@@ -1,0 +1,11 @@
+{
+"name": "ArchiTech",
+"short_name": "ArchiTech",
+"start_url": "/",
+"display": "standalone",
+"background_color": "#0e141c",
+"theme_color": "#0e141c",
+"icons": [
+{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml" }
+]
+}
