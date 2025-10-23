@@ -1,1 +1,3 @@
-export function FormHint({children}:{children?:React.ReactNode}){ return <p className="hint">{children}</p>; }
+export function FormHint({children, error}:{children?:React.ReactNode, error?: boolean}){
+  return <p className={`hint ${error ? 'error' : ''}`}>{children}</p>;
+}

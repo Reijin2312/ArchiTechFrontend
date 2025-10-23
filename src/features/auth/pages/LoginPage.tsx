@@ -43,12 +43,20 @@ export default function LoginPage(){
 				<h1 className="text-2xl mb-4">Вход</h1>
 				<form onSubmit={handleSubmit(onSubmit)} className="grid gap-3">
 					<label className="label">Почта</label>
-					<Input autoComplete="email" {...register('email')} />
-					<FormHint>{errors.email?.message}</FormHint>
+					<Input 
+						autoComplete="email" 
+						{...register('email')} 
+						error={!!errors.email}
+					/>
+					<FormHint error={!!errors.email}>{errors.email?.message}</FormHint>
 
 					<label className="label">Пароль</label>
-					<PasswordField autoComplete="current-password" {...register('password')} />
-					<FormHint>{errors.password?.message}</FormHint>
+					<PasswordField 
+						autoComplete="current-password" 
+						{...register('password')} 
+						error={!!errors.password}
+					/>
+					<FormHint error={!!errors.password}>{errors.password?.message}</FormHint>
 
 					<div className="flex gap-2 mt-2">
 						<Button disabled={isSubmitting}>Войти</Button>
