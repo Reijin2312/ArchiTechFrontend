@@ -7,6 +7,8 @@ import { Card } from '@/shared/ui/Card';
 import { endpoints } from '@/shared/api/endpoints';
 import { authStore } from '@/shared/store/auth';
 import Footer from '@/shared/ui/Footer';
+import type { VerifyEmailReq, VerifyEmailRes } from '@/shared/api/types';
+import type { ResetConfirmReq, ResetConfirmRes } from '@/shared/api/types';
 
 
 export default function CodeVerifyPage({ mode }:{ mode: 'email-verify'|'reset' }){
@@ -21,28 +23,28 @@ const [code, setCode] = useState('');
 const [resendLock, setResendLock] = useState(0);
 
 
-useEffect(()=>{
-if (resendLock<=0) return; const id = setInterval(()=>setResendLock(x=>x-1), 1000); return ()=>clearInterval(id);
+useEffect(()=>  {
+    if (resendLock<=0) return; 
+    const id = setInterval(()=>setResendLock(x=>x-1), 1000); return ()=>clearInterval(id);
 }, [resendLock]);
 
-
 async function confirm(){
-if (!/^\d{6}$/.test(code)) return;
-if (mode === 'email-verify'){
-const { data } = await http.post(endpoints.verifyEmailConfirm, { ticket, code });
-setTokens(data.accessToken, data.refreshToken);
-nav('/', { replace: true });
-} else {
-const { data } = await http.post(endpoints.resetConfirm, { ticket, code });
-nav(`/auth/reset/new?token=${encodeURIComponent(data.resetToken)}&email=${encodeURIComponent(email)}`);
-}
+    if (!/^\d{6}$/.test(code)) return;
+    if (mode === 'email-verify') {
+        const { data } = await http.post<VerifyEmailRes>(endpoints.verifyEmailConfirm, { ticket, code } as VerifyEmailReq);
+        setTokens(data.accessToken, data.refreshToken);
+        nav('/', { replace: true });
+    } else {
+        const { data } = await http.post<ResetConfirmRes>(endpoints.resetConfirm, { ticket, code } as ResetConfirmReq);
+        nav(`/auth/reset/new?token=${encodeURIComponent(data.resetToken)}&email=${encodeURIComponent(email)}`);
+    }
 }
 
 
 async function resend(){
-const url = mode==='email-verify' ? endpoints.verifyEmailResend : endpoints.resetResend;
-await http.post(url, { ticket });
-setResendLock(60);
+    const url = mode==='email-verify' ? endpoints.verifyEmailResend : endpoints.resetResend;
+    await http.post(url, { ticket });
+    setResendLock(60);
 }
 
 

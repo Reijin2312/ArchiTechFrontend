@@ -19,7 +19,7 @@ loadFromStorage: () => void;
 };
 
 
-export const authStore = create<State & Actions>((set, get) => ({
+export const authStore = create<State &     Actions>((set, get) => ({
 user: null,
 accessToken: null,
 refreshToken: null,

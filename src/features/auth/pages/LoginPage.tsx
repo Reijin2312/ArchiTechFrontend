@@ -10,7 +10,7 @@ import { FormHint } from '@/shared/ui/FormHint';
 import { Link } from 'react-router-dom';
 import PasswordField from '../components/PasswordField';
 import Footer from '@/shared/ui/Footer';
-
+import type { LoginReq, LoginRes} from '@/shared/api/types'
 
 const schema = z.object({ email: z.string().email(), password: z.string().min(1) });
 
@@ -24,7 +24,7 @@ export default function LoginPage(){
 
 
 	async function onSubmit(v: Form){
-		const { data } = await http.post('/api/auth/login', v);
+		const { data } = await http.post<LoginRes>('/api/auth/login', v as LoginReq);
 		setTokens(data.accessToken, data.refreshToken);
 		setUser(data.user);
 	}

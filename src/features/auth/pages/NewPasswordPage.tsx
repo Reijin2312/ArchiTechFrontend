@@ -9,6 +9,7 @@ import { Input } from '@/shared/ui/Input';
 import { Card } from '@/shared/ui/Card';
 import { FormHint } from '@/shared/ui/FormHint';
 import Footer from '@/shared/ui/Footer';
+import type { ResetFinishReq, Ok } from '@/shared/api/types';
 
 
 const schema = z.object({
@@ -20,7 +21,7 @@ pw2: z.string()
 type Form = z.infer<typeof schema>;
 
 
-export default function NewPasswordPage(){
+export default function NewPasswordPage() {
 	const [sp] = useSearchParams();
 	const token = sp.get('token') || '';
 	const email = sp.get('email') || '';
@@ -29,7 +30,7 @@ export default function NewPasswordPage(){
 
 
 	async function onSubmit(v: Form){
-		await http.post(endpoints.resetFinish, { resetToken: token, newPassword: v.pw1 });
+		await http.post<Ok>(endpoints.resetFinish, { resetToken: token, newPassword: v.pw1 } as ResetFinishReq);
 		nav('/auth/reset/done', { replace:true });
 	}
 

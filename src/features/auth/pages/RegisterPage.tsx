@@ -7,6 +7,7 @@ import { Input } from '@/shared/ui/Input';
 import { Card } from '@/shared/ui/Card';
 import { FormHint } from '@/shared/ui/FormHint';
 import Footer from '@/shared/ui/Footer';
+import type { RegisterReq, RegisterRes } from '@/shared/api/types';
 
 
 const schema = z.object({
@@ -25,10 +26,12 @@ const { register, handleSubmit, formState:{errors, isSubmitting} } = useForm<For
 
 
 async function onSubmit(v: Form){
-const { data } = await http.post('/api/auth/register', { email: v.email, username: v.username, password: v.password });
+const { data } = await http.post<RegisterRes>('/api/auth/register', {
+  email: v.email, username: v.username, password: v.password
+} as RegisterReq);
 if (data.needVerify) {
-const qs = new URLSearchParams({ ticket: data.ticket, email: data.email });
-window.location.href = '/auth/verify?' + qs.toString();
+  const qs = new URLSearchParams({ ticket: data.ticket, email: data.email });
+  window.location.href = '/auth/verify?' + qs.toString();
 }
 }
 
@@ -43,7 +46,7 @@ return (
 <FormHint>{errors.email?.message}</FormHint>
 
 
-<label className="label">Ник</label>
+<label className="label">Никнейм</label>
 <Input autoComplete="username" {...register('username')} />
 <FormHint>{errors.username?.message}</FormHint>
 
@@ -53,7 +56,7 @@ return (
 <FormHint>{errors.password?.message || 'мин. 8, буквы и цифры'}</FormHint>
 
 
-<label className="label">Повтор</label>
+<label className="label">Повтор пароля</label>
 <Input type="password" autoComplete="new-password" {...register('confirm')} />
 <FormHint>{errors.confirm?.message}</FormHint>
 
