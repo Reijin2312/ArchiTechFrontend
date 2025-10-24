@@ -11,10 +11,10 @@ import type { RegisterReq, RegisterRes } from '@/shared/api/types';
 
 
 const schema = z.object({
-email: z.string().email(),
-username: z.string().regex(/^[A-Za-z0-9_]{3,16}$/,'3–16: латиница/цифры/_'),
-password: z.string().min(8).regex(/[A-Za-z]/,'нужны буквы').regex(/\d/,'нужны цифры'),
-confirm: z.string()
+	email: z.string().email(),
+	username: z.string().regex(/^[A-Za-z0-9_]{3,16}$/,'3–16: латиница/цифры/_'),
+	password: z.string().min(8).regex(/[A-Za-z]/,'нужны буквы').regex(/\d/,'нужны цифры'),
+	confirm: z.string()
 }).refine(v => v.password === v.confirm, { path: ['confirm'], message: 'Не совпадает' });
 
 
@@ -26,13 +26,13 @@ const { register, handleSubmit, formState:{errors, isSubmitting} } = useForm<For
 
 
 async function onSubmit(v: Form){
-const { data } = await http.post<RegisterRes>('/api/auth/register', {
-  email: v.email, username: v.username, password: v.password
-} as RegisterReq);
-if (data.needVerify) {
-  const qs = new URLSearchParams({ ticket: data.ticket, email: data.email });
-  window.location.href = '/auth/verify?' + qs.toString();
-}
+	const { data } = await http.post<RegisterRes>('/api/auth/register', {
+	email: v.email, username: v.username, password: v.password
+	} as RegisterReq);
+	if (data.needVerify) {
+	const qs = new URLSearchParams({ ticket: data.ticket, email: data.email });
+	window.location.href = '/auth/verify?' + qs.toString();
+	}
 }
 
 

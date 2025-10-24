@@ -7,10 +7,12 @@ import { Button } from '@/shared/ui/Button';
 import { Input } from '@/shared/ui/Input';
 import { Card } from '@/shared/ui/Card';
 import { FormHint } from '@/shared/ui/FormHint';
-import { Link } from 'react-router-dom';
+import { Link, NavigateFunction } from 'react-router-dom';
 import PasswordField from '../components/PasswordField';
 import Footer from '@/shared/ui/Footer';
 import type { LoginReq, LoginRes} from '@/shared/api/types'
+import { useLocation, useNavigate } from 'react-router-dom'
+import { useEffect } from 'react';
 
 const schema = z.object({ email: z.string().email(), password: z.string().min(1) });
 
@@ -18,22 +20,38 @@ const schema = z.object({ email: z.string().email(), password: z.string().min(1)
 type Form = z.infer<typeof schema>;
 
 
-export default function LoginPage(){
+export default function LoginPage() {
 	const { setTokens, setUser } = authStore();
 	const { register, handleSubmit, formState:{errors, isSubmitting}, getValues } = useForm<Form>({ resolver: zodResolver(schema) });
 
+	const navigate = useNavigate()
+	const { search } = useLocation()
+	const user = authStore(s => s.user)
 
-	async function onSubmit(v: Form){
+	useEffect(() => {
+  		if (user) navigate('/profile', { replace: true })
+	}, [user, navigate])
+
+	const next = new URLSearchParams(search).get('next') || '/profile'
+
+	async function onSubmit(v: Form) {
 		const { data } = await http.post<LoginRes>('/api/auth/login', v as LoginReq);
 		setTokens(data.accessToken, data.refreshToken);
 		setUser(data.user);
+		try {
+    		const { data } = await http.post<LoginRes>('/api/auth/login', v as LoginReq);
+    		setTokens(data.accessToken, data.refreshToken);
+    		setUser(data.user);
+    		navigate(next, { replace: true });
+  		} catch (e) {
+    
+		}
 	}
 
-
-	function startReset(){
+	function startReset() {
 		const email = getValues('email') || '';
 		const qs = new URLSearchParams({ email }).toString();
-		window.location.href = '/auth/reset?' + qs;
+		navigate('/auth/reset?' + qs);
 	}
 
 

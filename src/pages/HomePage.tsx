@@ -1,9 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react'
+import { Link, useLocation } from 'react-router-dom'
+import { authStore } from '@/shared/store/auth'
 
-const SERVER_NAME = 'ArchiTech SMP'
+const SERVER_NAME = 'ArchiTech MC'
 const SERVER_IP = 'play.architech.gg'
 const DISCORD_URL = 'https://discord.gg/your-invite'
-const TELEGRAM_URL = 'https://t.me/your-channel'
+const TELEGRAM_URL = 'https://t.me/archi_tech_official'
 const MAP_URL = '/map'
 const RULES_URL = '/rules'
 const SHOP_URL = '/shop'
@@ -23,6 +25,25 @@ type McStatus = {
 export default function HomePage() {
   const [status, setStatus] = useState<McStatus | null>(null)
   const [copyOk, setCopyOk] = useState<'idle' | 'ok' | 'err'>('idle')
+  const shots = ['/images/screen1.png','/images/screen2.png','/images/screen3.png']
+  const [shot, setShot] = useState(shots[0])
+  const [prevShot, setPrevShot] = useState<string | null>(null)
+  const [cross, setCross] = useState(false)
+
+  function changeTo(newSrc: string) {
+   if (newSrc === shot) return
+    setPrevShot(shot)
+    setShot(newSrc)
+    setCross(false)
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => setCross(true))
+    })
+    setTimeout(() => setPrevShot(null), 320)
+  }
+
+  const user = authStore(s => s.user)
+  const { pathname, search } = useLocation()
+  const next = encodeURIComponent(pathname + search)
 
   useEffect(() => {
     let stop = false
@@ -47,6 +68,15 @@ export default function HomePage() {
       clearInterval(id)
     }
   }, [])
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      const next = shots[(shots.indexOf(shot) + 1) % shots.length]
+      changeTo(next)
+    }, 5000)
+    return () => clearInterval(id)
+  }, [shot])
+
 
   const onlineText = useMemo(() => {
     if (!status) return '—'
@@ -83,44 +113,25 @@ export default function HomePage() {
         />
       </div>
 
-      {/* Навбар */}
-      <header className="sticky top-0 z-20 backdrop-blur supports-[backdrop-filter]:bg-slate-950/50 border-b border-slate-800">
-        <nav className="mx-auto max-w-7xl px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <img src="/icon.svg" alt="logo" className="size-8" />
-            <span className="font-semibold tracking-wide">{SERVER_NAME}</span>
-          </div>
-          <div className="hidden md:flex items-center gap-6 text-sm">
-            <a href={MAP_URL} className="hover:text-white text-slate-300">Карта</a>
-            <a href={RULES_URL} className="hover:text-white text-slate-300">Правила</a>
-            <a href={SHOP_URL} className="hover:text-white text-slate-300">Магазин</a>
-            <a href={WIKI_URL} className="hover:text-white text-slate-300">Вики</a>
-            <a href={DISCORD_URL} className="rounded-xl px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500">Discord</a>
-            <a href={TELEGRAM_URL} className="rounded-xl px-3 py-1.5 bg-sky-500 hover:bg-sky-400">Telegram</a>
-            <a href={PROFILE_URL} className="rounded-xl px-3 py-1.5 border border-slate-700 hover:border-slate-500">Профиль</a>
-          </div>
-        </nav>
-      </header>
-
       {/* Hero */}
       <section className="mx-auto max-w-7xl px-4 pb-10 pt-10 md:pt-16">
         <div className="grid md:grid-cols-2 gap-10 md:gap-14 items-center">
           <div>
             <h1 className="text-4xl md:text-5xl font-bold leading-tight">
-              Присоединяйся к <span className="text-indigo-400">{SERVER_NAME}</span>
+              Присоединяйся к <span className="text-indigo-400">{SERVER_NAME}!</span>
             </h1>
             <p className="mt-4 text-slate-300 max-w-prose">
-              Выживание, ивенты, экономика и честный PvP. Без вайпов сезонами. Аккуратная модерация.
+              Модифицированный техномагический сервер c упором на строительство и творчество. Без вайпов и с уникальными самописными модами. Добрая администрация и отсутствие гриферов.
             </p>
 
             {/* IP + статус + кнопка скачивания */}
             <div className="mt-6 grid gap-3">
-              <div className="flex items-stretch overflow-hidden rounded-xl border border-slate-800 max-w-md">
-                <div className="px-3 hidden sm:grid place-items-center bg-slate-900/60 border-r border-slate-800 text-xs text-slate-300">IP</div>
-                <div className="px-3 py-2 font-mono">{SERVER_IP}</div>
-                <button onClick={copyIp} className="px-3 py-2 bg-slate-900/60 hover:bg-slate-800 border-l border-slate-800 text-sm">
-                  {copyOk === 'ok' ? 'Скопировано' : copyOk === 'err' ? 'Ошибка' : 'Копировать'}
-                </button>
+              <div className="flex w-full items-stretch overflow-hidden rounded-xl border border-slate-800 max-w-md">
+              <div className="px-3 hidden sm:grid place-items-center bg-slate-900/60 border-r border-slate-800 text-xs text-slate-300">IP</div>
+              <div className="px-3 font-mono flex-1 truncate flex items-center justify-center text-center">{SERVER_IP}</div>
+              <button onClick={copyIp} className="px-3 py-2 bg-slate-900/60 hover:bg-slate-800 border-l border-slate-800 text-sm">
+                {copyOk === 'ok' ? 'Скопировано' : copyOk === 'err' ? 'Ошибка' : 'Копировать'}
+              </button>
               </div>
 
               <div className="flex flex-wrap items-center gap-4 text-sm text-slate-300">
@@ -139,14 +150,48 @@ export default function HomePage() {
 
           {/* Галерея */}
           <div className="relative">
-            <div className="aspect-[16/10] w-full overflow-hidden rounded-2xl border border-slate-800 shadow-xl">
-              <img src="/images/screen1.jpg" className="h-full w-full object-cover" alt="screenshot" />
+            <div className="aspect-16/10 w-full overflow-hidden rounded-2xl border border-slate-800 shadow-xl">
+              <div className="relative h-full w-full">
+              {/* текущий кадр (сверху), с плавным появлением */}
+              <img
+                key={shot}
+                src={shot}
+                alt="screenshot"
+                className={
+                  "absolute inset-0 h-full w-full object-cover transition-opacity duration-300 " +
+                  (cross ? "opacity-100" : "opacity-0")
+                }
+              />
+              {/* предыдущий кадр (снизу), с плавным исчезновением */}
+              {prevShot && (
+                <img
+                  key={prevShot + "-prev"}
+                  src={prevShot}
+                  alt=""
+                  aria-hidden
+                  className={
+                    "absolute inset-0 h-full w-full object-cover transition-opacity duration-300 " +
+                    (cross ? "opacity-0" : "opacity-100")
+                  }
+                />
+              )}
+            </div>
             </div>
             <div className="mt-3 flex gap-3">
-              {['/images/screen1.jpg','/images/screen2.jpg','/images/screen3.jpg'].map((src,i)=> (
-                <img key={i} src={src} className="size-16 rounded-xl border border-slate-800 object-cover" alt="thumb" />
-              ))}
-            </div>
+            {shots.map((src) => (
+              <button
+                key={src}
+                onClick={() => changeTo(src)}
+                aria-label="Показать скриншот"
+                className={[
+                  'size-16 rounded-xl overflow-hidden border',
+                  shot === src ? 'border-indigo-500 ring-2 ring-indigo-500/40' : 'border-slate-800'
+                ].join(' ')}
+              >
+                <img src={src} className="h-full w-full object-cover" alt="" />
+              </button>
+            ))}
+          </div>
           </div>
         </div>
       </section>
@@ -164,7 +209,7 @@ export default function HomePage() {
 
       {/* Команда */}
       <section className="mx-auto max-w-7xl px-4 py-10">
-        <h2 className="text-2xl font-semibold mb-6">Команда</h2>
+        <h2 className="text-2xl font-semibold mb-6">Команда проекта</h2>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {[
             { name: 'Raijin', role: 'Owner' },
@@ -194,53 +239,6 @@ export default function HomePage() {
           <Faq q="Правила?" a={<span>Коротко и без воды — <a className='underline' href={RULES_URL}>читай тут</a>.</span>} />
         </div>
       </section>
-
-      {/* Футер */}
-      <footer className="border-t border-slate-800 bg-slate-950/80">
-        <div className="mx-auto max-w-7xl px-4 py-8 text-sm text-slate-300">
-          {/* Верхняя строка: сеть + быстрые иконки */}
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <img src="/icon.svg" alt="logo" className="size-6" />
-              <div>
-                <span className="text-slate-200">Сервер является частью сети</span>{' '}
-                <b className="text-white">ArchiTech</b>
-              </div>
-            </div>
-            <div className="flex items-center gap-4 text-base">
-              <a href={TELEGRAM_URL} aria-label="Telegram" className="hover:text-white text-slate-300"><SvgTelegram className="h-5"/></a>
-              <a href={DISCORD_URL} aria-label="Discord" className="hover:text-white text-slate-300"><SvgDiscord className="h-5"/></a>
-              <a href="https://t.me/Raijin2312" aria-label="Support" className="hover:text-white text-slate-300">🎧</a>
-            </div>
-          </div>
-
-          {/* Навигация по документам */}
-          <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2">
-            <a href="/contacts" className="hover:text-white">Контакты · Contacts</a>
-            <a href="/brand" className="hover:text-white">Дизайн</a>
-            <a href="/terms" className="hover:text-white">Пользовательское соглашение</a>
-            <a href="/privacy" className="hover:text-white">Политика конфиденциальности</a>
-            <a href="/refund" className="hover:text-white">Политика возврата средств</a>
-            <a href="/payments" className="hover:text-white">Условия оплаты</a>
-            <a href="/pricing" className="hover:text-white">Цены</a>
-          </div>
-
-          {/* Низ: дисклеймер + платёжки */}
-          <div className="mt-6 flex flex-wrap items-center justify-between gap-4 text-xs text-slate-400">
-            <div className="max-w-3xl leading-relaxed">
-              Not an official Minecraft product. We are in no way affiliated with or endorsed by Mojang Synergies AB, Microsoft Corporation or other rightsholders.
-            </div>
-            <div className="flex items-center gap-3">
-              <span className="text-slate-400">Принимаем к оплате</span>
-              <SvgMastercard className="h-5 text-slate-300" />
-              <SvgVisa className="h-5 text-slate-300" />
-            </div>
-          </div>
-
-          {/* Копирайт */}
-          <div className="mt-4 text-xs text-slate-500">© ArchiTech. 2024–2026. Все права защищены.</div>
-        </div>
-      </footer>
     </div>
   )
 }
@@ -276,7 +274,7 @@ function Feature({ title, text, icon }: { title: string; text: string; icon: str
 
 function CardCTA({ title, text, href, button }: { title: string; text: string; href: string; button: string }) {
   return (
-    <div className="rounded-2xl border border-slate-800 p-5 bg-gradient-to-b from-slate-900/60 to-slate-900/20">
+    <div className="rounded-2xl border border-slate-800 p-5 bg-linear-to-b from-slate-900/60 to-slate-900/20">
       <div className="font-medium text-lg">{title}</div>
       <div className="text-sm text-slate-300 mt-1 mb-4">{text}</div>
       <a href={href} className="inline-flex rounded-xl px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-sm">{button}</a>
@@ -304,7 +302,7 @@ function StepsGuide({ version }: { version?: string }) {
           <div className="size-10 rounded-xl bg-sky-600/20 grid place-items-center text-sky-300 mb-3">👤</div>
           <div className="text-lg font-semibold mb-2">Зарегистрируйтесь на сайте</div>
           <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
-            <a href="/auth/login" className="inline-flex rounded-xl px-4 py-2 bg-indigo-600 hover:bg-indigo-500">Войти или зарегистрироваться</a>
+            <Link to="/auth/login" className="inline-flex rounded-xl px-4 py-2 bg-indigo-600 hover:bg-indigo-500">Войти или зарегистрироваться</Link>
             <div className="text-xs text-slate-400 mt-3">Потребуется аккаунт Minecraft: Java Edition</div>
           </div>
         </div>
@@ -327,9 +325,9 @@ function StepsGuide({ version }: { version?: string }) {
           <div className="size-10 rounded-xl bg-teal-600/20 grid place-items-center text-teal-300 mb-3">🗺️</div>
           <div className="text-lg font-semibold mb-2">Зайдите на сервер</div>
           <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
-            <div className="flex items-stretch overflow-hidden rounded-xl border border-slate-800">
+            <div className="flex w-full items-stretch overflow-hidden rounded-xl border border-slate-800">
               <div className="px-3 hidden sm:grid place-items-center bg-slate-900/60 border-r border-slate-800 text-xs text-slate-300">IP адрес</div>
-              <div className="px-3 py-2 font-mono">{SERVER_IP}</div>
+              <div className="px-3 py-2 font-mono flex-1 truncate">{SERVER_IP}</div>
               <button onClick={copy} className="px-3 py-2 bg-slate-900/60 hover:bg-slate-800 border-l border-slate-800 text-sm">
                 {copied === 'ok' ? 'Скопировано' : copied === 'err' ? 'Ошибка' : 'Копировать'}
               </button>
