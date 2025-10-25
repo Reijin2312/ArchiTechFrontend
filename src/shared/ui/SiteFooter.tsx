@@ -12,7 +12,7 @@ export default function SiteFooter() {
           <div className="flex items-center gap-3">
             <img src="/images/favicon-32.png" alt="logo" className="size-6" />
             <div>
-              <span className="text-slate-200">Сервер является частью сети </span>
+              <span className="text-slate-200"></span>
               <b className="text-white">ArchiTech</b>
             </div>
           </div>

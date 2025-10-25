@@ -8,7 +8,7 @@ const DISCORD_URL = 'https://discord.gg/your-invite'
 const TELEGRAM_URL = 'https://t.me/archi_tech_official'
 const MAP_URL = '/map'
 const RULES_URL = '/rules'
-const SHOP_URL = '/shop'
+const SHOP_URL = 'https://t.me/@Archi_payment_bot'
 const WIKI_URL = '/wiki'
 const MODPACK_URL = '/modpack'
 const PROFILE_URL = '/profile'
@@ -25,7 +25,7 @@ type McStatus = {
 export default function HomePage() {
   const [status, setStatus] = useState<McStatus | null>(null)
   const [copyOk, setCopyOk] = useState<'idle' | 'ok' | 'err'>('idle')
-  const shots = ['/images/screen1.png','/images/screen2.png','/images/screen3.png']
+  const shots = ['/images/screen1.png','/images/screen2.png','/images/screen3.png', '/images/screen4.png', '/images/screen5.png']
   const [shot, setShot] = useState(shots[0])
   const [prevShot, setPrevShot] = useState<string | null>(null)
   const [cross, setCross] = useState(false)
@@ -101,7 +101,7 @@ export default function HomePage() {
     <div className="min-h-dvh bg-slate-950 text-slate-100 relative">
       {/* Фон */}
       <div className="pointer-events-none absolute inset-0 -z-10">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-900/30 via-slate-950 to-slate-950" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,var(--tw-gradient-stops))] from-blue-900/30 via-slate-950 to-slate-950" />
         <div
           className="absolute inset-0"
           style={{
@@ -129,9 +129,26 @@ export default function HomePage() {
               <div className="flex w-full items-stretch overflow-hidden rounded-xl border border-slate-800 max-w-md">
               <div className="px-3 hidden sm:grid place-items-center bg-slate-900/60 border-r border-slate-800 text-xs text-slate-300">IP</div>
               <div className="px-3 font-mono flex-1 truncate flex items-center justify-center text-center">{SERVER_IP}</div>
-              <button onClick={copyIp} className="px-3 py-2 bg-slate-900/60 hover:bg-slate-800 border-l border-slate-800 text-sm">
-                {copyOk === 'ok' ? 'Скопировано' : copyOk === 'err' ? 'Ошибка' : 'Копировать'}
+              <button
+                onClick={copyIp}
+                className="px-3 py-2 bg-slate-900/60 hover:bg-slate-800 border-l border-slate-800 text-sm grid place-items-center"
+                aria-label={copyOk === 'ok' ? 'Скопировано' : copyOk === 'err' ? 'Ошибка' : 'Копировать IP'}
+                title={copyOk === 'ok' ? 'Скопировано' : copyOk === 'err' ? 'Ошибка' : 'Копировать IP'}
+              >
+                {copyOk === 'ok' ? (
+          
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="size-5">
+                    <path d="M5 13l4 4L19 7" />
+                  </svg>
+                ) : (
+       
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="size-5">
+                    <path d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2" />
+                    <path d="M10 20h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  </svg>
+                )}
               </button>
+
               </div>
 
               <div className="flex flex-wrap items-center gap-4 text-sm text-slate-300">
@@ -212,10 +229,11 @@ export default function HomePage() {
         <h2 className="text-2xl font-semibold mb-6">Команда проекта</h2>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {[
-            { name: 'Raijin', role: 'Owner' },
-            { name: 'Alex', role: 'Admin' },
-            { name: 'Mira', role: 'Moderator' },
-            { name: 'Fox', role: 'Builder' }
+            { name: 'Raijin', role: 'Владелец & программист' },
+            { name: 'Kelbor-Hal', role: 'Мл. Админ' },
+            { name: 'Wolle', role: 'Тех. Админ' },
+            { name: 'Sile Scorp', role: 'Дизайнер' },
+            { name: 'Explyp', role: 'Python-программист' }
           ].map(p => (
             <div key={p.name} className="rounded-2xl border border-slate-800 p-4 bg-slate-900/40">
               <div className="flex items-center gap-3">

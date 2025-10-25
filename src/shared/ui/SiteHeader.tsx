@@ -17,7 +17,7 @@ export default function SiteHeader() {
   const next = encodeURIComponent(pathname + search);
 
   return (
-    <header className="sticky top-0 z-20 backdrop-blur supports-[backdrop-filter]:bg-slate-950/50 border-b border-slate-800">
+    <header className="sticky top-0 z-20 backdrop-blur supports-backdrop-filter:bg-slate-950/50 border-b border-slate-800">
       <nav className="mx-auto max-w-7xl px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <img src="/images/favicon-192.png" alt="logo" className="size-8" />

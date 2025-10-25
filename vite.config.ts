@@ -6,6 +6,13 @@ const outDir = 'webbuild'
 
 export default defineConfig({
   plugins: [react()],
+  server: {
+    port: 5173,
+    proxy: {
+      '/api': { target: 'http://localhost:51789', changeOrigin: true },
+      '^/ws/.*': { target: 'http://localhost:51789', ws: true, changeOrigin: true },
+    },
+  },
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url))
