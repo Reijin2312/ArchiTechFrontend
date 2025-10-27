@@ -8,6 +8,9 @@ import ResetDonePage from '@/features/auth/pages/ResetDonePage';
 import Layout from '@/app/Layout';
 import UserProfilePage from '@/pages/UserProfilePage';
 import RedirectToMyProfile from '@/pages/RedirectToMyProfile';
+import RulesPage from '@/pages/RulesPage';
+import ShopPage from '@/pages/ShopPage';
+import WikiPage from '@/pages/WikiPage';
 
 export const router = createBrowserRouter([
   {
@@ -23,6 +26,9 @@ export const router = createBrowserRouter([
       { path: '/auth/reset/done', element: <ResetDonePage /> },
       { path: '/u/:username', element: <UserProfilePage /> },
       { path: '/profile', element: <RedirectToMyProfile /> },
+      { path: '/rules', element: <RulesPage />},
+      { path: '/shop', element: <ShopPage/>},
+      { path: '/wiki', element: <WikiPage/>},
       { path: '*', element: <Navigate to="/" replace /> },
     ],
   },

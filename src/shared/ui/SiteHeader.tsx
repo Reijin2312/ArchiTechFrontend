@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { authStore } from '@/shared/store/auth';
 
 const SERVER_NAME = 'ArchiTech MC';
+const MAIN_URL = '';
 const MAP_URL = '/map';
 const RULES_URL = '/rules';
 const SHOP_URL = '/shop';
@@ -16,6 +17,26 @@ export default function SiteHeader() {
   const { pathname, search } = useLocation();
   const next = encodeURIComponent(pathname + search);
 
+  const linkCls = (active: boolean) =>
+    [
+      'relative px-2 py-1.5 text-sm transition-colors',
+      active
+        ? // градиентный текст + тонкая полоса снизу
+          'text-transparent bg-clip-text bg-gradient-to-r from-sky-400 to-blue-500 ' +
+          'after:absolute after:left-1.5 after:right-1.5 after:-bottom-[3px] after:h-[2px] after:rounded-full ' +
+          'after:bg-gradient-to-r after:from-sky-400 after:to-blue-500 after:content-[""]'
+        : 'text-slate-300 hover:text-sky-300',
+    ].join(' ');
+
+  const isActive = (to: string, end = false) => {
+    const t = to || '/'; // пустая строка = корень
+    if (end) return pathname === t;
+    return pathname === t || pathname.startsWith(t + '/');
+  };
+
+  const isProfileActive =
+    pathname.startsWith('/u/') || pathname === PROFILE_URL || pathname.startsWith(PROFILE_URL + '/');
+
   return (
     <header className="sticky top-0 z-20 backdrop-blur supports-backdrop-filter:bg-slate-950/50 border-b border-slate-800">
       <nav className="mx-auto max-w-7xl px-4 py-3 flex items-center justify-between">
@@ -25,29 +46,39 @@ export default function SiteHeader() {
         </div>
 
         <div className="hidden md:flex items-center gap-6 text-sm">
-          <Link to={MAP_URL} className="hover:text-white text-slate-300">Карта</Link>
-          <Link to={RULES_URL} className="hover:text-white text-slate-300">Правила</Link>
-          <Link to={SHOP_URL} className="hover:text-white text-slate-300">Покупка проходки</Link>
-          <Link to={WIKI_URL} className="hover:text-white text-slate-300">Вики</Link>
+          <Link to={MAIN_URL} className={linkCls(isActive(MAIN_URL, true))} aria-current={isActive(MAIN_URL, true) ? 'page' : undefined}>
+            Главная
+          </Link>
+          <Link to={RULES_URL} className={linkCls(isActive(RULES_URL))} aria-current={isActive(RULES_URL) ? 'page' : undefined}>
+            Правила
+          </Link>
+          <Link to={SHOP_URL} className={linkCls(isActive(SHOP_URL))} aria-current={isActive(SHOP_URL) ? 'page' : undefined}>
+            Покупка проходки
+          </Link>
+          <Link to={WIKI_URL} className={linkCls(isActive(WIKI_URL))} aria-current={isActive(WIKI_URL) ? 'page' : undefined}>
+            Вики
+          </Link>
+
           <a href={DISCORD_URL} className="rounded-xl px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500">Discord</a>
           <a href={TELEGRAM_URL} className="rounded-xl px-3 py-1.5 bg-sky-500 hover:bg-sky-400">Telegram</a>
 
           {user ? (
-          <Link
-            to={`/u/${user.username}`}
-            className="rounded-xl px-3 py-1.5 border border-slate-700 hover:border-slate-500"
-            title="Профиль"
-          >
-            {user.username}
-          </Link>
-        ) : (
-          <Link
-            to={`/auth/login?next=${next}`}
-            className="rounded-xl px-3 py-1.5 border border-slate-700 hover:border-slate-500"
-          >
-            Войти
-          </Link>
-        )}
+            <Link
+              to={`/u/${user.username}`}
+              className={['rounded-xl px-3 py-1.5 border', isProfileActive ? 'border-sky-500 text-sky-300' : 'border-slate-700 hover:border-slate-500'].join(' ')}
+              aria-current={isProfileActive ? 'page' : undefined}
+              title="Профиль"
+            >
+              {user.username}
+            </Link>
+          ) : (
+            <Link
+              to={`/auth/login?next=${next}`}
+              className="rounded-xl px-3 py-1.5 border border-slate-700 hover:border-slate-500"
+            >
+              Войти
+            </Link>
+          )}
         </div>
       </nav>
     </header>
