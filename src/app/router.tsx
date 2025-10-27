@@ -11,6 +11,7 @@ import RedirectToMyProfile from '@/pages/RedirectToMyProfile';
 import RulesPage from '@/pages/RulesPage';
 import ShopPage from '@/pages/ShopPage';
 import WikiPage from '@/pages/WikiPage';
+import SettingsProfilePage from '@/pages/SettingsProfilePage';
 
 export const router = createBrowserRouter([
   {
@@ -29,6 +30,7 @@ export const router = createBrowserRouter([
       { path: '/rules', element: <RulesPage />},
       { path: '/shop', element: <ShopPage/>},
       { path: '/wiki', element: <WikiPage/>},
+      { path: '/settings/profile', element: <SettingsProfilePage/>},
       { path: '*', element: <Navigate to="/" replace /> },
     ],
   },

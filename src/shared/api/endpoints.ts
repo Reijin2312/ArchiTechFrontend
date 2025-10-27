@@ -11,4 +11,13 @@ resetFinish: '/api/auth/password/reset/finish',
 profileMe: '/api/v1/profile',
 userByName: (u: string) => `/api/v1/users/${encodeURIComponent(u)}`,
 profileUpdate: '/api/v1/profile',
+profileAvatar: '/api/v1/profile/avatar',
+accountPasswordChange: '/api/v1/account/password/change',
+accountUsernameChange: '/api/v1/account/username/change',
+accountEmailChange: '/api/v1/account/email/change',
+accountEmailConfirm: '/api/v1/account/email/confirm',
+accountPhoneBind: '/api/v1/account/phone/bind',
+accountPhoneVerify: '/api/v1/account/phone/verify',
+accountSessions: '/api/v1/account/sessions',
+accountExport: '/api/v1/account/export'
 } as const;

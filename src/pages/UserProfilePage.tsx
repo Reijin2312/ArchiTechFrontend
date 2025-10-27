@@ -4,9 +4,6 @@ import { http } from '@/shared/api/http';
 import { endpoints } from '@/shared/api/endpoints';
 import { isSelf } from '@/shared/auth/isSelf';
 
-import Header from '@/shared/ui/SiteHeader';
-import Footer from '@/shared/ui/SiteFooter';
-
 type PublicUser = { id: string; username: string; about?: string; avatar?: string };
 type Me = PublicUser & { email?: string };
 type Stats = { servers?: number; sessions?: number; achievements?: number; registeredAt?: string; online?: boolean };
@@ -49,34 +46,10 @@ export default function UserProfilePage() {
 
   return (
     <div className="min-h-dvh bg-slate-950 text-slate-100 flex flex-col">
-      <Header />
-
-      {/* Шапка страницы в фирменном синем */}
-      <div className="border-b border-slate-800 bg-slate-950/85 backdrop-blur">
-        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
-          <div className="text-sm font-medium tracking-wide text-sky-400">Профиль</div>
-          <div className="flex items-center gap-2">
-            {!self && (
-              <button className="rounded-xl border border-slate-700 px-3 py-1.5 text-sm hover:border-slate-500">
-                Сообщение
-              </button>
-            )}
-            <button
-              className={`rounded-xl px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-300 ${
-                self
-                  ? 'border border-slate-700 hover:border-slate-500'
-                  : 'bg-sky-600 hover:bg-sky-500'
-              }`}
-            >
-              {self ? 'Редактировать' : 'Подписаться'}
-            </button>
-          </div>
-        </div>
-      </div>
 
       {/* Контент */}
       <main className="mx-auto grid w-full max-w-6xl grow grid-cols-12 gap-6 px-4 py-6">
-        {/* Левый сайдбар: 3D-с kin */}
+        {/* Левый сайдбар: 3D-скин */}
         <section className="col-span-12 md:col-span-3">
           <Card>
             <div className="mb-3 flex items-center justify-between">
@@ -100,16 +73,26 @@ export default function UserProfilePage() {
 
         {/* Центральная колонка */}
         <section className="col-span-12 md:col-span-9">
-          <Card className="relative overflow-visible">
-            {/* Аватар перекрывает карточку */}
-            <div className="pointer-events-none absolute -top-12 left-1/2 -translate-x-1/2">
+          <Card className="relative overflow-hidden">
+            {/* Кнопка редактирования в правом верхнем углу */}
+            {self && (
+              <a
+                href="/settings/profile"
+                className="absolute right-4 top-4 rounded-xl border border-slate-700 px-3 py-1.5 text-sm hover:border-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-300"
+              >
+                Редактировать
+              </a>
+            )}
+
+            {/* Аватар внутри карточки */}
+            <div className="mt-2 flex justify-center">
               <Avatar url={(user as any)?.avatar} loading={loading} />
             </div>
 
-            <div className="pt-14 text-center">
+            <div className="pt-4 text-center">
               <div className="mb-1 flex items-center justify-center gap-2">
                 <h1 className="truncate text-2xl font-bold">
-                  {loading ? 'Загрузка…' : user ? `@${user.username}` : '—'}
+                  {loading ? 'Загрузка…' : user ? `${user.username}` : '—'}
                 </h1>
                 {stats?.online != null && (
                   <span
@@ -136,12 +119,7 @@ export default function UserProfilePage() {
               <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
                 {self ? (
                   <>
-                    <a
-                      href="/settings/profile"
-                      className="rounded-xl border border-slate-700 px-3 py-1.5 text-sm hover:border-slate-500"
-                    >
-                      Настройки
-                    </a>
+                    {/* Кнопку настроек убрали сверху, оставим только «Поделиться» здесь */}
                     <button className="rounded-xl border border-slate-700 px-3 py-1.5 text-sm hover:border-slate-500">
                       Поделиться
                     </button>
@@ -186,12 +164,11 @@ export default function UserProfilePage() {
         </section>
       </main>
 
-      <Footer />
     </div>
   );
 }
 
-/* ===== UI helpers (в стиле проекта, с синим акцентом) ===== */
+/* ===== UI helpers ===== */
 
 function Card(props: { children: React.ReactNode; className?: string }) {
   return (
@@ -209,7 +186,6 @@ function Avatar({ url, loading }: { url?: string; loading: boolean }) {
       {loading ? (
         <div className="h-full w-full animate-pulse rounded-3xl bg-slate-800" />
       ) : url ? (
-        // eslint-disable-next-line jsx-a11y/alt-text
         <img src={url} alt="Аватар" className="h-full w-full rounded-3xl object-cover" loading="lazy" />
       ) : (
         <div className="flex h-full w-full items-center justify-center rounded-3xl text-slate-400">AVA</div>

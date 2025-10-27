@@ -9,7 +9,7 @@ export async function bootstrapAuth() {
     const { accessToken } = await r.json();
 
     authStore.getState().setAuth(null, accessToken);
-    const me = await http.get<User>('/api/v1/profile/me');
+    const me = await http.get<User>('/api/v1/profile');
     authStore.getState().setAuth(me.data, accessToken);
   } catch {
     authStore.getState().clear();
