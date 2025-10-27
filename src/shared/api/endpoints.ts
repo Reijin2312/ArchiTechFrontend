@@ -7,5 +7,8 @@ verifyEmailResend: '/api/auth/verify-email/resend',
 resetBegin: '/api/auth/password/reset/begin',
 resetConfirm: '/api/auth/password/reset/confirm',
 resetResend: '/api/auth/password/reset/resend',
-resetFinish: '/api/auth/password/reset/finish'
+resetFinish: '/api/auth/password/reset/finish',
+profileMe: '/api/v1/profile',
+userByName: (u: string) => `/api/v1/users/${encodeURIComponent(u)}`,
+profileUpdate: '/api/v1/profile',
 } as const;

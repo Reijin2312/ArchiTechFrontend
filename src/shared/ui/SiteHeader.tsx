@@ -31,15 +31,23 @@ export default function SiteHeader() {
           <Link to={WIKI_URL} className="hover:text-white text-slate-300">Вики</Link>
           <a href={DISCORD_URL} className="rounded-xl px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500">Discord</a>
           <a href={TELEGRAM_URL} className="rounded-xl px-3 py-1.5 bg-sky-500 hover:bg-sky-400">Telegram</a>
+
           {user ? (
-            <Link to={PROFILE_URL} className="rounded-xl px-3 py-1.5 border border-slate-700 hover:border-slate-500">
-              Профиль
-            </Link>
-          ) : (
-            <Link to={`/auth/login?next=${next}`} className="rounded-xl px-3 py-1.5 border border-slate-700 hover:border-slate-500">
-              Войти
-            </Link>
-          )}
+          <Link
+            to={`/u/${user.username}`}
+            className="rounded-xl px-3 py-1.5 border border-slate-700 hover:border-slate-500"
+            title="Профиль"
+          >
+            {user.username}
+          </Link>
+        ) : (
+          <Link
+            to={`/auth/login?next=${next}`}
+            className="rounded-xl px-3 py-1.5 border border-slate-700 hover:border-slate-500"
+          >
+            Войти
+          </Link>
+        )}
         </div>
       </nav>
     </header>

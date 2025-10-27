@@ -11,7 +11,7 @@ export type RegisterRes =
 
 
 export type VerifyEmailReq = { ticket: string; code: string }
-export type VerifyEmailRes = Tokens
+export type VerifyEmailRes = { accessToken: string }
 
 export type ResetConfirmReq = { ticket: string; code: string }
 export type ResetConfirmRes = { resetToken: string }

@@ -1,3 +1,4 @@
+import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -7,83 +8,122 @@ import { Button } from '@/shared/ui/Button';
 import { Input } from '@/shared/ui/Input';
 import { Card } from '@/shared/ui/Card';
 import { FormHint } from '@/shared/ui/FormHint';
-import { Link, NavigateFunction } from 'react-router-dom';
 import PasswordField from '../components/PasswordField';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import Footer from '@/shared/ui/Footer';
-import type { LoginReq, LoginRes} from '@/shared/api/types'
-import { useLocation, useNavigate } from 'react-router-dom'
-import { useEffect } from 'react';
+import type { LoginReq, LoginRes } from '@/shared/api/types';
+import { finalizeAuth } from '@/shared/auth/finalizeAuth';
+import { endpoints } from '@/shared/api/endpoints';
 
-const schema = z.object({ email: z.string().email(), password: z.string().min(1) });
-
-
+const schema = z.object({
+  email: z.string().email({ message: 'Некорректная почта' }),
+  password: z.string().min(1, 'Введите пароль'),
+});
 type Form = z.infer<typeof schema>;
 
-
 export default function LoginPage() {
-	const { setTokens, setUser } = authStore();
-	const { register, handleSubmit, formState:{errors, isSubmitting}, getValues } = useForm<Form>({ resolver: zodResolver(schema) });
+  //const { setTokens, setUser } = authStore();
+  const user = authStore((s) => s.user);
+  const navigate = useNavigate();
+  const { search } = useLocation();
+  const [serverErr, setServerErr] = useState<string | null>(null);
 
-	const navigate = useNavigate()
-	const { search } = useLocation()
-	const user = authStore(s => s.user)
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting, isValid },
+    getValues,
+    setError,
+    clearErrors,
+    watch,
+  } = useForm<Form>({
+    resolver: zodResolver(schema),
+    mode: 'onChange',
+    reValidateMode: 'onChange',
+    criteriaMode: 'all',
+    shouldFocusError: true,
+  });
+  watch();
 
-	useEffect(() => {
-  		if (user) navigate('/profile', { replace: true })
-	}, [user, navigate])
+  useEffect(() => {
+    if (user) navigate('/profile', { replace: true });
+    setServerErr(null);
+  }, [user, navigate]);
 
-	const next = new URLSearchParams(search).get('next') || '/profile'
+  const next = new URLSearchParams(search).get('next') || '/profile';
 
-	async function onSubmit(v: Form) {
-		const { data } = await http.post<LoginRes>('/api/auth/login', v as LoginReq);
-		setTokens(data.accessToken, data.refreshToken);
-		setUser(data.user);
-		try {
-    		const { data } = await http.post<LoginRes>('/api/auth/login', v as LoginReq);
-    		setTokens(data.accessToken, data.refreshToken);
-    		setUser(data.user);
-    		navigate(next, { replace: true });
-  		} catch (e) {
-    
-		}
-	}
+  async function onSubmit(v: Form) {
+    try {
+      const { data } = await http.post<{ accessToken: string }>(endpoints.login, v);
+      const me = await finalizeAuth(data.accessToken);
+      setServerErr(null);
+      navigate(`/u/${me.username}`, { replace: true });
+    } catch (e: any) {
+      const msg =
+        e?.response?.data?.message ||
+        e?.response?.data?.error ||
+        e?.message ||
+        'Неверная почта или пароль';
+      setServerErr(msg);
+      setError('password', { type: 'server', message: msg });
+    }
+  }
 
-	function startReset() {
-		const email = getValues('email') || '';
-		const qs = new URLSearchParams({ email }).toString();
-		navigate('/auth/reset?' + qs);
-	}
+  function startReset() {
+    const email = getValues('email') || '';
+    const qs = new URLSearchParams({ email }).toString();
+    navigate('/auth/reset?' + qs);
+  }
 
+  // при вводе очищаем глобальную ошибку
+  useEffect(() => {
+    if (serverErr) setServerErr(null);
+  }, [watch('email'), watch('password')]); // eslint-disable-line react-hooks/exhaustive-deps
 
-	return (
-		<div className="wrap">
-			<Card>
-				<h1 className="text-2xl mb-4">Вход</h1>
-				<form onSubmit={handleSubmit(onSubmit)} className="grid gap-3">
-					<label className="label">Почта</label>
-					<Input 
-						autoComplete="email" 
-						{...register('email')} 
-						error={!!errors.email}
-					/>
-					<FormHint error={!!errors.email}>{errors.email?.message}</FormHint>
+  return (
+    <div className="wrap">
+      <Card>
+        <h1 className="text-2xl mb-4">Вход</h1>
 
-					<label className="label">Пароль</label>
-					<PasswordField 
-						autoComplete="current-password" 
-						{...register('password')} 
-						error={!!errors.password}
-					/>
-					<FormHint error={!!errors.password}>{errors.password?.message}</FormHint>
+        {serverErr && (
+          <div className="error" role="alert" style={{ display: 'block' }}>
+            {serverErr}
+          </div>
+        )}
 
-					<div className="flex gap-2 mt-2">
-						<Button disabled={isSubmitting}>Войти</Button>
-						<Button type="button" variant="ghost" onClick={startReset}>Забыли пароль?</Button>
-						<Link to="/auth/register" className="btn ghost">Регистрация</Link>
-					</div>
-				</form>
-			</Card>
-			<Footer />
-		</div>
-	);
+        <form onSubmit={handleSubmit(onSubmit)} className="grid gap-3">
+          <label className="label">Почта</label>
+          <Input
+            autoComplete="email"
+            {...register('email')}
+            error={!!errors.email}
+            className={errors.email ? 'is-err' : watch('email') ? 'is-ok' : ''}
+          />
+          <FormHint error={!!errors.email}>{errors.email?.message}</FormHint>
+
+          <label className="label">Пароль</label>
+          <PasswordField
+            autoComplete="current-password"
+            {...register('password')}
+            error={!!errors.password}
+            className={errors.password ? 'is-err' : watch('password') ? 'is-ok' : ''}
+          />
+          <FormHint error={!!errors.password}>{errors.password?.message}</FormHint>
+
+          <div className="flex gap-2 mt-2">
+            <Button type="submit" disabled={!isValid || isSubmitting}>
+              Войти
+            </Button>
+            <Button type="button" variant="ghost" onClick={startReset}>
+              Забыли пароль?
+            </Button>
+            <Link to="/auth/register" className="btn ghost">
+              Регистрация
+            </Link>
+          </div>
+        </form>
+      </Card>
+      <Footer />
+    </div>
+  );
 }
