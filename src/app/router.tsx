@@ -12,6 +12,8 @@ import RulesPage from '@/pages/RulesPage';
 import ShopPage from '@/pages/ShopPage';
 import WikiPage from '@/pages/WikiPage';
 import SettingsProfilePage from '@/pages/SettingsProfilePage';
+import ChangeEmailPage from '@/pages/ChangeEmailPage';
+import ChangePasswordPage from '@/pages/ChangePasswordPage';
 
 export const router = createBrowserRouter([
   {
@@ -31,6 +33,10 @@ export const router = createBrowserRouter([
       { path: '/shop', element: <ShopPage/>},
       { path: '/wiki', element: <WikiPage/>},
       { path: '/settings/profile', element: <SettingsProfilePage/>},
+      { path: '/settings/email', element: <ChangeEmailPage/> },
+      { path: '/settings/password', element: <ChangePasswordPage/> },
+      { path: '/verify/email',    element: <CodeVerifyPage mode="email-verify" /> },
+      { path: '/auth/reset/code', element: <CodeVerifyPage mode="reset" /> },
       { path: '*', element: <Navigate to="/" replace /> },
     ],
   },

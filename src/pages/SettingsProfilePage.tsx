@@ -12,7 +12,7 @@ type Profile = {
   bio: string;
   location: string;
   website: string;
-  social: string; // JSON string
+  social: string;
   avatarUrl: string;
 };
 
@@ -31,44 +31,29 @@ type Session = {
 export default function SettingsProfilePage() {
   const nav = useNavigate();
 
-  // base
   const [me, setMe] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
 
-  // profile form
   const [displayName, setDisplayName] = useState('');
   const [bio, setBio] = useState('');
   const [location, setLocation] = useState('');
   const [website, setWebsite] = useState('');
-  const [social, setSocial] = useState(''); // raw JSON
+  const [social, setSocial] = useState('');
 
-  // avatar
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarUrlInput, setAvatarUrlInput] = useState('');
 
-  // account
   const [newUsername, setNewUsername] = useState('');
   const [usernameOk, setUsernameOk] = useState<boolean | null>(null);
 
-  const [newEmail, setNewEmail] = useState('');
-  const [emailOk, setEmailOk] = useState<boolean | null>(null);
-  const [emailCode, setEmailCode] = useState('');
-
-  const [oldPwd, setOldPwd] = useState('');
-  const [newPwd, setNewPwd] = useState('');
-  const [newPwd2, setNewPwd2] = useState('');
-
-  // phone
   const [phone, setPhone] = useState('');
   const [phoneCode, setPhoneCode] = useState('');
 
-  // sessions
   const [sessions, setSessions] = useState<Session[]>([]);
 
-  // bootstrap
   useEffect(() => {
     let alive = true;
     setLoading(true);
@@ -76,7 +61,7 @@ export default function SettingsProfilePage() {
     setNotice(null);
     (async () => {
       try {
-        const meResp = await http.get<Profile>(endpoints.profileMe); // GET /api/v1/profile
+        const meResp = await http.get<Profile>(endpoints.profileMe);
         if (!alive) return;
         const p = meResp.data;
         setMe(p);
@@ -88,7 +73,7 @@ export default function SettingsProfilePage() {
         setNewUsername(p.username ?? '');
 
         try {
-          const sessResp = await http.get<{ sessions: Session[] }>(endpoints.accountSessions); // GET /api/v1/account/sessions
+          const sessResp = await http.get<{ sessions: Session[] }>(endpoints.accountSessions);
           if (alive) setSessions(sessResp.data.sessions || []);
         } catch { /* optional */ }
       } catch (e: any) {
@@ -100,7 +85,6 @@ export default function SettingsProfilePage() {
     return () => { alive = false; };
   }, []);
 
-  // live username check
   useEffect(() => {
     const u = newUsername?.trim();
     if (!u || !me) { setUsernameOk(null); return; }
@@ -108,28 +92,16 @@ export default function SettingsProfilePage() {
     const ctl = new AbortController();
     const run = async () => {
       try {
-        const { data } = await http.get<{ ok: boolean }>(`/api/validate/username?value=${encodeURIComponent(u)}`, { signal: ctl.signal });
+        const { data } = await http.get<{ ok: boolean }>(
+          `/api/validate/username?value=${encodeURIComponent(u)}`,
+          { signal: ctl.signal },
+        );
         setUsernameOk(!!data.ok);
       } catch { setUsernameOk(null); }
     };
     const t = setTimeout(run, 300);
     return () => { ctl.abort(); clearTimeout(t); };
   }, [newUsername, me]);
-
-  // live email check
-  useEffect(() => {
-    const m = newEmail?.trim();
-    if (!m) { setEmailOk(null); return; }
-    const ctl = new AbortController();
-    const run = async () => {
-      try {
-        const { data } = await http.get<{ ok: boolean }>(`/api/validate/email?value=${encodeURIComponent(m)}`, { signal: ctl.signal });
-        setEmailOk(!!data.ok);
-      } catch { setEmailOk(null); }
-    };
-    const t = setTimeout(run, 300);
-    return () => { ctl.abort(); clearTimeout(t); };
-  }, [newEmail]);
 
   const since = useMemo(() => {
     if (!sessions.length) return null;
@@ -138,7 +110,6 @@ export default function SettingsProfilePage() {
     try { return new Date(created).toLocaleDateString(); } catch { return null; }
   }, [sessions]);
 
-  // actions
   async function saveProfile() {
     setBusy('profile'); setNotice(null); setErr(null);
     try {
@@ -149,7 +120,7 @@ export default function SettingsProfilePage() {
       return;
     }
     try {
-      await http.put(endpoints.profileMe, { displayName, bio, location, website, social: social || '{}' }); // PUT /api/v1/profile
+      await http.put(endpoints.profileMe, { displayName, bio, location, website, social: social || '{}' });
       setNotice('Профиль сохранён');
       const meResp = await http.get<Profile>(endpoints.profileMe);
       setMe(meResp.data);
@@ -166,8 +137,7 @@ export default function SettingsProfilePage() {
     try {
       const fd = new FormData();
       fd.append('file', avatarFile);
-      // ВАЖНО: не указывать Content-Type вручную, чтобы браузер проставил boundary.
-      const { data } = await http.post<{ avatarUrl: string }>(endpoints.profileAvatar, fd); // POST /api/v1/profile/avatar
+      const { data } = await http.post<{ avatarUrl: string }>(endpoints.profileAvatar, fd);
       setMe((m) => m ? { ...m, avatarUrl: data.avatarUrl } : m);
       setAvatarFile(null);
       setNotice('Аватар обновлён');
@@ -183,7 +153,7 @@ export default function SettingsProfilePage() {
     if (!url) return;
     setBusy('avatar-url'); setNotice(null); setErr(null);
     try {
-      const { data } = await http.post<{ avatarUrl: string }>(`${endpoints.profileAvatar}/url`, { url }); // POST /api/v1/profile/avatar/url
+      const { data } = await http.post<{ avatarUrl: string }>(`${endpoints.profileAvatar}/url`, { url });
       setMe((m) => m ? { ...m, avatarUrl: data.avatarUrl } : m);
       setAvatarUrlInput('');
       setNotice('Аватар обновлён');
@@ -198,7 +168,7 @@ export default function SettingsProfilePage() {
     if (!newUsername?.trim() || usernameOk === false) return;
     setBusy('username'); setNotice(null); setErr(null);
     try {
-      await http.post(endpoints.accountUsernameChange, { username: newUsername.trim() }); // /api/v1/account/username/change
+      await http.post(endpoints.accountUsernameChange, { username: newUsername.trim() });
       setNotice('Логин обновлён');
       nav(`/u/${encodeURIComponent(newUsername.trim())}`, { replace: true });
     } catch (e: any) {
@@ -208,53 +178,11 @@ export default function SettingsProfilePage() {
     }
   }
 
-  async function changeEmail() {
-    if (!newEmail?.trim() || emailOk === false) return;
-    setBusy('email'); setNotice(null); setErr(null);
-    try {
-      await http.post(endpoints.accountEmailChange, { email: newEmail.trim() }); // begin /api/v1/account/email/change
-      setNotice('Код отправлен на почту. Введите код ниже и подтвердите.');
-    } catch (e: any) {
-      setErr(e?.response?.data || e?.message || 'Ошибка запроса смены email');
-    } finally {
-      setBusy(null);
-    }
-  }
-
-  async function confirmEmail() {
-    if (!emailCode?.trim()) return;
-    setBusy('email-confirm'); setNotice(null); setErr(null);
-    try {
-      await http.post(endpoints.accountEmailConfirm, { code: emailCode.trim() }); // /api/v1/account/email/confirm
-      setNotice('Email подтверждён');
-    } catch (e: any) {
-      setErr(e?.response?.data || e?.message || 'Неверный или просроченный код');
-    } finally {
-      setBusy(null);
-    }
-  }
-
-  async function changePassword() {
-    if (!oldPwd || !newPwd || newPwd !== newPwd2) {
-      setErr('Проверьте пароль и подтверждение'); return;
-    }
-    setBusy('password'); setNotice(null); setErr(null);
-    try {
-      await http.post(endpoints.accountPasswordChange, { oldPassword: oldPwd, newPassword: newPwd }); // /api/v1/account/password/change
-      setNotice('Пароль обновлён');
-      setOldPwd(''); setNewPwd(''); setNewPwd2('');
-    } catch (e: any) {
-      setErr(e?.response?.data || e?.message || 'Ошибка смены пароля');
-    } finally {
-      setBusy(null);
-    }
-  }
-
   async function bindPhone() {
     if (!phone?.trim()) return;
     setBusy('phone'); setNotice(null); setErr(null);
     try {
-      await http.post(endpoints.accountPhoneBind, { phone: phone.trim() }); // /api/v1/account/phone/bind
+      await http.post(endpoints.accountPhoneBind, { phone: phone.trim() });
       setNotice('Код отправлен. Введите код подтверждения ниже.');
     } catch (e: any) {
       setErr(e?.response?.data || e?.message || 'Ошибка привязки телефона');
@@ -267,7 +195,7 @@ export default function SettingsProfilePage() {
     if (!phoneCode?.trim()) return;
     setBusy('phone-verify'); setNotice(null); setErr(null);
     try {
-      await http.post(endpoints.accountPhoneVerify, { code: phoneCode.trim() }); // /api/v1/account/phone/verify
+      await http.post(endpoints.accountPhoneVerify, { code: phoneCode.trim() });
       setNotice('Телефон подтверждён');
       setPhoneCode('');
     } catch (e: any) {
@@ -287,7 +215,7 @@ export default function SettingsProfilePage() {
   async function revokeSession(tokenId: string) {
     setBusy(`sess:${tokenId}`); setErr(null);
     try {
-      await http.delete(`${endpoints.accountSessions}/${encodeURIComponent(tokenId)}`); // DELETE /api/v1/account/sessions/{tokenId}
+      await http.delete(`${endpoints.accountSessions}/${encodeURIComponent(tokenId)}`);
       await refreshSessions();
     } catch (e: any) {
       setErr(e?.response?.data || e?.message || 'Ошибка завершения сессии');
@@ -299,7 +227,7 @@ export default function SettingsProfilePage() {
   async function exportAccount() {
     setBusy('export'); setErr(null);
     try {
-      const { data } = await http.get<any>(endpoints.accountExport); // /api/v1/account/export
+      const { data } = await http.get<any>(endpoints.accountExport);
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -372,13 +300,11 @@ export default function SettingsProfilePage() {
                 <div className="rounded-xl border border-slate-800 bg-slate-900 p-4 text-sm text-slate-400">Нет активных сессий</div>
               ) : (
                 sessions.map((s) => {
-                  const status = s.revokedAt
-                    ? 'revoked'
-                    : s.replacedBy
-                      ? 'replaced'
-                      : Date.parse(s.expiresAt) < Date.now()
-                        ? 'expired'
-                        : 'active';
+                  const status =
+                    s.revokedAt ? 'revoked'
+                    : s.replacedBy ? 'replaced'
+                    : Date.parse(s.expiresAt) < Date.now() ? 'expired'
+                    : 'active';
                   return (
                     <div key={s.tokenId} className="rounded-xl border border-slate-800 bg-slate-900 p-3 text-xs">
                       <div className="flex items-center justify-between">
@@ -490,55 +416,25 @@ export default function SettingsProfilePage() {
               {usernameOk === true && newUsername !== me?.username && <p className="mt-1 text-xs text-green-400">Доступен</p>}
             </InputRow>
 
-            <InputRow label="Email">
-              <div className="flex w-full items-center gap-2">
-                <input type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} className={inp()} />
-                <button
-                  disabled={busy === 'email' || !newEmail?.trim() || emailOk === false}
-                  onClick={changeEmail}
-                  className="whitespace-nowrap rounded-xl border border-slate-700 px-3 py-1.5 text-sm hover:border-slate-500 disabled:opacity-50"
-                >
-                  Отправить код
-                </button>
-              </div>
-              {emailOk === false && <p className="mt-1 text-xs text-red-400">Email уже используется или некорректен</p>}
-
-              <div className="mt-3 flex items-center gap-2">
-                <input
-                  value={emailCode}
-                  onChange={(e) => setEmailCode(e.target.value)}
-                  placeholder="Код из письма"
-                  className={inp()}
-                />
-                <button
-                  disabled={busy === 'email-confirm' || !emailCode?.trim()}
-                  onClick={confirmEmail}
-                  className="whitespace-nowrap rounded-xl border border-slate-700 px-3 py-1.5 text-sm hover:border-slate-500 disabled:opacity-50"
-                >
-                  Подтвердить
-                </button>
-              </div>
-            </InputRow>
-
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-              <InputRow label="Текущий пароль">
-                <input type="password" value={oldPwd} onChange={(e) => setOldPwd(e.target.value)} className={inp()} />
-              </InputRow>
-              <InputRow label="Новый пароль">
-                <input type="password" value={newPwd} onChange={(e) => setNewPwd(e.target.value)} className={inp()} />
-              </InputRow>
-              <InputRow label="Повторите пароль">
-                <input type="password" value={newPwd2} onChange={(e) => setNewPwd2(e.target.value)} className={inp()} />
-              </InputRow>
-            </div>
-
-            <div className="mt-2 flex justify-end">
+            <div className="mt-4 flex flex-col gap-2 sm:flex-row">
               <button
-                disabled={busy === 'password'}
-                onClick={changePassword}
-                className="rounded-xl border border-slate-700 px-3 py-1.5 text-sm hover:border-slate-500 disabled:opacity-50"
+                type="button"
+                onClick={() => nav('/settings/email')}
+                className="rounded-xl border border-slate-700 px-3 py-1.5 text-sm hover:border-slate-500"
               >
-                Сменить пароль
+                Изменить email
+              </button>
+
+              <button
+                type="button"
+                onClick={async () => {
+                  const { data } = await http.post(endpoints.resetBegin);
+                  const next = '/profile';
+                  nav(`/auth/reset/code?ticket=${encodeURIComponent(data.ticket)}&email=${encodeURIComponent(data.email)}&next=${encodeURIComponent(next)}`);
+                }}
+                className="rounded-xl border border-slate-700 px-3 py-1.5 text-sm hover:border-slate-500"
+              >
+                Изменить пароль
               </button>
             </div>
           </Card>
@@ -547,7 +443,7 @@ export default function SettingsProfilePage() {
             <h2 className="mb-4 text-sm font-semibold text-sky-300">Телефон</h2>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <InputRow label="Номер">
-                <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+49…" className={inp()} />
+                <input value={phone} onChange={(e) => setPhone(e.target.value)} className={inp()} />
               </InputRow>
               <div className="flex items-end">
                 <button
@@ -590,8 +486,6 @@ export default function SettingsProfilePage() {
     </div>
   );
 }
-
-/* ===== UI helpers ===== */
 
 function Card(props: { children: React.ReactNode; className?: string }) {
   return (

@@ -202,7 +202,7 @@ export default function RegisterPage() {
           return;
         }
         if (/invalid_username/i.test(text)) {
-          setError('username', { type: 'server', message: 'Ник: 3–16, латиница/цифры/_' });
+          setError('username', { type: 'server', message: 'Ник: 3–16, латиницnpmа/цифры/_' });
           setServerErr('Некорректный ник');
           return;
         }

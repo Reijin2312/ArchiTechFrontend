@@ -31,7 +31,8 @@ export default function NewPasswordPage() {
 
 	async function onSubmit(v: Form){
 		await http.post<Ok>(endpoints.resetFinish, { resetToken: token, newPassword: v.pw1 } as ResetFinishReq);
-		nav('/auth/reset/done', { replace:true });
+		const next = sp.get('next') || '/profile';
+		nav(`/auth/reset/done?next=${encodeURIComponent(next)}`, { replace:true });
 	}
 
 

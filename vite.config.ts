@@ -10,6 +10,7 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': { target: 'http://localhost:51789', changeOrigin: true },
+      "/media": { target: "http://localhost:51789", changeOrigin: true },
       '^/ws/.*': { target: 'http://localhost:51789', ws: true, changeOrigin: true },
     },
   },

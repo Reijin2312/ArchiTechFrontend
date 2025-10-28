@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
-/* ---------- TOC ---------- */
 type TocItem = { id: string; title: string; n: number };
 const SECTIONS: TocItem[] = [
   { id: 'intro', title: 'О сервере и тематика', n: 1 },
@@ -14,20 +13,45 @@ const SECTIONS: TocItem[] = [
   { id: 'links', title: 'Ссылки', n: 9 },
 ];
 
-type Mod = { name: string; cat: 'Tech' | 'Magic' | 'QoL' | 'World' | 'Core'; brief: string; wiki?: string };
+type Mod = { name: string; cat: 'Tech' | 'Magic' | 'Decoration' | 'QoL' | 'World' | 'Optimization' | 'Core'; brief: string; wiki?: string };
 const MODS: Mod[] = [
-  { name: 'Create', cat: 'Tech', brief: 'Кинетика, механизмы, транспорт' },
-  { name: 'Applied Energistics 2', cat: 'Tech', brief: 'ME-сеть, автокрафт, диски' },
-  { name: 'Botania', cat: 'Magic', brief: 'Мана, цветочная магия, инструменты' },
-  { name: 'Occultism', cat: 'Magic', brief: 'Призывы, духи, автоматика' },
-  { name: 'Mekanism', cat: 'Tech', brief: 'Руды, генерация, индастриал' },
-  { name: 'Astral Sorcery', cat: 'Magic', brief: 'Созвездия, алтари, бафы' },
-  { name: 'Patchouli', cat: 'QoL', brief: 'Руководства внутри игры' },
-  { name: 'JEI', cat: 'QoL', brief: 'Просмотр рецептов и использований' },
-  { name: 'Waystones', cat: 'QoL', brief: 'Телепорты между точками' },
-  { name: 'FTB Chunks', cat: 'QoL', brief: 'Клеймы, защита территорий' },
-  { name: 'JourneyMap', cat: 'QoL', brief: 'Карта, маркеры' },
-  { name: 'Create: Crafts & Additions', cat: 'Tech', brief: 'Электрика для Create' },
+  { name: '3D Skin Layers', cat: 'QoL', brief: 'Объёмные скины' },
+  { name: 'All The Arcanist Gear', cat: 'Magic', brief: 'Магическая броня из новых руд' },
+  { name: 'All The Modium', cat: 'Magic', brief: 'Новые магические руды, броня и измерение' },
+  { name: 'Ambient Sounds', cat: 'QoL', brief: 'Новые эмбиент звуки' },
+  { name: 'ArchiSound', cat: 'QoL', brief: 'Кастомная музыка и радио' },
+  { name: 'ArmorPoser', cat: 'QoL', brief: 'Тонкая настройка стоек для брони' },
+  { name: 'Ars Additions', cat: 'Magic', brief: 'Мелкие декорации, новые глифы и структуры'},
+  { name: 'Ars Fauna', cat: 'Magic', brief: 'Новые разновидности магических животных' },
+  { name: 'Ars Nouveau', cat: 'Magic', brief: 'Ядро магии на сервере' },
+  { name: 'Ars Nouveaus Flavors & Delight', cat: 'Magic', brief: 'Магическая еда' },
+  { name: 'Ars Ocultas', cat: 'Magic', brief: 'Совместимость Ars Nouveau и Occultism' },
+  { name: 'Ars Creo', cat: 'Magic', brief: 'Совместимость Create и Ars Nouveau' },
+  { name: 'Ars Elemental', cat: 'Magic', brief: 'Новые элементальные школы' },
+  { name: 'Ars Technica', cat: 'Tech', brief: 'Совместимость Create и Ars Nouveau' },
+  { name: 'Asteroids!', cat: 'World', brief: 'Астероиды с ценными ресурсами' },
+  { name: 'Better End', cat: 'World', brief: 'Глобальное изменение энда' },
+  { name: 'Better Nether', cat: 'World', brief: 'Глобальное изменение незера' },
+  { name: 'Chat Heads', cat: 'QoL', brief: 'Головы игроков рядом с сообщениями' },
+  { name: 'Chipped', cat: 'Decoration', brief: 'Огромное количество вариаций ванильных блоков' },
+  { name: 'Clumps', cat: 'Optimization', brief: 'Оптимизация частиц опыта' },
+  { name: 'Create', cat: 'Tech', brief: 'Ядро технологий на сервере' },
+  { name: 'Create Crafts & Additions', cat: 'Tech', brief: 'Мост между кинетикой и электричеством' },
+  { name: 'Create Encased', cat: 'Tech', brief: 'Кинетика, механизмы, транспорт' },
+  { name: 'Create Jetpack', cat: 'Tech', brief: 'Кинетика, механизмы, транспорт' },
+  { name: 'Create Ore Excavation', cat: 'Tech', brief: 'Кинетика, механизмы, транспорт' },
+  { name: 'Сreate Slice & Dice', cat: 'Tech', brief: 'Кинетика, механизмы, транспорт' },
+  { name: 'Create: Bells & Whistles', cat: 'Tech', brief: 'Кинетика, механизмы, транспорт' },
+  { name: 'Create: Central Kitchen', cat: 'Tech', brief: 'Кинетика, механизмы, транспорт' },
+  { name: 'Create: Connected', cat: 'Tech', brief: 'Кинетика, механизмы, транспорт' },
+  { name: 'Create: Copycats+', cat: 'Tech', brief: 'ME-сеть, автокрафт, диски' },
+  { name: 'Create: Design n Decor', cat: 'Tech', brief: 'ME-сеть, автокрафт, диски' },
+  { name: 'Create: Dragons Plus', cat: 'Tech', brief: 'ME-сеть, автокрафт, диски' },
+  { name: 'Create: Dreams & Desires', cat: 'Tech', brief: 'ME-сеть, автокрафт, диски' },
+  { name: 'Create: Enchantment Industry', cat: 'Tech', brief: 'ME-сеть, автокрафт, диски' },
+  { name: 'Create: Food', cat: 'Tech', brief: 'ME-сеть, автокрафт, диски' },
+  { name: 'Create: Framed', cat: 'Tech', brief: 'ME-сеть, автокрафт, диски' },
+  { name: 'Create: The Factory Must Grow', cat: 'Tech', brief: 'ME-сеть, автокрафт, диски' }
 ];
 
 type Cmd = { cmd: string; desc: string; scope: 'server' | 'bot' };
@@ -43,30 +67,31 @@ const CMDS: Cmd[] = [
   { cmd: 'Бот: пригласить друга', desc: 'Реферальная ссылка и скидки', scope: 'bot' },
 ];
 
-/* ---------- PAGE ---------- */
 export default function WikiPage() {
   return (
     <div className="mx-auto w-full max-w-7xl grid grid-cols-12 gap-6 px-4 py-6 text-slate-100">
-      {/* Left */}
       <aside className="col-span-12 md:col-span-3">
         <LeftNav />
       </aside>
 
-      {/* Main */}
       <main className="col-span-12 md:col-span-6">
         <h1 className="mb-4 text-3xl font-bold">Вики сервера</h1>
         <Callout />
 
         <Section id="intro" title="О сервере и тематика" n={1}>
           <p className="text-slate-300">
-            Один мир. Тематика — <span className="text-sky-300">техномагия</span>: сочетание технологических модов и магических систем.
-            Баланс без донат-преимуществ. Упор на кооперацию, крафт и автоматизацию.
+            Сервер состоит из <span className="text-sky-400">одного мира</span>. Тематикой является <span className="text-sky-400">техномагия с особым упором на строительство</span>. 
+            Наша цель — создать комфортное и стабильное место для общения и взаимодействия. 
+          </p>
+          <p className="text-slate-300">
+            Спавн расположен на острове, окружённым со всех сторон океаном. Атмосферно, не находите?
           </p>
         </Section>
 
         <Section id="start" title="Как начать играть" n={2}>
           <ol className="list-decimal pl-6 space-y-2 text-slate-300">
-            <li>Купите проходку в Telegram-боте, привяжите ник.</li>
+            <li>Купите проходку в Telegram-боте.</li>
+            <li>Скачайте лаунчер отсюда.</li>
             <li>Зайдите на сервер. Заберите старт-книги (Patchouli/инструкции).</li>
             <li>Отметьте базу: <code className="px-1 rounded bg-slate-800 text-xs">/sethome</code>, заклеймите чанки в FTB.</li>
             <li>Начните с добычи руд и Create-механики. Далее — ME/магия.</li>

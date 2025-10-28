@@ -4,7 +4,7 @@ import { http } from '@/shared/api/http';
 import { endpoints } from '@/shared/api/endpoints';
 import { isSelf } from '@/shared/auth/isSelf';
 
-type PublicUser = { id: string; username: string; about?: string; avatar?: string };
+type PublicUser = { id: string; username: string; about?: string; avatarUrl?: string };
 type Me = PublicUser & { email?: string };
 type Stats = { servers?: number; sessions?: number; achievements?: number; registeredAt?: string; online?: boolean };
 
@@ -86,7 +86,7 @@ export default function UserProfilePage() {
 
             {/* Аватар внутри карточки */}
             <div className="mt-2 flex justify-center">
-              <Avatar url={(user as any)?.avatar} loading={loading} />
+              <Avatar url={(user as any)?.avatarUrl} loading={loading} />
             </div>
 
             <div className="pt-4 text-center">
