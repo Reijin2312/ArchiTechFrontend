@@ -75,10 +75,9 @@ export default function LoginPage() {
     navigate('/auth/reset?' + qs);
   }
 
-  // при вводе очищаем глобальную ошибку
   useEffect(() => {
     if (serverErr) setServerErr(null);
-  }, [watch('email'), watch('password')]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [watch('email'), watch('password')]);
 
   return (
     <div className="wrap">

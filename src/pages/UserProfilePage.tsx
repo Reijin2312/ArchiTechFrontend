@@ -4,7 +4,7 @@ import { http } from '@/shared/api/http';
 import { endpoints } from '@/shared/api/endpoints';
 import { isSelf } from '@/shared/auth/isSelf';
 
-type PublicUser = { id: string; username: string; about?: string; avatarUrl?: string };
+type PublicUser = { id: string; username: string; bio?: string; avatarUrl?: string };
 type Me = PublicUser & { email?: string };
 type Stats = { servers?: number; sessions?: number; achievements?: number; registeredAt?: string; online?: boolean };
 
@@ -113,7 +113,7 @@ export default function UserProfilePage() {
               </div>
 
               <p className="mx-auto max-w-2xl whitespace-pre-wrap text-sm text-slate-200">
-                {loading ? '…' : user?.about || 'Описание не заполнено'}
+                {loading ? '…' : user?.bio || 'Описание не заполнено'}
               </p>
 
               <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
