@@ -17,6 +17,7 @@
     "react-dom": "^19.1.1",
     "react-hook-form": "^7.65.0",
     "react-router-dom": "^7.9.4",
+    "skinview3d": "^3.4.1",
     "sonner": "^2.0.7",
     "zod": "^4.1.12",
     "zustand": "^5.0.8"

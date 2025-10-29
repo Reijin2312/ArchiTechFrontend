@@ -1,4 +1,3 @@
-// src/pages/SettingsProfilePage.tsx
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { http } from '@/shared/api/http';
@@ -14,6 +13,7 @@ type Profile = {
   website: string;
   social: string;
   avatarUrl: string;
+  skinUrl: string;
   email?: string;
 };
 
@@ -58,6 +58,10 @@ export default function SettingsProfilePage() {
   // аватар
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarUrlInput, setAvatarUrlInput] = useState('');
+
+  //скин
+  const [skinFile, setSkinFile] = useState<File | null>(null);
+  const [skinUrlInput, setSkinUrlInput] = useState('');
 
   // учётка
   const [email, setEmail] = useState('');
@@ -271,6 +275,39 @@ export default function SettingsProfilePage() {
     }
   }
 
+  async function uploadSkinFile() {
+    if (!skinFile) return;
+    setBusy('skin-file'); setNotice(null); setErr(null);
+    try {
+      const fd = new FormData();
+      fd.append('file', skinFile);
+      const { data } = await http.post<{ skinUrl: string }>(endpoints.profileSkin, fd, { withCredentials: true });
+      setMe((m) => (m ? { ...m, skinUrl: data.skinUrl } : m));
+      setSkinFile(null);
+      setNotice('Скин обновлён');
+    } catch (e: any) {
+      setErr(e?.response?.data || e?.message || 'Ошибка загрузки скина');
+    } finally { setBusy(null); }
+  }
+
+  async function uploadSkinUrl() {
+    const url = skinUrlInput.trim();
+    if (!url) return;
+    setBusy('skin-url'); setNotice(null); setErr(null);
+    try {
+      const { data } = await http.post<{ skinUrl: string }>(
+        endpoints.profileSkinUrl,
+        { url },
+        { withCredentials: true, headers: { 'Content-Type': 'application/json' } }
+      );
+      setMe((m) => (m ? { ...m, skinUrl: data.skinUrl } : m));
+      setSkinUrlInput('');
+      setNotice('Скин обновлён');
+    } catch (e: any) {
+      setErr(e?.response?.data || e?.message || 'Ошибка загрузки по URL');
+    } finally { setBusy(null); }
+  }
+
   async function changeUsername() {
     const u = newUsername.trim().toLowerCase();
     if (!u || usernameOk !== true) return;
@@ -439,6 +476,54 @@ export default function SettingsProfilePage() {
                 </button>
               </div>
               <p className="mt-1 text-xs text-slate-500">До 2 МБ. PNG/JPG, обрежется до квадрата 512×512.</p>
+            </div>
+          </Card>
+
+          <Card className="mt-6">
+            <h2 className="mb-3 text-sm font-semibold text-sky-300">Скин</h2>
+            <div className="flex items-center gap-4">
+              <div className="h-28 w-28 overflow-hidden rounded-2xl border border-slate-800 bg-slate-900">
+                {loading ? (
+                  <div className="h-full w-full animate-pulse bg-slate-800" />
+                ) : (
+                  <img src={me?.skinUrl} alt="skin" className="h-full w-full object-cover" />
+                )}
+              </div>
+              <div className="flex-1 space-y-2">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setSkinFile(e.target.files?.[0] || null)}
+                  className="block w-full text-sm file:mr-3 file:rounded-lg file:border file:border-slate-700 file:bg-slate-900 file:px2 file:py-1.5 file:text-sm hover:file:border-slate-500"
+                />
+                <button
+                  disabled={!skinFile || busy === 'skin-file'}
+                  onClick={uploadSkinFile}
+                  className="rounded-xl border border-slate-700 px-3 py-1.5 text-sm hover:border-slate-500 disabled:opacity-50"
+                >
+                  Загрузить файл
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-4">
+              <label className="mb-1 block text-xs text-slate-400">URL картинки</label>
+              <div className="flex gap-2">
+                <input
+                  value={skinUrlInput}
+                  onChange={(e) => setSkinUrlInput(e.target.value)}
+                  placeholder="https://…"
+                  className="w-full rounded-xl border border-slate-800 bg-slate-900 px-3 py-2 text-sm outline-none focus:border-slate-600"
+                />
+                <button
+                  disabled={!skinUrlInput || busy === 'skin-url'}
+                  onClick={uploadSkinUrl}
+                  className="rounded-xl border border-slate-700 px-3 py-2 text-sm hover:border-slate-500 disabled:opacity-50"
+                >
+                  Применить
+                </button>
+              </div>
+              <p className="mt-1 text-xs text-slate-500">До 2 МБ. PNG/JPG. Без обрезки.</p>
             </div>
           </Card>
 

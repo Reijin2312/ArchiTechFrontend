@@ -1,10 +1,12 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
+import * as skinview3d from 'skinview3d';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { useParams } from 'react-router-dom';
 import { http } from '@/shared/api/http';
 import { endpoints } from '@/shared/api/endpoints';
 import { isSelf } from '@/shared/auth/isSelf';
 
-type PublicUser = { id: string; username: string; bio?: string; avatarUrl?: string };
+type PublicUser = { id: string; username: string; bio?: string; avatarUrl?: string; skinUrl?: string };
 type Me = PublicUser & { email?: string };
 type Stats = { servers?: number; sessions?: number; achievements?: number; registeredAt?: string; online?: boolean };
 
@@ -16,6 +18,7 @@ export default function UserProfilePage() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
+  const [spin, setSpin] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -56,13 +59,17 @@ export default function UserProfilePage() {
               <h2 className="text-sm font-semibold">Скин</h2>
               <div className="text-xs text-slate-400">3D</div>
             </div>
-            <div
-              aria-label="3D-просмотр скина"
-              className="aspect-3/4 w-full rounded-xl border border-slate-800 bg-slate-900"
+            <Skin3D
+              className="aspect-3/4 min-h-[220px] w-full overflow-hidden rounded-xl border border-slate-800 bg-slate-900"
+              skinUrl={(user as any)?.skinUrl || ''}
+              spin={spin}
             />
             <div className="mt-3 flex gap-2">
-              <button className="grow rounded-xl border border-slate-700 px-3 py-1.5 text-sm hover:border-slate-500">
-                Повернуть
+              <button
+                onClick={() => setSpin(v => !v)}
+                className="grow rounded-xl border border-slate-700 px-3 py-1.5 text-sm hover:border-slate-500"
+              >
+                {spin ? 'Стоп' : 'Повернуть'}
               </button>
               <button className="grow rounded-xl border border-slate-700 px-3 py-1.5 text-sm hover:border-slate-500">
                 {self ? 'Заменить' : 'Скачать'}
@@ -166,6 +173,97 @@ export default function UserProfilePage() {
 
     </div>
   );
+}
+
+function Skin3D(props: { className?: string; skinUrl: string; spin?: boolean }) {
+  const { className, skinUrl, spin } = props as any;
+  const wrapRef = useRef<HTMLDivElement | null>(null);
+  const viewerRef = useRef<any>(null);
+  const roRef = useRef<ResizeObserver | null>(null);
+  const rafRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!wrapRef.current) return;
+
+    const viewer = new skinview3d.SkinViewer({
+      canvas: document.createElement('canvas'),
+      width: 300,
+      height: 400,
+    });
+    viewerRef.current = viewer;
+
+    wrapRef.current.innerHTML = '';
+    wrapRef.current.appendChild(viewer.canvas);
+
+    const maybePromise = viewer.loadSkin(skinUrl as any);
+    if (maybePromise && typeof (maybePromise as any).catch === 'function') {
+      (maybePromise as any).catch(() => {});
+    }
+
+    viewer.background = '#0f172a';
+    viewer.camera.fov = 40;
+    viewer.camera.position.set(0, 15, 40);
+    viewer.cameraLight.intensity = 0.9;
+    viewer.globalLight.intensity = 0.3;
+    (viewer as any).camera.updateProjectionMatrix?.();
+
+    const controls = new OrbitControls((viewer as any).camera, viewer.canvas);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.08;
+    controls.enablePan = false;
+    controls.addEventListener('change', () => viewer.render());
+
+    const cv = viewer.canvas as HTMLCanvasElement;
+    cv.style.position = 'absolute';
+    cv.style.inset = '0';
+    cv.style.width = '100%';
+    cv.style.height = '100%';
+    cv.style.display = 'block';
+
+    const fit = () => {
+      const r = wrapRef.current!.getBoundingClientRect();
+      const w = Math.max(120, Math.floor(r.width));
+      const hCss = Math.max(160, Math.floor(r.height || (w * 4 / 3)));
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      viewer.setSize(Math.floor(w * dpr), Math.floor(hCss * dpr));
+      viewer.render();
+    };
+    fit();
+    const ro = new ResizeObserver(fit);
+    ro.observe(wrapRef.current);
+    roRef.current = ro;
+
+    viewer.render();
+
+    return () => {
+      roRef.current?.disconnect();
+      (controls as any)?.dispose?.();
+      viewer.dispose();
+      viewerRef.current = null;
+    };
+  }, [skinUrl]);
+
+  useEffect(() => {
+    const viewer = viewerRef.current;
+    if (!viewer) return;
+
+    if (!spin) {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+      return; 
+    }
+
+    viewerRef.current.autoRotate = !!spin;
+    viewerRef.current.autoRotateSpeed = 1.2;
+    viewerRef.current.render();
+
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    };
+  }, [spin]);
+
+  return <div ref={wrapRef} className={`${className||''} relative`} aria-label="3D-просмотр скина" />;
 }
 
 /* ===== UI helpers ===== */
