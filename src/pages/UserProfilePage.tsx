@@ -18,7 +18,6 @@ export default function UserProfilePage() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
-  const [spin, setSpin] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -62,19 +61,8 @@ export default function UserProfilePage() {
             <Skin3D
               className="aspect-3/4 min-h-[220px] w-full overflow-hidden rounded-xl border border-slate-800 bg-slate-900"
               skinUrl={(user as any)?.skinUrl || ''}
-              spin={spin}
+        
             />
-            <div className="mt-3 flex gap-2">
-              <button
-                onClick={() => setSpin(v => !v)}
-                className="grow rounded-xl border border-slate-700 px-3 py-1.5 text-sm hover:border-slate-500"
-              >
-                {spin ? 'Стоп' : 'Повернуть'}
-              </button>
-              <button className="grow rounded-xl border border-slate-700 px-3 py-1.5 text-sm hover:border-slate-500">
-                {self ? 'Заменить' : 'Скачать'}
-              </button>
-            </div>
           </Card>
         </section>
 
@@ -188,7 +176,7 @@ function Skin3D(props: { className?: string; skinUrl: string; spin?: boolean }) 
     const viewer = new skinview3d.SkinViewer({
       canvas: document.createElement('canvas'),
       width: 300,
-      height: 400,
+      height: 480,
     });
     viewerRef.current = viewer;
 
@@ -202,9 +190,11 @@ function Skin3D(props: { className?: string; skinUrl: string; spin?: boolean }) 
 
     viewer.background = '#0f172a';
     viewer.camera.fov = 40;
-    viewer.camera.position.set(0, 15, 40);
-    viewer.cameraLight.intensity = 0.9;
-    viewer.globalLight.intensity = 0.3;
+    viewer.camera.position.set(0, 15, 90);
+    viewer.cameraLight.intensity = 2;
+    viewer.globalLight.intensity = 2;
+    viewer.animation = new skinview3d.IdleAnimation();
+    viewer.animation.speed = 1;
     (viewer as any).camera.updateProjectionMatrix?.();
 
     const controls = new OrbitControls((viewer as any).camera, viewer.canvas);

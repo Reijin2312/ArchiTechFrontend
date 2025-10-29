@@ -21,7 +21,7 @@ export default function SiteHeader() {
     [
       'relative px-2 py-1.5 text-sm transition-colors',
       active
-        ? // градиентный текст + тонкая полоса снизу
+        ?
           'text-transparent bg-clip-text bg-gradient-to-r from-sky-400 to-blue-500 ' +
           'after:absolute after:left-1.5 after:right-1.5 after:-bottom-[3px] after:h-[2px] after:rounded-full ' +
           'after:bg-gradient-to-r after:from-sky-400 after:to-blue-500 after:content-[""]'
@@ -29,7 +29,7 @@ export default function SiteHeader() {
     ].join(' ');
 
   const isActive = (to: string, end = false) => {
-    const t = to || '/'; // пустая строка = корень
+    const t = to || '/';
     if (end) return pathname === t;
     return pathname === t || pathname.startsWith(t + '/');
   };
@@ -63,14 +63,36 @@ export default function SiteHeader() {
           <a href={TELEGRAM_URL} className="rounded-xl px-3 py-1.5 bg-sky-500 hover:bg-sky-400">Telegram</a>
 
           {user ? (
-            <Link
-              to={`/u/${user.username}`}
-              className={['rounded-xl px-3 py-1.5 border', isProfileActive ? 'border-sky-500 text-sky-300' : 'border-slate-700 hover:border-slate-500'].join(' ')}
-              aria-current={isProfileActive ? 'page' : undefined}
-              title="Профиль"
-            >
-              {user.username}
-            </Link>
+            <>
+              <Link
+                to={`/u/${user.username}`}
+                className="rounded-xl px-3 py-1.5 border border-slate-700 hover:border-slate-500"
+                title="Профиль"
+              >
+                {user.username}
+              </Link>
+
+              {}
+              <Link
+                to={`/u/${user.username}`}
+                className="ml-2 inline-flex h-8 w-8 overflow-hidden rounded-full border border-slate-700"
+                title="Профиль"
+              >
+                {(user as any)?.avatarUrl ? (
+                  <img
+                    src={(user as any).avatarUrl as string}
+                    alt=""
+                    className="h-full w-full object-cover"
+                    loading="lazy"
+                    referrerPolicy="no-referrer"
+                  />
+                ) : (
+                  <span className="w-full text-center text-xs leading-8 text-slate-300">
+                    {(user.username?.[0] || '?').toUpperCase()}
+                  </span>
+                )}
+              </Link>
+            </>
           ) : (
             <Link
               to={`/auth/login?next=${next}`}
