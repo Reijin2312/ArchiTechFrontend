@@ -39,12 +39,13 @@ type RegisterRes =
   | { needVerify: false; accessToken: string; refreshToken: string; user: any };
 
 export default function RegisterPage() {
-  //const { setTokens, setUser } = authStore();
   const user = authStore((s) => s.user);
   const navigate = useNavigate();
   const { search } = useLocation();
-
   const [serverErr, setServerErr] = useState<string | null>(null);
+
+  const params = new URLSearchParams(window.location.search);
+  const redirectUri = params.get("redirect_uri");
 
   const {
     register,
@@ -68,7 +69,6 @@ export default function RegisterPage() {
   const passV  = useWatch({ control, name: 'password' }) ?? '';
   const pass2V = useWatch({ control, name: 'password2' }) ?? '';
 
-  // async live-валидация
   const emailAbort = useRef<AbortController | null>(null);
   const userAbort = useRef<AbortController | null>(null);
 
@@ -77,7 +77,7 @@ export default function RegisterPage() {
       clearErrors('email');
       return;
     }
-    // если локальная ошибка не серверная — сервер не трогаем
+   
     if (errors.email && errors.email.type !== 'server') return;
 
     emailAbort.current?.abort();
@@ -86,12 +86,10 @@ export default function RegisterPage() {
 
     const t = setTimeout(async () => {
       try {
-        // GET /api/validate/email?email=...
         const { data } = await http.get('/api/validate/email', {
           params: { email: emailV },
           signal: ctrl.signal,
         });
-        // ожидаем { format:boolean, mx:boolean, available:boolean }
         if (!data?.format) {
           setError('email', { type: 'server', message: 'Некорректная почта' });
           return;
@@ -107,7 +105,6 @@ export default function RegisterPage() {
         clearErrors('email');
       } catch (e: any) {
         if (e?.name === 'CanceledError' || e?.code === 'ERR_CANCELED') return;
-        // молча игнорируем сетевые ошибки, не ломаем UX
       }
     }, 400);
 
@@ -115,7 +112,6 @@ export default function RegisterPage() {
       clearTimeout(t);
       ctrl.abort();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [emailV]);
 
   useEffect(() => {
@@ -131,12 +127,10 @@ export default function RegisterPage() {
 
     const t = setTimeout(async () => {
       try {
-        // GET /api/validate/username?username=...
         const { data } = await http.get('/api/validate/username', {
           params: { username: userV },
           signal: ctrl.signal,
         });
-        // ожидаем { valid:boolean, available:boolean, reason:string }
         if (!data?.valid) {
           setError('username', { type: 'server', message: data?.reason || 'Недопустимый ник' });
           return;
@@ -155,7 +149,6 @@ export default function RegisterPage() {
       clearTimeout(t);
       ctrl.abort();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userV]);
 
   useEffect(() => {
@@ -183,9 +176,10 @@ export default function RegisterPage() {
 
       if (resp.status === 200 && (resp.data as any)?.accessToken) {
         const d = resp.data as any;
-        //setTokens(d.accessToken, d.refreshToken);
-		authStore.getState().setAuth(d.user, d.accessToken);
-        //setUser(d.user);
+
+        await notifyLauncher({accessToken: d.accessToken,refreshToken: d.refreshToken, user: d.user,});
+      
+		    authStore.getState().setAuth(d.user, d.accessToken);  
         setServerErr(null);
         navigate(next, { replace: true });
         return;
@@ -231,6 +225,18 @@ export default function RegisterPage() {
         'Ошибка регистрации';
       setServerErr(msg);
     }
+  }
+
+  async function notifyLauncher(tokens: { accessToken: string; refreshToken: string; user: any }) {
+    if (!redirectUri) return;
+    try {
+      await fetch(redirectUri, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(tokens),
+        mode: "cors",
+      });
+    } catch {}
   }
 
   useEffect(() => {

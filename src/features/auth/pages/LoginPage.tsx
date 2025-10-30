@@ -22,11 +22,12 @@ const schema = z.object({
 type Form = z.infer<typeof schema>;
 
 export default function LoginPage() {
-  //const { setTokens, setUser } = authStore();
   const user = authStore((s) => s.user);
   const navigate = useNavigate();
   const { search } = useLocation();
   const [serverErr, setServerErr] = useState<string | null>(null);
+  const params = new URLSearchParams(window.location.search);
+  const redirectUri = params.get("redirect_uri");
 
   const {
     register,
@@ -54,8 +55,10 @@ export default function LoginPage() {
 
   async function onSubmit(v: Form) {
     try {
-      const { data } = await http.post<{ accessToken: string }>(endpoints.login, v);
+      const { data } = await http.post<LoginRes>(endpoints.login, v);
+      const { accessToken, refreshToken, user } = data;
       const me = await finalizeAuth(data.accessToken);
+      await notifyLauncher({accessToken, refreshToken, user: user ?? me,});
       setServerErr(null);
       navigate(`/u/${me.username}`, { replace: true });
     } catch (e: any) {
@@ -67,6 +70,18 @@ export default function LoginPage() {
       setServerErr(msg);
       setError('password', { type: 'server', message: msg });
     }
+  }
+
+  async function notifyLauncher(tokens: {accessToken: string; refreshToken: string; user: any}) {
+    if (!redirectUri) return;
+    try {
+      await fetch(redirectUri, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(tokens),
+        mode: "cors",
+      });
+    } catch {}
   }
 
   function startReset() {
