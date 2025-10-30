@@ -1,4 +1,4 @@
-import React from 'react';
+import { Link } from 'react-router-dom'
 
 const DISCORD_URL = 'https://discord.gg/your-invite';
 const TELEGRAM_URL = 'https://t.me/archi_tech_official';
@@ -25,7 +25,7 @@ export default function SiteFooter() {
         <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2">
           <a href="/contacts" className="hover:text-white">Контакты</a>
           <a href="/brand" className="hover:text-white">Дизайн</a>
-          <a href="/terms" className="hover:text-white">Пользовательское соглашение</a>
+          <Link to="/terms" className="hover:text-white">Пользовательское соглашение</Link>
           <a href="/privacy" className="hover:text-white">Политика конфиденциальности</a>
           <a href="/refund" className="hover:text-white">Политика возврата средств</a>
           <a href="/payments" className="hover:text-white">Условия оплаты</a>

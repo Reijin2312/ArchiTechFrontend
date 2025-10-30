@@ -398,7 +398,7 @@ function Callout() {
     <div className="mb-6 rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
       <div className="mb-1 text-base font-semibold">Как пользоваться вики</div>
       <ul className="text-sm text-slate-300 space-y-1">
-        <li>Переходите по разделам слева или используйте <Kbd>Ctrl</Kbd>+<Kbd>F</Kbd>.</li>
+        <li>Переходите по разделам слева или используйте быстрый поиск по странице: <Kbd>Ctrl</Kbd> + <Kbd>F</Kbd> (Windows / Linux), <Kbd>Cmd</Kbd> + <Kbd>F</Kbd> (macOS).</li>
         <li>Список модов можно фильтровать по названию или категории.</li>
       </ul>
     </div>
