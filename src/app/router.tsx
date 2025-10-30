@@ -15,6 +15,7 @@ import SettingsProfilePage from '@/pages/SettingsProfilePage';
 import ChangeEmailPage from '@/pages/ChangeEmailPage';
 import ChangePasswordPage from '@/pages/ChangePasswordPage';
 import UserAgreementPage from '@/pages/UserAgreementPage';
+import PrivacyPolicyPage from '@/pages/PrivacyPolicyPage';
 
 export const router = createBrowserRouter([
   {
@@ -34,6 +35,7 @@ export const router = createBrowserRouter([
       { path: '/shop', element: <ShopPage/>},
       { path: '/wiki', element: <WikiPage/>},
       { path: '/terms', element: <UserAgreementPage/>},
+      { path: '/privacy', element: <PrivacyPolicyPage/>},
       { path: '/settings/profile', element: <SettingsProfilePage/>},
       { path: '/settings/email', element: <ChangeEmailPage/> },
       { path: '/settings/password', element: <ChangePasswordPage/> },

@@ -11,7 +11,7 @@ const SECTIONS: TocItem[] = [
   { id: 'id7', title: 'Оборот игрового контента', n: 7 },
   { id: 'id8', title: 'Операции с доступом и Аккаунтами', n: 8 },
   { id: 'id9', title: 'Персональные данные', n: 9 },
-  { id: 'id10', title: 'Прочие условия', n: 9 },
+  { id: 'id10', title: 'Прочие условия', n: 10 },
 ];
 
 export default function UserAgreementPage() {
