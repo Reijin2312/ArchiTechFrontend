@@ -117,7 +117,7 @@ export default function HomePage() {
       <section className="mx-auto max-w-7xl px-4 pb-10 pt-10 md:pt-16">
         <div className="grid md:grid-cols-2 gap-10 md:gap-14 items-center">
           <div>
-            <h1 className="text-4xl md:text-5xl font-bold leading-tight">
+            <h1 className="text-left! text-4xl md:text-5xl font-bold leading-tight">
               Присоединяйся к <span className="text-indigo-400">{SERVER_NAME}!</span>
             </h1>
             <p className="mt-4 text-slate-300 max-w-prose">

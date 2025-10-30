@@ -190,7 +190,7 @@ function Skin3D(props: { className?: string; skinUrl: string; spin?: boolean }) 
 
     viewer.background = '#0f172a';
     viewer.camera.fov = 40;
-    viewer.camera.position.set(0, 15, 90);
+    viewer.camera.position.set(-15, 15, 40);
     viewer.cameraLight.intensity = 2;
     viewer.globalLight.intensity = 2;
     viewer.animation = new skinview3d.IdleAnimation();
