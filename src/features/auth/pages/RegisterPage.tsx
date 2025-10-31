@@ -11,6 +11,7 @@ import { FormHint } from '@/shared/ui/FormHint';
 import PasswordField from '../components/PasswordField';
 import Footer from '@/shared/ui/Footer';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import Turnstile from 'react-turnstile';
 
 const schema = z
   .object({
@@ -43,6 +44,8 @@ export default function RegisterPage() {
   const navigate = useNavigate();
   const { search } = useLocation();
   const [serverErr, setServerErr] = useState<string | null>(null);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [termsAccepted, setTermsAccepted] = useState(false);
 
   const params = new URLSearchParams(window.location.search);
   const redirectUri = params.get("redirect_uri");
@@ -59,7 +62,7 @@ export default function RegisterPage() {
     resolver: zodResolver(schema),
     mode: 'onChange',
     reValidateMode: 'onChange',
-    criteriaMode: 'all',
+
     shouldFocusError: true,
   });
   watch();
@@ -71,6 +74,17 @@ export default function RegisterPage() {
 
   const emailAbort = useRef<AbortController | null>(null);
   const userAbort = useRef<AbortController | null>(null);
+
+  function firstError(fe?: any): string {
+    if (!fe) return '';
+    if (fe.message) return String(fe.message);
+    const t = fe.types;
+    if (t && typeof t === 'object') {
+      const v = Object.values(t)[0];
+      return Array.isArray(v) ? String(v[0]) : String(v);
+    }
+    return '';
+  }
 
   useEffect(() => {
     if (!emailV) {
@@ -156,13 +170,16 @@ export default function RegisterPage() {
     setServerErr(null);
   }, [user, navigate]);
 
+  useEffect(() => { if (serverErr) setCaptchaToken(null); }, [serverErr]);
+
   const next = new URLSearchParams(search).get('next') || '/profile';
 
   async function onSubmit(v: Form) {
+    if (!captchaToken || !termsAccepted) return;
     try {
       const resp = await http.post<RegisterRes>(
         '/api/auth/register',
-        { email: v.email, username: v.username, password: v.password },
+        { email: v.email, username: v.username, password: v.password, captcha: captchaToken },
         { validateStatus: () => true }
       );
 
@@ -282,7 +299,7 @@ export default function RegisterPage() {
             error={!!errors.email}
             className={errors.email ? 'is-err' : emailV ? 'is-ok' : ''}
           />
-          <FormHint error={!!errors.email}>{errors.email?.message}</FormHint>
+          <FormHint error={!!errors.email}>{firstError(errors.email)}</FormHint>
 
           <label className="label">Ник</label>
           <Input
@@ -291,7 +308,7 @@ export default function RegisterPage() {
             error={!!errors.username}
             className={errors.username ? 'is-err' : userV ? 'is-ok' : ''}
           />
-          <FormHint error={!!errors.username}>{errors.username?.message}</FormHint>
+          <FormHint error={!!errors.username}>{firstError(errors.username)}</FormHint>
 
           <label className="label">Пароль</label>
           <PasswordField
@@ -300,7 +317,7 @@ export default function RegisterPage() {
             error={!!errors.password}
             className={errors.password ? 'is-err' : passV ? 'is-ok' : ''}
           />
-          <FormHint error={!!errors.password}>{errors.password?.message}</FormHint>
+          <FormHint error={!!errors.password}>{firstError(errors.password)}</FormHint>
 
           <label className="label">Повторите пароль</label>
           <PasswordField
@@ -309,16 +326,80 @@ export default function RegisterPage() {
             error={!!errors.password2}
             className={errors.password2 ? 'is-err' : pass2V ? 'is-ok' : ''}
           />
-          <FormHint error={!!errors.password2}>{errors.password2?.message}</FormHint>
+          <FormHint error={!!errors.password2}>{firstError(errors.password2)}</FormHint>
 
-          <div className="flex gap-2 mt-2">
-            <Button type="submit" disabled={!isValid || isSubmitting}>
-              Зарегистрироваться
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '20px 1fr',
+              alignItems: 'start',
+              columnGap: 8,
+              marginTop: 8,
+              width: '100%',
+              gridColumn: '1 / -1',
+            }}
+          >
+            <input
+              id="terms"
+              type="checkbox"
+              checked={termsAccepted}
+              onChange={(e) => setTermsAccepted(e.target.checked)}
+              style={{
+                width: 16,
+                height: 16,
+                margin: 2,
+                padding: 0,
+                display: 'block',
+                flex: '0 0 16px',
+              }}
+            />
+            <label htmlFor="terms" style={{ fontSize: 14, lineHeight: '20px', margin: 0 }}>
+              Я принимаю{' '}
+              <a href="/terms" target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'underline' }}>
+                Условия использования сервисов
+              </a>{' '}и{' '}
+              <a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'underline' }}>
+                Политику конфиденциальности
+              </a>.
+            </label>
+          </div>
+
+          <div style={{ width: '100%', display: 'flex', justifyContent: 'center', marginTop: 8 }}>
+            <Turnstile
+              sitekey="0x4AAAAAAB95ajuXGWziFGzi"
+              theme="dark"
+              appearance="always"
+              action="register"
+              onVerify={(t) => setCaptchaToken(t)}
+              onExpire={() => setCaptchaToken(null)}
+              onError={() => setCaptchaToken(null)}
+            />
+          </div>
+
+          <div style={{ marginTop: 12 }}>
+            <Button
+              type="submit"
+              disabled={!isValid || isSubmitting || !captchaToken}
+              style={{ width: '100%', padding: '12px 16px' }}
+            >
+            Зарегистрироваться
             </Button>
-            <Link to="/auth/login" className="btn ghost">
+
+            <Link
+              to="/auth/login"
+              style={{
+                display: 'block',
+                marginTop: 8,
+                textAlign: 'center',
+                textDecoration: 'underline',
+                fontSize: 14,
+                opacity: 0.9
+              }}
+            >
               Уже есть аккаунт?
             </Link>
           </div>
+
         </form>
       </Card>
       <Footer />

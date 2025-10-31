@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom'
 import { authStore } from '@/shared/store/auth'
 
 const SERVER_NAME = 'ArchiTech MC'
-const SERVER_IP = 'play.architech.gg'
+const SERVER_IP = 'architech-mc.online'
 const DISCORD_URL = 'https://discord.gg/your-invite'
 const TELEGRAM_URL = 'https://t.me/archi_tech_official'
 const MAP_URL = '/map'

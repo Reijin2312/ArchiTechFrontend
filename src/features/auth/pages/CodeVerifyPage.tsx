@@ -8,6 +8,7 @@ import { endpoints } from '@/shared/api/endpoints';
 import Footer from '@/shared/ui/Footer';
 import type { VerifyEmailReq, VerifyEmailRes, ResetConfirmReq, ResetConfirmRes } from '@/shared/api/types';
 import { finalizeAuth } from '@/shared/auth/finalizeAuth';
+import { authStore } from '@/shared/store/auth';
 
 export default function CodeVerifyPage({ mode }:{ mode: 'email-verify'|'reset' }){
   const [sp] = useSearchParams();
@@ -31,18 +32,20 @@ export default function CodeVerifyPage({ mode }:{ mode: 'email-verify'|'reset' }
     setServerErr(null);
     if (mode === 'email-verify') {
       const body: VerifyEmailReq = { ticket, code };
-      const { data } = await http.post<VerifyEmailRes>(endpoints.verifyEmailConfirm, body);
+      const at = authStore.getState().accessToken;
+      const { data } = await http.post<VerifyEmailRes>(
+        endpoints.verifyEmailConfirm,
+        body,
+        { headers: { Authorization: `Bearer ${at}` } }
+      );
 
-      // получаем свой профиль и сразу знаем ник
       const me = await finalizeAuth(data.accessToken);
 
-      // если в URL нет осмысленного next, идём на /u/<мой ник>
       const target = next && next !== '/profile' ? next : `/u/${me.username}`;
       navigate(target, { replace: true });
       return;
     }
 
-    // reset
     const body: ResetConfirmReq = { ticket, code };
     const { data } = await http.post<ResetConfirmRes>(endpoints.resetConfirm, body);
     navigate(`/auth/reset/new?token=${encodeURIComponent(data.resetToken)}&next=${encodeURIComponent(next)}`, { replace: true });
@@ -56,7 +59,12 @@ export default function CodeVerifyPage({ mode }:{ mode: 'email-verify'|'reset' }
     try {
       setServerErr(null);
       if (mode === 'email-verify') {
-        await http.post(endpoints.verifyEmailResend, { ticket, email });
+          const at = authStore.getState().accessToken;
+          await http.post(
+            endpoints.verifyEmailResend,
+            { ticket, email },
+            { headers: { Authorization: `Bearer ${at}` } }
+          );
       } else {
         await http.post(endpoints.resetResend, { ticket, email });
       }

@@ -341,7 +341,7 @@ function RightToc({ items }: { items: TocItem[] }) {
           const on = active === it.id;
           return (
             <li key={it.id} className="flex items-start gap-2">
-              <span className="mt-[2px] inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-slate-700 text-xs text-slate-400">
+              <span className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-slate-700 text-xs text-slate-400">
                 {i + 1}
               </span>
               <a href={`#${it.id}`} className={on ? 'text-sky-300' : 'text-slate-300 hover:text-sky-300'}>
