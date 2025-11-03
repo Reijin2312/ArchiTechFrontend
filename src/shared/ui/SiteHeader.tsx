@@ -53,7 +53,7 @@ export default function SiteHeader() {
             Правила
           </Link>
           <Link to={SHOP_URL} className={linkCls(isActive(SHOP_URL))} aria-current={isActive(SHOP_URL) ? 'page' : undefined}>
-            Покупка проходки
+            Проходка
           </Link>
           <Link to={WIKI_URL} className={linkCls(isActive(WIKI_URL))} aria-current={isActive(WIKI_URL) ? 'page' : undefined}>
             Вики

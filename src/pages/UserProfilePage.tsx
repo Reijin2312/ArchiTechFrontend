@@ -49,9 +49,9 @@ export default function UserProfilePage() {
   return (
     <div className="min-h-dvh bg-slate-950 text-slate-100 flex flex-col">
 
-      {/* Контент */}
+      {}
       <main className="mx-auto grid w-full max-w-6xl grow grid-cols-12 gap-6 px-4 py-6">
-        {/* Левый сайдбар: 3D-скин */}
+        {}
         <section className="col-span-12 md:col-span-3">
           <Card>
             <div className="mb-3 flex items-center justify-between">
@@ -66,10 +66,10 @@ export default function UserProfilePage() {
           </Card>
         </section>
 
-        {/* Центральная колонка */}
+        {}
         <section className="col-span-12 md:col-span-9">
           <Card className="relative overflow-hidden">
-            {/* Кнопка редактирования в правом верхнем углу */}
+            {}
             {self && (
               <a
                 href="/settings/profile"
@@ -79,7 +79,7 @@ export default function UserProfilePage() {
               </a>
             )}
 
-            {/* Аватар внутри карточки */}
+            {}
             <div className="mt-2 flex justify-center">
               <Avatar url={(user as any)?.avatarUrl} loading={loading} />
             </div>
@@ -114,7 +114,7 @@ export default function UserProfilePage() {
               <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
                 {self ? (
                   <>
-                    {/* Кнопку настроек убрали сверху, оставим только «Поделиться» здесь */}
+                    {}
                     <button className="rounded-xl border border-slate-700 px-3 py-1.5 text-sm hover:border-slate-500">
                       Поделиться
                     </button>
@@ -139,7 +139,6 @@ export default function UserProfilePage() {
             </div>
           </Card>
 
-          {/* Доп. блоки */}
           <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
             <Card>
               <h3 className="mb-3 text-sm font-semibold text-sky-300">Достижения</h3>
@@ -255,8 +254,6 @@ function Skin3D(props: { className?: string; skinUrl: string; spin?: boolean }) 
 
   return <div ref={wrapRef} className={`${className||''} relative`} aria-label="3D-просмотр скина" />;
 }
-
-/* ===== UI helpers ===== */
 
 function Card(props: { children: React.ReactNode; className?: string }) {
   return (

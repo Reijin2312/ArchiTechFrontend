@@ -11,15 +11,12 @@ import { FormHint } from '@/shared/ui/FormHint';
 import Footer from '@/shared/ui/Footer';
 import type { ResetFinishReq, Ok } from '@/shared/api/types';
 
-
 const schema = z.object({
 pw1: z.string().min(8).regex(/[A-Za-z]/,'нужны буквы').regex(/\d/,'нужны цифры'),
 pw2: z.string()
 }).refine(v => v.pw1 === v.pw2, { path:['pw2'], message:'Не совпадает' });
 
-
 type Form = z.infer<typeof schema>;
-
 
 export default function NewPasswordPage() {
 	const [sp] = useSearchParams();
@@ -28,18 +25,15 @@ export default function NewPasswordPage() {
 	const nav = useNavigate();
 	const { register, handleSubmit, formState:{errors, isSubmitting} } = useForm<Form>({ resolver: zodResolver(schema) });
 
-
 	async function onSubmit(v: Form){
 		await http.post<Ok>(endpoints.resetFinish, { resetToken: token, newPassword: v.pw1 } as ResetFinishReq);
 		const next = sp.get('next') || '/profile';
 		nav(`/auth/reset/done?next=${encodeURIComponent(next)}`, { replace:true });
 	}
 
-
 	if (!token) return (
 		<div className="wrap"><Card><div className="error">Нет токена сброса.</div></Card></div>
 	);
-
 
 	return (
 		<div className="wrap">

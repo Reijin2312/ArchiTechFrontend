@@ -12,10 +12,12 @@ import RulesPage from '@/pages/RulesPage';
 import ShopPage from '@/pages/ShopPage';
 import WikiPage from '@/pages/WikiPage';
 import SettingsProfilePage from '@/pages/SettingsProfilePage';
-import ChangeEmailPage from '@/pages/ChangeEmailPage';
+import ChangeEmailPage from '@/pages/EmailChangeStartPage';
 import ChangePasswordPage from '@/pages/ChangePasswordPage';
 import UserAgreementPage from '@/pages/UserAgreementPage';
 import PrivacyPolicyPage from '@/pages/PrivacyPolicyPage';
+import EmailChangeStartPage from '@/pages/EmailChangeStartPage';
+import ChangeEmailNewPage from '@/pages/ChangeEmailNewPage';
 
 export const router = createBrowserRouter([
   {
@@ -37,7 +39,9 @@ export const router = createBrowserRouter([
       { path: '/terms', element: <UserAgreementPage/>},
       { path: '/privacy', element: <PrivacyPolicyPage/>},
       { path: '/settings/profile', element: <SettingsProfilePage/>},
-      { path: '/settings/email', element: <ChangeEmailPage/> },
+      { path: '/settings/email', element: <EmailChangeStartPage/> },
+      { path: '/settings/email/new', element: <ChangeEmailNewPage/> },
+      { path: '/verify/email-change-old', element: <CodeVerifyPage mode="email-change-old" /> },
       { path: '/settings/password', element: <ChangePasswordPage/> },
       { path: '/verify/email',    element: <CodeVerifyPage mode="email-verify" /> },
       { path: '/auth/reset/code', element: <CodeVerifyPage mode="reset" /> },

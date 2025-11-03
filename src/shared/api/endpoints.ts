@@ -21,5 +21,10 @@ accountEmailConfirm: '/api/v1/account/email/confirm',
 accountPhoneBind: '/api/v1/account/phone/bind',
 accountPhoneVerify: '/api/v1/account/phone/verify',
 accountSessions: '/api/v1/account/sessions',
-accountExport: '/api/v1/account/export'
+accountExport: '/api/v1/account/export',
+desktopToken: '/api/auth/desktop-token',
+accountEmailChangeOldBegin: '/api/account/email/change/begin',
+accountEmailChangeOldResend: '/api/account/email/change/resend',
+accountEmailChangeOldConfirm: '/api/account/email/change/confirm',
+accountEmailChangeSet: '/api/account/email/change/set',
 } as const;

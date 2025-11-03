@@ -25,9 +25,25 @@ export default function LoginPage() {
   const user = authStore((s) => s.user);
   const navigate = useNavigate();
   const { search } = useLocation();
+  const sp = new URLSearchParams(search);
   const [serverErr, setServerErr] = useState<string | null>(null);
   const params = new URLSearchParams(window.location.search);
-  const redirectUri = params.get("redirect_uri");
+
+  const rawRedirect = sp.get('redirect_uri');
+
+  const redirectUri = (() => {
+    if (!rawRedirect) return null;
+    let s = rawRedirect;
+    try {
+      if (/^https?%3A/i.test(s)) s = decodeURIComponent(s);
+      if (/^https?%3A/i.test(s)) s = decodeURIComponent(s);
+      const u = new URL(s);
+      if (!/^https?:$/.test(u.protocol)) return null;
+      if (!/^(localhost|127\.0\.0\.1)$/i.test(u.hostname)) return null;
+      if (u.pathname !== '/cb') return null;
+      return u.toString();
+    } catch { return null; }
+  })();
 
   const {
     register,
@@ -76,18 +92,31 @@ export default function LoginPage() {
     if (!redirectUri) return;
     try {
       await fetch(redirectUri, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(tokens),
-        mode: "cors",
+        mode: 'cors',
+        keepalive: true,
       });
     } catch {}
   }
 
-  function startReset() {
-    const email = getValues('email') || '';
-    const qs = new URLSearchParams({ email }).toString();
-    navigate('/auth/reset?' + qs);
+  async function startReset() {
+    const emailVal = (getValues('email') || '').trim();
+    if (!emailVal) { setServerErr('Введите email для сброса пароля'); return; }
+
+    try {
+      const next = location.pathname + (location.search || '') || '/profile';
+      const { data } = await http.post(
+        endpoints.resetBegin,
+        { email: emailVal },
+        { withCredentials: true, headers: { 'Content-Type': 'application/json' } }
+      );
+      const qs = new URLSearchParams({ ticket: data.ticket, email: emailVal, next }).toString();
+      navigate('/auth/reset/code?' + qs, { replace: true });
+    } catch (e: any) {
+      setServerErr(e?.response?.data || e?.message || 'Не удалось начать сброс пароля');
+    }
   }
 
   useEffect(() => {

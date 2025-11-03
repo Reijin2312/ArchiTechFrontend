@@ -12,7 +12,7 @@ type Profile = {
   bio: string;
   location: string;
   website: string;
-  social: string;
+  birthDate?: string | null;
   avatarUrl: string;
   skinUrl: string;
   email?: string;
@@ -49,34 +49,27 @@ export default function SettingsProfilePage() {
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
 
-  // профиль
   const [displayName, setDisplayName] = useState('');
   const [bio, setBio] = useState('');
   const [locationTxt, setLocationTxt] = useState('');
   const [website, setWebsite] = useState('');
-  const [social, setSocial] = useState('');
+  const [birthDate, setBirthDate] = useState(me?.birthDate ?? '');
 
-  // аватар
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarUrlInput, setAvatarUrlInput] = useState('');
 
-  //скин
   const [skinFile, setSkinFile] = useState<File | null>(null);
   const [skinUrlInput, setSkinUrlInput] = useState('');
 
-  // учётка
   const [email, setEmail] = useState('');
   const [pwdDummy, setPwdDummy] = useState('');
 
-  // логин
   const [newUsername, setNewUsername] = useState('');
   const [usernameOk, setUsernameOk] = useState<boolean | null>(null);
 
-  // телефон
   const [phone, setPhone] = useState('');
   const [phoneCode, setPhoneCode] = useState('');
 
-  // сессии
   const [sessions, setSessions] = useState<Session[]>([]);
 
   const [delOpen, setDelOpen] = useState(false);
@@ -85,7 +78,6 @@ export default function SettingsProfilePage() {
   const [delBusy, setDelBusy] = useState(false);
   const [delErr, setDelErr]   = useState<string|null>(null);
 
-  // фильтры сессий: только статусы + даты + сорт
   const [show, setShow] = useState<{ active: boolean; expired: boolean; replaced: boolean; revoked: boolean }>({
     active: true,
     expired: false,
@@ -112,7 +104,7 @@ export default function SettingsProfilePage() {
         setBio(p.bio ?? '');
         setLocationTxt(p.location ?? '');
         setWebsite(p.website ?? '');
-        setSocial(p.social ?? '{}');
+        setBirthDate(p.birthDate ?? '');
         setEmail(p.email ?? '');
         setNewUsername(p.username ?? '');
         try {
@@ -177,23 +169,22 @@ export default function SettingsProfilePage() {
   }, [sessions]);
 
   const visibleSessions = useMemo(() => {
-    // статус
     let list = sessions.filter((s) => show[sessionStatus(s)]);
-    // диапазон
+  
     const fromTs = from ? Date.parse(from) : -Infinity;
     const toTs = to ? Date.parse(to) : Infinity;
     list = list.filter((s) => {
       const t = Date.parse(s.createdAt);
       return t >= fromTs && t <= toTs;
     });
-    // группировка по семействам всегда включена и скрываем replaced
+    
     const latest = new Map<string, Session>();
     for (const s of list) {
       const prev = latest.get(s.familyId);
       if (!prev || Date.parse(prev.createdAt) < Date.parse(s.createdAt)) latest.set(s.familyId, s);
     }
     list = Array.from(latest.values()).filter((s) => !s.replacedBy);
-    // сортировка
+    
     const cmp = (a: Session, b: Session) => {
       const ca = Date.parse(a.createdAt),
         cb = Date.parse(b.createdAt);
@@ -218,16 +209,9 @@ export default function SettingsProfilePage() {
     setNotice(null);
     setErr(null);
     try {
-      if (social?.trim()) JSON.parse(social);
-    } catch {
-      setBusy(null);
-      setErr('Поле social должно быть корректным JSON');
-      return;
-    }
-    try {
       await http.put(
         endpoints.profileMe,
-        { displayName, bio, location: locationTxt, website, social: social || '{}' },
+        { displayName, bio, location: locationTxt, website, birthDate },
         { withCredentials: true, headers: { 'Content-Type': 'application/json' } }
       );
       setNotice('Профиль сохранён');
@@ -251,7 +235,15 @@ export default function SettingsProfilePage() {
     if (delConfirm !== 'DELETE' || !delPwd) return;
     setDelBusy(true); setDelErr(null);
     try {
-      await http.post('/api/account/delete', { password: delPwd }, { withCredentials: true });
+      const token = authStore.getState().accessToken;
+      await http.delete('/api/v1/account', {
+        withCredentials: false,
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
+        data: { password: delPwd }
+      });
       await logout();
     } catch (e: any) {
       const msg = e?.response?.data || e?.message || 'Не удалось удалить аккаунт';
@@ -702,16 +694,15 @@ export default function SettingsProfilePage() {
               </InputRow>
             </div>
 
-            <InputRow label="Social JSON">
-              <textarea
-                value={social}
-                onChange={(e) => setSocial(e.target.value)}
-                rows={5}
-                spellCheck={false}
-                className={`${inp()} font-mono`}
-                placeholder='{"tg":"@name","gh":"user"}'
+            <InputRow label="Дата рождения">
+              <input
+                type="date"
+                value={birthDate || ""}
+                onChange={(e) => setBirthDate(e.target.value || "")}
+                className={inp()}
+                min="1900-01-01"
+                max={new Date().toISOString().slice(0, 10)}
               />
-              <p className="mt-1 text-xs text-slate-500">Ключи и ссылки в формате JSON.</p>
             </InputRow>
 
             <div className="mt-4 flex justify-end">
@@ -745,7 +736,6 @@ export default function SettingsProfilePage() {
                   Изменить
                 </button>
               </div>
-              <p className="mt-1 text-xs text-slate-500">Если поле пустое — введите адрес для сброса пароля.</p>
             </InputRow>
 
             <InputRow label="Пароль">
@@ -788,7 +778,6 @@ export default function SettingsProfilePage() {
                   Изменить
                 </button>
               </div>
-              <p className="mt-1 text-xs text-slate-500">Нажмите «Изменить», чтобы получить код на email и создать новый пароль.</p>
             </InputRow>
 
             <InputRow label="Логин">

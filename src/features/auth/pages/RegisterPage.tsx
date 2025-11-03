@@ -379,7 +379,7 @@ export default function RegisterPage() {
           <div style={{ marginTop: 12 }}>
             <Button
               type="submit"
-              disabled={!isValid || isSubmitting || !captchaToken}
+              disabled={!isValid || isSubmitting || !captchaToken || !termsAccepted}
               style={{ width: '100%', padding: '12px 16px' }}
             >
             Зарегистрироваться
