@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -11,7 +11,7 @@ import { FormHint } from '@/shared/ui/FormHint';
 import PasswordField from '../components/PasswordField';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import Footer from '@/shared/ui/Footer';
-import type { LoginReq, LoginRes } from '@/shared/api/types';
+import type { LoginRes } from '@/shared/api/types';
 import { finalizeAuth } from '@/shared/auth/finalizeAuth';
 import { endpoints } from '@/shared/api/endpoints';
 
@@ -19,6 +19,7 @@ const schema = z.object({
   email: z.string().email({ message: 'Некорректная почта' }),
   password: z.string().min(1, 'Введите пароль'),
 });
+
 type Form = z.infer<typeof schema>;
 
 export default function LoginPage() {
@@ -27,21 +28,24 @@ export default function LoginPage() {
   const { search } = useLocation();
   const sp = new URLSearchParams(search);
   const [serverErr, setServerErr] = useState<string | null>(null);
-  const params = new URLSearchParams(window.location.search);
 
-  const rawRedirect = sp.get('redirect_uri');
+  const rawRedirect = sp.get('redirect_uri') || sessionStorage.getItem('redirect_uri');
+
+  useEffect(() => {
+    const raw = sp.get('redirect_uri');
+    if (raw) sessionStorage.setItem('redirect_uri', raw);
+  }, [search]);
 
   const redirectUri = (() => {
     if (!rawRedirect) return null;
     let s = rawRedirect;
     try {
-      if (/^https?%3A/i.test(s)) s = decodeURIComponent(s);
-      if (/^https?%3A/i.test(s)) s = decodeURIComponent(s);
+      for (let i = 0; i < 2 && /^https?%3A/i.test(s); i++) s = decodeURIComponent(s);
       const u = new URL(s);
       if (!/^https?:$/.test(u.protocol)) return null;
-      if (!/^(localhost|127\.0\.0\.1)$/i.test(u.hostname)) return null;
-      if (u.pathname !== '/cb') return null;
-      return u.toString();
+      if (!/^(localhost|127\.0\.0\.1|::1)$/i.test(u.hostname)) return null;
+      if (!(u.pathname === '/cb' || u.pathname === '/cb/')) return null;
+      return `${u.origin}/cb`;
     } catch { return null; }
   })();
 
@@ -51,7 +55,6 @@ export default function LoginPage() {
     formState: { errors, isSubmitting, isValid },
     getValues,
     setError,
-    clearErrors,
     watch,
   } = useForm<Form>({
     resolver: zodResolver(schema),
@@ -63,11 +66,47 @@ export default function LoginPage() {
   watch();
 
   useEffect(() => {
-    if (user) navigate('/profile', { replace: true });
+    if (user && !redirectUri) navigate('/profile', { replace: true });
     setServerErr(null);
-  }, [user, navigate]);
+  }, [user, navigate, redirectUri]);
 
-  const next = new URLSearchParams(search).get('next') || '/profile';
+  useEffect(() => {
+    if (!redirectUri) return;
+
+    let cancelled = false;
+    (async () => {
+      try {      
+        let me = await http.get(endpoints.profileMe, { withCredentials: true })
+          .then(r => r.data).catch(() => null);
+
+        let { data } = await http.post(endpoints.desktopToken, null, {
+          withCredentials: true, validateStatus: () => true,
+        });
+
+        if (!data?.accessToken || !data?.refreshToken) {
+          const r2 = await http.post(endpoints.desktopToken, null, {
+            withCredentials: true, validateStatus: () => true,
+          });
+          if (r2?.data) data = r2.data;
+        }
+
+        if (!cancelled && data?.accessToken && data?.refreshToken) {
+          await notifyLauncher({
+            accessToken: data.accessToken,
+            refreshToken: data.refreshToken,
+            user: authStore.getState().user ?? me,
+          });
+          me = await finalizeAuth(data.accessToken).catch(() => me);
+          if (me?.username) {
+            navigate(`/u/${me.username}`, { replace: true });
+            return;
+          }
+        }
+      } catch {}
+    })();
+
+    return () => { cancelled = true; };
+  }, [redirectUri, navigate]);
 
   async function onSubmit(v: Form) {
     try {
@@ -112,7 +151,10 @@ export default function LoginPage() {
         { email: emailVal },
         { withCredentials: true, headers: { 'Content-Type': 'application/json' } }
       );
-      const qs = new URLSearchParams({ ticket: data.ticket, email: emailVal, next }).toString();
+      const qs = new URLSearchParams({
+      ticket: data.ticket, email: emailVal, next,
+      ...(redirectUri ? { redirect_uri: redirectUri } : {})
+      }).toString();
       navigate('/auth/reset/code?' + qs, { replace: true });
     } catch (e: any) {
       setServerErr(e?.response?.data || e?.message || 'Не удалось начать сброс пароля');

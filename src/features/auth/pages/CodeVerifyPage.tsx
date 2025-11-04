@@ -20,6 +20,7 @@ export default function CodeVerifyPage({ mode }:{ mode: 'email-verify'|'reset'|'
   const ticket = sp.get('ticket') || '';
   const email  = sp.get('email')  || '';
   const next   = sp.get('next')   || '/profile';
+  const redirectUri = sp.get('redirect_uri') || sessionStorage.getItem('redirect_uri') || '';
 
   const at = authStore.getState().accessToken;
 
@@ -28,6 +29,11 @@ export default function CodeVerifyPage({ mode }:{ mode: 'email-verify'|'reset'|'
     const t = setTimeout(() => setResendLock((x) => x - 1), 1000);
     return () => clearTimeout(t);
   }, [resendLock]);
+
+  useEffect(() => {
+    const raw = sp.get('redirect_uri');
+    if (raw) sessionStorage.setItem('redirect_uri', raw);
+  }, [sp]);
 
   async function confirm() {
   try {
@@ -43,6 +49,16 @@ export default function CodeVerifyPage({ mode }:{ mode: 'email-verify'|'reset'|'
 
       const me = await finalizeAuth(data.accessToken);
 
+      try {
+        const r = await http.post(endpoints.desktopToken, null, { withCredentials: true });
+        if (r?.data?.accessToken && r?.data?.refreshToken && redirectUri) {
+          await fetch(redirectUri ?? '', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ...r.data, user: me }), mode: 'cors', keepalive: true,
+          });
+        }
+      } catch {}
+
       const target = next && next !== '/profile' ? next : `/u/${me.username}`;
       navigate(target, { replace: true });
       return;
@@ -54,13 +70,13 @@ export default function CodeVerifyPage({ mode }:{ mode: 'email-verify'|'reset'|'
         { ticket, code },
         { headers: { Authorization: `Bearer ${at}` } }
       );
-      navigate(`/settings/email/new?ct=${encodeURIComponent(data.changeToken)}&next=${encodeURIComponent(next)}`, { replace: true });
+      navigate(`/settings/email/new?ct=${encodeURIComponent(data.changeToken)}&next=${encodeURIComponent(next)}${redirectUri ? `&redirect_uri=${encodeURIComponent(redirectUri)}` : ''}`, { replace: true });
       return;
     }
 
     const body: ResetConfirmReq = { ticket, code };
     const { data } = await http.post<ResetConfirmRes>(endpoints.resetConfirm, body);
-    navigate(`/auth/reset/new?token=${encodeURIComponent(data.resetToken)}&email=${encodeURIComponent(email)}&next=${encodeURIComponent(next)}`, { replace: true });
+    navigate(`/auth/reset/new?token=${encodeURIComponent(data.resetToken)}&email=${encodeURIComponent(email)}&next=${encodeURIComponent(next)}${redirectUri ? `&redirect_uri=${encodeURIComponent(redirectUri)}` : ''}`, { replace: true });
   } catch (e: any) {
     const msg = e?.response?.data?.message || e?.message || 'Неверный код';
     setServerErr(msg);
