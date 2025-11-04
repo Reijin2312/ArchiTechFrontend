@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 
-const DISCORD_URL = 'https://discord.gg/your-invite';
+const DISCORD_URL = 'https://discord.gg/x6JwVPwPtw';
 const TELEGRAM_URL = 'https://t.me/archi_tech_official';
 
 export default function SiteFooter() {

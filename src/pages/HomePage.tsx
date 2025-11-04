@@ -1,10 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { Link, useLocation } from 'react-router-dom'
-import { authStore } from '@/shared/store/auth'
+import { Link } from 'react-router-dom'
 
 const SERVER_NAME = 'ArchiTech MC'
 const SERVER_IP = 'architech-mc.online'
-const DISCORD_URL = 'https://discord.gg/your-invite'
+const DISCORD_URL = 'https://discord.gg/x6JwVPwPtw'
 const TELEGRAM_URL = 'https://t.me/archi_tech_official'
 const MAP_URL = '/map'
 const RULES_URL = '/rules'
@@ -23,10 +22,51 @@ type McStatus = {
 export default function HomePage() {
   const [status, setStatus] = useState<McStatus | null>(null)
   const [copyOk, setCopyOk] = useState<'idle' | 'ok' | 'err'>('idle')
-  const shots = ['/images/screen1.png','/images/screen2.png','/images/screen3.png', '/images/screen4.png', '/images/screen5.png']
+  const shots = ['/images/screen1.png','/images/screen2.png','/images/screen3.png', '/images/screen4.png', '/images/screen5.png', '/images/screen6.png', '/images/screen7.png', '/images/screen8.png']
   const [shot, setShot] = useState(shots[0])
   const [prevShot, setPrevShot] = useState<string | null>(null)
   const [cross, setCross] = useState(true);
+
+  type PublicUser = {
+    username: string
+    userId: string
+    avatarUrl?: string | null
+    skinUrl?: string | null
+  }
+
+  const TEAM: { name: string; role: string }[] = [
+    { name: 'Raijin',     role: 'Владелец & программист' },
+    { name: 'Kelbor_Hal', role: 'Мл. Админ' },
+    { name: 'Wolle',      role: 'Тех. Админ' },
+    { name: 'Sile_Scorp', role: 'Дизайнер' },
+    { name: 'Explyp',     role: 'Python-программист' },
+  ]
+
+  const [avatars, setAvatars] = useState<Record<string, string>>({})
+  const AVATAR_FALLBACK = '/images/avatar-fallback.png'
+
+  useEffect(() => {
+    let alive = true
+    ;(async () => {
+      const pairs = await Promise.all(
+        TEAM.map(async (p) => {
+          try {
+            const r = await fetch(`/api/v1/users/by-name?username=${encodeURIComponent(p.name)}`)
+            if (!r.ok) return [p.name, ''] as const
+            const u: PublicUser = await r.json()
+            return [p.name, u.avatarUrl || ''] as const
+          } catch {
+            return [p.name, ''] as const
+          }
+        })
+      )
+      if (!alive) return
+      const next: Record<string, string> = {}
+      for (const [k, v] of pairs) if (v) next[k] = v
+      setAvatars(next)
+    })()
+    return () => { alive = false }
+  }, [])
 
   function changeTo(newSrc: string) {
    if (newSrc === shot) return
@@ -155,7 +195,6 @@ function SvgMcBlockGrass({ className }: { className?: string }) {
         />
       </div>
 
-      {/* Hero */}
       <section className="mx-auto max-w-7xl px-4 pb-10 pt-10 md:pt-16">
         <div className="grid md:grid-cols-2 gap-10 md:gap-14 items-stretch">
           <div className="md:flex md:flex-col md:h-full">
@@ -166,7 +205,6 @@ function SvgMcBlockGrass({ className }: { className?: string }) {
               Модифицированный техномагический сервер c упором на строительство и творчество. Без вайпов и с уникальными самописными модами. Добрая администрация и отсутствие гриферов.
             </p>
 
-            {/* IP + статус + кнопка скачивания */}
             <div className="mt-6 grid gap-3">
               <div className="flex w-full items-stretch overflow-hidden rounded-xl border border-slate-800 max-w-md">
               <div className="px-3 hidden sm:grid place-items-center bg-slate-900/60 border-r border-slate-800 text-xs text-slate-300">IP</div>
@@ -207,11 +245,9 @@ function SvgMcBlockGrass({ className }: { className?: string }) {
             </div>
           </div>
 
-          {/* Галерея */}
           <div className="relative">
             <div className="aspect-16/10 w-full overflow-hidden rounded-2xl border border-slate-800 shadow-xl">
               <div className="relative h-full w-full">
-              {/* текущий кадр (сверху), с плавным появлением */}
               <img
                 key={shot}
                 src={shot}
@@ -221,7 +257,6 @@ function SvgMcBlockGrass({ className }: { className?: string }) {
                   (cross ? "opacity-100" : "opacity-0")
                 }
               />
-              {/* предыдущий кадр (снизу), с плавным исчезновением */}
               {prevShot && (
                 <img
                   key={prevShot + "-prev"}
@@ -285,27 +320,35 @@ function SvgMcBlockGrass({ className }: { className?: string }) {
       <section className="mx-auto max-w-7xl px-4 py-10">
         <h2 className="text-2xl font-semibold mb-6">Команда проекта</h2>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {[
-            { name: 'Raijin', role: 'Владелец & программист' },
-            { name: 'Kelbor-Hal', role: 'Мл. Админ' },
-            { name: 'Wolle', role: 'Тех. Админ' },
-            { name: 'Sile Scorp', role: 'Дизайнер' },
-            { name: 'Explyp', role: 'Python-программист' }
-          ].map(p => (
-            <div key={p.name} className="rounded-2xl border border-slate-800 p-4 bg-slate-900/40">
-              <div className="flex items-center gap-3">
-                <div className="size-12 rounded-xl bg-slate-800 grid place-items-center">🧑‍💻</div>
-                <div>
-                  <div className="font-medium">{p.name}</div>
-                  <div className="text-sm text-slate-400">{p.role}</div>
+          {TEAM.map((p) => {
+            const src = avatars[p.name] || AVATAR_FALLBACK
+            return (
+              <div key={p.name} className="rounded-2xl border border-slate-800 p-4 bg-slate-900/40">
+                <div className="flex items-center gap-3">
+                  <img
+                    src={src}
+                    alt={p.name}
+                    width={48}
+                    height={48}
+                    loading="lazy"
+                    decoding="async"
+                    className="size-12 rounded-xl object-cover border border-slate-700 bg-slate-800"
+                    onError={(e) => {
+                      const img = e.currentTarget as HTMLImageElement
+                      if (!img.src.endsWith(AVATAR_FALLBACK)) img.src = AVATAR_FALLBACK
+                    }}
+                  />
+                  <div>
+                    <div className="font-medium">{p.name}</div>
+                    <div className="text-sm text-slate-400">{p.role}</div>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       </section>
 
-      {/* FAQ */}
       <section className="mx-auto max-w-7xl px-4 py-10">
         <h2 className="text-2xl font-semibold mb-6">FAQ</h2>
         <div className="grid gap-3">
@@ -380,7 +423,7 @@ function StepsGuide({ version }: { version?: string }) {
           <div className="text-lg font-semibold mb-2">Зарегистрируйтесь на сайте</div>
           <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
             <Link to="/auth/login" className="inline-flex rounded-xl px-4 py-2 bg-indigo-600 hover:bg-indigo-500">Войти или зарегистрироваться</Link>
-            <div className="text-xs text-slate-400 mt-3">Потребуется аккаунт Minecraft: Java Edition</div>
+            <div className="text-xs text-slate-400 mt-3">Потребуется только ваша почта</div>
           </div>
         </div>
       </div>
@@ -388,11 +431,10 @@ function StepsGuide({ version }: { version?: string }) {
       <div className="rounded-2xl border border-slate-800 bg-slate-900/40 overflow-hidden">
         <div className="p-5">
           <div className="size-10 rounded-xl bg-emerald-600/20 grid place-items-center text-emerald-300 mb-3">➕</div>
-          <div className="text-lg font-semibold mb-2">Купите доступ</div>
-          <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 text-center">
-            <div className="font-medium">Временно недоступно</div>
-            <div className="text-xs text-slate-400 mt-1">Подписывайтесь на Telegram, чтобы не пропустить</div>
-            <a href={TELEGRAM_URL} className="mt-3 inline-flex rounded-xl px-4 py-2 bg-sky-600 hover:bg-sky-500">Перейти в канал</a>
+          <div className="text-lg font-semibold mb-2">Получите доступ</div>
+          <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+          <a href={TELEGRAM_URL} className="inline-flex rounded-xl px-4 py-2 bg-sky-600 hover:bg-sky-500">Перейти в бота</a>
+            <div className="text-xs text-slate-400 mt-3">Введите ваш ник на сайте, чтобы получить проходку</div>
           </div>
         </div>
       </div>

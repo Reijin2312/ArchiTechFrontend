@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 
 type TocItem = { id: string; title: string; n: number };
 const SECTIONS: TocItem[] = [
@@ -139,11 +140,29 @@ export default function WikiPage() {
 
         <Section id="start" title="Как начать играть" n={2}>
           <ol className="list-decimal pl-6 space-y-2 text-slate-300">
-            <li>Купите проходку в Telegram-боте.</li>
-            <li>Скачайте лаунчер отсюда.</li>
-            <li>Зайдите на сервер. Заберите старт-книги (Patchouli/инструкции).</li>
-            <li>Отметьте базу: <code className="px-1 rounded bg-slate-800 text-xs">/sethome</code>, заклеймите чанки в FTB.</li>
-            <li>Начните с добычи руд и Create-механики. Далее — ME/магия.</li>
+            <li>
+              <Link to="/api/auth/register" className="text-sky-400 hover:text-sky-300 hover:underline">
+                Зарегистрируйтесь
+              </Link>{" "}
+              или{" "}
+              <Link to="/api/auth/login" className="text-sky-400 hover:text-sky-300 hover:underline">
+                войдите
+              </Link>{" "}
+              на сайте.
+            </li>
+            <li>Получите проходку в {" "}
+              <a href="https://telegram.me/@Archi_payment_bot" className="text-sky-400 hover:text-sky-300 hover:underline">
+              телеграм-боте.
+              </a>
+            </li>
+            <li>Скачайте лаунчер {" "}
+              <Link to="/api/auth/register" className="text-sky-400 hover:text-sky-300 hover:underline">
+               отсюда
+              </Link>
+              .
+            </li>
+            <li>Установите игру. Сервер автоматически появится в списке серверов сетевой игры.</li>
+            <li> Начинайте играть! </li>
           </ol>
         </Section>
 
