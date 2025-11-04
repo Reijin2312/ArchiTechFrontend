@@ -14,95 +14,94 @@ const SECTIONS: TocItem[] = [
   { id: 'links', title: 'Ссылки', n: 9 },
 ];
 
-type Mod = { name: string; cat: 'Tech' | 'Magic' | 'Decoration' | 'QoL' | 'World' | 'Optimization' | 'Core'; brief: string; wiki?: string };
+type Mod = { name: string; cat: 'Tech' | 'Magic' | 'Decoration' | 'Food' | 'QoL' | 'World' | 'Optimization' | 'Core'; brief: string; wiki?: string };
 const MODS: Mod[] = [
-  { name: '3D Skin Layers', cat: 'QoL', brief: 'Объёмные скины' },
-  { name: 'All The Arcanist Gear', cat: 'Magic', brief: 'Магическая броня из новых руд' },
-  { name: 'All The Modium', cat: 'Magic', brief: 'Новые магические руды, броня и измерение' },
-  { name: 'Ambient Sounds', cat: 'QoL', brief: 'Новые эмбиент звуки' },
-  { name: 'ArchiSound', cat: 'QoL', brief: 'Кастомная музыка и радио' },
-  { name: 'ArmorPoser', cat: 'QoL', brief: 'Тонкая настройка стоек для брони' },
-  { name: 'Ars Additions', cat: 'Magic', brief: 'Мелкие декорации, новые глифы и структуры'},
-  { name: 'Ars Fauna', cat: 'Magic', brief: 'Новые разновидности магических животных' },
-  { name: 'Ars Nouveau', cat: 'Magic', brief: 'Ядро магии на сервере' },
-  { name: 'Ars Nouveaus Flavors & Delight', cat: 'Magic', brief: 'Магическая еда' },
+  { name: 'Ars Nouveau', cat: 'Magic', brief: 'Модульная магия и собственные заклинания' },
+  { name: 'Ars Elemental', cat: 'Magic', brief: 'Элементальные школы для Ars Nouveau' },
+  { name: 'Ars Additions', cat: 'Magic', brief: 'QoL-добавки и иммерсия для Ars Nouveau' },
+  { name: 'Ars Fauna', cat: 'Magic', brief: 'Больше атмосферных вариаций магических существ' },
   { name: 'Ars Ocultas', cat: 'Magic', brief: 'Совместимость Ars Nouveau и Occultism' },
-  { name: 'Ars Creo', cat: 'Magic', brief: 'Совместимость Create и Ars Nouveau' },
-  { name: 'Ars Elemental', cat: 'Magic', brief: 'Новые элементальные школы' },
-  { name: 'Ars Technica', cat: 'Tech', brief: 'Совместимость Create и Ars Nouveau' },
-  { name: 'Asteroids!', cat: 'World', brief: 'Астероиды с ценными ресурсами' },
-  { name: 'Better End', cat: 'World', brief: 'Глобальное изменение энда' },
-  { name: 'Better Nether', cat: 'World', brief: 'Глобальное изменение незера' },
-  { name: 'Chat Heads', cat: 'QoL', brief: 'Головы игроков рядом с сообщениями' },
-  { name: 'Chipped', cat: 'Decoration', brief: 'Огромное количество вариаций ванильных блоков' },
-  { name: 'Clumps', cat: 'Optimization', brief: 'Оптимизация частиц опыта' },
-  { name: 'Create', cat: 'Tech', brief: 'Ядро технологий на сервере' },
-  { name: 'Create Crafts & Additions', cat: 'Tech', brief: 'Мост между кинетикой и электричеством' },
-  { name: 'Create Encased', cat: 'Tech', brief: 'Кинетика, механизмы, транспорт' },
-  { name: 'Create Jetpack', cat: 'Tech', brief: 'Кинетика, механизмы, транспорт' },
-  { name: 'Create Ore Excavation', cat: 'Tech', brief: 'Кинетика, механизмы, транспорт' },
-  { name: 'Сreate Slice & Dice', cat: 'Tech', brief: 'Кинетика, механизмы, транспорт' },
-  { name: 'Create: Bells & Whistles', cat: 'Tech', brief: 'Кинетика, механизмы, транспорт' },
-  { name: 'Create: Central Kitchen', cat: 'Tech', brief: 'Кинетика, механизмы, транспорт' },
-  { name: 'Create: Connected', cat: 'Tech', brief: 'Кинетика, механизмы, транспорт' },
-  { name: 'Create: Copycats+', cat: 'Tech', brief: 'ME-сеть, автокрафт, диски' },
-  { name: 'Create: Design n Decor', cat: 'Tech', brief: 'ME-сеть, автокрафт, диски' },
-  { name: 'Create: Dragons Plus', cat: 'Tech', brief: 'ME-сеть, автокрафт, диски' },
-  { name: 'Create: Dreams & Desires', cat: 'Tech', brief: 'ME-сеть, автокрафт, диски' },
-  { name: 'Create: Enchantment Industry', cat: 'Tech', brief: 'ME-сеть, автокрафт, диски' },
-  { name: 'Create: Food', cat: 'Tech', brief: 'ME-сеть, автокрафт, диски' },
-  { name: 'Create: Framed', cat: 'Tech', brief: 'ME-сеть, автокрафт, диски' },
-  { name: 'Create: The Factory Must Grow', cat: 'Tech', brief: 'ME-сеть, автокрафт, диски' },
-  { name: 'CreateBetterFps', cat: 'Tech', brief: 'Ядро технологий на сервере' },
-  { name: 'Deeper and Darker', cat: 'Tech', brief: 'Ядро технологий на сервере' },
-  { name: 'Dynamic Crosshair', cat: 'Tech', brief: 'Ядро технологий на сервере' },
-  { name: 'Dynamic FPS', cat: 'Tech', brief: 'Ядро технологий на сервере' },
-  { name: 'Emotecraft', cat: 'Tech', brief: 'Ядро технологий на сервере' },
-  { name: 'Ends Delight', cat: 'Tech', brief: 'Ядро технологий на сервере' },
-  { name: 'Entity Culling', cat: 'Tech', brief: 'Ядро технологий на сервере' },
-  { name: 'Every Compat (Wood Good)', cat: 'Tech', brief: 'Ядро технологий на сервере' },
-  { name: 'Expanded Delight', cat: 'Tech', brief: 'Ядро технологий на сервере' },
-  { name: 'Farmers Delight', cat: 'Tech', brief: 'Ядро технологий на сервере' },
-  { name: 'Female Gender Mod', cat: 'Tech', brief: 'Ядро технологий на сервере' },
-  { name: 'FerriteCore', cat: 'Tech', brief: 'Ядро технологий на сервере' },
-  { name: 'ImageToMap', cat: 'Tech', brief: 'Ядро технологий на сервере' },
-  { name: 'Inventory Profiles Next', cat: 'Tech', brief: 'Ядро технологий на сервере' },
-  { name: 'Iris & Oculus Flywheel Compat', cat: 'Tech', brief: 'Ядро технологий на сервере' },
-  { name: 'Iris Shaders', cat: 'Tech', brief: 'Ядро технологий на сервере' },
-  { name: 'Jade', cat: 'Tech', brief: 'Ядро технологий на сервере' },
-  { name: 'JourneyMap', cat: 'Tech', brief: 'Ядро технологий на сервере' },
-  { name: 'Just Enough Items', cat: 'Tech', brief: 'Ядро технологий на сервере' },
-  { name: 'KleeSlabs', cat: 'Tech', brief: 'Ядро технологий на сервере' },
-  { name: 'Lithium', cat: 'Tech', brief: 'Ядро технологий на сервере' },
-  { name: 'Longer Chat History', cat: 'Tech', brief: 'Ядро технологий на сервере' },
-  { name: 'Macaws Bridges', cat: 'Tech', brief: 'Ядро технологий на сервере' },
-  { name: 'Macaws Doors', cat: 'Tech', brief: 'Ядро технологий на сервере' },
-  { name: 'Macaws Fences and Walls', cat: 'Tech', brief: 'Ядро технологий на сервере' },
-  { name: 'Macaws Lights and Lamps', cat: 'Tech', brief: 'Ядро технологий на сервере' },
-  { name: 'Macaws Paintings', cat: 'Tech', brief: 'Ядро технологий на сервере' },
-  { name: 'Macaws Stairs', cat: 'Tech', brief: 'Ядро технологий на сервере' },
-  { name: 'Macaws Trapdoors', cat: 'Tech', brief: 'Ядро технологий на сервере' },
-  { name: 'Macaws Windows', cat: 'Tech', brief: 'Ядро технологий на сервере' },
-  { name: 'Model Gap Fix', cat: 'Tech', brief: 'Ядро технологий на сервере' },
-  { name: 'More Delight (for Farmers Delight)', cat: 'Tech', brief: 'Ядро технологий на сервере' },
-  { name: 'Mouse Tweaks', cat: 'Tech', brief: 'Ядро технологий на сервере' },
-  { name: 'Occultism', cat: 'Tech', brief: 'Ядро технологий на сервере' },
-  { name: 'Particle Core', cat: 'Tech', brief: 'Ядро технологий на сервере' },
-  { name: 'Patchouli', cat: 'Tech', brief: 'Ядро технологий на сервере' },
-  { name: 'Rechiseled', cat: 'Tech', brief: 'Ядро технологий на сервере' },
-  { name: 'Reeses Sodium Options', cat: 'Tech', brief: 'Ядро технологий на сервере' },
-  { name: 'Shulker Box Tooltip', cat: 'Tech', brief: 'Ядро технологий на сервере' },
-  { name: 'Simple Voice Chat', cat: 'Tech', brief: 'Ядро технологий на сервере' },
-  { name: 'Sinytra Connector', cat: 'Tech', brief: 'Ядро технологий на сервере' },
-  { name: 'Sit', cat: 'Tech', brief: 'Ядро технологий на сервере' },
-  { name: 'Sodium', cat: 'Tech', brief: 'Ядро технологий на сервере' },
-  { name: 'Sodium Extra', cat: 'Tech', brief: 'Ядро технологий на сервере' },
-  { name: 'Sodium Leaf Culling', cat: 'Tech', brief: 'Ядро технологий на сервере' },
-  { name: 'Supplementaries', cat: 'Tech', brief: 'Ядро технологий на сервере' },
-  { name: 'Supplementaries Squared', cat: 'Tech', brief: 'Ядро технологий на сервере' },
-  { name: 'Tiny Item Animations', cat: 'Tech', brief: 'Ядро технологий на сервере' },
-  { name: 'Voice Messages', cat: 'Tech', brief: 'Ядро технологий на сервере' }
+  { name: 'Ars Creo', cat: 'Magic', brief: 'Интеграция с Create: турели и источники на штуковинах' },
+  { name: "Ars Nouveau's Flavors & Delight", cat: 'Food', brief: 'Еда на ингредиентах из Ars Nouveau в стиле Farmer’s Delight' },
+  { name: 'Ars Technica', cat: 'Magic', brief: 'Техномагические глифы и броня' },
+
+  { name: 'Create', cat: 'Tech', brief: 'Ядро техники на сервере. Кинетика, конвейеры, автоматизация' },
+  { name: 'Create: Enchantment Industry', cat: 'Tech', brief: 'Автоматизация чар через Create' },
+  { name: 'Create: Central Kitchen', cat: 'Tech', brief: 'Связка с Farmer’s Delight' },
+  { name: 'Create: Copycats+', cat: 'Tech', brief: 'Доп. копикэт-формы и трюки оформления' },
+  { name: 'Create: Bells & Whistles', cat: 'Tech', brief: 'Декор и утилиты для поездов' },
+  { name: 'Create: Framed', cat: 'Tech', brief: 'Больше разновидностей стёкол' },
+  { name: 'Create: Food', cat: 'Food', brief: 'Расширение пищевого контента Create' },
+  { name: 'Create: Dreams & Desires', cat: 'Tech', brief: 'Сборные QoL-фичи и новые Create блоки' },
+  { name: 'Create: The Factory Must Grow', cat: 'Tech', brief: 'Эпоха дизеля, нефти и электричества в Create' },
+  { name: 'Create Encased', cat: 'Tech', brief: 'Новые «encased» узлы и рецепты для Create' },
+  { name: 'Create Jetpack', cat: 'Tech', brief: 'Джетпак на воздухе' },
+  { name: 'Create Ore Excavation', cat: 'Tech', brief: 'Бурение и добыча руд механизмами Create' },
+  { name: 'Create: Connected', cat: 'Tech', brief: 'Связи и удобства для длинных конвейеров' },
+
+  { name: 'Better End', cat: 'World', brief: 'Полный редизайн Энда' },
+  { name: 'Better Nether', cat: 'World', brief: 'Расширение и новые биомы в Нижнем мире' },
+  { name: 'Deeper and Darker', cat: 'World', brief: 'Разнообразный скалк-контент, новое измерение и мобы' },
+  { name: 'Asteroids!', cat: 'World', brief: 'Астероиды и обсерватории' },
+
+  { name: 'Chipped', cat: 'Decoration', brief: 'Сотни новых вариаций ванильных блоков' },
+  { name: 'Rechiseled', cat: 'Decoration', brief: 'Новые формы/текстуры ванильных блоков для отделки' },
+  { name: "Macaw's Bridges", cat: 'Decoration', brief: 'Мосты' },
+  { name: "Macaw's Doors", cat: 'Decoration', brief: 'Двери' },
+  { name: "Macaw's Windows", cat: 'Decoration', brief: 'Окна' },
+  { name: "Macaw's Fences and Walls", cat: 'Decoration', brief: 'Заборы и стены' },
+  { name: "Macaw's Lights and Lamps", cat: 'Decoration', brief: 'Светильники' },
+  { name: "Macaw's Paintings", cat: 'Decoration', brief: 'Картины' },
+  { name: "Macaw's Stairs", cat: 'Decoration', brief: 'Лестницы' },
+  { name: "Macaw's Trapdoors", cat: 'Decoration', brief: 'Люки' },
+  { name: 'Supplementaries', cat: 'Decoration', brief: 'Функциональный декор и утиль' },
+  { name: 'Supplementaries Squared', cat: 'Decoration', brief: 'Аддон к Supplementaries - ещё больше декора' },
+  { name: 'Every Compat (Wood Good)', cat: 'Decoration', brief: 'Единые материалы/древесина между модами' },
+
+  { name: 'Jade', cat: 'QoL', brief: 'HUD подсказок по блокам и сущностям' },
+  { name: 'JourneyMap', cat: 'QoL', brief: 'Карта мира и мини-карта в реальном времени' },
+  { name: 'Just Enough Items', cat: 'QoL', brief: 'Просмотр рецептов предметов и их использования' },
+  { name: 'Patchouli', cat: 'QoL', brief: 'Система внутриигровых гайдов в виде книг' },
+  { name: 'Shulker Box Tooltip', cat: 'QoL', brief: 'Удобный просмотр содержимого шалкеров' },
+  { name: 'Inventory Profiles Next', cat: 'QoL', brief: 'Сортировка и шаблоны инвентаря' },
+  { name: 'KleeSlabs', cat: 'QoL', brief: 'Поломка только той части двойной плиты, на которую вы смотрите' },
+  { name: 'Chat Heads', cat: 'QoL', brief: 'Аватары игроков в чате' },
+  { name: 'ArmorPoser', cat: 'QoL', brief: 'Точная настройка стоек брони' },
+  { name: 'Dynamic Crosshair', cat: 'QoL', brief: 'Адаптивный прицел под предмет и цель' },
+  { name: 'Model Gap Fix', cat: 'QoL', brief: 'Фикс «щелей» между частями моделей интструментов' },
+
+  { name: 'Ambient Sounds', cat: 'QoL', brief: 'Расширенные фоновые звуки' },
+  { name: 'ArchiSound', cat: 'QoL', brief: 'Кастомная музыка и радио' },
+  { name: '3D Skin Layers', cat: 'QoL', brief: '3D объёмные скины' },
+  { name: 'Emotecraft', cat: 'QoL', brief: 'Эмоции игрока' },
+  { name: 'Female Gender Mod', cat: 'QoL', brief: 'Кастомизация женской модели игрока' },
+  { name: 'Tiny Item Animations', cat: 'QoL', brief: 'Мелкие анимации в инвентаре' },
+
+  { name: 'ImageToMap', cat: 'QoL', brief: 'Запись своих изображений на карту' },
+
+  { name: 'Simple Voice Chat', cat: 'QoL', brief: 'Голосовой чат с группами' },
+  { name: 'Voice Messages', cat: 'QoL', brief: 'Голосовые сообщения' },
+  { name: 'Sinytra Connector', cat: 'QoL', brief: 'Запуск Fabric-модов на NeoForge' },
+
+  { name: 'Sodium', cat: 'Optimization', brief: 'Оптимизация рендера клиента' },
+  { name: 'Lithium', cat: 'Optimization', brief: 'Оптимизация серверной логики и физики' },
+  { name: 'FerriteCore', cat: 'Optimization', brief: 'Экономия оперативной памяти' },
+  { name: 'Entity Culling', cat: 'Optimization', brief: 'Отбраковка невидимых сущностей и блоков' },
+  { name: 'Dynamic FPS', cat: 'Optimization', brief: 'Снижение фоновой нагрузки' },
+  { name: 'Clumps', cat: 'Optimization', brief: 'Мелкие частицы опыта объединены в крупные: меньше лагов на фермах' },
+  { name: 'Particle Core', cat: 'Optimization', brief: 'Оптимизация рендера частиц' },
+  { name: "Reese's Sodium Options", cat: 'Optimization', brief: 'Удобные настройки Sodium' },
+  { name: 'Sodium Leaf Culling', cat: 'Optimization', brief: 'Ускорение рендера листвы' },
+  { name: 'Iris Shaders', cat: 'Optimization', brief: 'Шейдер-лоадер для Sodium' },
+  { name: 'Iris & Oculus Flywheel Compat', cat: 'Optimization', brief: 'Улучшает производительность Create с включенными шейдерами' },
+  { name: 'CreateBetterFps', cat: 'Optimization', brief: 'Повышает FPS в Create' },
+
+  { name: "Farmer's Delight", cat: 'Food', brief: 'Базовая кулинария и готовка' },
+  { name: "End's Delight", cat: 'Food', brief: 'Еда и ингредиенты Энда' },
+  { name: 'Expanded Delight', cat: 'Food', brief: 'Новые культуры и предметы' },
+  { name: 'More Delight (for Farmers Delight)', cat: 'Food', brief: 'Ещё больше еды!' }
 ];
+
 
 type Cmd = { cmd: string; desc: string; scope: 'server' | 'bot' };
 const CMDS: Cmd[] = [
@@ -216,15 +215,12 @@ export default function WikiPage() {
         </Section>
       </main>
 
-      {/* Right */}
       <aside className="col-span-12 md:col-span-3">
         <RightToc items={SECTIONS} />
       </aside>
     </div>
   );
 }
-
-/* ---------- Sections ---------- */
 
 function ModsSection() {
   const [q, setQ] = useState('');
@@ -255,7 +251,7 @@ function ModsSection() {
             <tr>
               <th className="px-3 py-2">Мод</th>
               <th className="px-3 py-2">Категория</th>
-              <th className="px-3 py-2">Кратко</th>
+              <th className="px-3 py-2">Краткое описание</th>
             </tr>
           </thead>
           <tbody>

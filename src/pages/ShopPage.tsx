@@ -1,56 +1,42 @@
 import { useMemo } from 'react';
 import { authStore } from '@/shared/store/auth';
 
-const TELEGRAM_BOT = 'https://t.me/@Archi_payment_bot';
+const TELEGRAM_BOT = 'https://t.me/Archi_payment_bot';
 
 export default function ShopPage() {
   const user = authStore((s) => s.user);
   const nick = user?.username || 'ваш_ник';
+
   const deepLink = useMemo(() => {
-    const p = new URLSearchParams({ start: `buy-${nick}` }).toString();
+    const p = new URLSearchParams({ start: `activate-${nick}` }).toString();
     return `${TELEGRAM_BOT}?${p}`;
   }, [nick]);
 
   return (
     <div className="mx-auto w-full max-w-7xl grid grid-cols-12 gap-6 px-4 py-6 text-slate-100">
-      {/* Левое меню */}
       <aside className="col-span-12 md:col-span-3">
         <LeftNav />
       </aside>
 
-      {/* Контент */}
       <main className="col-span-12 md:col-span-6">
-        <h1 className="mb-4 text-3xl font-bold">Покупка проходки</h1>
+        <h1 className="mb-4 text-3xl font-bold">Получение проходки</h1>
 
-        <Callout />
+        <CalloutFree />
 
-        {/* Стоимость */}
-        <Section id="price" n={1} title="Стоимость и варианты">
-          <div className="grid gap-3 sm:grid-cols-3">
-            <PriceCard title="1 месяц" price="250 ₽" note="Базовый период" />
-            <PriceCard title="3 месяца" price="650 ₽" old="750 ₽" note="Экономия 100 ₽" />
-            <PriceCard title="12 месяцев" price="1 800 ₽" old="3 000 ₽" note="Лучшее предложение" />
-          </div>
-          <p className="mt-3 text-sm text-slate-300">
-            Проходка одинаковая для всех. <span className="text-sky-300">Никаких преимуществ в игре</span>.
-          </p>
-        </Section>
-
-        {/* Как оплатить */}
-        <Section id="how" n={2} title="Как оплатить через Telegram-бота">
+        <Section id="how" n={1} title="Активация через Telegram-бота">
           <ol className="list-decimal pl-6 space-y-2 text-slate-300">
             <li>Перейдите к боту по кнопке ниже.</li>
-            <li>Выберите «Купить проходку» и следуйте шагам.</li>
+            <li>Выберите «Активировать проходку» и следуйте шагам.</li>
             <li>Укажите ник: <b>{nick}</b>.</li>
-            <li>Оплатите встроенным методом Telegram.</li>
-            <li>После подтверждения бот запишет срок проходки и добавит вас в whitelist.</li>
+            <li>Подтвердите. Оплата не требуется.</li>
+            <li>После подтверждения администратором бот добавит вас в whitelist.</li>
           </ol>
           <div className="mt-4 flex flex-wrap gap-2">
             <a
               href={deepLink}
               className="rounded-xl bg-sky-600 px-4 py-2 text-sm hover:bg-sky-500"
             >
-              Открыть бота и оплатить
+              Открыть бота и активировать
             </a>
             <a
               href={TELEGRAM_BOT}
@@ -59,50 +45,41 @@ export default function ShopPage() {
               Открыть профиль бота
             </a>
           </div>
-          <p className="mt-3 text-xs text-slate-400">
-            Реквизиты из старого способа оплаты не используются. Оплата происходит только через бота.
-          </p>
         </Section>
 
-        {/* Скидки */}
-        <Section id="discounts" n={3} title="Скидки и поддержка">
+        {/* Поддержка */}
+        <Section id="discounts" n={2} title="Поддержка проекта">
           <ul className="list-disc pl-5 space-y-2 text-slate-300">
             <li>
-              <b>Реферальная программа:</b> пригласил друга — <b>−50 ₽</b> к твоей следующей оплате. Друга — тоже <b>−50 ₽</b>.
-              <div className="mt-1 text-xs text-slate-400">
-                Достаточно, чтобы приглашённый указал твой ник в сообщении боту. После проверки оба получат скидку.
-              </div>
+              <b>Добровольные пожертвования:</b> через того же бота. Не дают привилегий и не влияют на геймплей.
             </li>
-            <li><b>3 месяца:</b> 650 ₽ вместо 750 ₽.</li>
-            <li><b>Год:</b> 1 800 ₽ вместо 3 000 ₽.</li>
             <li>
-              <b>PR/творчество:</b> посты, обзоры, гайды, арты, баннеры — напишите администрации. Возможны скидки или бесплатная проходка.
+              <b>PR/творчество:</b> посты, обзоры, гайды, арты, видеоролики — напишите администрации. Возможны благодарности от проекта.
             </li>
           </ul>
         </Section>
 
         {/* Политика и честность */}
-        <Section id="policy" n={4} title="Зачем это нужно">
+        <Section id="policy" n={3} title="Зачем это нужно">
           <p className="text-slate-300">
-            Проходка — способ поддержать сервер: хостинг, электричество, интернет, обновления. <b>Без донат-привилегий. </b>
-            Все средства идут на нужды сервера.
+            Проходка — способ учёта новых игроков и защиты сервера. <b>Не даёт донат-привилегий.</b>
           </p>
         </Section>
 
         {/* FAQ */}
-        <Section id="faq" n={5} title="FAQ">
+        <Section id="faq" n={4} title="FAQ">
           <dl className="space-y-3">
             <QA q="Когда активируется проходка?">
-              Сразу после подтверждения оплаты ботом.
+              Сразу после подтверждения вашей заявки из бота администратором.
             </QA>
             <QA q="Что если указал ник с ошибкой?">
-              Напишите админу через бота. Исправим вручную после проверки.
+              Исправьте ник в профиле на сайте или отправьте заявку повторно. Неверная будет автоматически отклонена.
             </QA>
-            <QA q="Где узнать срок окончания?">
-              Команда бота «Моя проходка» покажет дату.
+            <QA q="Где узнать статус?">
+              Команда бота «Моя проходка» покажет состояние.
             </QA>
             <QA q="Можно играть без проходки?">
-              Нет. Доступ только с активной проходкой и в whitelist.
+              Нет. Доступ разрёшен только верифицированным игрокам.
             </QA>
           </dl>
         </Section>
@@ -120,9 +97,9 @@ export default function ShopPage() {
 
 function LeftNav() {
   const items = [
-    { id: 'price', title: 'Стоимость' },
-    { id: 'how', title: 'Как оплатить' },
-    { id: 'discounts', title: 'Скидки' },
+    { id: 'price', title: 'Доступ' },
+    { id: 'how', title: 'Как активировать' },
+    { id: 'discounts', title: 'Поддержка' },
     { id: 'policy', title: 'Зачем это нужно' },
     { id: 'faq', title: 'FAQ' },
   ];
@@ -154,12 +131,12 @@ function Section({
   );
 }
 
-function Callout() {
+function CalloutFree() {
   return (
     <div className="mb-6 rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
       <div className="mb-2 text-base font-semibold">Честная модель без доната</div>
       <p className="text-sm text-slate-300">
-        Проходка — <b>способ поддержки существования проекта. Не даёт преимуществ</b>, не открывает платные команды, донат-оружие и тому подобные привилегии.
+        Проходка <b>бесплатна для всех игроков</b>. Не даёт никаких преимуществ, не открывает платные команды, донатное оружие и тому подобные привилегии.
       </p>
     </div>
   );
@@ -181,18 +158,18 @@ function RightBox({ nick, deepLink }: { nick: string; deepLink: string }) {
     <div className="sticky top-20 space-y-3">
       <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
         <div className="text-sm text-slate-300">Ваш ник</div>
-        <div className="mt-1 text-lg font-semibold">@{nick}</div>
+        <div className="mt-1 text-lg font-semibold">{nick}</div>
         <a href={deepLink} className="mt-3 inline-flex rounded-xl bg-sky-600 px-4 py-2 text-sm hover:bg-sky-500">
-          Оплатить через бота
+          Активировать через бота
         </a>
         <p className="mt-2 text-xs text-slate-400">
-          Важно: укажите правильный ник. После оплаты доступ появится автоматически.
+          Важно: укажите правильный ник. После активации доступ появится автоматически.
         </p>
       </div>
 
       <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 text-sm text-slate-300">
-        <div className="font-semibold mb-1">Реферальная программа</div>
-        Пригласи друга — минус 50 ₽ тебе и ему. Попросите друга указать твой ник при оплате в боте.
+        <div className="font-semibold mb-1">Поддержка проекта</div>
+        Пожертвования добровольные и осуществляются через бота. Привилегий не дают.
       </div>
     </div>
   );
