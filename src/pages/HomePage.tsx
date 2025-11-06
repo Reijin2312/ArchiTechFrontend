@@ -7,7 +7,7 @@ const DISCORD_URL = 'https://discord.gg/x6JwVPwPtw'
 const TELEGRAM_URL = 'https://t.me/archi_tech_official'
 const MAP_URL = '/map'
 const RULES_URL = '/rules'
-const SHOP_URL = 'https://t.me/@Archi_payment_bot'
+const SHOP_URL = '/shop'
 const MODPACK_URL = '/modpack'
 
 type McStatus = {
@@ -240,7 +240,7 @@ function SvgMcBlockGrass({ className }: { className?: string }) {
               </div>
 
               <div>
-                <a href={MODPACK_URL} className="inline-flex rounded-xl px-5 py-3 bg-indigo-600 hover:bg-indigo-500 text-center">Скачать лаунчер</a>
+                <a href="https://launcher.architech-mc.ru/download/launcher/latest" className="inline-flex rounded-xl px-5 py-3 bg-indigo-600 hover:bg-indigo-500 text-center">Скачать лаунчер</a>
               </div>
             </div>
           </div>
@@ -295,7 +295,7 @@ function SvgMcBlockGrass({ className }: { className?: string }) {
           <CardCTA 
             title={<span className="inline-flex items-center gap-2"><SvgMcBlockGrass className="h-5" />Лаунчер</span>}
             text="Автоматическое обновление модов" 
-            href={MAP_URL}
+            href="https://launcher.architech-mc.ru/download/launcher/latest"
             button="Скачать" />
           <CardCTA 
             title={<span className="inline-flex items-center gap-2"><SvgUserPlus className="h-5" />Доступ на сервер</span>}

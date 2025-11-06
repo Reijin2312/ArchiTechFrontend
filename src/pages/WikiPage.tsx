@@ -155,9 +155,9 @@ export default function WikiPage() {
               </a>
             </li>
             <li>Скачайте лаунчер {" "}
-              <Link to="/api/auth/register" className="text-sky-400 hover:text-sky-300 hover:underline">
+              <a href="https://launcher.architech-mc.ru/download/launcher/latest" className="text-sky-400 hover:text-sky-300 hover:underline">
                отсюда
-              </Link>
+              </a>
               .
             </li>
             <li>Установите игру. Сервер автоматически появится в списке серверов сетевой игры.</li>
