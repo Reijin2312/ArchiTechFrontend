@@ -16,6 +16,32 @@
 .error { @apply text-sm text-red-400; }
 .sep { @apply my-4 h-px bg-slate-800; }
 .wrap { @apply min-h-dvh grid place-items-center px-4; }
-/* target the shared Footer component specifically so it's fixed to the viewport */
 .site-footer { @apply fixed bottom-2 right-3 text-sm text-slate-400 z-50; }
 .site-footer a { @apply text-slate-400 underline-offset-2 hover:underline; }
+
+@layer base {
+  body { @apply bg-slate-950 text-slate-100; }
+  
+  body.has-wallpaper {
+    --overlay-alpha: .75;
+
+    background-image:
+      linear-gradient(rgb(2 6 23 / var(--overlay-alpha)), rgb(2 6 23 / var(--overlay-alpha))),
+      var(--bg-url, url('/images/bg.png'));
+    background-position: center;
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+  }
+
+  input:-webkit-autofill {
+    -webkit-text-fill-color: #eaf3ff;
+    transition: background-color 600000s 0s, color 600000s 0s;
+    caret-color: #eaf3ff;
+  }
+}
+
+@layer components {
+  .is-ok  { @apply border-green-500 bg-green-950/30 focus:border-green-500 focus:ring-1 focus:ring-green-500/30; }
+  .is-err { @apply border-red-500  bg-red-950/30  focus:border-red-500  focus:ring-1 focus:ring-red-500/30; }
+}

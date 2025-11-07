@@ -1,3 +1,4 @@
+import { useWallpaper } from '@/shared/ui/useWallpaper';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 
@@ -117,6 +118,8 @@ const CMDS: Cmd[] = [
 ];
 
 export default function WikiPage() {
+  useWallpaper();
+
   return (
     <div className="mx-auto w-full max-w-7xl grid grid-cols-12 gap-6 px-4 py-6 text-slate-100">
       <aside className="col-span-12 md:col-span-3">
@@ -124,11 +127,11 @@ export default function WikiPage() {
       </aside>
 
       <main className="col-span-12 md:col-span-6">
-        <h1 className="mb-4 text-3xl font-bold">Вики сервера</h1>
+        <h1 className="mb-4 text-3xl font-bold text-[22px] md:text-[24px] text-center">Вики сервера</h1>
         <Callout />
 
         <Section id="intro" title="О сервере и тематика" n={1}>
-          <p className="text-slate-300">
+          <p className="text-slate-300 ">
             Сервер состоит из <span className="text-sky-400">одного мира</span>. Тематикой является <span className="text-sky-400">техномагия с особым упором на строительство</span>. 
             Наша цель — создать комфортное и стабильное место для общения и взаимодействия. 
           </p>
@@ -208,9 +211,10 @@ export default function WikiPage() {
 
         <Section id="links" title="Ссылки" n={9}>
           <ul className="list-disc pl-5 text-slate-300">
-            <li><a className="text-sky-300 hover:text-sky-200" href="/rules">Правила сервера</a></li>
-            <li><a className="text-sky-300 hover:text-sky-200" href="/shop">Покупка проходки</a></li>
-            <li><a className="text-sky-300 hover:text-sky-200" href="/map">Онлайн-карта</a> (если включена)</li>
+            <li><Link to="/rules" className="text-sky-300 hover:text-sky-200" > Правила сервера</Link></li>
+            <li><Link to="/shop" className="text-sky-300 hover:text-sky-200" > Получение проходки</Link></li>
+            <li><Link to="/privacy" className="text-sky-300 hover:text-sky-200" > Политика конфиденциальности</Link></li>
+            <li><Link to="/terms" className="text-sky-300 hover:text-sky-200" > Пользовательское соглашение</Link></li>
           </ul>
         </Section>
       </main>
@@ -372,12 +376,12 @@ function RightToc({ items }: { items: TocItem[] }) {
 
 function Section({ id, title, n, children }: { id: string; title: string; n: number; children: React.ReactNode }) {
   return (
-    <section id={id} className="scroll-mt-24">
+    <section id={id} className="scroll-mt-24 ">
       <h2 className="mb-3 inline-flex items-center gap-2 rounded-full bg-slate-900/60 px-3 py-1.5 text-lg font-semibold">
-        <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-sky-600 text-slate-50 text-sm">{n}</span>
+        <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-sky-600 text-slate-50 text-sm ">{n}</span>
         {title}
       </h2>
-      <div className="mb-8 rounded-2xl border border-slate-800 bg-slate-900/60 p-4">{children}</div>
+      <div className="mb-8 rounded-2xl border border-slate-800 bg-slate-900/60 p-4 backdrop-blur-md backdrop-saturate-150">{children}</div>
     </section>
   );
 }
@@ -410,7 +414,7 @@ function CmdTable({ title, items }: { title: string; items: Cmd[] }) {
 
 function Callout() {
   return (
-    <div className="mb-6 rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
+    <div className="mb-6 rounded-2xl border border-slate-800 bg-slate-900/60 p-4 backdrop-blur-md backdrop-saturate-150">
       <div className="mb-1 text-base font-semibold">Как пользоваться вики</div>
       <ul className="text-sm text-slate-300 space-y-1">
         <li>Переходите по разделам слева или используйте быстрый поиск по странице: <Kbd>Ctrl</Kbd> + <Kbd>F</Kbd> (Windows / Linux), <Kbd>Cmd</Kbd> + <Kbd>F</Kbd> (macOS).</li>

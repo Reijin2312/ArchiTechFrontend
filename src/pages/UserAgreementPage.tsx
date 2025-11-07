@@ -22,7 +22,7 @@ export default function UserAgreementPage() {
       </aside>
 
       <main className="col-span-12 md:col-span-6">
-        <h1 className="mb-4 text-3xl font-bold">Пользовательское соглашение</h1>
+        <h1 className="mb-4 text-3xl font-bold text-[22px] md:text-[24px] text-center">Пользовательское соглашение</h1>
         <Callout />
 
         <Section id="id1" title="Общие условия" n={1}>

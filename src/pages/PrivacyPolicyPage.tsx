@@ -25,7 +25,7 @@ export default function PrivacyPolicyPage() {
       </aside>
 
       <main className="col-span-12 md:col-span-6">
-        <h1 className="mb-4 text-3xl font-bold">Политика конфиденциальности проекта</h1>
+        <h1 className="mb-4 text-3xl font-bold text-[22px] md:text-[24px] text-center">Политика конфиденциальности проекта</h1>
         <Callout />
 
         <Section id="id1" title="Общие положения" n={1}>

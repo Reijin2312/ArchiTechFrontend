@@ -5,10 +5,9 @@ const SERVER_NAME = 'ArchiTech MC'
 const SERVER_IP = 'architech-mc.online'
 const DISCORD_URL = 'https://discord.gg/x6JwVPwPtw'
 const TELEGRAM_URL = 'https://t.me/archi_tech_official'
-const MAP_URL = '/map'
 const RULES_URL = '/rules'
 const SHOP_URL = '/shop'
-const MODPACK_URL = '/modpack'
+import { useWallpaper } from '@/shared/ui/useWallpaper';
 
 type McStatus = {
   online: boolean
@@ -20,6 +19,8 @@ type McStatus = {
 }
 
 export default function HomePage() {
+  useWallpaper();
+
   const [status, setStatus] = useState<McStatus | null>(null)
   const [copyOk, setCopyOk] = useState<'idle' | 'ok' | 'err'>('idle')
   const shots = ['/images/screen1.png','/images/screen2.png','/images/screen3.png', '/images/screen4.png', '/images/screen5.png', '/images/screen6.png', '/images/screen7.png', '/images/screen8.png']
@@ -96,33 +97,37 @@ export default function HomePage() {
   }
 
   function SvgUserPlus({
-    className,
-    gap = 4,
-  }: { className?: string; gap?: number }) {
-    return (
-      <svg viewBox="0 0 24 24" className={className} fill="currentColor" aria-hidden>
-        {}
-        <g transform={`translate(${-gap},0)`}>
-          <circle cx="12" cy="8" r="4" />                         {}
-          <path d="M4 19c0-3.866 3.134-7 7-7h2c3.866 0 7 3.134 7 7v1H4v-1Z"/> {}
-        </g>
-        {}
-        <path d="M18 4h2v3h3v2h-3v3h-2V9h-3V7h3V4Z"/>
-      </svg>
-    );
-  }
+  className,
+}: { className?: string; gap?: number }) {
+  return (
+    <svg
+      viewBox="0 0 29 29"
+      className={className}
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden
+    >
+      <path
+        d="M21 7.00001C21 6.7348 21.1054 6.48044 21.2929 6.29291C21.4805 6.10537 21.7348 6.00001 22 6.00001H24V4.00001C24 3.7348 24.1054 3.48044 24.2929 3.29291C24.4805 3.10537 24.7348 3.00001 25 3.00001C25.2652 3.00001 25.5196 3.10537 25.7071 3.29291C25.8947 3.48044 26 3.7348 26 4.00001V6.00001H28C28.2652 6.00001 28.5196 6.10537 28.7071 6.29291C28.8947 6.48044 29 6.7348 29 7.00001C29 7.26523 28.8947 7.51958 28.7071 7.70712C28.5196 7.89466 28.2652 8.00001 28 8.00001H26V10C26 10.2652 25.8947 10.5196 25.7071 10.7071C25.5196 10.8947 25.2652 11 25 11C24.7348 11 24.4805 10.8947 24.2929 10.7071C24.1054 10.5196 24 10.2652 24 10V8.00001H22C21.7348 8.00001 21.4805 7.89466 21.2929 7.70712C21.1054 7.51958 21 7.26523 21 7.00001ZM28.82 13.835C29.2769 16.5507 28.8589 19.3413 27.6263 21.804C26.3938 24.2666 24.4105 26.2738 21.9628 27.5358C19.5151 28.7978 16.7297 29.2492 14.0087 28.8249C11.2877 28.4006 8.77199 27.1226 6.82472 25.1753C4.87744 23.2281 3.59941 20.7123 3.17513 17.9913C2.75085 15.2704 3.20229 12.4849 4.46426 10.0373C5.72624 7.58958 7.73344 5.60628 10.1961 4.37373C12.6587 3.14118 15.4493 2.72316 18.165 3.18001C18.4246 3.22592 18.6556 3.37247 18.8077 3.58778C18.9598 3.80309 19.0207 4.06974 18.9772 4.32974C18.9337 4.58974 18.7893 4.82204 18.5754 4.97613C18.3615 5.13021 18.0954 5.1936 17.835 5.15251C16.2577 4.88717 14.6415 4.96873 13.0989 5.39152C11.5563 5.81431 10.1243 6.56817 8.90268 7.60064C7.68104 8.63311 6.69906 9.91938 6.02508 11.3699C5.3511 12.8205 5.0013 14.4005 5.00003 16C4.99766 18.6928 5.98734 21.292 7.78003 23.3013C8.89532 21.6851 10.4636 20.4348 12.2875 19.7075C11.3078 18.9358 10.5928 17.878 10.2421 16.6811C9.89143 15.4843 9.92241 14.2079 10.3308 13.0294C10.7391 11.851 11.5046 10.8291 12.5206 10.1059C13.5367 9.38263 14.7529 8.99399 16 8.99399C17.2472 8.99399 18.4634 9.38263 19.4795 10.1059C20.4955 10.8291 21.2609 11.851 21.6693 13.0294C22.0777 14.2079 22.1086 15.4843 21.7579 16.6811C21.4072 17.878 20.6923 18.9358 19.7125 19.7075C21.5365 20.4348 23.1047 21.6851 24.22 23.3013C26.0127 21.292 27.0024 18.6928 27 16C27.0001 15.3852 26.9491 14.7714 26.8475 14.165C26.8245 14.0349 26.8275 13.9016 26.8564 13.7727C26.8852 13.6437 26.9393 13.5218 27.0155 13.4139C27.0917 13.306 27.1885 13.2143 27.3004 13.144C27.4123 13.0738 27.537 13.0264 27.6672 13.0046C27.7975 12.9828 27.9309 12.987 28.0595 13.017C28.1881 13.0471 28.3096 13.1023 28.4168 13.1795C28.5239 13.2567 28.6148 13.3544 28.684 13.4669C28.7532 13.5794 28.7994 13.7045 28.82 13.835ZM16 19C16.7912 19 17.5645 18.7654 18.2223 18.3259C18.8801 17.8864 19.3928 17.2617 19.6956 16.5307C19.9983 15.7998 20.0775 14.9956 19.9232 14.2197C19.7688 13.4437 19.3879 12.731 18.8285 12.1716C18.269 11.6122 17.5563 11.2312 16.7804 11.0769C16.0045 10.9225 15.2002 11.0017 14.4693 11.3045C13.7384 11.6072 13.1137 12.1199 12.6742 12.7777C12.2346 13.4355 12 14.2089 12 15C12 16.0609 12.4215 17.0783 13.1716 17.8284C13.9218 18.5786 14.9392 19 16 19ZM16 27C18.4417 27.0025 20.8142 26.1885 22.74 24.6875C22.0166 23.5561 21.02 22.625 19.8421 21.9801C18.6642 21.3351 17.3429 20.9971 16 20.9971C14.6571 20.9971 13.3358 21.3351 12.1579 21.9801C10.98 22.625 9.98345 23.5561 9.26003 24.6875C11.1859 26.1885 13.5583 27.0025 16 27Z"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}
 
 function SvgMcBlockGrass({ className }: { className?: string }) {
   return (
-    <svg viewBox="0 0 20 20" className={className} aria-hidden>
-      {}
-      <path fill="#6FBF3D" d="M12 2.5 20 7 12 11.5 4 7 12 2.5Z"/>
-      {}
-      <path fill="#5EAB30" d="M12 2.5 20 7l-2.2 1.2L12 5 6.2 8.2 4 7 12 2.5Z"/>
-      {}
-      <path fill="#8B5E3C" d="M20 7v8l-8 5.5v-9L20 7Z"/>
-      {}
-      <path fill="#7A5030" d="M12 11.5v9L4 15V7l8 4.5Z"/>
+    <svg
+      viewBox="0 0 29 29"
+      className={className}
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden
+    >
+      <path
+        d="M26 4H6C5.46957 4 4.96086 4.21071 4.58579 4.58579C4.21071 4.96086 4 5.46957 4 6V26C4 26.5304 4.21071 27.0391 4.58579 27.4142C4.96086 27.7893 5.46957 28 6 28H26C26.5304 28 27.0391 27.7893 27.4142 27.4142C27.7893 27.0391 28 26.5304 28 26V6C28 5.46957 27.7893 4.96086 27.4142 4.58579C27.0391 4.21071 26.5304 4 26 4ZM24.4137 15L17 7.58625V6H18.5863L26 13.415V15H24.4137ZM17 10.4137L21.5863 15H17V10.4137ZM26 10.5863L21.4137 6H26V10.5863ZM15 6V15H6V6H15ZM13.4137 26L6 18.5863V17H7.58625L15 24.4137V26H13.4137ZM15 21.5863L10.4137 17H15V21.5863ZM6 21.4137L10.5863 26H6V21.4137ZM26 26H17V17H26V26Z"
+        fill="currentColor"
+      />
     </svg>
   );
 }
@@ -180,25 +185,11 @@ function SvgMcBlockGrass({ className }: { className?: string }) {
   }
 
   return (
-    <div className="min-h-dvh bg-slate-950 text-slate-100 relative">
-      {/* Фон */}
-      <div className="pointer-events-none absolute inset-0 -z-10">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,var(--tw-gradient-stops))] from-blue-900/30 via-slate-950 to-slate-950" />
-        <div
-          className="absolute inset-0"
-          style={{
-            backgroundImage: "url('/images/bg.png')",
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            opacity: 0.15,
-          }}
-        />
-      </div>
-
+    <div className="min-h-dvh text-slate-100 relative">
       <section className="mx-auto max-w-7xl px-4 pb-10 pt-10 md:pt-16">
         <div className="grid md:grid-cols-2 gap-10 md:gap-14 items-stretch">
           <div className="md:flex md:flex-col md:h-full">
-            <h1 className="text-left! text-4xl md:text-5xl font-bold leading-tight">
+            <h1 className="mb-3 text-[22px] md:text-[24px] font-bold leading-tight text-left!">
               Присоединяйся к <span className="text-indigo-400">{SERVER_NAME}!</span>
             </h1>
             <p className="mt-4 text-slate-300 max-w-prose">
@@ -208,7 +199,7 @@ function SvgMcBlockGrass({ className }: { className?: string }) {
             <div className="mt-6 grid gap-3">
               <div className="flex w-full items-stretch overflow-hidden rounded-xl border border-slate-800 max-w-md">
               <div className="px-3 hidden sm:grid place-items-center bg-slate-900/60 border-r border-slate-800 text-xs text-slate-300">IP</div>
-              <div className="px-3 font-mono flex-1 truncate flex items-center justify-center text-center">{SERVER_IP}</div>
+              <div className="px-3 font-mono flex-1 truncate flex items-center justify-center text-center backdrop-blur-md backdrop-saturate-150">{SERVER_IP}</div>
               <button
                 onClick={copyIp}
                 className="px-3 py-2 bg-slate-900/60 hover:bg-slate-800 border-l border-slate-800 text-sm grid place-items-center"
@@ -323,7 +314,7 @@ function SvgMcBlockGrass({ className }: { className?: string }) {
           {TEAM.map((p) => {
             const src = avatars[p.name] || AVATAR_FALLBACK
             return (
-              <div key={p.name} className="rounded-2xl border border-slate-800 p-4 bg-slate-900/40">
+              <div key={p.name} className="rounded-2xl border border-slate-800 p-4 bg-slate-900/40 backdrop-blur-md backdrop-saturate-150">
                 <div className="flex items-center gap-3">
                   <img
                     src={src}
@@ -380,27 +371,20 @@ function Badge({ label, ok }: { label: string; ok?: boolean }) {
   )
 }
 
-function Feature({ title, text, icon }: { title: string; text: string; icon: string }) {
+function CardCTA({ title, text, href, button }: {
+  title: React.ReactNode; text: string; href: string; button: string
+}) {
   return (
-    <div className="rounded-2xl border border-slate-800 p-5 bg-slate-900/40">
-      <div className="text-2xl mb-2">{icon}</div>
-      <div className="font-medium mb-1">{title}</div>
-      <div className="text-sm text-slate-300">{text}</div>
+    <div className="rounded-2xl border border-slate-800 p-5
+                    bg-linear-to-b from-slate-900/60 to-slate-900/20
+                    backdrop-blur-md backdrop-saturate-150">
+      <div className="font-medium text-lg">{title}</div>
+      <div className="text-sm text-slate-300 mt-1 mb-4">{text}</div>
+      <a href={href} className="inline-flex rounded-xl px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-sm">{button}</a>
     </div>
   )
 }
 
-function CardCTA({ title, text, href, button }: {
-    title: React.ReactNode; text: string; href: string; button: string
-  }) {
-    return (
-      <div className="rounded-2xl border border-slate-800 p-5 bg-linear-to-b from-slate-900/60 to-slate-900/20">
-        <div className="font-medium text-lg">{title}</div>
-        <div className="text-sm text-slate-300 mt-1 mb-4">{text}</div>
-        <a href={href} className="inline-flex rounded-xl px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-sm">{button}</a>
-      </div>
-    )
-}
 
 function StepsGuide({ version }: { version?: string }) {
   const [copied, setCopied] = useState<'idle' | 'ok' | 'err'>('idle')
@@ -468,7 +452,7 @@ function StepsGuide({ version }: { version?: string }) {
 function Faq({ q, a }: { q: string; a: React.ReactNode }) {
   const [open, setOpen] = useState(false)
   return (
-    <div className="rounded-2xl border border-slate-800 overflow-hidden">
+    <div className="rounded-2xl border border-slate-800 overflow-hidden backdrop-blur-md backdrop-saturate-150">
       <button
         onClick={() => setOpen(v => !v)}
         className="w-full text-left px-4 py-3 bg-slate-900/50 hover:bg-slate-900/70 flex items-center justify-between"

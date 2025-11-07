@@ -1,9 +1,12 @@
 import { useMemo } from 'react';
 import { authStore } from '@/shared/store/auth';
+import { useWallpaper } from '@/shared/ui/useWallpaper';
 
 const TELEGRAM_BOT = 'https://t.me/Archi_payment_bot';
 
 export default function ShopPage() {
+  useWallpaper();
+
   const user = authStore((s) => s.user);
   const nick = user?.username || 'ваш_ник';
 
@@ -19,7 +22,7 @@ export default function ShopPage() {
       </aside>
 
       <main className="col-span-12 md:col-span-6">
-        <h1 className="mb-4 text-3xl font-bold">Получение проходки</h1>
+        <h1 className="mb-4 text-3xl font-bold text-[22px] md:text-[24px] text-center">Получение проходки</h1>
 
         <CalloutFree />
 
@@ -47,7 +50,6 @@ export default function ShopPage() {
           </div>
         </Section>
 
-        {/* Поддержка */}
         <Section id="discounts" n={2} title="Поддержка проекта">
           <ul className="list-disc pl-5 space-y-2 text-slate-300">
             <li>
@@ -59,14 +61,12 @@ export default function ShopPage() {
           </ul>
         </Section>
 
-        {/* Политика и честность */}
         <Section id="policy" n={3} title="Зачем это нужно">
           <p className="text-slate-300">
             Проходка — способ учёта новых игроков и защиты сервера. <b>Не даёт донат-привилегий.</b>
           </p>
         </Section>
 
-        {/* FAQ */}
         <Section id="faq" n={4} title="FAQ">
           <dl className="space-y-3">
             <QA q="Когда активируется проходка?">
@@ -85,15 +85,12 @@ export default function ShopPage() {
         </Section>
       </main>
 
-      {/* Правый сайдбар */}
       <aside className="col-span-12 md:col-span-3">
         <RightBox nick={nick} deepLink={deepLink} />
       </aside>
     </div>
   );
 }
-
-/* ---------- Components ---------- */
 
 function LeftNav() {
   const items = [
@@ -126,29 +123,18 @@ function Section({
         <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-sky-600 text-slate-50 text-sm">{n}</span>
         {title}
       </h2>
-      <div className="mb-8 rounded-2xl border border-slate-800 bg-slate-900/60 p-4">{children}</div>
+      <div className="mb-8 rounded-2xl border border-slate-800 bg-slate-900/60 p-4 backdrop-blur-md backdrop-saturate-150">{children}</div>
     </section>
   );
 }
 
 function CalloutFree() {
   return (
-    <div className="mb-6 rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
+    <div className="mb-6 rounded-2xl border border-slate-800 bg-slate-900/60 p-4 backdrop-blur-md backdrop-saturate-150">
       <div className="mb-2 text-base font-semibold">Честная модель без доната</div>
       <p className="text-sm text-slate-300">
         Проходка <b>бесплатна для всех игроков</b>. Не даёт никаких преимуществ, не открывает платные команды, донатное оружие и тому подобные привилегии.
       </p>
-    </div>
-  );
-}
-
-function PriceCard({ title, price, old, note }: { title: string; price: string; old?: string; note?: string }) {
-  return (
-    <div className="rounded-2xl border border-slate-800 bg-slate-900 p-4">
-      <div className="text-sm text-slate-300">{title}</div>
-      <div className="mt-1 text-2xl font-semibold text-sky-300">{price}</div>
-      {old && <div className="text-xs text-slate-500 line-through">{old}</div>}
-      {note && <div className="mt-1 text-xs text-slate-400">{note}</div>}
     </div>
   );
 }
@@ -167,7 +153,7 @@ function RightBox({ nick, deepLink }: { nick: string; deepLink: string }) {
         </p>
       </div>
 
-      <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 text-sm text-slate-300">
+      <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 text-sm text-slate-300 backdrop-blur-md backdrop-saturate-150">
         <div className="font-semibold mb-1">Поддержка проекта</div>
         Пожертвования добровольные и осуществляются через бота. Привилегий не дают.
       </div>

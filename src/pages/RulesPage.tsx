@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useWallpaper } from '@/shared/ui/useWallpaper';
 
 type TocItem = { id: string; title: string };
 
@@ -16,16 +17,15 @@ const SECTIONS: TocItem[] = [
 ];
 
 export default function RulesPage() {
+  useWallpaper();
   return (
     <div className="mx-auto w-full max-w-7xl grid grid-cols-12 gap-6 px-4 py-6 text-slate-100">
-      {/* Левое меню */}
       <aside className="col-span-12 md:col-span-3">
         <LeftNav />
       </aside>
 
-      {/* Контент */}
       <main className="col-span-12 md:col-span-6">
-        <h1 className="mb-4 text-3xl font-bold">Правила сервера</h1>
+        <h1 className="mb-4 text-3xl font-bold text-center text-[22px] md:text-[24px]">Правила сервера</h1>
         <Callout />
 
         <Section id="intro" title="Введение" n={1}>
@@ -139,7 +139,7 @@ export default function RulesPage() {
 
 function Callout() {
   return (
-    <div className="mb-6 rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
+    <div className="mb-6 rounded-2xl border border-slate-800 bg-slate-900/60 p-4 backdrop-blur-md backdrop-saturate-150">
       <div className="mb-2 text-base font-semibold">Рекомендация</div>
       <ul className="text-sm text-slate-300 space-y-1">
         <li>Быстрый поиск по странице: <Kbd>Ctrl</Kbd> + <Kbd>F</Kbd> (Windows / Linux), <Kbd>Cmd</Kbd> + <Kbd>F</Kbd> (macOS).</li>
@@ -209,7 +209,7 @@ function Section({ id, title, n, children }: { id: string; title: string; n: num
         <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-sky-600 text-slate-50 text-sm">{n}</span>
         {title}
       </h2>
-      <div className="mb-8 rounded-2xl border border-slate-800 bg-slate-900/60 p-4">{children}</div>
+      <div className="mb-8 rounded-2xl border border-slate-800 bg-slate-900/60 p-4 backdrop-blur-md backdrop-saturate-150">{children}</div>
     </section>
   );
 }
