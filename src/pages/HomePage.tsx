@@ -8,6 +8,8 @@ const TELEGRAM_URL = 'https://t.me/archi_tech_official'
 const RULES_URL = '/rules'
 const SHOP_URL = '/shop'
 import { useWallpaper } from '@/shared/ui/useWallpaper';
+import { AnimatePresence, motion } from 'framer-motion'
+import { type Variants, type Transition } from 'framer-motion'
 
 type McStatus = {
   online: boolean
@@ -371,61 +373,178 @@ function Badge({ label, ok }: { label: string; ok?: boolean }) {
   )
 }
 
-function CardCTA({ title, text, href, button }: {
-  title: React.ReactNode; text: string; href: string; button: string
-}) {
+const SHINE_EVERY = 4.5 
+const SHINE_DURATION = 0.85
+
+function CardCTA({
+  title, text, href, button,
+}: { title: React.ReactNode; text: string; href: string; button: string }) {
+  const initialDelay = useMemo(() => Math.random() * SHINE_EVERY, [])
+
   return (
-    <div className="rounded-2xl border border-slate-800 p-5
-                    bg-linear-to-b from-slate-900/60 to-slate-900/20
-                    backdrop-blur-md backdrop-saturate-150">
+    <motion.div
+      whileHover={{ y: -4, scale: 1.01 }}
+      className="relative rounded-2xl border border-slate-800 p-5 bg-linear-to-b from-slate-900/60 to-slate-900/20 backdrop-blur-md backdrop-saturate-150 overflow-hidden"
+    >
+    
+      <motion.span
+        aria-hidden
+        className="pointer-events-none absolute inset-y-0 -left-1/3 w-1/3 bg-linear-to-r from-transparent via-white/10 to-transparent"
+        initial={{ x: '-40%', opacity: 0 }}
+        animate={{ x: ['-40%', '160%'], opacity: [0, 1, 0] }}
+        transition={{
+          duration: SHINE_DURATION,
+          ease: 'easeOut',
+          delay: initialDelay,
+          repeat: Infinity,
+          repeatType: 'loop',
+          repeatDelay: SHINE_EVERY
+        }}
+        style={{ willChange: 'transform, opacity' }}
+      />
+
       <div className="font-medium text-lg">{title}</div>
       <div className="text-sm text-slate-300 mt-1 mb-4">{text}</div>
       <a href={href} className="inline-flex rounded-xl px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-sm">{button}</a>
-    </div>
+    </motion.div>
   )
 }
+
+type IconProps = React.SVGProps<SVGSVGElement>;
+
+export const SvgUserPlus: React.FC<IconProps> = (props) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} {...props}>
+    <circle cx="10" cy="8" r="3" />
+    <path d="M3.5 19c.6-3.2 3.6-5 6.5-5s5.9 1.8 6.5 5" />
+    <path d="M18 4v4" />
+    <path d="M16 6h4" />
+  </svg>
+);
+
+export const SvgTelegram: React.FC<IconProps> = (props) => (
+  <svg viewBox="0 0 24 24" fill="currentColor" {...props}>
+    <path d="M21.7 3.8c.5-.2.9.3.8.8l-3.3 15.1c-.1.6-.8.9-1.3.6l-5-3.6-2.4 2.4c-.4.4-1 .2-1.1-.4l-.5-4.3L3.1 12c-.6-.2-.6-1 .1-1.2l18.5-7z" />
+    <path d="M9.1 14.6l7.8-7.8-9.7 6 1.9 1.8z" fill="#fff" opacity=".6" />
+  </svg>
+);
+
+export const SvgMcBlockGrass: React.FC<IconProps> = (props) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.2} {...props}>
+    <rect x="3" y="5" width="18" height="16" rx="2" />
+    <rect x="3" y="5" width="18" height="5" fill="currentColor" opacity=".25" />
+    <path d="M6 14v4M10 14v4M14 14v4M18 14v4" />
+    <path d="M6 10h12" />
+  </svg>
+);
 
 function StepsGuide({ version }: { version?: string }) {
   const [copied, setCopied] = useState<'idle' | 'ok' | 'err'>('idle')
   async function copy() {
     try {
       await navigator.clipboard.writeText(SERVER_IP)
-      setCopied('ok')
-      setTimeout(() => setCopied('idle'), 1500)
+      setCopied('ok'); setTimeout(() => setCopied('idle'), 1500)
     } catch {
-      setCopied('err')
-      setTimeout(() => setCopied('idle'), 1500)
+      setCopied('err'); setTimeout(() => setCopied('idle'), 1500)
     }
   }
+
+  const spring: Transition = { type: 'spring', stiffness: 380, damping: 26, mass: 0.6 }
+
+  const container: Variants = {
+    hidden: { opacity: 0 },
+    show:   { opacity: 1, transition: { staggerChildren: 0.06 } }
+  }
+
+  const item: Variants = {
+    hidden: { opacity: 0, y: 14, scale: 0.98, filter: 'blur(6px)' },
+    show:   { opacity: 1, y: 0,  scale: 1,    filter: 'blur(0px)', transition: spring }
+  }
+
   return (
-    <div className="grid gap-4 md:grid-cols-3">
-      <div className="rounded-2xl border border-slate-800 bg-slate-900/40 overflow-hidden">
+    <motion.div
+      className="grid gap-4 md:grid-cols-3"
+      variants={container}
+      initial="hidden"
+      animate="show"
+    >
+
+      <motion.div
+        variants={item}
+        whileHover={{ y: -6, scale: 1.01 }}
+        whileTap={{ scale: 0.99 }}
+        className="relative rounded-2xl border border-slate-800 bg-slate-900/40 overflow-hidden will-change-transform"
+      >
+        <motion.span
+          aria-hidden
+          className="absolute inset-x-0 top-0 h-0.5 bg-linear-to-r from-indigo-500 via-sky-500 to-emerald-500 origin-left"
+          initial={{ scaleX: 0 }}
+          animate={{ scaleX: 1 }}
+          transition={{ duration: 0.5 }}
+        />
         <div className="p-5">
-          <div className="size-10 rounded-xl bg-sky-600/20 grid place-items-center text-sky-300 mb-3">👤</div>
+          <div className="size-10 rounded-xl bg-sky-600/20 grid place-items-center text-sky-300 mb-3">
+            <SvgUserPlus className="h-5" />
+          </div>
           <div className="text-lg font-semibold mb-2">Зарегистрируйтесь на сайте</div>
           <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
-            <Link to="/auth/login" className="inline-flex rounded-xl px-4 py-2 bg-indigo-600 hover:bg-indigo-500">Войти или зарегистрироваться</Link>
+            <Link to="/auth/login" className="inline-flex rounded-xl px-4 py-2 bg-indigo-600 hover:bg-indigo-500">
+              Войти или зарегистрироваться
+            </Link>
             <div className="text-xs text-slate-400 mt-3">Потребуется только ваша почта</div>
           </div>
         </div>
-      </div>
-      <div className="rounded-2xl border border-slate-800 bg-slate-900/40 overflow-hidden">
+      </motion.div>
+
+      <motion.div
+        variants={item}
+        whileHover={{ y: -6, scale: 1.01 }}
+        whileTap={{ scale: 0.99 }}
+        className="relative rounded-2xl border border-slate-800 bg-slate-900/40 overflow-hidden will-change-transform"
+      >
+        <motion.span
+          aria-hidden
+          className="absolute inset-x-0 top-0 h-0.5 bg-linear-to-r from-indigo-500 via-sky-500 to-emerald-500 origin-left"
+          initial={{ scaleX: 0 }}
+          animate={{ scaleX: 1 }}
+          transition={{ duration: 0.6, delay: 0.05 }}
+        />
         <div className="p-5">
-          <div className="size-10 rounded-xl bg-emerald-600/20 grid place-items-center text-emerald-300 mb-3">➕</div>
+          <div className="size-10 rounded-xl bg-emerald-600/20 grid place-items-center text-emerald-300 mb-3">
+            <SvgTelegram className="h-5" />
+          </div>
           <div className="text-lg font-semibold mb-2">Получите доступ</div>
           <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
-          <a href={TELEGRAM_URL} className="inline-flex rounded-xl px-4 py-2 bg-sky-600 hover:bg-sky-500">Перейти в бота</a>
+            <a href={TELEGRAM_URL} className="inline-flex rounded-xl px-4 py-2 bg-sky-600 hover:bg-sky-500">
+              Перейти в бота
+            </a>
             <div className="text-xs text-slate-400 mt-3">Введите ваш ник на сайте, чтобы получить проходку</div>
           </div>
         </div>
-      </div>
-      <div className="rounded-2xl border border-slate-800 bg-slate-900/40 overflow-hidden">
+      </motion.div>
+
+      <motion.div
+        variants={item}
+        whileHover={{ y: -6, scale: 1.01 }}
+        whileTap={{ scale: 0.99 }}
+        className="relative rounded-2xl border border-slate-800 bg-slate-900/40 overflow-hidden will-change-transform"
+      >
+        <motion.span
+          aria-hidden
+          className="absolute inset-x-0 top-0 h-0.5 bg-linear-to-r from-indigo-500 via-sky-500 to-emerald-500 origin-left"
+          initial={{ scaleX: 0 }}
+          animate={{ scaleX: 1 }}
+          transition={{ duration: 0.6, delay: 0.1 }}
+        />
         <div className="p-5">
-          <div className="size-10 rounded-xl bg-teal-600/20 grid place-items-center text-teal-300 mb-3">🗺️</div>
+          <div className="size-10 rounded-xl bg-teal-600/20 grid place-items-center text-teal-300 mb-3">
+            <SvgMcBlockGrass className="h-5" />
+          </div>
           <div className="text-lg font-semibold mb-2">Зайдите на сервер</div>
           <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
             <div className="flex w-full items-stretch overflow-hidden rounded-xl border border-slate-800">
-              <div className="px-3 hidden sm:grid place-items-center bg-slate-900/60 border-r border-slate-800 text-xs text-slate-300">IP адрес</div>
+              <div className="px-3 hidden sm:grid place-items-center bg-slate-900/60 border-r border-slate-800 text-xs text-slate-300">
+                IP адрес
+              </div>
               <div className="px-3 py-2 font-mono flex-1 truncate">{SERVER_IP}</div>
               <button onClick={copy} className="px-3 py-2 bg-slate-900/60 hover:bg-slate-800 border-l border-slate-800 text-sm">
                 {copied === 'ok' ? 'Скопировано' : copied === 'err' ? 'Ошибка' : 'Копировать'}
@@ -433,20 +552,18 @@ function StepsGuide({ version }: { version?: string }) {
             </div>
             <div className="text-xs text-slate-400 mt-3 text-center">
               Откройте Minecraft: Java Edition
-              {version ? (
-                <> версии <b className="text-slate-300">{version}</b></>
-              ) : null}
-              {' '}и вставьте IP
+              {version ? <> версии <b className="text-slate-300">{version}</b></> : null} и вставьте IP
             </div>
           </div>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   )
 }
 
 function Faq({ q, a }: { q: string; a: React.ReactNode }) {
   const [open, setOpen] = useState(false)
+
   return (
     <div className="rounded-2xl border border-slate-800 overflow-hidden backdrop-blur-md backdrop-saturate-150">
       <button
@@ -454,9 +571,32 @@ function Faq({ q, a }: { q: string; a: React.ReactNode }) {
         className="w-full text-left px-4 py-3 bg-slate-900/50 hover:bg-slate-900/70 flex items-center justify-between"
       >
         <span className="font-medium">{q}</span>
-        <span className="text-slate-400">{open ? '−' : '+'}</span>
+        <motion.span
+          className="text-slate-400 inline-block"
+          animate={{ rotate: open ? 180 : 0 }}
+          transition={{ type: 'spring', stiffness: 400, damping: 24 }}
+        >
+          <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="1.8">
+            <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </motion.span>
       </button>
-      {open && <div className="px-4 py-3 text-sm text-slate-300">{a}</div>}
+
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            key="faq-content"
+            initial={{ height: 0, opacity: 0, filter: 'blur(6px)' }}
+            animate={{ height: 'auto', opacity: 1, filter: 'blur(0px)' }}
+            exit={{ height: 0, opacity: 0, filter: 'blur(6px)' }}
+            transition={{ duration: 0.3, ease: 'easeInOut' }}
+            className="overflow-hidden"
+          >
+            <div className="px-4 py-3 text-sm text-slate-300">{a}</div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
     </div>
   )
 }
