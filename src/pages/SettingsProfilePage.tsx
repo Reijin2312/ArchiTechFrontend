@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { http } from '@/shared/api/http';
 import { endpoints } from '@/shared/api/endpoints';
 import { authStore } from '@/shared/store/auth';
+import { useWallpaper } from '@/shared/ui/useWallpaper';
 
 type Profile = {
   id: string;
@@ -40,6 +41,8 @@ function sessionStatus(s: Session): Status {
 }
 
 export default function SettingsProfilePage() {
+  useWallpaper();
+
   const nav = useNavigate();
   const location = useLocation();
 
@@ -88,6 +91,12 @@ export default function SettingsProfilePage() {
   const [to, setTo] = useState<string>('');
   type SortKey = 'created_desc' | 'created_asc' | 'expires_desc' | 'expires_asc';
   const [sortBy, setSortBy] = useState<SortKey>('created_desc');
+
+  const bust = (u: string) => u ? `${u}${u.includes('?') ? '&' : '?'}v=${Date.now()}` : u;
+
+  function syncAuth(partial: Partial<{ avatarUrl: string; username: string }>) {
+    authStore.setState(s => s.user ? { user: { ...s.user, ...partial } } : s);
+  }
 
   useEffect(() => {
     let alive = true;
@@ -261,6 +270,7 @@ export default function SettingsProfilePage() {
       fd.append('file', avatarFile);
       const { data } = await http.post<{ avatarUrl: string }>(endpoints.profileAvatar, fd, { withCredentials: true });
       setMe((m) => (m ? { ...m, avatarUrl: data.avatarUrl } : m));
+      syncAuth({ avatarUrl: bust(data.avatarUrl) });
       setAvatarFile(null);
       setNotice('Аватар обновлён');
     } catch (e: any) {
@@ -283,6 +293,7 @@ export default function SettingsProfilePage() {
         { withCredentials: true, headers: { 'Content-Type': 'application/json' } }
       );
       setMe((m) => (m ? { ...m, avatarUrl: data.avatarUrl } : m));
+      syncAuth({ avatarUrl: bust(data.avatarUrl) }); 
       setAvatarUrlInput('');
       setNotice('Аватар обновлён');
     } catch (e: any) {
@@ -444,7 +455,7 @@ export default function SettingsProfilePage() {
   }
 
   return (
-    <div className="min-h-dvh bg-slate-950 text-slate-100 flex flex-col">
+    <div className="min-h-dvh flex flex-col">
       <main className="mx-auto grid w-full max-w-6xl grow grid-cols-12 gap-6 px-4 py-6">
         {/* Левый столбец */}
         <section className="col-span-12 md:col-span-4">
@@ -876,8 +887,8 @@ export default function SettingsProfilePage() {
             </div>
           </Card>
 
-          {err && <div className="mt-6 rounded-xl border border-red-800 bg-red-950/40 p-3 text-sm text-red-300">{String(err)}</div>}
-          {notice && <div className="mt-3 rounded-xl border border-sky-800 bg-sky-950/40 p-3 text-sm text-sky-300">{notice}</div>}
+          {err && <div className="mt-6 rounded-xl border border-red-800 bg-red-950/40 p-3 text-sm text-red-300 backdrop-blur-md backdrop-saturate-150">{String(err)}</div>}
+          {notice && <div className="mt-3 rounded-xl border border-sky-800 bg-sky-950/40 p-3 text-sm text-sky-300 backdrop-blur-md backdrop-saturate-150">{notice}</div>}
           {since && <div className="mt-3 text-center text-xs text-slate-500">Вы с нами с {since}</div>}
         </section>
 
@@ -939,7 +950,7 @@ export default function SettingsProfilePage() {
 
 function Card(props: { children: React.ReactNode; className?: string }) {
   return (
-    <section className={`rounded-2xl border border-slate-800 bg-slate-900/60 p-4 shadow-[0_1px_0_#ffffff10_inset,0_20px_40px_-20px_#000] ${props.className || ''}`}>
+    <section className={`rounded-2xl border border-slate-800 bg-slate-900/60 p-4 shadow-[0_1px_0_#ffffff10_inset,0_20px_40px_-20px_#000 backdrop-blur-md backdrop-saturate-150] ${props.className || ''}`}>
       {props.children}
     </section>
   );

@@ -385,7 +385,6 @@ function CardCTA({ title, text, href, button }: {
   )
 }
 
-
 function StepsGuide({ version }: { version?: string }) {
   const [copied, setCopied] = useState<'idle' | 'ok' | 'err'>('idle')
   async function copy() {
@@ -400,7 +399,6 @@ function StepsGuide({ version }: { version?: string }) {
   }
   return (
     <div className="grid gap-4 md:grid-cols-3">
-      {/* Шаг 1 */}
       <div className="rounded-2xl border border-slate-800 bg-slate-900/40 overflow-hidden">
         <div className="p-5">
           <div className="size-10 rounded-xl bg-sky-600/20 grid place-items-center text-sky-300 mb-3">👤</div>
@@ -411,7 +409,6 @@ function StepsGuide({ version }: { version?: string }) {
           </div>
         </div>
       </div>
-      {/* Шаг 2 */}
       <div className="rounded-2xl border border-slate-800 bg-slate-900/40 overflow-hidden">
         <div className="p-5">
           <div className="size-10 rounded-xl bg-emerald-600/20 grid place-items-center text-emerald-300 mb-3">➕</div>
@@ -422,7 +419,6 @@ function StepsGuide({ version }: { version?: string }) {
           </div>
         </div>
       </div>
-      {/* Шаг 3 */}
       <div className="rounded-2xl border border-slate-800 bg-slate-900/40 overflow-hidden">
         <div className="p-5">
           <div className="size-10 rounded-xl bg-teal-600/20 grid place-items-center text-teal-300 mb-3">🗺️</div>

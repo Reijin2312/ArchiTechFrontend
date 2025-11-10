@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -12,6 +12,7 @@ import PasswordField from '../components/PasswordField';
 import Footer from '@/shared/ui/Footer';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import Turnstile from 'react-turnstile';
+import { useWallpaper } from '@/shared/ui/useWallpaper';
 
 const schema = z
   .object({
@@ -40,6 +41,8 @@ type RegisterRes =
   | { needVerify: false; accessToken: string; refreshToken: string; user: any };
 
 export default function RegisterPage() {
+  useWallpaper();
+
   const user = authStore((s) => s.user);
   const navigate = useNavigate();
   const { search } = useLocation();
@@ -283,7 +286,7 @@ export default function RegisterPage() {
   return (
     <div className="wrap">
       <Card>
-        <h1 className="text-2xl mb-4">Регистрация</h1>
+        <h1 className="text-2xl mb-4 text-center">Регистрация</h1>
 
         {serverErr && (
           <div className="error" role="alert" style={{ display: 'block' }}>

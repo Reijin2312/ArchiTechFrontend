@@ -5,12 +5,16 @@ import { useParams } from 'react-router-dom';
 import { http } from '@/shared/api/http';
 import { endpoints } from '@/shared/api/endpoints';
 import { isSelf } from '@/shared/auth/isSelf';
+import { useWallpaper } from '@/shared/ui/useWallpaper';
+import * as THREE from 'three';
 
 type PublicUser = { id: string; username: string; bio?: string; avatarUrl?: string; skinUrl?: string };
 type Me = PublicUser & { email?: string };
 type Stats = { servers?: number; sessions?: number; achievements?: number; registeredAt?: string; online?: boolean };
 
 export default function UserProfilePage() {
+  useWallpaper();
+
   const username = useParams().username!;
   const self = isSelf(username);
 
@@ -47,7 +51,7 @@ export default function UserProfilePage() {
   }, [stats?.registeredAt]);
 
   return (
-    <div className="min-h-dvh bg-slate-950 text-slate-100 flex flex-col">
+    <div className="min-h-dvh flex flex-col">
 
       {}
       <main className="mx-auto grid w-full max-w-6xl grow grid-cols-12 gap-6 px-4 py-6">
@@ -162,12 +166,13 @@ export default function UserProfilePage() {
   );
 }
 
+
 function Skin3D(props: { className?: string; skinUrl: string; spin?: boolean }) {
   const { className, skinUrl, spin } = props as any;
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const viewerRef = useRef<any>(null);
+  const controlsRef = useRef<OrbitControls | null>(null);
   const roRef = useRef<ResizeObserver | null>(null);
-  const rafRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (!wrapRef.current) return;
@@ -182,25 +187,23 @@ function Skin3D(props: { className?: string; skinUrl: string; spin?: boolean }) 
     wrapRef.current.innerHTML = '';
     wrapRef.current.appendChild(viewer.canvas);
 
-    const maybePromise = viewer.loadSkin(skinUrl as any);
-    if (maybePromise && typeof (maybePromise as any).catch === 'function') {
-      (maybePromise as any).catch(() => {});
-    }
-
     viewer.background = '#0f172a';
     viewer.camera.fov = 40;
-    viewer.camera.position.set(-15, 15, 40);
+    viewer.camera.zoom = 1;
+    viewer.camera.near = 0.01;
+    viewer.camera.far = 1000;
+    viewer.camera.updateProjectionMatrix();
     viewer.cameraLight.intensity = 2;
     viewer.globalLight.intensity = 2;
     viewer.animation = new skinview3d.IdleAnimation();
     viewer.animation.speed = 1;
-    (viewer as any).camera.updateProjectionMatrix?.();
 
     const controls = new OrbitControls((viewer as any).camera, viewer.canvas);
     controls.enableDamping = true;
     controls.dampingFactor = 0.08;
     controls.enablePan = false;
     controls.addEventListener('change', () => viewer.render());
+    controlsRef.current = controls;
 
     const cv = viewer.canvas as HTMLCanvasElement;
     cv.style.position = 'absolute';
@@ -209,56 +212,104 @@ function Skin3D(props: { className?: string; skinUrl: string; spin?: boolean }) 
     cv.style.height = '100%';
     cv.style.display = 'block';
 
-    const fit = () => {
-      const r = wrapRef.current!.getBoundingClientRect();
-      const w = Math.max(120, Math.floor(r.width));
-      const hCss = Math.max(160, Math.floor(r.height || (w * 4 / 3)));
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      viewer.setSize(Math.floor(w * dpr), Math.floor(hCss * dpr));
-      viewer.render();
+    const PAD = 1.05;
+
+    const frameToFit = () => {
+      const v = viewerRef.current;
+      if (!v) return;
+
+      const obj = (v as any).playerObject ?? (v as any).scene;
+      if (!obj) return;
+
+      const box = new THREE.Box3().setFromObject(obj);
+      const size = box.getSize(new THREE.Vector3());
+      const center = box.getCenter(new THREE.Vector3());
+
+      const el = wrapRef.current!;
+      const cw = Math.max(1, el.clientWidth);
+      const ch = Math.max(1, el.clientHeight);
+      const aspect = cw / ch;
+
+      const vFovEffRad = THREE.MathUtils.degToRad(v.camera.fov / Math.max(v.camera.zoom, 1e-6));
+      const hFovEffRad = 2 * Math.atan(Math.tan(vFovEffRad / 2) * aspect);
+
+      const halfH = size.y * 0.5;
+      const halfW = 0.5 * Math.max(size.x, size.z);
+
+      const distV = halfH / Math.tan(vFovEffRad / 2);
+      const distH = halfW / Math.tan(hFovEffRad / 2);
+      const dist = Math.max(distV, distH) * PAD;
+
+      const oldTarget = (controlsRef.current?.target ?? center).clone();
+      const dir = v.camera.position.clone().sub(oldTarget);
+      if (!isFinite(dir.length()) || dir.length() < 1e-3) dir.set(-0.35, 0.3, 1);
+      dir.setLength(dist);
+
+      controlsRef.current?.target.copy(center);
+      v.camera.position.copy(center).add(dir);
+
+      v.camera.near = Math.max(0.01, dist / 100);
+      v.camera.far = Math.max(v.camera.near * 10, dist * 100);
+
+      v.camera.updateProjectionMatrix();
+      controlsRef.current?.update();
+      v.render();
     };
-    fit();
-    const ro = new ResizeObserver(fit);
-    ro.observe(wrapRef.current);
+
+    const fitPixels = () => {
+      const el = wrapRef.current!;
+      const cw = Math.max(1, Math.floor(el.clientWidth));
+      const ch = Math.max(1, Math.floor(el.clientHeight));
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+      viewer.setSize(cw, ch);
+      const r = (viewer as any).renderer;
+      if (r?.setPixelRatio) r.setPixelRatio(dpr);
+
+      viewer.camera.aspect = cw / ch;
+      viewer.camera.updateProjectionMatrix();
+
+      frameToFit();
+    }
+
+    Promise.resolve(viewer.loadSkin(skinUrl as any)).catch(() => {}).finally(() => {
+      fitPixels();
+    });
+
+    const ro = new ResizeObserver(fitPixels);
+    ro.observe(wrapRef.current!);
     roRef.current = ro;
 
-    viewer.render();
+    const onResize = () => fitPixels();
+    window.addEventListener('resize', onResize);
+
+    fitPixels();
 
     return () => {
+      window.removeEventListener('resize', onResize);
       roRef.current?.disconnect();
-      (controls as any)?.dispose?.();
+      controls.dispose();
       viewer.dispose();
       viewerRef.current = null;
+      controlsRef.current = null;
     };
   }, [skinUrl]);
 
   useEffect(() => {
     const viewer = viewerRef.current;
     if (!viewer) return;
-
-    if (!spin) {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-      rafRef.current = null;
-      return; 
-    }
-
-    viewerRef.current.autoRotate = !!spin;
-    viewerRef.current.autoRotateSpeed = 1.2;
-    viewerRef.current.render();
-
-    return () => {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-      rafRef.current = null;
-    };
+    viewer.autoRotate = !!spin;
+    viewer.autoRotateSpeed = 1.2;
+    viewer.render();
   }, [spin]);
 
-  return <div ref={wrapRef} className={`${className||''} relative`} aria-label="3D-просмотр скина" />;
+  return <div ref={wrapRef} className={`${className || ''} relative`} aria-label="3D-просмотр скина" />;
 }
 
 function Card(props: { children: React.ReactNode; className?: string }) {
   return (
     <section
-      className={`rounded-2xl border border-slate-800 bg-slate-900/60 p-4 shadow-[0_1px_0_#ffffff10_inset,0_20px_40px_-20px_#000] ${props.className || ''}`}
+      className={`rounded-2xl border border-slate-800 bg-slate-900/60 p-4 shadow-[0_1px_0_#ffffff10_inset,0_20px_40px_-20px_#000 backdrop-blur-md backdrop-saturate-150] ${props.className || ''}`}
     >
       {props.children}
     </section>

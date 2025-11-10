@@ -10,9 +10,9 @@ export default defineConfig({
     host: '127.0.0.1',
     port: 5173,
     proxy: {
-      '/api': { target: 'http://localhost:51788', changeOrigin: true },
-      "/media": { target: "http://localhost:51788", changeOrigin: true },
-      '^/ws/.*': { target: 'http://localhost:51788', ws: true, changeOrigin: true },
+      '/api': { target: 'http://localhost:51789', changeOrigin: true },
+      "/media": { target: "http://localhost:51789", changeOrigin: true },
+      '^/ws/.*': { target: 'http://localhost:51789', ws: true, changeOrigin: true },
     },
   },
   resolve: {

@@ -1,3 +1,4 @@
+import { useWallpaper } from '@/shared/ui/useWallpaper';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 type TocItem = { id: string; title: string; n: number };
@@ -15,6 +16,8 @@ const SECTIONS: TocItem[] = [
 ];
 
 export default function UserAgreementPage() {
+  useWallpaper();
+
   return (
     <div className="mx-auto w-full max-w-7xl grid grid-cols-12 gap-6 px-4 py-6 text-slate-100">
       <aside className="col-span-12 md:col-span-3">
@@ -182,7 +185,7 @@ function Section({ id, title, n, children }: { id: string; title: string; n: num
         <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-sky-600 text-slate-50 text-sm">{n}</span>
         {title}
       </h2>
-      <div className="mb-8 rounded-2xl border border-slate-800 bg-slate-900/60 p-4">{children}</div>
+      <div className="mb-8 rounded-2xl border border-slate-800 bg-slate-900/60 p-4 backdrop-blur-md backdrop-saturate-150">{children}</div>
     </section>
   );
 }

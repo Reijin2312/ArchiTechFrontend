@@ -14,6 +14,7 @@ import Footer from '@/shared/ui/Footer';
 import type { LoginRes } from '@/shared/api/types';
 import { finalizeAuth } from '@/shared/auth/finalizeAuth';
 import { endpoints } from '@/shared/api/endpoints';
+import { useWallpaper } from '@/shared/ui/useWallpaper';
 
 const schema = z.object({
   email: z.string().email({ message: 'Некорректная почта' }),
@@ -23,6 +24,8 @@ const schema = z.object({
 type Form = z.infer<typeof schema>;
 
 export default function LoginPage() {
+  useWallpaper();
+
   const user = authStore((s) => s.user);
   const navigate = useNavigate();
   const { search } = useLocation();
@@ -168,7 +171,7 @@ export default function LoginPage() {
   return (
     <div className="wrap">
       <Card>
-        <h1 className="text-2xl mb-4">Вход</h1>
+        <h1 className="text-2xl mb-4 text-center">Вход</h1>
 
         {serverErr && (
           <div className="error" role="alert" style={{ display: 'block' }}>
