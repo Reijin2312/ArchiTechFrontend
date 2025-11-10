@@ -17,15 +17,15 @@ export default function SiteFooter() {
             </div>
           </div>
           <div className="flex items-center gap-4 text-base">
-            <a href={TELEGRAM_URL} aria-label="Telegram" className="hover:text-white text-slate-300"><SvgTelegram className="h-5" /></a>
-            <a href={DISCORD_URL} aria-label="Discord" className="hover:text-white text-slate-300"><SvgDiscord className="h-5" /></a>
+            <a href={TELEGRAM_URL} rel="noopener noreferrer" aria-label="Telegram" className="hover:text-white text-slate-300"><SvgTelegram className="h-5" /></a>
+            <a href={DISCORD_URL} rel="noopener noreferrer" aria-label="Discord" className="hover:text-white text-slate-300"><SvgDiscord className="h-5" /></a>
           </div>
         </div>
 
         <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2">
-          <a href="/contacts" className="hover:text-white">Контакты</a>
+          <a href="/contacts" rel="noopener noreferrer" className="hover:text-white">Контакты</a>
           <Link to="/terms" className="hover:text-white">Пользовательское соглашение</Link>
-          <a href="/privacy" className="hover:text-white">Политика конфиденциальности</a>
+          <a href="/privacy" rel="noopener noreferrer" className="hover:text-white">Политика конфиденциальности</a>
         </div>
 
         <div className="mt-6 text-xs text-slate-400">

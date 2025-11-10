@@ -6,6 +6,7 @@ import { http } from '@/shared/api/http';
 import { endpoints } from '@/shared/api/endpoints';
 import { isSelf } from '@/shared/auth/isSelf';
 import { useWallpaper } from '@/shared/ui/useWallpaper';
+import { Seo } from '@/shared/seo/seo';
 import * as THREE from 'three';
 
 type PublicUser = { id: string; username: string; bio?: string; avatarUrl?: string; skinUrl?: string };
@@ -51,6 +52,8 @@ export default function UserProfilePage() {
   }, [stats?.registeredAt]);
 
   return (
+    <>
+    <Seo title="Профиль игрока — ArchiTech MC" robots="noindex,follow" />
     <div className="min-h-dvh flex flex-col">
 
       {}
@@ -163,6 +166,7 @@ export default function UserProfilePage() {
       </main>
 
     </div>
+    </>
   );
 }
 

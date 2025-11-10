@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useWallpaper } from '@/shared/ui/useWallpaper';
+import { Seo } from '@/shared/seo/seo';
+import { routesMeta } from '@/shared/seo/routesMeta';
 
 type TocItem = { id: string; title: string };
 
@@ -19,6 +21,8 @@ const SECTIONS: TocItem[] = [
 export default function RulesPage() {
   useWallpaper();
   return (
+    <>
+    <Seo {...routesMeta['/rules']} />
     <div className="mx-auto w-full max-w-7xl grid grid-cols-12 gap-6 px-4 py-6 text-slate-100">
       <aside className="col-span-12 md:col-span-3">
         <LeftNav />
@@ -127,15 +131,13 @@ export default function RulesPage() {
         </Section>
       </main>
 
-      {/* Правый TOC */}
       <aside className="col-span-12 md:col-span-3">
         <RightToc items={SECTIONS} />
       </aside>
     </div>
+    </>
   );
 }
-
-/* ---------- Components ---------- */
 
 function Callout() {
   return (

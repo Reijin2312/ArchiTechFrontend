@@ -10,6 +10,7 @@ import { Card } from '@/shared/ui/Card';
 import { FormHint } from '@/shared/ui/FormHint';
 import Footer from '@/shared/ui/Footer';
 import type { ResetFinishReq, Ok } from '@/shared/api/types';
+import { Seo } from '@/shared/seo/seo';
 
 const schema = z.object({
 pw1: z.string().min(8).regex(/[A-Za-z]/,'нужны буквы').regex(/\d/,'нужны цифры'),
@@ -36,6 +37,8 @@ export default function NewPasswordPage() {
 	);
 
 	return (
+		<>
+		<Seo title="Сброс пароля — ArchiTech MC" robots="noindex,follow" />
 		<div className="wrap">
 			<Card>
 				<h1 className="text-2xl mb-2">Новый пароль</h1>
@@ -56,5 +59,6 @@ export default function NewPasswordPage() {
 			</Card>
 			<Footer />
 		</div>
+		</>
 	);
 }

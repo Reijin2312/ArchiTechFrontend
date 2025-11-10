@@ -7,6 +7,7 @@ import { Input } from '@/shared/ui/Input';
 import { Button } from '@/shared/ui/Button';
 import { FormHint } from '@/shared/ui/FormHint';
 import Footer from '@/shared/ui/Footer';
+import { Seo } from '@/shared/seo/seo';
 
 export default function ChangeEmailNewPage(){
   const [sp] = useSearchParams();
@@ -28,6 +29,8 @@ export default function ChangeEmailNewPage(){
   }
 
   return (
+    <>
+    <Seo title="Настройки — ArchiTech MC" robots="noindex,follow" />
     <div className="wrap">
       <Card>
         <h1 className="text-2xl mb-4">Новый e-mail</h1>
@@ -42,5 +45,6 @@ export default function ChangeEmailNewPage(){
       </Card>
       <Footer/>
     </div>
+    </>
   );
 }

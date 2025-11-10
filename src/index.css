@@ -34,6 +34,13 @@
     background-attachment: fixed;
   }
 
+  @media (max-width: 1024px) {
+    .has-wallpaper { background-attachment: scroll; }
+  }
+  @media (prefers-reduced-data: reduce) {
+    .has-wallpaper { background-image: none; }
+  }
+
   input:-webkit-autofill {
     -webkit-text-fill-color: #eaf3ff;
     transition: background-color 600000s 0s, color 600000s 0s;

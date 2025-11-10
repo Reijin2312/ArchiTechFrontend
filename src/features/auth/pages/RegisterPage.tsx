@@ -13,6 +13,7 @@ import Footer from '@/shared/ui/Footer';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import Turnstile from 'react-turnstile';
 import { useWallpaper } from '@/shared/ui/useWallpaper';
+import { Seo } from '@/shared/seo/seo';
 
 const schema = z
   .object({
@@ -284,6 +285,8 @@ export default function RegisterPage() {
   }, [pass2V]);
 
   return (
+    <>
+    <Seo title="Регистрация — ArchiTech MC" robots="noindex,follow" />
     <div className="wrap">
       <Card>
         <h1 className="text-2xl mb-4 text-center">Регистрация</h1>
@@ -407,5 +410,6 @@ export default function RegisterPage() {
       </Card>
       <Footer />
     </div>
+    </>
   );
 }

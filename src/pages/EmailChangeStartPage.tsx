@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { http } from '@/shared/api/http';
 import { endpoints } from '@/shared/api/endpoints';
 import { Card } from '@/shared/ui/Card';
 import { Button } from '@/shared/ui/Button';
 import Footer from '@/shared/ui/Footer';
+import { Seo } from '@/shared/seo/seo';
 
 export default function EmailChangeStartPage(){
   const nav = useNavigate();
@@ -18,7 +19,7 @@ export default function EmailChangeStartPage(){
         endpoints.accountEmailChangeOldBegin,
         {},
         { withCredentials: true }
-      ); // { ticket, email, resendAfterSec? }
+      );
       const qs = new URLSearchParams({ ticket: data.ticket, email: data.email, next: '/settings/email/new' });
       nav('/verify/email-change-old?' + qs.toString(), { replace: true });
     }catch(e:any){
@@ -27,6 +28,8 @@ export default function EmailChangeStartPage(){
   }
 
   return (
+    <>
+    <Seo title="Настройки — ArchiTech MC" robots="noindex,follow" />
     <div className="wrap">
       <Card>
         <h1 className="text-2xl mb-4">Смена e-mail</h1>
@@ -36,5 +39,6 @@ export default function EmailChangeStartPage(){
       </Card>
       <Footer/>
     </div>
+    </>
   );
 }

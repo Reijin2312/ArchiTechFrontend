@@ -9,6 +9,7 @@ import Footer from '@/shared/ui/Footer';
 import type { VerifyEmailReq, VerifyEmailRes, ResetConfirmReq, ResetConfirmRes } from '@/shared/api/types';
 import { finalizeAuth } from '@/shared/auth/finalizeAuth';
 import { authStore } from '@/shared/store/auth';
+import { Seo } from '@/shared/seo/seo';
 
 export default function CodeVerifyPage({ mode }:{ mode: 'email-verify'|'reset'|'email-change-old' }){
   const [sp] = useSearchParams();
@@ -110,6 +111,8 @@ export default function CodeVerifyPage({ mode }:{ mode: 'email-verify'|'reset'|'
   }
 
   return (
+    <>
+    <Seo title="Сброс пароля — ArchiTech MC" robots="noindex,follow" />
     <div className="wrap">
       <Card>
         <h1 className="text-2xl mb-4">
@@ -136,5 +139,6 @@ export default function CodeVerifyPage({ mode }:{ mode: 'email-verify'|'reset'|'
       </Card>
       <Footer />
     </div>
+    </>
   );
 }

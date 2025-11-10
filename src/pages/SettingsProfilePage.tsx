@@ -4,6 +4,7 @@ import { http } from '@/shared/api/http';
 import { endpoints } from '@/shared/api/endpoints';
 import { authStore } from '@/shared/store/auth';
 import { useWallpaper } from '@/shared/ui/useWallpaper';
+import { Seo } from '@/shared/seo/seo';
 
 type Profile = {
   id: string;
@@ -455,6 +456,8 @@ export default function SettingsProfilePage() {
   }
 
   return (
+    <>
+    <Seo title="Настройки — ArchiTech MC" robots="noindex,follow" />
     <div className="min-h-dvh flex flex-col">
       <main className="mx-auto grid w-full max-w-6xl grow grid-cols-12 gap-6 px-4 py-6">
         {/* Левый столбец */}
@@ -945,6 +948,7 @@ export default function SettingsProfilePage() {
 
       </main>
     </div>
+    </>
   );
 }
 

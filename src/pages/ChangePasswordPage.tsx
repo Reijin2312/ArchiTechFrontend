@@ -9,6 +9,7 @@ import { Input } from '@/shared/ui/Input';
 import { Card } from '@/shared/ui/Card';
 import { FormHint } from '@/shared/ui/FormHint';
 import Footer from '@/shared/ui/Footer';
+import { Seo } from '@/shared/seo/seo';
 
 const schema = z.object({
   old: z.string().min(1, 'Введите текущий пароль'),
@@ -32,6 +33,8 @@ export default function ChangePasswordPage(){
   }
 
   return (
+    <>
+    <Seo title="Сброс пароля — ArchiTech MC" robots="noindex,follow" />
     <div className="wrap">
       <Card>
         <h1 className="text-2xl mb-4">Смена пароля</h1>
@@ -56,5 +59,6 @@ export default function ChangePasswordPage(){
       </Card>
       <Footer />
     </div>
+    </>
   );
 }

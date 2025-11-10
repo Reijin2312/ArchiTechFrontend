@@ -1,6 +1,8 @@
 import { useMemo } from 'react';
 import { authStore } from '@/shared/store/auth';
 import { useWallpaper } from '@/shared/ui/useWallpaper';
+import { Seo } from '@/shared/seo/seo';
+import { routesMeta } from '@/shared/seo/routesMeta';
 
 const TELEGRAM_BOT = 'https://t.me/Archi_payment_bot';
 
@@ -16,6 +18,8 @@ export default function ShopPage() {
   }, [nick]);
 
   return (
+    <>
+    <Seo {...routesMeta['/shop']} />
     <div className="mx-auto w-full max-w-7xl grid grid-cols-12 gap-6 px-4 py-6 text-slate-100">
       <aside className="col-span-12 md:col-span-3">
         <LeftNav />
@@ -89,6 +93,7 @@ export default function ShopPage() {
         <RightBox nick={nick} deepLink={deepLink} />
       </aside>
     </div>
+    </>
   );
 }
 

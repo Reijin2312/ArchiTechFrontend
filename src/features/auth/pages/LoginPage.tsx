@@ -15,6 +15,7 @@ import type { LoginRes } from '@/shared/api/types';
 import { finalizeAuth } from '@/shared/auth/finalizeAuth';
 import { endpoints } from '@/shared/api/endpoints';
 import { useWallpaper } from '@/shared/ui/useWallpaper';
+import { Seo } from '@/shared/seo/seo';
 
 const schema = z.object({
   email: z.string().email({ message: 'Некорректная почта' }),
@@ -169,6 +170,8 @@ export default function LoginPage() {
   }, [watch('email'), watch('password')]);
 
   return (
+    <>
+    <Seo title="Вход — ArchiTech MC" robots="noindex,follow" />
     <div className="wrap">
       <Card>
         <h1 className="text-2xl mb-4 text-center">Вход</h1>
@@ -213,5 +216,6 @@ export default function LoginPage() {
       </Card>
       <Footer />
     </div>
+    </>
   );
 }

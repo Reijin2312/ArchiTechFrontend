@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /auth/
+Disallow: /verify/
+Disallow: /settings/
+Sitemap: https://architech-mc.ru/sitemap.xml

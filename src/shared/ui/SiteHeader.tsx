@@ -73,8 +73,8 @@ export default function SiteHeader() {
             Вики
           </Link>
 
-          <a href={TELEGRAM_URL} aria-label="Telegram" className="hover:text-white text-slate-300"><SvgTelegram className="h-5" /></a>
-          <a href={DISCORD_URL} aria-label="Discord" className="hover:text-white text-slate-300"><SvgDiscord className="h-5" /></a>
+          <a href={TELEGRAM_URL} rel="noopener noreferrer" aria-label="Telegram" className="hover:text-white text-slate-300"><SvgTelegram className="h-5" /></a>
+          <a href={DISCORD_URL} rel="noopener noreferrer" aria-label="Discord" className="hover:text-white text-slate-300"><SvgDiscord className="h-5" /></a>
 
           {user ? (
             <>

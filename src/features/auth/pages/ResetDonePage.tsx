@@ -2,6 +2,7 @@ import { Card } from '@/shared/ui/Card';
 import Footer from '@/shared/ui/Footer';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
+import { Seo } from '@/shared/seo/seo';
 
 export default function ResetDonePage(){
   const [sp] = useSearchParams();
@@ -15,6 +16,8 @@ export default function ResetDonePage(){
   }, [next, nav]);
 
   return (
+    <>
+    <Seo title="Сброс пароля — ArchiTech MC" robots="noindex,follow" />
     <div className="wrap">
       <Card>
         <h1 className="text-2xl mb-2">Пароль изменён</h1>
@@ -27,5 +30,6 @@ export default function ResetDonePage(){
       </Card>
       <Footer />
     </div>
+    </>
   );
 }

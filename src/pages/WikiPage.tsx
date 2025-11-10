@@ -1,6 +1,8 @@
 import { useWallpaper } from '@/shared/ui/useWallpaper';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { Seo } from '@/shared/seo/seo';
+import { routesMeta } from '@/shared/seo/routesMeta';
 
 type TocItem = { id: string; title: string; n: number };
 const SECTIONS: TocItem[] = [
@@ -121,6 +123,8 @@ export default function WikiPage() {
   useWallpaper();
 
   return (
+    <>
+    <Seo {...routesMeta['/wiki']} />
     <div className="mx-auto w-full max-w-7xl grid grid-cols-12 gap-6 px-4 py-6 text-slate-100">
       <aside className="col-span-12 md:col-span-3">
         <LeftNav />
@@ -223,6 +227,7 @@ export default function WikiPage() {
         <RightToc items={SECTIONS} />
       </aside>
     </div>
+    </>
   );
 }
 

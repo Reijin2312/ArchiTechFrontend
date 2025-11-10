@@ -10,6 +10,8 @@ const SHOP_URL = '/shop'
 import { useWallpaper } from '@/shared/ui/useWallpaper';
 import { AnimatePresence, motion } from 'framer-motion'
 import { type Variants, type Transition } from 'framer-motion'
+import { Seo } from '@/shared/seo/seo';
+import { routesMeta } from '@/shared/seo/routesMeta';
 
 type McStatus = {
   online: boolean
@@ -187,6 +189,8 @@ function SvgMcBlockGrass({ className }: { className?: string }) {
   }
 
   return (
+    <>
+    <Seo {...routesMeta['/']} />
     <div className="min-h-dvh text-slate-100 relative">
       <section className="mx-auto max-w-7xl px-4 pb-10 pt-10 md:pt-16">
         <div className="grid md:grid-cols-2 gap-10 md:gap-14 items-stretch">
@@ -351,7 +355,8 @@ function SvgMcBlockGrass({ className }: { className?: string }) {
         </div>
       </section>
     </div>
-  )
+    </>
+  );
 }
 
 function Badge({ label, ok }: { label: string; ok?: boolean }) {
