@@ -1,55 +1,148 @@
 export const ORIGIN = 'https://architech-mc.ru';
 
-export const routesMeta = {
+const breadcrumb = (items: { name: string; url: string }[]) => ({
+  "@context":"https://schema.org",
+  "@type":"BreadcrumbList",
+  "itemListElement": items.map((it, i) => ({
+    "@type":"ListItem", "position": i+1, "name": it.name, "item": it.url
+  }))
+});
+
+const jsonLdOrg = {
+  "@context":"https://schema.org",
+  "@type":"Organization",
+  "name":"ArchiTech MC",
+  "url": ORIGIN,
+  "logo": ORIGIN + "/images/favicon-192.png",
+  "sameAs":[]
+};
+
+const jsonLdSite = {
+  "@context":"https://schema.org",
+  "@type":"WebSite",
+  "name":"ArchiTech MC",
+  "url": ORIGIN,
+  "potentialAction": {
+    "@type":"SearchAction",
+    "target": ORIGIN + "/wiki?q={search_term_string}",
+    "query-input":"required name=search_term_string"
+  }
+};
+
+const OG = ORIGIN + "/og/home.jpg";
+
+export const routesMeta: Record<string, any> = {
   '/': {
     title: 'ArchiTech MC — техномагический Minecraft-сервер без вайпов',
     description: 'Модифицированный сервер: техномагия, строительство, собственные моды. IP: architech-mc.online.',
     canonical: `${ORIGIN}/`,
-    og: { url: `${ORIGIN}/`, image: `${ORIGIN}/og/home.jpg` },
+    og: { url: ORIGIN + "/", type: "website", image: OG },
+    twitterCard: "summary_large_image",
     jsonLd: [
+      jsonLdOrg, 
+      jsonLdSite,
       {
-        '@context': 'https://schema.org',
-        '@type': 'Organization',
-        name: 'ArchiTech MC',
-        url: `${ORIGIN}/`,
-        logo: `${ORIGIN}/images/favicon-192.png`,
-        sameAs: ['https://discord.gg/x6JwVPwPtw','https://t.me/archi_tech_official']
-      },
-      {
-        '@context': 'https://schema.org',
-        '@type': 'FAQPage',
-        mainEntity: [
-          { '@type': 'Question', name: 'Как подключиться?',
-            acceptedAnswer: { '@type':'Answer', text: 'Скачайте лаунчер и подключайтесь по IP architech-mc.online.' } },
-          { '@type': 'Question', name: 'Есть ли вайпы?',
-            acceptedAnswer: { '@type':'Answer', text: 'Вайпов нет.' } }
+        "@context":"https://schema.org",
+        "@type":"FAQPage",
+        "mainEntity":[
+          { "@type":"Question", "name":"Как подключиться?",
+            "acceptedAnswer":{ "@type":"Answer", "text":"Зарегестрируйтесь, скачайте лаунчер и подключайтесь по IP architech-mc.online." } },
+          { "@type":"Question", "name":"Есть ли вайпы?",
+            "acceptedAnswer":{ "@type":"Answer", "text":"Вайпов нет." } }
         ]
       }
     ]
   },
-  '/rules': {
-    title: 'Правила сервера — ArchiTech MC',
-    description: 'Правила игры, взаимодействия и строительства на сервере ArchiTech MC.',
-    canonical: `${ORIGIN}/rules`,
-    og: { url: `${ORIGIN}/rules` }
-  },
-  '/shop': {
-    title: 'Проходка на сервер — ArchiTech MC',
-    description: 'Как получить проходку. Доступ, поддержка.',
-    canonical: `${ORIGIN}/shop`,
-    og: { url: `${ORIGIN}/shop` },
+  "/wiki": {
+    title: "Wiki — моды, гайды и документация | ArchiTech MC",
+    description: "Сборник гайдов по модам, механикам, квестам и экономике на ArchiTech MC.",
+    canonical: `${ORIGIN}/wiki`,
+    og: { url: `${ORIGIN}/wiki`, type: "website", image: OG },
+    twitterCard: "summary_large_image",
     jsonLd: [
+      breadcrumb([{name:"Главная", url: ORIGIN + "/"}, {name:"Wiki", url: ORIGIN + "/wiki"}]),
       {
-        '@context':'https://schema.org',
-        '@type':'Product',
-        name:'Проходка ArchiTech MC',
-        brand:'ArchiTech MC',
+        "@context":"https://schema.org",
+        "@type":"Article",
+        "headline":"Wiki ArchiTech",
+        "author":{"@type":"Organization","name":"ArchiTech MC"},
+        "image": OG,
+        "mainEntityOfPage": `${ORIGIN}/wiki`
       }
     ]
   },
-  '/wiki':   { title:'Wiki — ArchiTech MC', description:'Справка по модам и механикам сервера.', canonical:`${ORIGIN}/wiki`, og:{url:`${ORIGIN}/wiki`} },
-  '/terms':  { title:'Пользовательское соглашение — ArchiTech MC', description:'Условия использования сервера и лаунчера.', canonical:`${ORIGIN}/terms`, og:{url:`${ORIGIN}/terms`} },
-  '/privacy':{ title:'Политика конфиденциальности — ArchiTech MC', description:'Какие данные собираем и как используем.', canonical:`${ORIGIN}/privacy`, og:{url:`${ORIGIN}/privacy`} },
+  "/rules": {
+    title: "Правила сервера | ArchiTech MC",
+    description: "Актуальные правила поведения и наказания на ArchiTech MC.",
+    canonical: `${ORIGIN}/rules`,
+    og: { url: `${ORIGIN}/rules`, type: "article", image: OG },
+    twitterCard: "summary_large_image",
+    jsonLd: [
+      breadcrumb([{name:"Главная", url: ORIGIN + "/"}, {name:"Правила", url: ORIGIN + "/rules"}]),
+      {
+        "@context":"https://schema.org",
+        "@type":"Article",
+        "headline":"Правила сервера ArchiTech",
+        "author":{"@type":"Organization","name":"ArchiTech MC"},
+        "image": OG,
+        "mainEntityOfPage": `${ORIGIN}/rules`
+      }
+    ]
+  },
+  "/shop": {
+    title: "Проходка на сервер | ArchiTech MC",
+    description: "Как получить проходку. Доступ, поддержка.",
+    canonical: `${ORIGIN}/shop`,
+    og: { url: `${ORIGIN}/shop`, type: "website", image: OG },
+    twitterCard: "summary_large_image",
+    jsonLd: [
+      breadcrumb([{name:"Главная", url: ORIGIN + "/"}, {name:"Магазин", url: ORIGIN + "/shop"}]),
+      {
+        "@context":"https://schema.org",
+        "@type":"Product",
+        "name":"Проходка ArchiTech MC",
+        "brand":"ArchiTech MC",
+        "url": `${ORIGIN}/shop`,
+        "image": OG
+      }
+    ]
+  },
+  "/terms": {
+    title: "Пользовательское соглашение | ArchiTech MC",
+    description: "Условия использования сервера и лаунчера.",
+    canonical: `${ORIGIN}/terms`,
+    og: { url: `${ORIGIN}/terms`, type: "article", image: OG },
+    twitterCard: "summary_large_image",
+    jsonLd: [
+      breadcrumb([{name:"Главная", url: ORIGIN + "/"}, {name:"Соглашение", url: ORIGIN + "/terms"}]),
+      {
+        "@context":"https://schema.org",
+        "@type":"Article",
+        "headline":"Пользовательское соглашение",
+        "author":{"@type":"Organization","name":"ArchiTech MC"},
+        "image": OG,
+        "mainEntityOfPage": `${ORIGIN}/terms`
+      }
+    ]
+  },
+  "/privacy": {
+    title: "Политика конфиденциальности | ArchiTech MC",
+    description: "Как мы обрабатываем и защищаем персональные данные.",
+    canonical: `${ORIGIN}/privacy`,
+    og: { url: `${ORIGIN}/privacy`, type: "article", image: OG },
+    twitterCard: "summary_large_image",
+    jsonLd: [
+      breadcrumb([{name:"Главная", url: ORIGIN + "/"}, {name:"Конфиденциальность", url: ORIGIN + "/privacy"}]),
+      {
+        "@context":"https://schema.org",
+        "@type":"Article",
+        "headline":"Политика конфиденциальности",
+        "author":{"@type":"Organization","name":"ArchiTech MC"},
+        "image": OG,
+        "mainEntityOfPage": `${ORIGIN}/privacy`
+      }
+    ]
+  },
 
   '/auth/login':     { title:'Вход — ArchiTech MC', robots:'noindex,follow', canonical:`${ORIGIN}/auth/login` },
   '/auth/register':  { title:'Регистрация — ArchiTech MC', robots:'noindex,follow', canonical:`${ORIGIN}/auth/register` },
@@ -60,7 +153,7 @@ export const routesMeta = {
   '/settings/password':{ title:'Смена пароля', robots:'noindex,follow', canonical:`${ORIGIN}/settings/password` },
   '/me':             { title:'Мой профиль', robots:'noindex,follow', canonical:`${ORIGIN}/me` },
   
-  '/u/:username':    { title:'Профиль игрока — ArchiTech MC', robots:'noindex,follow' }
+  "/u/:username": { title:"Профиль игрока — ArchiTech MC", robots:"noindex,follow", og:{ image: OG } }
 } as const;
 
 export type RoutePath = keyof typeof routesMeta;

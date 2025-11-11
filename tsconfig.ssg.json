@@ -1,15 +1,24 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "outDir": "dist-ssg",
+    "outDir": "./dist-ssg",
+    "rootDir": "./src",
     "target": "ES2022",
     "module": "ES2022",
     "moduleResolution": "Bundler",
     "jsx": "react-jsx",
-    "baseUrl": "./",
+    "baseUrl": ".",
     "paths": { "@/*": ["src/*"] },
+    "skipLibCheck": true,
     "noEmit": false,
-    "sourceMap": false
+    "isolatedModules": false
   },
-  "include": ["src/ssg/pages.tsx", "src/shared/seo/routesMeta.ts"]
+  "include": [
+    "src/ssg/**/*",
+    "src/pages/**/*",
+    "src/shared/**/*"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
 }

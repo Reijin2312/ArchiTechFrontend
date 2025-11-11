@@ -1,23 +1,49 @@
-import { readFile, writeFile, mkdir } from 'node:fs/promises';
-import { dirname, join } from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
-import { renderToString } from 'react-dom/server';
-import React from 'react';
-const __dirname = dirname(fileURLToPath(import.meta.url));
+import fs from 'node:fs'
+import { resolve } from 'node:path'
+import { pathToFileURL } from 'node:url'
+import { readFile, writeFile, mkdir } from 'node:fs/promises'
+import { renderToString } from 'react-dom/server'
+import { StaticRouter } from 'react-router'
+import React from 'react'
 
-const pagesMod = await import(pathToFileURL(join(process.cwd(), 'dist-ssg/pages.js')).href);
-const metaMod  = await import(pathToFileURL(join(process.cwd(), 'dist-ssg/routesMeta.js')).href);
-const routesMeta = metaMod.routesMeta;
-const pages = pagesMod.pages;
+const cwd = process.cwd()
+const exists = p => fs.existsSync(p)
+const first = arr => arr.find(exists) ?? null
 
-const template = await readFile('dist/index.html', 'utf-8');
+const pagesFile = first([
+  resolve(cwd, 'dist-ssg/ssg/pages.js'),
+  resolve(cwd, 'dist-ssg/pages.js'),
+  resolve(cwd, 'dist-ssg/ssg/pages.mjs'),
+  resolve(cwd, 'dist-ssg/pages.mjs')
+])
+if (!pagesFile) throw new Error('Не найден pages.(mjs|js) в dist-ssg')
+
+const routesMetaFile = first([
+  resolve(cwd, 'dist-ssg/shared/seo/routesMeta.js'),
+  resolve(cwd, 'dist-ssg/routesMeta.js')
+])
+if (!routesMetaFile) throw new Error('Не найден routesMeta.js в dist-ssg')
+
+const { pages } = await import(pathToFileURL(pagesFile).href)
+const { routesMeta } = await import(pathToFileURL(routesMetaFile).href)
+
+const template = await readFile('dist/index.html', 'utf-8')
+
+const ogImage = (meta.og && meta.og.image) || meta.twitterImage;
 
 async function writeRoute(pathname) {
-  const render = pages[pathname];
-  if (!render) return;
+  const Render = pages[pathname]
+  if (!Render) return
 
-  const appHtml = renderToString(React.createElement(render));
-  const meta = routesMeta[pathname] || {};
+  const appHtml = renderToString(
+    React.createElement(
+      StaticRouter,
+      { location: pathname },
+      React.createElement(Render)
+    )
+  )
+
+  const meta = routesMeta[pathname] || {}
   const head = [
     `<title>${meta.title || 'ArchiTech'}</title>`,
     meta.description ? `<meta name="description" content="${meta.description}">` : '',
@@ -27,18 +53,22 @@ async function writeRoute(pathname) {
     meta.description ? `<meta property="og:description" content="${meta.description}">` : '',
     meta.og?.url ? `<meta property="og:url" content="${meta.og.url}">` : '',
     `<meta property="og:type" content="${meta.og?.type || 'website'}">`,
-    meta.og?.image ? `<meta property="og:image" content="${meta.og.image}">` : '',
+    ogImage ? `<meta property="og:image" content="${ogImage}">` : '',
     `<meta name="twitter:card" content="${meta.twitterCard || 'summary_large_image'}">`,
+    ogImage ? `<meta name="twitter:image" content="${ogImage}">` : '',
     ...(meta.jsonLd || []).map(b => `<script type="application/ld+json">${JSON.stringify(b)}</script>`)
   ].filter(Boolean).join('\n');
 
-  let html = template.replace('<div id="root"></div>', `<div id="root">${appHtml}</div>`);
-  html = html.replace('<!-- ssr-head -->', head);
+  let html = template.replace('<div id="root"></div>', `<div id="root">${appHtml}</div>`)
+  html = html.replace('<!-- ssr-head -->', head)
 
-  const out = pathname === '/' ? 'dist/index.html' : `dist${pathname}/index.html`;
-  await mkdir(dirname(out), { recursive: true });
-  await writeFile(out, html, 'utf-8');
-  console.log('prerendered', pathname, '→', out);
+  const out = pathname === '/' ? 'dist/index.html' : `dist${pathname}/index.html`
+  await mkdir(resolve(out, '..'), { recursive: true })
+  await writeFile(out, html, 'utf-8')
+  console.log('prerendered', pathname, '→', out)
 }
 
-for (const pathname of Object.keys(pages)) await writeRoute(pathname);
+for (const pathname of Object.keys(pages)) {
+  try { await writeRoute(pathname) }
+  catch (e) { console.error('SSG fail at', pathname, e) }
+}
