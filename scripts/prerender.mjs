@@ -29,8 +29,6 @@ const { routesMeta } = await import(pathToFileURL(routesMetaFile).href)
 
 const template = await readFile('dist/index.html', 'utf-8')
 
-const ogImage = (meta.og && meta.og.image) || meta.twitterImage;
-
 async function writeRoute(pathname) {
   const Render = pages[pathname]
   if (!Render) return
@@ -44,6 +42,9 @@ async function writeRoute(pathname) {
   )
 
   const meta = routesMeta[pathname] || {}
+
+  const ogImage = (meta.og && meta.og.image) || meta.twitterImage;
+
   const head = [
     `<title>${meta.title || 'ArchiTech'}</title>`,
     meta.description ? `<meta name="description" content="${meta.description}">` : '',
