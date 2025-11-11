@@ -7,8 +7,10 @@
     "predev": "node scripts/build-sitemap.mjs",
     "dev": "vite",
     "lint": "eslint .",
+
+    "images": "node scripts/raster-resize.mjs",
     "preview": "vite preview",
-    "prebuild": "node scripts/optimize-images.mjs && node scripts/build-sitemap.mjs",
+    "prebuild": "npm run images && node scripts/build-sitemap.mjs",
     "build": "tsc -b && vite build",
     "ssg:prep": "tsc -p tsconfig.ssg.json",
     "ssg": "node scripts/prerender.mjs",

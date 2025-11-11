@@ -12,6 +12,8 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { type Variants, type Transition } from 'framer-motion'
 import { Seo } from '@/shared/seo/seo';
 import { routesMeta } from '@/shared/seo/routesMeta';
+import { ResponsiveImage } from '@/shared/ui/ResponsiveImage'
+import { IMAGES } from '@/shared/images.manifest'
 
 type McStatus = {
   online: boolean
@@ -31,6 +33,11 @@ export default function HomePage() {
   const [shot, setShot] = useState(shots[0])
   const [prevShot, setPrevShot] = useState<string | null>(null)
   const [cross, setCross] = useState(true);
+
+  const toName = (p: string) =>
+  p.split('/').pop()!
+   .replace(/-[a-z0-9]{8,}(?=\.\w+$)/i, '')
+   .replace(/\.(avif|webp)$/i, '.png')
 
   type PublicUser = {
     username: string
@@ -245,27 +252,33 @@ function SvgMcBlockGrass({ className }: { className?: string }) {
           <div className="relative">
             <div className="aspect-16/10 w-full overflow-hidden rounded-2xl border border-slate-800 shadow-xl">
               <div className="relative h-full w-full">
-              <img
+              <ResponsiveImage
                 key={shot}
-                src={shot}
-                alt="screenshot"
+                name={toName(shot) as keyof typeof IMAGES}
+                alt="Скриншот мира ArchiTech MC"
+                eager
+                width={1600}
+                height={900}
+                sizes="(max-width:640px) 100vw, (max-width:1024px) 80vw, 1200px"
                 className={
                   "absolute inset-0 h-full w-full object-cover transition-opacity duration-300 " +
                   (cross ? "opacity-100" : "opacity-0")
                 }
               />
               {prevShot && (
-                <img
-                  key={prevShot + "-prev"}
-                  src={prevShot}
-                  alt=""
-                  aria-hidden
-                  className={
-                    "absolute inset-0 h-full w-full object-cover transition-opacity duration-300 " +
-                    (cross ? "opacity-0" : "opacity-100")
-                  }
-                />
-              )}
+              <ResponsiveImage
+                key={prevShot + "-prev"}
+                name={toName(prevShot) as keyof typeof IMAGES}
+                alt=""
+                width={1600}
+                height={900}
+                sizes="(max-width:640px) 100vw, (max-width:1024px) 80vw, 1200px"
+                className={
+                  "absolute inset-0 h-full w-full object-cover transition-opacity duration-300 " +
+                  (cross ? "opacity-0" : "opacity-100")
+                }
+              />
+            )}
             </div>
             </div>
             <div className="mt-3 flex gap-3">
@@ -279,7 +292,14 @@ function SvgMcBlockGrass({ className }: { className?: string }) {
                   shot === src ? 'border-indigo-500 ring-2 ring-indigo-500/40' : 'border-slate-800'
                 ].join(' ')}
               >
-                <img src={src} className="h-full w-full object-cover" alt="" />
+                <ResponsiveImage
+                  name={toName(src) as keyof typeof IMAGES}
+                  alt=""
+                  width={160}
+                  height={100}
+                  sizes="160px"
+                  className="h-full w-full object-cover"
+                />
               </button>
             ))}
           </div>

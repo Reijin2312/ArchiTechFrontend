@@ -469,7 +469,15 @@ export default function SettingsProfilePage() {
                 {loading ? (
                   <div className="h-full w-full animate-pulse bg-slate-800" />
                 ) : (
-                  <img src={me?.avatarUrl} alt="avatar" className="h-full w-full object-cover" />
+                  <img
+                    src={me?.avatarUrl}
+                    alt="Аватар"
+                    width={128}
+                    height={128}
+                    loading="lazy"
+                    decoding="async"
+                    className="h-full w-full object-cover"
+                  />
                 )}
               </div>
               <div className="flex-1 space-y-2">
@@ -517,7 +525,15 @@ export default function SettingsProfilePage() {
                 {loading ? (
                   <div className="h-full w-full animate-pulse bg-slate-800" />
                 ) : (
-                  <img src={me?.skinUrl} alt="skin" className="h-full w-full object-cover" />
+                  <img
+                    src={me?.skinUrl}
+                    alt="Скин"
+                    width={128}
+                    height={128}
+                    loading="lazy"
+                    decoding="async"
+                    className="h-full w-full object-cover"
+                  />
                 )}
               </div>
               <div className="flex-1 space-y-2">

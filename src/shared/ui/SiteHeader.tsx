@@ -6,7 +6,6 @@ const MAIN_URL = '';
 const RULES_URL = '/rules';
 const SHOP_URL = '/shop';
 const WIKI_URL = '/wiki';
-const PROFILE_URL = '/profile';
 const DISCORD_URL = 'https://discord.gg/x6JwVPwPtw';
 const TELEGRAM_URL = 'https://t.me/archi_tech_official';
 
@@ -32,9 +31,6 @@ export default function SiteHeader() {
     return pathname === t || pathname.startsWith(t + '/');
   };
 
-  const isProfileActive =
-    pathname.startsWith('/u/') || pathname === PROFILE_URL || pathname.startsWith(PROFILE_URL + '/');
-
   function SvgTelegram({ className }: { className?: string }) {
     return (
       <svg viewBox="0 0 24 24" className={className} fill="currentColor" aria-hidden>
@@ -55,7 +51,7 @@ export default function SiteHeader() {
     <header className="sticky top-0 z-20 backdrop-blur supports-backdrop-filter:bg-slate-950/50 border-b border-slate-800">
       <nav className="mx-auto max-w-7xl px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <img src="/images/favicon-192.png" alt="logo" className="size-8" />
+          <img src="/images/favicon-192.png" alt="Логотип ArchiTech MC" width={32} height={32} decoding="async" />
           <span className="font-semibold tracking-wide">{SERVER_NAME}</span>
         </div>
 
@@ -95,10 +91,12 @@ export default function SiteHeader() {
                 {(user as any)?.avatarUrl ? (
                   <img
                     src={(user as any).avatarUrl as string}
-                    alt=""
-                    className="h-full w-full object-cover"
-                    loading="lazy"
+                    alt="Профиль"
+                    width={32}
+                    height={32}
+                    decoding="async"
                     referrerPolicy="no-referrer"
+                    className="h-full w-full object-cover"
                   />
                 ) : (
                   <span className="w-full text-center text-xs leading-8 text-slate-300">

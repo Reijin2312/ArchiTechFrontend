@@ -326,7 +326,15 @@ function Avatar({ url, loading }: { url?: string; loading: boolean }) {
       {loading ? (
         <div className="h-full w-full animate-pulse rounded-3xl bg-slate-800" />
       ) : url ? (
-        <img src={url} alt="Аватар" className="h-full w-full rounded-3xl object-cover" loading="lazy" />
+        <img
+          src={url}
+          alt="Аватар"
+          width={128}
+          height={128}
+          loading="lazy"
+          decoding="async"
+          className="h-full w-full rounded-3xl object-cover"
+        />
       ) : (
         <div className="flex h-full w-full items-center justify-center rounded-3xl text-slate-400">AVA</div>
       )}
