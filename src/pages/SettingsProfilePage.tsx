@@ -6,6 +6,8 @@ import { authStore } from '@/shared/store/auth';
 import { useWallpaper } from '@/shared/ui/useWallpaper';
 import { Seo } from '@/shared/seo/seo';
 
+type SkinModel = 'classic' | 'slim';
+
 type Profile = {
   id: string;
   userId?: string;
@@ -17,6 +19,7 @@ type Profile = {
   birthDate?: string | null;
   avatarUrl: string;
   skinUrl: string;
+  skinModel?: SkinModel;
   email?: string;
 };
 
@@ -64,6 +67,7 @@ export default function SettingsProfilePage() {
 
   const [skinFile, setSkinFile] = useState<File | null>(null);
   const [skinUrlInput, setSkinUrlInput] = useState('');
+  const [skinModel, setSkinModel] = useState<SkinModel>('classic');
 
   const [email, setEmail] = useState('');
   const [pwdDummy, setPwdDummy] = useState('');
@@ -117,6 +121,7 @@ export default function SettingsProfilePage() {
         setBirthDate(p.birthDate ?? '');
         setEmail(p.email ?? '');
         setNewUsername(p.username ?? '');
+        setSkinModel(p.skinModel === 'slim' ? 'slim' : 'classic');
         try {
           const sessResp = await http.get<{ sessions: Session[] }>(endpoints.accountSessions, { withCredentials: true });
           if (alive) setSessions(sessResp.data.sessions || []);
@@ -310,8 +315,23 @@ export default function SettingsProfilePage() {
     try {
       const fd = new FormData();
       fd.append('file', skinFile);
-      const { data } = await http.post<{ skinUrl: string }>(endpoints.profileSkin, fd, { withCredentials: true });
-      setMe((m) => (m ? { ...m, skinUrl: data.skinUrl } : m));
+
+      const url = `${endpoints.profileSkin}?model=${encodeURIComponent(skinModel)}`;
+
+      const { data } = await http.post<{ skinUrl: string; skinModel?: SkinModel }>(
+        url, fd, { withCredentials: true }
+      );
+
+      setMe((m) =>
+        m
+          ? {
+              ...m,
+              skinUrl: data.skinUrl,
+              skinModel: data.skinModel ?? skinModel,
+            }
+          : m
+      );
+
       setSkinFile(null);
       setNotice('Скин обновлён');
     } catch (e: any) {
@@ -324,12 +344,24 @@ export default function SettingsProfilePage() {
     if (!url) return;
     setBusy('skin-url'); setNotice(null); setErr(null);
     try {
-      const { data } = await http.post<{ skinUrl: string }>(
-        endpoints.profileSkinUrl,
+      const urlWithModel = `${endpoints.profileSkinUrl}?model=${encodeURIComponent(skinModel)}`;
+
+      const { data } = await http.post<{ skinUrl: string; skinModel?: SkinModel }>(
+        urlWithModel,
         { url },
         { withCredentials: true, headers: { 'Content-Type': 'application/json' } }
       );
-      setMe((m) => (m ? { ...m, skinUrl: data.skinUrl } : m));
+
+      setMe((m) =>
+        m
+          ? {
+              ...m,
+              skinUrl: data.skinUrl,
+              skinModel: data.skinModel ?? skinModel,
+            }
+          : m
+      );
+
       setSkinUrlInput('');
       setNotice('Скин обновлён');
     } catch (e: any) {
@@ -571,6 +603,40 @@ export default function SettingsProfilePage() {
                 </button>
               </div>
               <p className="mt-1 text-xs text-slate-500">До 2 МБ. PNG/JPG. Без обрезки.</p>
+
+              <div className="mt-4">
+                <label className="mb-1 block text-xs text-slate-400">Модель скина</label>
+                <div className="flex gap-2 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setSkinModel('classic')}
+                    className={
+                      'rounded-lg border px-3 py-1 ' +
+                      (skinModel === 'classic'
+                        ? 'border-sky-700 bg-sky-900/40 text-sky-300'
+                        : 'border-slate-700 text-slate-300 hover:border-slate-500')
+                    }
+                  >
+                    Classic (Steve)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSkinModel('slim')}
+                    className={
+                      'rounded-lg border px-3 py-1 ' +
+                      (skinModel === 'slim'
+                        ? 'border-sky-700 bg-sky-900/40 text-sky-300'
+                        : 'border-slate-700 text-slate-300 hover:border-slate-500')
+                    }
+                  >
+                    Slim (Alex)
+                  </button>
+                </div>
+                <p className="mt-1 text-xs text-slate-500">
+                  Classic — широкие руки, Slim — узкие руки. Игра должна знать выбранную модель.
+                </p>
+              </div>
+
             </div>
           </Card>
 

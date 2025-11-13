@@ -4,6 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "dev": "vite",
     "assets": "node scripts/raster-resize.mjs && node scripts/build-og.mjs && node scripts/build-sitemap.mjs",
     "build": "tsc -b && vite build",
     "ssg:prep": "tsc -p tsconfig.ssg.json && tsc-alias -p tsconfig.ssg.json --resolve-full-paths",
