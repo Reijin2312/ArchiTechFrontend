@@ -33,6 +33,27 @@ export default function HomePage() {
   const [shot, setShot] = useState(shots[0])
   const [prevShot, setPrevShot] = useState<string | null>(null)
   const [cross, setCross] = useState(true);
+  const [activeIndex, setActiveIndex] = useState(0)
+
+  const thumbSpring: Transition = {
+    type: 'spring',
+    stiffness: 260,
+    damping: 22,
+    mass: 0.6,
+  }
+
+  const thumbVariants: Variants = {
+    active: {
+      scale: 1,
+      opacity: 1,
+      y: 0,
+    },
+    inactive: {
+      scale: 0.85,
+      opacity: 0.55,
+      y: 2,
+    },
+  }
 
   const toName = (p: string) =>
   p.split('/').pop()!
@@ -81,9 +102,14 @@ export default function HomePage() {
   }, [])
 
   function changeTo(newSrc: string) {
-   if (newSrc === shot) return
+    if (newSrc === shot) return
+
     setPrevShot(shot)
     setShot(newSrc)
+
+    const idx = shots.indexOf(newSrc)
+    if (idx !== -1) setActiveIndex(idx)
+
     setCross(false)
     requestAnimationFrame(() => {
       requestAnimationFrame(() => setCross(true))
@@ -198,7 +224,7 @@ function SvgMcBlockGrass({ className }: { className?: string }) {
   return (
     <>
     <Seo {...routesMeta['/']} />
-    <div className="min-h-dvh text-slate-100 relative">
+    <div className="min-h-dvh text-slate-100 relative overflow-x-hidden">
       <section className="mx-auto max-w-7xl px-4 pb-10 pt-10 md:pt-16">
         <div className="grid md:grid-cols-2 gap-10 md:gap-14 items-stretch">
           <div className="md:flex md:flex-col md:h-full">
@@ -249,62 +275,81 @@ function SvgMcBlockGrass({ className }: { className?: string }) {
             </div>
           </div>
 
-          <div className="relative">
-            <div className="aspect-16/10 w-full overflow-hidden rounded-2xl border border-slate-800 shadow-xl">
-              <div className="relative h-full w-full">
-              <ResponsiveImage
-                key={shot}
-                name={toName(shot) as keyof typeof IMAGES}
-                alt="Скриншот мира ArchiTech MC"
-                eager
-                width={1600}
-                height={900}
-                sizes="(max-width:640px) 100vw, (max-width:1024px) 80vw, 1200px"
-                className={
-                  "absolute inset-0 h-full w-full object-cover transition-opacity duration-300 " +
-                  (cross ? "opacity-100" : "opacity-0")
-                }
-              />
-              {prevShot && (
-              <ResponsiveImage
-                key={prevShot + "-prev"}
-                name={toName(prevShot) as keyof typeof IMAGES}
-                alt=""
-                width={1600}
-                height={900}
-                sizes="(max-width:640px) 100vw, (max-width:1024px) 80vw, 1200px"
-                className={
-                  "absolute inset-0 h-full w-full object-cover transition-opacity duration-300 " +
-                  (cross ? "opacity-0" : "opacity-100")
-                }
-              />
-            )}
-            </div>
-            </div>
-            <div className="mt-3 flex gap-3">
-            {shots.map((src) => (
-              <button
-                key={src}
-                onClick={() => changeTo(src)}
-                aria-label="Показать скриншот"
-                className={[
-                  'size-16 rounded-xl overflow-hidden border',
-                  shot === src ? 'border-indigo-500 ring-2 ring-indigo-500/40' : 'border-slate-800'
-                ].join(' ')}
-              >
-                <ResponsiveImage
-                  name={toName(src) as keyof typeof IMAGES}
-                  alt=""
-                  width={160}
-                  height={100}
-                  sizes="160px"
-                  className="h-full w-full object-cover"
-                />
-              </button>
-            ))}
-          </div>
-          </div>
+    <div className="relative max-w-full overflow-hidden">
+      <div className="aspect-16/10 w-full overflow-hidden rounded-2xl border border-slate-800 shadow-xl">
+        <div className="relative h-full w-full">
+          <ResponsiveImage
+            key={shot}
+            name={toName(shot) as keyof typeof IMAGES}
+            alt="Скриншот мира ArchiTech MC"
+            eager
+            width={1600}
+            height={900}
+            sizes="(max-width:640px) 100vw, (max-width:1024px) 80vw, 1200px"
+            className={
+              "absolute inset-0 h-full w-full object-cover transition-opacity duration-300 " +
+              (cross ? "opacity-100" : "opacity-0")
+            }
+          />
+          {prevShot && (
+            <ResponsiveImage
+              key={prevShot + "-prev"}
+              name={toName(prevShot) as keyof typeof IMAGES}
+              alt=""
+              width={1600}
+              height={900}
+              sizes="(max-width:640px) 100vw, (max-width:1024px) 80vw, 1200px"
+              className={
+                "absolute inset-0 h-full w-full object-cover transition-opacity duration-300 " +
+                (cross ? "opacity-0" : "opacity-100")
+              }
+            />
+          )}
         </div>
+      </div>
+
+      <motion.div
+        className="mt-3 flex flex-nowrap gap-3 overflow-x-auto pb-1 -mx-1 px-1 no-scrollbar"
+        layout
+      >
+      {shots.map((_, i) => {
+        const idx = (activeIndex + i) % shots.length
+        const src = shots[idx]
+        const isActive = shot === src
+
+        return (
+          <motion.button
+            key={src}
+            layout
+            variants={thumbVariants}
+            animate={isActive ? 'active' : 'inactive'}
+            whileHover={{ scale: 1.05, opacity: 1 }}
+            whileTap={{ scale: 0.95 }}
+            transition={thumbSpring}
+            onClick={() => changeTo(src)}
+            aria-label="Показать скриншот"
+            className={[
+              'flex-none w-16 aspect-square rounded-xl overflow-hidden border ring-offset-2 ring-offset-slate-950',
+              isActive
+                ? 'border-indigo-500 ring-2 ring-indigo-500/40'
+                : 'border-slate-800',
+            ].join(' ')}
+          >
+            <ResponsiveImage
+              name={toName(src) as keyof typeof IMAGES}
+              alt=""
+              width={160}
+              height={160}
+              sizes="64px"
+              className="h-full w-full object-cover"
+            />
+          </motion.button>
+        )
+      })}
+      </motion.div>
+
+      </div>
+      </div>
       </section>
 
       <section className="mx-auto max-w-7xl px-4 py-10">

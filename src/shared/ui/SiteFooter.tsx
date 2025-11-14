@@ -29,12 +29,12 @@ export default function SiteFooter() {
         </div>
 
         <div className="mt-6 text-xs text-slate-400">
-          <div className="w-full leading-relaxed whitespace-nowrap overflow-x-auto">
-            Не является официальным продуктом Minecraft. Мы никаким образом не связаны и не поддерживаем Mojang Synergies AB, Microsoft{"\u00A0"}Corporation или других правообладателей.
+          <div className="w-full leading-relaxed whitespace-normal wrap-break-words">
+            Не является официальным продуктом Minecraft. Мы никаким образом не связаны и не поддерживаем Mojang Synergies AB, Microsoft Corporation или других правообладателей.
           </div>
         </div>
 
-        <div className="mt-4 text-xs text-slate-500">© ArchiTech MC. 2024–2026. Все права защищены.</div>
+        <div className="mt-4 text-xs text-slate-500">© ArchiTech MC. 2024–2025. Все права защищены.</div>
       </div>
     </footer>
   );

@@ -45,6 +45,14 @@
     transition: background-color 600000s 0s, color 600000s 0s;
     caret-color: #eaf3ff;
   }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 @layer components {
