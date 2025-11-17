@@ -20,6 +20,11 @@ const SECTIONS: TocItem[] = [
 
 export default function RulesPage() {
   useWallpaper();
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'auto' });
+  }, []);
+
   return (
     <>
     <Seo {...routesMeta['/rules']} />

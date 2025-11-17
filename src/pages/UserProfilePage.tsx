@@ -16,6 +16,10 @@ type Stats = { servers?: number; sessions?: number; achievements?: number; regis
 export default function UserProfilePage() {
   useWallpaper();
 
+  useEffect(() => {
+      window.scrollTo({ top: 0, behavior: 'auto' });
+  }, []);
+
   const username = useParams().username!;
   const self = isSelf(username);
 

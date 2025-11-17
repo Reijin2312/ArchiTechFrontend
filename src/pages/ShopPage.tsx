@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useEffect } from 'react';
 import { authStore } from '@/shared/store/auth';
 import { useWallpaper } from '@/shared/ui/useWallpaper';
 import { Seo } from '@/shared/seo/seo';
@@ -8,6 +8,10 @@ const TELEGRAM_BOT = 'https://t.me/Archi_payment_bot';
 
 export default function ShopPage() {
   useWallpaper();
+
+  useEffect(() => {
+      window.scrollTo({ top: 0, behavior: 'auto' });
+  }, []);
 
   const user = authStore((s) => s.user);
   const nick = user?.username || 'ваш_ник';

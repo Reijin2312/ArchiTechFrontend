@@ -122,6 +122,10 @@ const CMDS: Cmd[] = [
 export default function WikiPage() {
   useWallpaper();
 
+  useEffect(() => {
+      window.scrollTo({ top: 0, behavior: 'auto' });
+  }, []);
+
   return (
     <>
     <Seo {...routesMeta['/wiki']} />

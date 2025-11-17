@@ -28,6 +28,10 @@ export default function HomePage() {
 
   const prefersReducedMotion = useReducedMotion();
 
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'auto' });
+  }, []);
+
   const [status, setStatus] = useState<McStatus | null>(null)
   const [copyOk, setCopyOk] = useState<'idle' | 'ok' | 'err'>('idle')
   const shots = useMemo(
@@ -153,40 +157,40 @@ export default function HomePage() {
   }
 
   function SvgUserPlus({
-  className,
-}: { className?: string; gap?: number }) {
-  return (
-    <svg
-      viewBox="0 0 29 29"
-      className={className}
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      aria-hidden
-    >
-      <path
-        d="M21 7.00001C21 6.7348 21.1054 6.48044 21.2929 6.29291C21.4805 6.10537 21.7348 6.00001 22 6.00001H24V4.00001C24 3.7348 24.1054 3.48044 24.2929 3.29291C24.4805 3.10537 24.7348 3.00001 25 3.00001C25.2652 3.00001 25.5196 3.10537 25.7071 3.29291C25.8947 3.48044 26 3.7348 26 4.00001V6.00001H28C28.2652 6.00001 28.5196 6.10537 28.7071 6.29291C28.8947 6.48044 29 6.7348 29 7.00001C29 7.26523 28.8947 7.51958 28.7071 7.70712C28.5196 7.89466 28.2652 8.00001 28 8.00001H26V10C26 10.2652 25.8947 10.5196 25.7071 10.7071C25.5196 10.8947 25.2652 11 25 11C24.7348 11 24.4805 10.8947 24.2929 10.7071C24.1054 10.5196 24 10.2652 24 10V8.00001H22C21.7348 8.00001 21.4805 7.89466 21.2929 7.70712C21.1054 7.51958 21 7.26523 21 7.00001ZM28.82 13.835C29.2769 16.5507 28.8589 19.3413 27.6263 21.804C26.3938 24.2666 24.4105 26.2738 21.9628 27.5358C19.5151 28.7978 16.7297 29.2492 14.0087 28.8249C11.2877 28.4006 8.77199 27.1226 6.82472 25.1753C4.87744 23.2281 3.59941 20.7123 3.17513 17.9913C2.75085 15.2704 3.20229 12.4849 4.46426 10.0373C5.72624 7.58958 7.73344 5.60628 10.1961 4.37373C12.6587 3.14118 15.4493 2.72316 18.165 3.18001C18.4246 3.22592 18.6556 3.37247 18.8077 3.58778C18.9598 3.80309 19.0207 4.06974 18.9772 4.32974C18.9337 4.58974 18.7893 4.82204 18.5754 4.97613C18.3615 5.13021 18.0954 5.1936 17.835 5.15251C16.2577 4.88717 14.6415 4.96873 13.0989 5.39152C11.5563 5.81431 10.1243 6.56817 8.90268 7.60064C7.68104 8.63311 6.69906 9.91938 6.02508 11.3699C5.3511 12.8205 5.0013 14.4005 5.00003 16C4.99766 18.6928 5.98734 21.292 7.78003 23.3013C8.89532 21.6851 10.4636 20.4348 12.2875 19.7075C11.3078 18.9358 10.5928 17.878 10.2421 16.6811C9.89143 15.4843 9.92241 14.2079 10.3308 13.0294C10.7391 11.851 11.5046 10.8291 12.5206 10.1059C13.5367 9.38263 14.7529 8.99399 16 8.99399C17.2472 8.99399 18.4634 9.38263 19.4795 10.1059C20.4955 10.8291 21.2609 11.851 21.6693 13.0294C22.0777 14.2079 22.1086 15.4843 21.7579 16.6811C21.4072 17.878 20.6923 18.9358 19.7125 19.7075C21.5365 20.4348 23.1047 21.6851 24.22 23.3013C26.0127 21.292 27.0024 18.6928 27 16C27.0001 15.3852 26.9491 14.7714 26.8475 14.165C26.8245 14.0349 26.8275 13.9016 26.8564 13.7727C26.8852 13.6437 26.9393 13.5218 27.0155 13.4139C27.0917 13.306 27.1885 13.2143 27.3004 13.144C27.4123 13.0738 27.537 13.0264 27.6672 13.0046C27.7975 12.9828 27.9309 12.987 28.0595 13.017C28.1881 13.0471 28.3096 13.1023 28.4168 13.1795C28.5239 13.2567 28.6148 13.3544 28.684 13.4669C28.7532 13.5794 28.7994 13.7045 28.82 13.835ZM16 19C16.7912 19 17.5645 18.7654 18.2223 18.3259C18.8801 17.8864 19.3928 17.2617 19.6956 16.5307C19.9983 15.7998 20.0775 14.9956 19.9232 14.2197C19.7688 13.4437 19.3879 12.731 18.8285 12.1716C18.269 11.6122 17.5563 11.2312 16.7804 11.0769C16.0045 10.9225 15.2002 11.0017 14.4693 11.3045C13.7384 11.6072 13.1137 12.1199 12.6742 12.7777C12.2346 13.4355 12 14.2089 12 15C12 16.0609 12.4215 17.0783 13.1716 17.8284C13.9218 18.5786 14.9392 19 16 19ZM16 27C18.4417 27.0025 20.8142 26.1885 22.74 24.6875C22.0166 23.5561 21.02 22.625 19.8421 21.9801C18.6642 21.3351 17.3429 20.9971 16 20.9971C14.6571 20.9971 13.3358 21.3351 12.1579 21.9801C10.98 22.625 9.98345 23.5561 9.26003 24.6875C11.1859 26.1885 13.5583 27.0025 16 27Z"
-        fill="currentColor"
-      />
-    </svg>
-  );
-}
+    className,
+  }: { className?: string; gap?: number }) {
+    return (
+      <svg
+        viewBox="0 0 29 29"
+        className={className}
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+        aria-hidden
+      >
+        <path
+          d="M21 7.00001C21 6.7348 21.1054 6.48044 21.2929 6.29291C21.4805 6.10537 21.7348 6.00001 22 6.00001H24V4.00001C24 3.7348 24.1054 3.48044 24.2929 3.29291C24.4805 3.10537 24.7348 3.00001 25 3.00001C25.2652 3.00001 25.5196 3.10537 25.7071 3.29291C25.8947 3.48044 26 3.7348 26 4.00001V6.00001H28C28.2652 6.00001 28.5196 6.10537 28.7071 6.29291C28.8947 6.48044 29 6.7348 29 7.00001C29 7.26523 28.8947 7.51958 28.7071 7.70712C28.5196 7.89466 28.2652 8.00001 28 8.00001H26V10C26 10.2652 25.8947 10.5196 25.7071 10.7071C25.5196 10.8947 25.2652 11 25 11C24.7348 11 24.4805 10.8947 24.2929 10.7071C24.1054 10.5196 24 10.2652 24 10V8.00001H22C21.7348 8.00001 21.4805 7.89466 21.2929 7.70712C21.1054 7.51958 21 7.26523 21 7.00001ZM28.82 13.835C29.2769 16.5507 28.8589 19.3413 27.6263 21.804C26.3938 24.2666 24.4105 26.2738 21.9628 27.5358C19.5151 28.7978 16.7297 29.2492 14.0087 28.8249C11.2877 28.4006 8.77199 27.1226 6.82472 25.1753C4.87744 23.2281 3.59941 20.7123 3.17513 17.9913C2.75085 15.2704 3.20229 12.4849 4.46426 10.0373C5.72624 7.58958 7.73344 5.60628 10.1961 4.37373C12.6587 3.14118 15.4493 2.72316 18.165 3.18001C18.4246 3.22592 18.6556 3.37247 18.8077 3.58778C18.9598 3.80309 19.0207 4.06974 18.9772 4.32974C18.9337 4.58974 18.7893 4.82204 18.5754 4.97613C18.3615 5.13021 18.0954 5.1936 17.835 5.15251C16.2577 4.88717 14.6415 4.96873 13.0989 5.39152C11.5563 5.81431 10.1243 6.56817 8.90268 7.60064C7.68104 8.63311 6.69906 9.91938 6.02508 11.3699C5.3511 12.8205 5.0013 14.4005 5.00003 16C4.99766 18.6928 5.98734 21.292 7.78003 23.3013C8.89532 21.6851 10.4636 20.4348 12.2875 19.7075C11.3078 18.9358 10.5928 17.878 10.2421 16.6811C9.89143 15.4843 9.92241 14.2079 10.3308 13.0294C10.7391 11.851 11.5046 10.8291 12.5206 10.1059C13.5367 9.38263 14.7529 8.99399 16 8.99399C17.2472 8.99399 18.4634 9.38263 19.4795 10.1059C20.4955 10.8291 21.2609 11.851 21.6693 13.0294C22.0777 14.2079 22.1086 15.4843 21.7579 16.6811C21.4072 17.878 20.6923 18.9358 19.7125 19.7075C21.5365 20.4348 23.1047 21.6851 24.22 23.3013C26.0127 21.292 27.0024 18.6928 27 16C27.0001 15.3852 26.9491 14.7714 26.8475 14.165C26.8245 14.0349 26.8275 13.9016 26.8564 13.7727C26.8852 13.6437 26.9393 13.5218 27.0155 13.4139C27.0917 13.306 27.1885 13.2143 27.3004 13.144C27.4123 13.0738 27.537 13.0264 27.6672 13.0046C27.7975 12.9828 27.9309 12.987 28.0595 13.017C28.1881 13.0471 28.3096 13.1023 28.4168 13.1795C28.5239 13.2567 28.6148 13.3544 28.684 13.4669C28.7532 13.5794 28.7994 13.7045 28.82 13.835ZM16 19C16.7912 19 17.5645 18.7654 18.2223 18.3259C18.8801 17.8864 19.3928 17.2617 19.6956 16.5307C19.9983 15.7998 20.0775 14.9956 19.9232 14.2197C19.7688 13.4437 19.3879 12.731 18.8285 12.1716C18.269 11.6122 17.5563 11.2312 16.7804 11.0769C16.0045 10.9225 15.2002 11.0017 14.4693 11.3045C13.7384 11.6072 13.1137 12.1199 12.6742 12.7777C12.2346 13.4355 12 14.2089 12 15C12 16.0609 12.4215 17.0783 13.1716 17.8284C13.9218 18.5786 14.9392 19 16 19ZM16 27C18.4417 27.0025 20.8142 26.1885 22.74 24.6875C22.0166 23.5561 21.02 22.625 19.8421 21.9801C18.6642 21.3351 17.3429 20.9971 16 20.9971C14.6571 20.9971 13.3358 21.3351 12.1579 21.9801C10.98 22.625 9.98345 23.5561 9.26003 24.6875C11.1859 26.1885 13.5583 27.0025 16 27Z"
+          fill="currentColor"
+        />
+      </svg>
+    );
+  }
 
-function SvgMcBlockGrass({ className }: { className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 29 29"
-      className={className}
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      aria-hidden
-    >
-      <path
-        d="M26 4H6C5.46957 4 4.96086 4.21071 4.58579 4.58579C4.21071 4.96086 4 5.46957 4 6V26C4 26.5304 4.21071 27.0391 4.58579 27.4142C4.96086 27.7893 5.46957 28 6 28H26C26.5304 28 27.0391 27.7893 27.4142 27.4142C27.7893 27.0391 28 26.5304 28 26V6C28 5.46957 27.7893 4.96086 27.4142 4.58579C27.0391 4.21071 26.5304 4 26 4ZM24.4137 15L17 7.58625V6H18.5863L26 13.415V15H24.4137ZM17 10.4137L21.5863 15H17V10.4137ZM26 10.5863L21.4137 6H26V10.5863ZM15 6V15H6V6H15ZM13.4137 26L6 18.5863V17H7.58625L15 24.4137V26H13.4137ZM15 21.5863L10.4137 17H15V21.5863ZM6 21.4137L10.5863 26H6V21.4137ZM26 26H17V17H26V26Z"
-        fill="currentColor"
-      />
-    </svg>
-  );
-}
+  function SvgMcBlockGrass({ className }: { className?: string }) {
+    return (
+      <svg
+        viewBox="0 0 29 29"
+        className={className}
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+        aria-hidden
+      >
+        <path
+          d="M26 4H6C5.46957 4 4.96086 4.21071 4.58579 4.58579C4.21071 4.96086 4 5.46957 4 6V26C4 26.5304 4.21071 27.0391 4.58579 27.4142C4.96086 27.7893 5.46957 28 6 28H26C26.5304 28 27.0391 27.7893 27.4142 27.4142C27.7893 27.0391 28 26.5304 28 26V6C28 5.46957 27.7893 4.96086 27.4142 4.58579C27.0391 4.21071 26.5304 4 26 4ZM24.4137 15L17 7.58625V6H18.5863L26 13.415V15H24.4137ZM17 10.4137L21.5863 15H17V10.4137ZM26 10.5863L21.4137 6H26V10.5863ZM15 6V15H6V6H15ZM13.4137 26L6 18.5863V17H7.58625L15 24.4137V26H13.4137ZM15 21.5863L10.4137 17H15V21.5863ZM6 21.4137L10.5863 26H6V21.4137ZM26 26H17V17H26V26Z"
+          fill="currentColor"
+        />
+      </svg>
+    );
+  }
 
   useEffect(() => {
     let stop = false
@@ -242,6 +246,43 @@ function SvgMcBlockGrass({ className }: { className?: string }) {
       setCopyOk('err')
       setTimeout(() => setCopyOk('idle'), 2000)
     }
+  }
+
+  const teamContainer: Variants = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: { staggerChildren: 0.06 },
+    },
+  }
+
+  const teamItem: Variants = {
+    hidden: { opacity: 0, y: 16, filter: 'blur(8px)', scale: 0.98 },
+    show: {
+      opacity: 1,
+      y: 0,
+      filter: 'blur(0px)',
+      scale: 1,
+      transition: { duration: 0.4, ease: 'easeOut' },
+    },
+  }
+
+  const faqContainer: Variants = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: { staggerChildren: 0.08, delayChildren: 0.05 },
+    },
+  }
+
+  const faqItem: Variants = {
+    hidden: { opacity: 0, y: 14, scale: 0.98 },
+    show: {
+      opacity: 1,
+      y: 0,
+      scale: 1,
+      transition: { duration: 0.35, ease: 'easeOut' },
+    },
   }
 
   return (
@@ -315,7 +356,7 @@ function SvgMcBlockGrass({ className }: { className?: string }) {
             </div>
           </div>
 
-        <div className="relative max-w-full overflow-hidden"
+        <div className="relative max-w-full"
           onMouseEnter={() => setSliderPaused(true)}
           onMouseLeave={() => setSliderPaused(false)}
           onFocus={() => setSliderPaused(true)}
@@ -357,31 +398,35 @@ function SvgMcBlockGrass({ className }: { className?: string }) {
 
             return (
               <motion.button
-                key={src}
-                layout
-                variants={thumbVariants}
-                animate={isActive ? 'active' : 'inactive'}
-                whileHover={{ scale: 1.05, opacity: 1 }}
-                whileTap={{ scale: 0.95 }}
-                transition={thumbSpring}
-                onClick={() => changeTo(src)}
-                aria-label="Показать скриншот"
-                className={[
-                  'flex-none w-16 aspect-square rounded-xl overflow-hidden border ring-offset-2 ring-offset-slate-950',
-                  isActive
-                    ? 'border-indigo-500 ring-2 ring-indigo-500/40'
-                    : 'border-slate-800',
-                ].join(' ')}
-              >
-                <ResponsiveImage
-                  name={toName(src) as keyof typeof IMAGES}
-                  alt=""
-                  width={160}
-                  height={160}
-                  sizes="64px"
-                  className="h-full w-full object-cover"
-                />
-              </motion.button>
+  key={src}
+  layout
+  variants={thumbVariants}
+  animate={isActive ? 'active' : 'inactive'}
+  whileHover={{ scale: 1.05, opacity: 1 }}
+  whileTap={{ scale: 0.95 }}
+  transition={thumbSpring}
+  onClick={() => changeTo(src)}
+  aria-label="Показать скриншот"
+  className={[
+    // базовые классы
+    'flex-none w-16 aspect-square rounded-xl ring-offset-2 ring-offset-slate-950 border',
+    isActive
+      // активная: бордер прозрачный, только кольцо
+      ? 'border-transparent ring-2 ring-indigo-500/40'
+      // неактивная: только серый бордер, без ring
+      : 'border-slate-800 ring-0 ring-transparent',
+  ].join(' ')}
+>
+  <ResponsiveImage
+    name={toName(src) as keyof typeof IMAGES}
+    alt=""
+    width={160}
+    height={160}
+    sizes="64px"
+    className="h-full w-full object-cover rounded-xl"
+  />
+</motion.button>
+
             )
           })}
           </motion.div>
@@ -391,8 +436,8 @@ function SvgMcBlockGrass({ className }: { className?: string }) {
 
       <motion.section
         className="mx-auto max-w-7xl px-4 py-10"
-        initial={prefersReducedMotion ? undefined : { opacity: 0, y: 24 }}
-        animate={prefersReducedMotion ? undefined : { opacity: 1, y: 0 }}
+        initial={prefersReducedMotion ? undefined : { y: 24 }}
+        animate={prefersReducedMotion ? undefined : { y: 0 }}
         transition={{ duration: 0.5, ease: 'easeOut' }}
       >
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -400,7 +445,8 @@ function SvgMcBlockGrass({ className }: { className?: string }) {
             title={<span className="inline-flex items-center gap-2"><SvgMcBlockGrass className="h-5" />Лаунчер</span>}
             text="Автоматическое обновление модов" 
             href="https://launcher.architech-mc.ru/download/launcher/latest"
-            button="Скачать" />
+            button="Скачать"
+          />
           <CardCTA 
             title={<span className="inline-flex items-center gap-2"><SvgUserPlus className="h-5" />Доступ на сервер</span>}
             text="Получить проходку в Telegram-боте" 
@@ -421,14 +467,32 @@ function SvgMcBlockGrass({ className }: { className?: string }) {
         </div>
       </motion.section>
 
-      <section className="mx-auto max-w-7xl px-4 py-10">
-        <h2 className="text-2xl font-semibold mb-6">Команда проекта</h2>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <motion.section className="mx-auto max-w-7xl px-4 py-10">
+        <motion.h2
+          className="text-2xl font-semibold mb-6"
+          variants={faqItem}
+        >
+        Команда проекта
+        </motion.h2>
+
+        <motion.div
+          className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
+          variants={teamContainer}
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true, margin: '-10% 0px' }}
+        >
           {TEAM.map((p) => {
             const src = avatars[p.name] || AVATAR_FALLBACK
             return (
-              <div key={p.name} className="rounded-2xl border border-slate-800 p-4 bg-slate-900/40 backdrop-blur-md backdrop-saturate-150">
-                <div className="flex items-center gap-3">
+              <motion.div
+                key={p.name}
+                variants={teamItem}
+                whileHover={{ y: -4, scale: 1.01 }}
+                whileTap={{ scale: 0.99 }}
+                className="relative rounded-2xl border border-slate-800 p-4 bg-linear-to-b from-slate-900/60 to-slate-900/20 backdrop-blur-md backdrop-saturate-150 overflow-hidden will-change-transform"
+              >
+                <Link to={`/u/${encodeURIComponent(p.name)}`} className="flex items-center gap-3">
                   <img
                     src={src}
                     alt={p.name}
@@ -446,25 +510,136 @@ function SvgMcBlockGrass({ className }: { className?: string }) {
                     <div className="font-medium">{p.name}</div>
                     <div className="text-sm text-slate-400">{p.role}</div>
                   </div>
-                </div>
-              </div>
+                </Link>
+              </motion.div>
             )
           })}
-        </div>
-      </section>
+        </motion.div>
+      </motion.section>
 
-      <section className="mx-auto max-w-7xl px-4 py-10">
-        <h2 className="text-2xl font-semibold mb-6">FAQ</h2>
-        <div className="grid gap-3">
+      <motion.section
+        className="mx-auto max-w-7xl px-4 py-10"
+        variants={faqContainer}
+        initial={prefersReducedMotion ? undefined : 'hidden'}
+        whileInView={prefersReducedMotion ? undefined : 'show'}
+        viewport={{ once: true, margin: '-10% 0px' }}
+      >
+        <motion.h2
+          className="text-2xl font-semibold mb-6"
+          variants={faqItem}
+        >
+          FAQ
+        </motion.h2>
+
+        <motion.div className="grid gap-3">
+          <motion.div variants={faqItem}>
           <Faq q="Как попасть на сервер?" a={<StepsGuide version={status?.version} />} />
-          <Faq q="Проводятся ли вайпы?" a="Вайпы существовали только с 1 по 3 сезон. Навсегда отменены с началом четвёртого. Вы можете не бояться потерять свой прогресс и постройки." />
-          <Faq q="Правила?" a={<span>Коротко и без воды — <a className='underline' href={RULES_URL}>читай тут</a>.</span>} />
-        </div>
-      </section>
-    </div>
-    </>
-  );
-}
+          </motion.div>
+
+          <motion.div variants={faqItem}>
+          <Faq
+            q="Проводятся ли вайпы?"
+            a={
+              <div className="relative overflow-hidden rounded-2xl border border-slate-800 bg-linear-to-br from-slate-950/80 via-slate-900/60 to-slate-900/20 backdrop-blur-md backdrop-saturate-150 px-4 py-4 sm:px-5 sm:py-5 group transition">
+                <div className="pointer-events-none absolute -top-20 -right-16 h-40 w-40 rounded-full bg-emerald-500/10 blur-3xl" />
+                <div className="pointer-events-none absolute -bottom-24 -left-20 h-40 w-40 rounded-full bg-sky-500/10 blur-3xl" />
+
+                <div className="absolute inset-x-0 top-0 h-[1px] bg-linear-to-r from-indigo-500/40 via-sky-500/60 to-emerald-500/40 opacity-80" />
+
+                <div className="flex items-start gap-3">
+                  <div className="mt-0.5 size-9 shrink-0 grid place-items-center rounded-xl bg-indigo-600/20 text-indigo-300">
+                    <SvgMcBlockGrass className="h-5" />
+                  </div>
+                  <div className="space-y-1">
+                    <div className="inline-flex items-center gap-2 text-[11px] uppercase tracking-wide text-slate-400">
+                      <span className="rounded-full border border-slate-700/80 bg-slate-950/60 px-2 py-0.5">
+                        Сезоны и сохранность мира
+                      </span>
+                    </div>
+                    <p className="text-sm text-slate-300">
+                      <b>Вайпы существовали только с 1 по 3 сезон и навсегда отменены с началом четвёртого. </b>
+                      Сейчас мир живёт максимально долго, прогресс и постройки никогда не будут обнулены и как-либо затронуты.
+                    </p>
+                  </div>
+                </div>
+
+                <dl className="mt-4 grid gap-2 text-[11px] text-slate-300 sm:grid-cols-3">
+                  <div className="rounded-xl border border-slate-800 bg-slate-950/60 px-3 py-2">
+                    <dt className="text-slate-400">Полный вайп</dt>
+                    <dd className="font-medium text-slate-100">
+                      Никогда не будет проведён
+                    </dd>
+                  </div>
+                  <div className="rounded-xl border border-slate-800 bg-slate-950/60 px-3 py-2">
+                    <dt className="text-slate-400">Текущий сезон</dt>
+                    <dd className="font-medium text-slate-100">
+                      Только частичные вайпы старых чанков без построек
+                    </dd>
+                  </div>
+                  <div className="rounded-xl border border-slate-800 bg-slate-950/60 px-3 py-2">
+                    <dt className="text-slate-400">Ваши базы</dt>
+                    <dd className="font-medium text-slate-100">
+                      Не будут затронуты частичными вайпами
+                    </dd>
+                  </div>
+                </dl>
+              </div>
+            }
+            />
+            </motion.div>
+
+            <motion.div variants={faqItem}>
+            <Faq
+              q="Правила?"
+              a={
+                <div className="relative overflow-hidden rounded-2xl border border-slate-800 bg-linear-to-br from-slate-950/80 via-slate-900/60 to-slate-900/20 backdrop-blur-md backdrop-saturate-150 px-4 py-4 sm:px-5 sm:py-5 group transition">
+                  <div className="pointer-events-none absolute -top-24 -left-16 h-40 w-40 rounded-full bg-rose-500/12 blur-3xl" />
+                  <div className="pointer-events-none absolute -bottom-24 -right-20 h-40 w-40 rounded-full bg-amber-400/10 blur-3xl" />
+
+                  <div className="absolute inset-x-0 top-0 h-[1px] bg-linear-to-r from-emerald-500/40 via-sky-500/60 to-indigo-500/40 opacity-80" />
+
+                  <div className="flex items-start gap-3">
+                    <div className="mt-0.5 size-9 shrink-0 grid place-items-center rounded-xl bg-emerald-600/20 text-emerald-300">
+                      <span className="text-sm font-semibold">!</span>
+                    </div>
+                    <div className="space-y-1">
+                      <div className="inline-flex items-center gap-2 text-[11px] uppercase tracking-wide text-slate-400">
+                        <span className="rounded-full border border-slate-700/80 bg-slate-950/60 px-2 py-0.5">
+                          Коротко и по делу
+                        </span>
+                      </div>
+                      <div className="text-sm font-semibold text-slate-100">
+                        Главная истина: не мешай другим играть
+                      </div>
+                      <ul className="mt-1 space-y-1 text-sm text-slate-300">
+                        <li>— Не ломай чужие постройки и не воруй ресурсы;</li>
+                        <li>— Без токсичности, хейта, угроз и спама в чате.</li>
+                        <li>— Не используй читы, багоюзы, автокликеры;</li>
+                      </ul>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-slate-400">
+                    <span className="rounded-full border border-slate-700/80 bg-slate-950/60 px-2 py-1">
+                      Подробный регламент правил см. на отдельной странице
+                    </span>
+                    <Link to=
+                      {RULES_URL}
+                      className="inline-flex items-center gap-1 rounded-full border border-emerald-500/70 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-300 hover:bg-emerald-500/20 hover:border-emerald-400 transition"
+                    >
+                      Открыть правила
+                    </Link>
+                  </div>
+                </div>
+              }
+            />
+            </motion.div>
+            </motion.div>
+            </motion.section>
+            </div>
+            </>
+          );
+        }
 
 function Badge({ label, ok }: { label: string; ok?: boolean }) {
   return (
@@ -513,25 +688,25 @@ function CardCTA({
       className="relative rounded-2xl border border-slate-800 p-5 bg-linear-to-b from-slate-900/60 to-slate-900/20 backdrop-blur-md backdrop-saturate-150 overflow-hidden"
     >
     
-      <motion.span
-        aria-hidden
-        className="pointer-events-none absolute inset-y-0 -left-1/3 w-1/3 bg-linear-to-r from-transparent via-white/10 to-transparent"
-        initial={{ x: '-40%', opacity: 0 }}
-        animate={{ x: ['-40%', '160%'], opacity: [0, 1, 0] }}
-        transition={{
-          duration: SHINE_DURATION,
-          ease: 'easeOut',
-          delay: initialDelay,
-          repeat: Infinity,
-          repeatType: 'loop',
-          repeatDelay: SHINE_EVERY
-        }}
-        style={{ willChange: 'transform, opacity' }}
-      />
+    <motion.span
+      aria-hidden
+      className="pointer-events-none absolute inset-y-0 -left-1/3 w-1/3 bg-linear-to-r from-transparent via-white/10 to-transparent"
+      initial={{ x: '-40%', opacity: 0 }}
+      animate={{ x: ['-40%', '160%'], opacity: [0, 1, 0] }}
+      transition={{
+        duration: SHINE_DURATION,
+        ease: 'easeOut',
+        delay: initialDelay,
+        repeat: Infinity,
+        repeatType: 'loop',
+        repeatDelay: SHINE_EVERY
+      }}
+      style={{ willChange: 'transform, opacity' }}
+    />
 
-      <div className="font-medium text-lg">{title}</div>
-      <div className="text-sm text-slate-300 mt-1 mb-4">{text}</div>
-      <a href={href} className="inline-flex rounded-xl px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-sm">{button}</a>
+    <div className="font-medium text-lg">{title}</div>
+    <div className="text-sm text-slate-300 mt-1 mb-4">{text}</div>
+    <a href={href} className="inline-flex rounded-xl px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-sm">{button}</a>
     </motion.div>
   )
 }
@@ -586,7 +761,7 @@ function StepsGuide({ version }: { version?: string }) {
     show:   { opacity: 1, y: 0,  scale: 1,    filter: 'blur(0px)', transition: spring }
   }
 
-    return (
+  return (
     <motion.div
       className="grid gap-4 md:grid-cols-3"
       variants={container}
@@ -595,96 +770,102 @@ function StepsGuide({ version }: { version?: string }) {
       viewport={{ once: true, margin: '-10% 0px' }}
     >
 
-      <motion.div
-        variants={item}
-        whileHover={{ y: -6, scale: 1.01 }}
-        whileTap={{ scale: 0.99 }}
-        className="relative rounded-2xl border border-slate-800 bg-slate-900/40 overflow-hidden will-change-transform"
-      >
-        <motion.span
-          aria-hidden
-          className="absolute inset-x-0 top-0 h-0.5 bg-linear-to-r from-indigo-500 via-sky-500 to-emerald-500 origin-left"
-          initial={{ scaleX: 0 }}
-          animate={{ scaleX: 1 }}
-          transition={{ duration: 0.5 }}
-        />
-        <div className="p-5">
-          <div className="size-10 rounded-xl bg-sky-600/20 grid place-items-center text-sky-300 mb-3">
-            <SvgUserPlus className="h-5" />
-          </div>
-          <div className="text-lg font-semibold mb-2">Зарегистрируйтесь на сайте</div>
-          <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
-            <Link to="/auth/login" className="inline-flex rounded-xl px-4 py-2 bg-indigo-600 hover:bg-indigo-500">
-              Войти или зарегистрироваться
-            </Link>
-            <div className="text-xs text-slate-400 mt-3">Потребуется только ваша почта</div>
-          </div>
-        </div>
-      </motion.div>
+    <motion.div
+      variants={item}
+      whileHover={{ y: -6, scale: 1.01 }}
+      whileTap={{ scale: 0.99 }}
+      className="relative rounded-2xl border border-slate-800 bg-slate-900/40 overflow-hidden will-change-transform"
+    >
+      
+    <motion.span
+      aria-hidden
+      className="absolute inset-x-0 top-0 h-0.5 bg-linear-to-r from-indigo-500 via-sky-500 to-emerald-500 origin-left"
+      initial={{ scaleX: 0 }}
+      animate={{ scaleX: 1 }}
+      transition={{ duration: 0.5 }}
+    />
 
-      <motion.div
-        variants={item}
-        whileHover={{ y: -6, scale: 1.01 }}
-        whileTap={{ scale: 0.99 }}
-        className="relative rounded-2xl border border-slate-800 bg-slate-900/40 overflow-hidden will-change-transform"
-      >
-        <motion.span
-          aria-hidden
-          className="absolute inset-x-0 top-0 h-0.5 bg-linear-to-r from-indigo-500 via-sky-500 to-emerald-500 origin-left"
-          initial={{ scaleX: 0 }}
-          animate={{ scaleX: 1 }}
-          transition={{ duration: 0.6, delay: 0.05 }}
-        />
-        <div className="p-5">
-          <div className="size-10 rounded-xl bg-emerald-600/20 grid place-items-center text-emerald-300 mb-3">
-            <SvgTelegram className="h-5" />
-          </div>
-          <div className="text-lg font-semibold mb-2">Получите доступ</div>
-          <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
-            <a href={TELEGRAM_URL} className="inline-flex rounded-xl px-4 py-2 bg-sky-600 hover:bg-sky-500">
-              Перейти в бота
-            </a>
-            <div className="text-xs text-slate-400 mt-3">Введите ваш ник на сайте, чтобы получить проходку</div>
-          </div>
-        </div>
-      </motion.div>
-
-      <motion.div
-        variants={item}
-        whileHover={{ y: -6, scale: 1.01 }}
-        whileTap={{ scale: 0.99 }}
-        className="relative rounded-2xl border border-slate-800 bg-slate-900/40 overflow-hidden will-change-transform"
-      >
-        <motion.span
-          aria-hidden
-          className="absolute inset-x-0 top-0 h-0.5 bg-linear-to-r from-indigo-500 via-sky-500 to-emerald-500 origin-left"
-          initial={{ scaleX: 0 }}
-          animate={{ scaleX: 1 }}
-          transition={{ duration: 0.6, delay: 0.1 }}
-        />
-        <div className="p-5">
-          <div className="size-10 rounded-xl bg-teal-600/20 grid place-items-center text-teal-300 mb-3">
-            <SvgMcBlockGrass className="h-5" />
-          </div>
-          <div className="text-lg font-semibold mb-2">Зайдите на сервер</div>
-          <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
-            <div className="flex w-full items-stretch overflow-hidden rounded-xl border border-slate-800">
-              <div className="px-3 hidden sm:grid place-items-center bg-slate-900/60 border-r border-slate-800 text-xs text-slate-300">
-                IP адрес
-              </div>
-              <div className="px-3 py-2 font-mono flex-1 truncate">{SERVER_IP}</div>
-              <button onClick={copy} className="px-3 py-2 bg-slate-900/60 hover:bg-slate-800 border-l border-slate-800 text-sm">
-                {copied === 'ok' ? 'Скопировано' : copied === 'err' ? 'Ошибка' : 'Копировать'}
-              </button>
-            </div>
-            <div className="text-xs text-slate-400 mt-3 text-center">
-              Откройте Minecraft: Java Edition
-              {version ? <> версии <b className="text-slate-300">{version}</b></> : null} и вставьте IP
-            </div>
-          </div>
-        </div>
-      </motion.div>
+    <div className="p-5">
+      <div className="size-10 rounded-xl bg-sky-600/20 grid place-items-center text-sky-300 mb-3">
+        <SvgUserPlus className="h-5" />
+      </div>
+      <div className="text-lg font-semibold mb-2">Зарегистрируйтесь на сайте</div>
+      <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+        <Link to="/auth/login" className="inline-flex rounded-xl px-4 py-2 bg-indigo-600 hover:bg-indigo-500">
+          Войти или зарегистрироваться
+        </Link>
+        <div className="text-xs text-slate-400 mt-3">Потребуется только ваша почта</div>
+      </div>
+    </div>
     </motion.div>
+
+    <motion.div
+      variants={item}
+      whileHover={{ y: -6, scale: 1.01 }}
+      whileTap={{ scale: 0.99 }}
+      className="relative rounded-2xl border border-slate-800 bg-slate-900/40 overflow-hidden will-change-transform"
+    >
+
+    <motion.span
+      aria-hidden
+      className="absolute inset-x-0 top-0 h-0.5 bg-linear-to-r from-indigo-500 via-sky-500 to-emerald-500 origin-left"
+      initial={{ scaleX: 0 }}
+      animate={{ scaleX: 1 }}
+      transition={{ duration: 0.6, delay: 0.05 }}
+    />
+
+    <div className="p-5">
+      <div className="size-10 rounded-xl bg-emerald-600/20 grid place-items-center text-emerald-300 mb-3">
+        <SvgTelegram className="h-5" />
+      </div>
+      <div className="text-lg font-semibold mb-2">Получите доступ</div>
+      <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+        <a href={TELEGRAM_URL} className="inline-flex rounded-xl px-4 py-2 bg-sky-600 hover:bg-sky-500">
+          Перейти в бота
+        </a>
+        <div className="text-xs text-slate-400 mt-3">Введите ваш ник на сайте, чтобы получить проходку</div>
+      </div>
+    </div>
+  </motion.div>
+
+  <motion.div
+    variants={item}
+    whileHover={{ y: -6, scale: 1.01 }}
+    whileTap={{ scale: 0.99 }}
+    className="relative rounded-2xl border border-slate-800 bg-slate-900/40 overflow-hidden will-change-transform"
+  >
+    
+  <motion.span
+    aria-hidden
+    className="absolute inset-x-0 top-0 h-0.5 bg-linear-to-r from-indigo-500 via-sky-500 to-emerald-500 origin-left"
+    initial={{ scaleX: 0 }}
+    animate={{ scaleX: 1 }}
+    transition={{ duration: 0.6, delay: 0.1 }}
+  />
+
+  <div className="p-5">
+    <div className="size-10 rounded-xl bg-teal-600/20 grid place-items-center text-teal-300 mb-3">
+      <SvgMcBlockGrass className="h-5" />
+    </div>
+    <div className="text-lg font-semibold mb-2">Зайдите на сервер</div>
+    <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+      <div className="flex w-full items-stretch overflow-hidden rounded-xl border border-slate-800">
+        <div className="px-3 hidden sm:grid place-items-center bg-slate-900/60 border-r border-slate-800 text-xs text-slate-300">
+          IP адрес
+        </div>
+        <div className="px-3 py-2 font-mono flex-1 truncate">{SERVER_IP}</div>
+        <button onClick={copy} className="px-3 py-2 bg-slate-900/60 hover:bg-slate-800 border-l border-slate-800 text-sm">
+          {copied === 'ok' ? 'Скопировано' : copied === 'err' ? 'Ошибка' : 'Копировать'}
+        </button>
+      </div>
+      <div className="text-xs text-slate-400 mt-3 text-center">
+        Откройте Minecraft: Java Edition
+        {version ? <> версии <b className="text-slate-300">{version}</b></> : null} и вставьте IP
+      </div>
+    </div>
+  </div>
+  </motion.div>
+  </motion.div>
   )
 }
 
