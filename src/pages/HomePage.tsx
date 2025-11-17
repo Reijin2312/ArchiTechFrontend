@@ -8,8 +8,7 @@ const TELEGRAM_URL = 'https://t.me/archi_tech_official'
 const RULES_URL = '/rules'
 const SHOP_URL = '/shop'
 import { useWallpaper } from '@/shared/ui/useWallpaper';
-import { AnimatePresence, motion } from 'framer-motion'
-import { type Variants, type Transition } from 'framer-motion'
+import { AnimatePresence, motion, useReducedMotion, type Variants, type Transition, } from 'framer-motion'
 import { Seo } from '@/shared/seo/seo';
 import { routesMeta } from '@/shared/seo/routesMeta';
 import { ResponsiveImage } from '@/shared/ui/ResponsiveImage'
@@ -27,13 +26,29 @@ type McStatus = {
 export default function HomePage() {
   useWallpaper();
 
+  const prefersReducedMotion = useReducedMotion();
+
   const [status, setStatus] = useState<McStatus | null>(null)
   const [copyOk, setCopyOk] = useState<'idle' | 'ok' | 'err'>('idle')
-  const shots = ['/images/screen1.png','/images/screen2.png','/images/screen3.png', '/images/screen4.png', '/images/screen5.png', '/images/screen6.png', '/images/screen7.png', '/images/screen8.png']
+  const shots = useMemo(
+    () => [
+      '/images/screen1.png',
+      '/images/screen2.png',
+      '/images/screen3.png',
+      '/images/screen4.png',
+      '/images/screen5.png',
+      '/images/screen6.png',
+      '/images/screen7.png',
+      '/images/screen8.png',
+    ],
+    [],
+  )
   const [shot, setShot] = useState(shots[0])
   const [prevShot, setPrevShot] = useState<string | null>(null)
   const [cross, setCross] = useState(true);
   const [activeIndex, setActiveIndex] = useState(0)
+  const [direction, setDirection] = useState<1 | -1>(1)
+  const [sliderPaused, setSliderPaused] = useState(false)
 
   const thumbSpring: Transition = {
     type: 'spring',
@@ -104,11 +119,15 @@ export default function HomePage() {
   function changeTo(newSrc: string) {
     if (newSrc === shot) return
 
+    const currIdx = shots.indexOf(shot)
+    const nextIdx = shots.indexOf(newSrc)
+    if (currIdx !== -1 && nextIdx !== -1) {
+      setDirection(nextIdx > currIdx ? 1 : -1)
+      setActiveIndex(nextIdx)
+    }
+
     setPrevShot(shot)
     setShot(newSrc)
-
-    const idx = shots.indexOf(newSrc)
-    if (idx !== -1) setActiveIndex(idx)
 
     setCross(false)
     requestAnimationFrame(() => {
@@ -194,13 +213,17 @@ function SvgMcBlockGrass({ className }: { className?: string }) {
   }, [])
 
   useEffect(() => {
-    const id = setInterval(() => {
-      const next = shots[(shots.indexOf(shot) + 1) % shots.length]
-      changeTo(next)
-    }, 5000)
-    return () => clearInterval(id)
-  }, [shot])
+    if (prefersReducedMotion) return
+    if (sliderPaused) return
 
+    const id = window.setInterval(() => {
+      const currentIndex = shots.indexOf(shot)
+      const nextIndex = (currentIndex + 1 + shots.length) % shots.length
+      changeTo(shots[nextIndex])
+    }, 5000)
+
+    return () => window.clearInterval(id)
+  }, [shot, sliderPaused, prefersReducedMotion])
 
   const onlineText = useMemo(() => {
     if (!status) return '—'
@@ -225,7 +248,12 @@ function SvgMcBlockGrass({ className }: { className?: string }) {
     <>
     <Seo {...routesMeta['/']} />
     <div className="min-h-dvh text-slate-100 relative overflow-x-hidden">
-      <section className="mx-auto max-w-7xl px-4 pb-10 pt-10 md:pt-16">
+     <motion.section
+        className="mx-auto max-w-7xl px-4 pb-10 pt-10 md:pt-16"
+        initial={prefersReducedMotion ? undefined : { opacity: 0, y: 24, filter: 'blur(8px)' }}
+        animate={prefersReducedMotion ? undefined : { opacity: 1, y: 0, filter: 'blur(0px)' }}
+        transition={{ duration: 0.5, ease: 'easeOut' }}
+      >
         <div className="grid md:grid-cols-2 gap-10 md:gap-14 items-stretch">
           <div className="md:flex md:flex-col md:h-full">
             <h1 className="mb-3 text-[22px] md:text-[24px] font-bold leading-tight text-left!">
@@ -244,19 +272,31 @@ function SvgMcBlockGrass({ className }: { className?: string }) {
                 className="px-3 py-2 bg-slate-900/60 hover:bg-slate-800 border-l border-slate-800 text-sm grid place-items-center"
                 aria-label={copyOk === 'ok' ? 'Скопировано' : copyOk === 'err' ? 'Ошибка' : 'Копировать IP'}
                 title={copyOk === 'ok' ? 'Скопировано' : copyOk === 'err' ? 'Ошибка' : 'Копировать IP'}
+                type="button"
               >
+                 <motion.div
+                  animate={
+                    copyOk === 'ok'
+                      ? { scale: [1, 1.2, 1], rotate: [0, -8, 0] }
+                      : copyOk === 'err'
+                        ? { x: [-2, 2, -2, 2, 0] }
+                        : { scale: 1, rotate: 0, x: 0 }
+                  }
+                  transition={{ duration: 0.3 }}
+                  className="grid place-items-center"
+                >
                 {copyOk === 'ok' ? (
           
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="size-5">
                     <path d="M5 13l4 4L19 7" />
                   </svg>
                 ) : (
-       
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="size-5">
                     <path d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2" />
                     <path d="M10 20h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                   </svg>
                 )}
+                </motion.div>
               </button>
 
               </div>
@@ -275,84 +315,86 @@ function SvgMcBlockGrass({ className }: { className?: string }) {
             </div>
           </div>
 
-    <div className="relative max-w-full overflow-hidden">
-      <div className="aspect-16/10 w-full overflow-hidden rounded-2xl border border-slate-800 shadow-xl">
-        <div className="relative h-full w-full">
-          <ResponsiveImage
-            key={shot}
-            name={toName(shot) as keyof typeof IMAGES}
-            alt="Скриншот мира ArchiTech MC"
-            eager
-            width={1600}
-            height={900}
-            sizes="(max-width:640px) 100vw, (max-width:1024px) 80vw, 1200px"
-            className={
-              "absolute inset-0 h-full w-full object-cover transition-opacity duration-300 " +
-              (cross ? "opacity-100" : "opacity-0")
-            }
-          />
-          {prevShot && (
-            <ResponsiveImage
-              key={prevShot + "-prev"}
-              name={toName(prevShot) as keyof typeof IMAGES}
-              alt=""
-              width={1600}
-              height={900}
-              sizes="(max-width:640px) 100vw, (max-width:1024px) 80vw, 1200px"
-              className={
-                "absolute inset-0 h-full w-full object-cover transition-opacity duration-300 " +
-                (cross ? "opacity-0" : "opacity-100")
-              }
-            />
-          )}
+        <div className="relative max-w-full overflow-hidden"
+          onMouseEnter={() => setSliderPaused(true)}
+          onMouseLeave={() => setSliderPaused(false)}
+          onFocus={() => setSliderPaused(true)}
+          onBlur={() => setSliderPaused(false)}>
+            <div className="aspect-16/10 w-full overflow-hidden rounded-2xl border border-slate-800 shadow-xl">
+            <div className="relative h-full w-full overflow-hidden">
+              <AnimatePresence initial={false} custom={direction}>
+                <motion.div
+                  key={shot}
+                  className="absolute inset-0 h-full w-full"
+                  custom={direction}
+                  initial={prefersReducedMotion ? false : { opacity: 0, x: 40 * direction, scale: 1.02 }}
+                  animate={{ opacity: 1, x: 0, scale: 1 }}
+                  exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, x: -40 * direction, scale: 0.98 }}
+                  transition={{ type: 'spring', stiffness: 260, damping: 30 }}
+                >
+                  <ResponsiveImage
+                    name={toName(shot) as keyof typeof IMAGES}
+                    alt="Скриншот мира ArchiTech MC"
+                    eager
+                    width={1600}
+                    height={900}
+                    sizes="(max-width:640px) 100vw, (max-width:1024px) 80vw, 1200px"
+                    className="h-full w-full object-cover"
+                  />
+                </motion.div>
+              </AnimatePresence>
+            </div>
+          </div>
+
+          <motion.div
+            className="mt-3 flex flex-nowrap gap-3 overflow-x-auto pb-1 -mx-1 px-1 no-scrollbar"
+            layout
+          >
+          {shots.map((_, i) => {
+            const idx = (activeIndex + i) % shots.length
+            const src = shots[idx]
+            const isActive = shot === src
+
+            return (
+              <motion.button
+                key={src}
+                layout
+                variants={thumbVariants}
+                animate={isActive ? 'active' : 'inactive'}
+                whileHover={{ scale: 1.05, opacity: 1 }}
+                whileTap={{ scale: 0.95 }}
+                transition={thumbSpring}
+                onClick={() => changeTo(src)}
+                aria-label="Показать скриншот"
+                className={[
+                  'flex-none w-16 aspect-square rounded-xl overflow-hidden border ring-offset-2 ring-offset-slate-950',
+                  isActive
+                    ? 'border-indigo-500 ring-2 ring-indigo-500/40'
+                    : 'border-slate-800',
+                ].join(' ')}
+              >
+                <ResponsiveImage
+                  name={toName(src) as keyof typeof IMAGES}
+                  alt=""
+                  width={160}
+                  height={160}
+                  sizes="64px"
+                  className="h-full w-full object-cover"
+                />
+              </motion.button>
+            )
+          })}
+          </motion.div>
         </div>
       </div>
+      </motion.section>
 
-      <motion.div
-        className="mt-3 flex flex-nowrap gap-3 overflow-x-auto pb-1 -mx-1 px-1 no-scrollbar"
-        layout
+      <motion.section
+        className="mx-auto max-w-7xl px-4 py-10"
+        initial={prefersReducedMotion ? undefined : { opacity: 0, y: 24 }}
+        animate={prefersReducedMotion ? undefined : { opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: 'easeOut' }}
       >
-      {shots.map((_, i) => {
-        const idx = (activeIndex + i) % shots.length
-        const src = shots[idx]
-        const isActive = shot === src
-
-        return (
-          <motion.button
-            key={src}
-            layout
-            variants={thumbVariants}
-            animate={isActive ? 'active' : 'inactive'}
-            whileHover={{ scale: 1.05, opacity: 1 }}
-            whileTap={{ scale: 0.95 }}
-            transition={thumbSpring}
-            onClick={() => changeTo(src)}
-            aria-label="Показать скриншот"
-            className={[
-              'flex-none w-16 aspect-square rounded-xl overflow-hidden border ring-offset-2 ring-offset-slate-950',
-              isActive
-                ? 'border-indigo-500 ring-2 ring-indigo-500/40'
-                : 'border-slate-800',
-            ].join(' ')}
-          >
-            <ResponsiveImage
-              name={toName(src) as keyof typeof IMAGES}
-              alt=""
-              width={160}
-              height={160}
-              sizes="64px"
-              className="h-full w-full object-cover"
-            />
-          </motion.button>
-        )
-      })}
-      </motion.div>
-
-      </div>
-      </div>
-      </section>
-
-      <section className="mx-auto max-w-7xl px-4 py-10">
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <CardCTA 
             title={<span className="inline-flex items-center gap-2"><SvgMcBlockGrass className="h-5" />Лаунчер</span>}
@@ -361,7 +403,7 @@ function SvgMcBlockGrass({ className }: { className?: string }) {
             button="Скачать" />
           <CardCTA 
             title={<span className="inline-flex items-center gap-2"><SvgUserPlus className="h-5" />Доступ на сервер</span>}
-            text="Получить проходку в телеграмм-боте" 
+            text="Получить проходку в Telegram-боте" 
             href={SHOP_URL} 
             button="Перейти" />
           <CardCTA
@@ -377,7 +419,7 @@ function SvgMcBlockGrass({ className }: { className?: string }) {
             button="Подписаться"
           />
         </div>
-      </section>
+      </motion.section>
 
       <section className="mx-auto max-w-7xl px-4 py-10">
         <h2 className="text-2xl font-semibold mb-6">Команда проекта</h2>
@@ -434,9 +476,23 @@ function Badge({ label, ok }: { label: string; ok?: boolean }) {
           : 'border-rose-700/50 bg-rose-500/10 text-rose-300',
       ].join(' ')}
     >
-      <span
+      <motion.span
         className="size-1.5 rounded-full"
         style={{ backgroundColor: ok ? '#22c55e' : '#ef4444' }}
+        aria-hidden
+        animate={
+          ok
+            ? {
+                scale: [1, 1.6, 1],
+                boxShadow: [
+                  '0 0 0 0 rgba(34,197,94,0.6)',
+                  '0 0 0 8px rgba(34,197,94,0)',
+                  '0 0 0 0 rgba(34,197,94,0)',
+                ],
+              }
+            : { scale: 1, boxShadow: 'none' }
+        }
+        transition={{ duration: 1.3, repeat: Infinity, repeatDelay: 0.7 }}
       />
       {label}
     </span>
@@ -530,12 +586,13 @@ function StepsGuide({ version }: { version?: string }) {
     show:   { opacity: 1, y: 0,  scale: 1,    filter: 'blur(0px)', transition: spring }
   }
 
-  return (
+    return (
     <motion.div
       className="grid gap-4 md:grid-cols-3"
       variants={container}
       initial="hidden"
-      animate="show"
+      whileInView="show"
+      viewport={{ once: true, margin: '-10% 0px' }}
     >
 
       <motion.div
