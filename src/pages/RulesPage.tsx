@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useWallpaper } from '@/shared/ui/useWallpaper';
+import { useScrollTop } from '@/shared/ui/useScrollTop';
 import { Seo } from '@/shared/seo/seo';
 import { routesMeta } from '@/shared/seo/routesMeta';
 import { motion, type Variants } from 'framer-motion';
@@ -62,10 +63,7 @@ const sectionVariants: Variants = {
 
 export default function RulesPage() {
   useWallpaper();
-
-  useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'auto' });
-  }, []);
+  useScrollTop();
 
   return (
     <>
@@ -206,7 +204,7 @@ function Callout() {
 function LeftNav() {
   return (
     <motion.nav
-      className="sticky top-20"
+      className="sticky top-20 rounded-2xl border border-slate-800/80 bg-slate-950/40 p-4 backdrop-blur-md backdrop-saturate-150"
       variants={sideNavVariants}
       initial="hidden"
       animate="show"
@@ -243,7 +241,7 @@ function RightToc({ items }: { items: TocItem[] }) {
 
   return (
     <motion.nav
-      className="sticky top-20"
+      className="sticky top-20 rounded-2xl border border-slate-800/80 bg-slate-950/40 p-4 backdrop-blur-md backdrop-saturate-150"
       variants={tocVariants}
       initial="hidden"
       animate="show"

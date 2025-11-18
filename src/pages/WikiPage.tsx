@@ -3,9 +3,11 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Seo } from '@/shared/seo/seo';
 import { routesMeta } from '@/shared/seo/routesMeta';
+import { useScrollTop } from '@/shared/ui/useScrollTop';
+import { motion, type Variants } from 'framer-motion';
 
-type TocItem = { id: string; title: string; n: number };
-const SECTIONS: TocItem[] = [
+export type WikiTocItem = { id: string; title: string; n: number };
+export const WIKI_SECTIONS: WikiTocItem[] = [
   { id: 'intro', title: 'О сервере и тематика', n: 1 },
   { id: 'start', title: 'Как начать играть', n: 2 },
   { id: 'mods', title: 'Список модов', n: 3 },
@@ -119,18 +121,46 @@ const CMDS: Cmd[] = [
   { cmd: 'Бот: пригласить друга', desc: 'Реферальная ссылка и скидки', scope: 'bot' },
 ];
 
+const pageVariants: Variants = {
+  hidden: { opacity: 0, y: 24, filter: 'blur(6px)' },
+  show: { opacity: 1, y: 0, filter: 'blur(0px)', transition: { duration: 0.6, ease: 'easeOut' } },
+};
+
+const sideNavVariants: Variants = {
+  hidden: { opacity: 0, x: -16, filter: 'blur(6px)' },
+  show: { opacity: 1, x: 0, filter: 'blur(0px)', transition: { duration: 0.5, ease: 'easeOut' } },
+};
+
+const tocVariants: Variants = {
+  hidden: { opacity: 0, x: 16, filter: 'blur(6px)' },
+  show: { opacity: 1, x: 0, filter: 'blur(0px)', transition: { duration: 0.5, ease: 'easeOut', delay: 0.05 } },
+};
+
+const sectionVariants: Variants = {
+  hidden: { opacity: 0, y: 18, scale: 0.98, filter: 'blur(8px)' },
+  show: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    filter: 'blur(0px)',
+    transition: { duration: 0.4, ease: 'easeOut' },
+  },
+};
+
 export default function WikiPage() {
   useWallpaper();
-
-  useEffect(() => {
-      window.scrollTo({ top: 0, behavior: 'auto' });
-  }, []);
+  useScrollTop();
 
   return (
     <>
     <Seo {...routesMeta['/wiki']} />
-    <div className="mx-auto w-full max-w-7xl grid grid-cols-12 gap-6 px-4 py-6 text-slate-100">
-      <aside className="col-span-12 md:col-span-3">
+    <motion.div
+      className="mx-auto w-full max-w-7xl grid grid-cols-12 gap-6 px-4 py-6 text-slate-100"
+      variants={pageVariants}
+      initial="hidden"
+      animate="show"
+    >
+      <aside className="hidden md:block md:col-span-3">
         <LeftNav />
       </aside>
 
@@ -227,10 +257,10 @@ export default function WikiPage() {
         </Section>
       </main>
 
-      <aside className="col-span-12 md:col-span-3">
-        <RightToc items={SECTIONS} />
+      <aside className="hidden md:block md:col-span-3">
+        <RightToc items={WIKI_SECTIONS} />
       </aside>
-    </div>
+    </motion.div>
     </>
   );
 }
@@ -258,7 +288,7 @@ function ModsSection() {
           className="w-full sm:w-64 rounded-lg border border-slate-700 bg-slate-900 px-2 py-1 text-sm outline-none focus:border-slate-500"
         />
       </div>
-      <div className="overflow-x-auto rounded-xl border border-slate-800">
+      <div className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-900/50 backdrop-blur-md backdrop-saturate-150">
         <table className="min-w-full text-left text-sm">
           <thead className="bg-slate-900/70 text-slate-300">
             <tr>
@@ -314,7 +344,7 @@ function FaqSection() {
     <Section id="faq" title="FAQ" n={8}>
       <div className="space-y-3">
         {qa.map((x) => (
-          <div key={x.q} className="rounded-xl border border-slate-800 bg-slate-900 p-3">
+          <div key={x.q} className="rounded-xl border border-slate-800 bg-slate-900/60 p-3 backdrop-blur-md backdrop-saturate-150">
             <div className="font-semibold">{x.q}</div>
             <div className="mt-1 text-sm text-slate-300">{x.a}</div>
           </div>
@@ -328,22 +358,27 @@ function FaqSection() {
 
 function LeftNav() {
   return (
-    <nav className="sticky top-20">
+    <motion.nav
+      className="sticky top-20 rounded-2xl border border-slate-800/80 bg-slate-950/40 p-4 backdrop-blur"
+      variants={sideNavVariants}
+      initial="hidden"
+      animate="show"
+    >
       <h2 className="mb-3 text-sky-400 text-sm font-semibold">Разделы</h2>
       <ul className="space-y-2 text-sm">
-        {SECTIONS.map((s) => (
+        {WIKI_SECTIONS.map((s) => (
           <li key={s.id}>
-            <a href={`#${s.id}`} className="text-slate-300 hover:text-sky-300">
+            <a href={`#${s.id}`} className="text-slate-300 hover:text-sky-300 transition-colors">
               {s.title}
             </a>
           </li>
         ))}
       </ul>
-    </nav>
+    </motion.nav>
   );
 }
 
-function RightToc({ items }: { items: TocItem[] }) {
+function RightToc({ items }: { items: WikiTocItem[] }) {
   const [active, setActive] = useState(items[0]?.id);
   const observer = useRef<IntersectionObserver | null>(null);
 
@@ -362,42 +397,60 @@ function RightToc({ items }: { items: TocItem[] }) {
   }, [items]);
 
   return (
-    <nav className="sticky top-20">
+    <motion.nav
+      className="sticky top-20 rounded-2xl border border-slate-800/80 bg-slate-950/40 p-4 backdrop-blur"
+      variants={tocVariants}
+      initial="hidden"
+      animate="show"
+    >
       <div className="mb-2 text-slate-300 text-sm">На этой странице</div>
       <ol className="space-y-2 text-sm">
         {items.map((it, i) => {
           const on = active === it.id;
           return (
             <li key={it.id} className="flex items-start gap-2">
-              <span className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-slate-700 text-xs text-slate-400">
+              <span className={`mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-xs ${on ? 'border-sky-500 text-sky-300' : 'border-slate-700 text-slate-400'}`}>
                 {i + 1}
               </span>
-              <a href={`#${it.id}`} className={on ? 'text-sky-300' : 'text-slate-300 hover:text-sky-300'}>
+              <a
+                href={`#${it.id}`}
+                className={on ? 'text-sky-300' : 'text-slate-300 hover:text-sky-300 transition-colors'}
+              >
                 {it.title}
               </a>
             </li>
           );
         })}
       </ol>
-    </nav>
+    </motion.nav>
   );
 }
 
 function Section({ id, title, n, children }: { id: string; title: string; n: number; children: React.ReactNode }) {
   return (
-    <section id={id} className="scroll-mt-24 ">
-      <h2 className="mb-3 inline-flex items-center gap-2 rounded-full bg-slate-900/60 px-3 py-1.5 text-lg font-semibold">
-        <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-sky-600 text-slate-50 text-sm ">{n}</span>
+    <motion.section
+      id={id}
+      className="scroll-mt-24"
+      variants={sectionVariants}
+      initial="hidden"
+      whileInView="show"
+      viewport={{ once: true, margin: '-15% 0px' }}
+    >
+      <div className="mb-5 inline-flex items-center gap-3 rounded-full border border-slate-800/70 bg-gradient-to-r from-slate-900 via-slate-900/70 to-slate-900/30 px-4 py-1.5 text-lg font-semibold shadow-[0_0_20px_-12px_rgba(14,165,233,0.9)]">
+        <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-sky-600 text-slate-50 text-sm shadow-lg shadow-sky-600/30">{n}</span>
         {title}
-      </h2>
-      <div className="mb-8 rounded-2xl border border-slate-800 bg-slate-900/60 p-4 backdrop-blur-md backdrop-saturate-150">{children}</div>
-    </section>
+      </div>
+      <div className="mb-10 rounded-3xl border border-slate-800/70 bg-slate-900/70 p-5 shadow-2xl shadow-black/20 backdrop-blur-md backdrop-saturate-150 relative overflow-hidden">
+        <div className="absolute inset-0 opacity-40 mix-blend-color-dodge pointer-events-none bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.2),_transparent_50%),radial-gradient(circle_at_bottom,_rgba(14,165,233,0.15),_transparent_45%)]" />
+        <div className="relative z-10">{children}</div>
+      </div>
+    </motion.section>
   );
 }
 
 function CmdTable({ title, items }: { title: string; items: Cmd[] }) {
   return (
-    <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
+    <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 backdrop-blur-md backdrop-saturate-150">
       <div className="mb-2 text-sm font-semibold text-sky-300">{title}</div>
       <div className="overflow-x-auto">
         <table className="min-w-full text-left text-sm">

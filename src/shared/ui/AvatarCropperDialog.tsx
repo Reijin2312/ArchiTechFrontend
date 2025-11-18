@@ -17,14 +17,16 @@ function createImage(url: string): Promise<HTMLImageElement> {
   });
 }
 
+const TARGET_SIZE = 512;
+
 async function getCroppedImg(imageSrc: string, crop: Area): Promise<Blob> {
   const image = await createImage(imageSrc);
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('no canvas context');
 
-  canvas.width = crop.width;
-  canvas.height = crop.height;
+  canvas.width = TARGET_SIZE;
+  canvas.height = TARGET_SIZE;
 
   ctx.drawImage(
     image,
@@ -34,8 +36,8 @@ async function getCroppedImg(imageSrc: string, crop: Area): Promise<Blob> {
     crop.height,
     0,
     0,
-    crop.width,
-    crop.height
+    TARGET_SIZE,
+    TARGET_SIZE
   );
 
   return new Promise<Blob>((resolve, reject) => {

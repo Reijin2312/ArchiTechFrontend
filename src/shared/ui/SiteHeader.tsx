@@ -1,21 +1,40 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { authStore } from '@/shared/store/auth';
+import { SECTIONS as RULES_SECTIONS } from '@/pages/RulesPage';
+import { WIKI_SECTIONS } from '@/pages/WikiPage';
+import { PRIVACY_SECTIONS } from '@/pages/PrivacyPolicyPage';
+import { TERMS_SECTIONS } from '@/pages/UserAgreementPage';
 
 const SERVER_NAME = 'ArchiTech MC';
 const MAIN_URL = '/';
 const RULES_URL = '/rules';
 const SHOP_URL = '/shop';
 const WIKI_URL = '/wiki';
+const PRIVACY_URL = '/privacy';
+const TERMS_URL = '/terms';
 const DISCORD_URL = 'https://discord.gg/x6JwVPwPtw';
 const TELEGRAM_URL = 'https://t.me/archi_tech_official';
-import { SECTIONS, type TocItem } from '@/pages/RulesPage'; 
+
+type HeaderTocItem = { id: string; title: string };
 
 export default function SiteHeader() {
   const user = authStore((s) => s.user);
   const { pathname, search } = useLocation();
   const next = encodeURIComponent(pathname + search);
   const isRulesPage = pathname === RULES_URL;
+  const isWikiPage = pathname === WIKI_URL;
+  const isPrivacyPage = pathname === PRIVACY_URL;
+  const isTermsPage = pathname === TERMS_URL;
+  const mobileTocItems: HeaderTocItem[] | undefined = isRulesPage
+    ? RULES_SECTIONS
+    : isWikiPage
+      ? WIKI_SECTIONS
+      : isPrivacyPage
+        ? PRIVACY_SECTIONS
+        : isTermsPage
+          ? TERMS_SECTIONS
+          : undefined;
 
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -55,12 +74,12 @@ export default function SiteHeader() {
     );
   }
 
-  function MobileRulesToc({ onItemClick }: { onItemClick: () => void }) {
-    const [active, setActive] = useState<string | undefined>(SECTIONS[0]?.id);
+  function MobileToc({ items, onItemClick }: { items: HeaderTocItem[]; onItemClick: () => void }) {
+    const [active, setActive] = useState<string | undefined>(items[0]?.id);
     const observerRef = useRef<IntersectionObserver | null>(null);
 
     useEffect(() => {
-      const targets = SECTIONS.map((item) => document.getElementById(item.id)).filter(
+      const targets = items.map((item) => document.getElementById(item.id)).filter(
         Boolean,
       ) as HTMLElement[];
       observerRef.current?.disconnect();
@@ -75,13 +94,13 @@ export default function SiteHeader() {
       );
       targets.forEach((el) => observerRef.current!.observe(el));
       return () => observerRef.current?.disconnect();
-    }, []);
+    }, [items]);
 
     return (
       <div className="mt-6 rounded-xl border border-slate-800 bg-slate-900/70 px-3 py-3">
         <div className="mb-2 text-xs font-semibold text-slate-300">На этой странице</div>
         <ol className="space-y-1 text-xs">
-          {SECTIONS.map((it, i) => {
+          {items.map((it, i) => {
             const on = active === it.id;
             return (
             <li key={it.id} className="flex items-start gap-2">
@@ -124,34 +143,34 @@ export default function SiteHeader() {
           </div>
 
           <div className="hidden md:flex items-center gap-6 text-sm">
-            <Link
-              to={MAIN_URL}
+            <a
+              href={MAIN_URL}
               className={linkCls(isActive(MAIN_URL, true))}
               aria-current={isActive(MAIN_URL, true) ? 'page' : undefined}
             >
               Главная
-            </Link>
-            <Link
-              to={RULES_URL}
+            </a>
+            <a
+              href={RULES_URL}
               className={linkCls(isActive(RULES_URL))}
               aria-current={isActive(RULES_URL) ? 'page' : undefined}
             >
               Правила
-            </Link>
-            <Link
-              to={SHOP_URL}
+            </a>
+            <a
+              href={SHOP_URL}
               className={linkCls(isActive(SHOP_URL))}
               aria-current={isActive(SHOP_URL) ? 'page' : undefined}
             >
               Проходка
-            </Link>
-            <Link
-              to={WIKI_URL}
+            </a>
+            <a
+              href={WIKI_URL}
               className={linkCls(isActive(WIKI_URL))}
               aria-current={isActive(WIKI_URL) ? 'page' : undefined}
             >
               Вики
-            </Link>
+            </a>
 
             <a
               href={TELEGRAM_URL}
@@ -322,42 +341,42 @@ export default function SiteHeader() {
 
           {/* Основные ссылки */}
           <nav className="flex flex-col gap-1 text-sm">
-            <Link
-              to={MAIN_URL}
+            <a
+              href={MAIN_URL}
               onClick={() => setMobileOpen(false)}
               className={`rounded-lg px-3 py-2 ${
                 isActive(MAIN_URL, true) ? 'bg-slate-800 text-sky-300' : 'text-slate-200 hover:bg-slate-900'
               }`}
             >
               Главная
-            </Link>
-            <Link
-              to={RULES_URL}
+            </a>
+            <a
+              href={RULES_URL}
               onClick={() => setMobileOpen(false)}
               className={`rounded-lg px-3 py-2 ${
                 isActive(RULES_URL) ? 'bg-slate-800 text-sky-300' : 'text-slate-200 hover:bg-slate-900'
               }`}
             >
               Правила
-            </Link>
-            <Link
-              to={SHOP_URL}
+            </a>
+            <a
+              href={SHOP_URL}
               onClick={() => setMobileOpen(false)}
               className={`rounded-lg px-3 py-2 ${
                 isActive(SHOP_URL) ? 'bg-slate-800 text-sky-300' : 'text-slate-200 hover:bg-slate-900'
               }`}
             >
               Проходка
-            </Link>
-            <Link
-              to={WIKI_URL}
+            </a>
+            <a
+              href={WIKI_URL}
               onClick={() => setMobileOpen(false)}
               className={`rounded-lg px-3 py-2 ${
                 isActive(WIKI_URL) ? 'bg-slate-800 text-sky-300' : 'text-slate-200 hover:bg-slate-900'
               }`}
             >
               Вики
-            </Link>
+            </a>
           </nav>
 
           {/* Блок профиля / логина */}
@@ -398,8 +417,8 @@ export default function SiteHeader() {
             )}
           </div>
 
-          {isRulesPage && (
-            <MobileRulesToc onItemClick={() => setMobileOpen(false)} />
+          {mobileTocItems && (
+            <MobileToc items={mobileTocItems} onItemClick={() => setMobileOpen(false)} />
           )}
 
           {/* Нижняя «футерная» полоска */}

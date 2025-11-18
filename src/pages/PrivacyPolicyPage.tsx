@@ -3,8 +3,8 @@ import { useEffect, useRef, useState } from 'react';
 import { Seo } from '@/shared/seo/seo';
 import { routesMeta } from '@/shared/seo/routesMeta';
 
-type TocItem = { id: string; title: string; n: number };
-const SECTIONS: TocItem[] = [
+export type PrivacyTocItem = { id: string; title: string; n: number };
+export const PRIVACY_SECTIONS: PrivacyTocItem[] = [
   { id: 'id1', title: 'Общие положения', n: 1 },
   { id: 'id2', title: 'Состав данных и цели обработки', n: 2 },
   { id: 'id3', title: 'Cookies и подобные технологии', n: 3 },
@@ -27,7 +27,7 @@ export default function PrivacyPolicyPage() {
     <>
     <Seo {...routesMeta['/privacy']} />
     <div className="mx-auto w-full max-w-7xl grid grid-cols-12 gap-6 px-4 py-6 text-slate-100">
-      <aside className="col-span-12 md:col-span-3">
+      <aside className="hidden md:block md:col-span-3">
         <LeftNav />
       </aside>
 
@@ -159,8 +159,8 @@ export default function PrivacyPolicyPage() {
         </Section>
       </main>
 
-      <aside className="col-span-12 md:col-span-3">
-        <RightToc items={SECTIONS} />
+      <aside className="hidden md:block md:col-span-3">
+        <RightToc items={PRIVACY_SECTIONS} />
       </aside>
     </div>
     </>
@@ -172,7 +172,7 @@ function LeftNav() {
     <nav className="sticky top-20">
       <h2 className="mb-3 text-sky-400 text-sm font-semibold">Разделы</h2>
       <ul className="space-y-2 text-sm">
-        {SECTIONS.map((s) => (
+        {PRIVACY_SECTIONS.map((s) => (
           <li key={s.id}>
             <a href={`#${s.id}`} className="text-slate-300 hover:text-sky-300">
               {s.title}
@@ -184,7 +184,7 @@ function LeftNav() {
   );
 }
 
-function RightToc({ items }: { items: TocItem[] }) {
+function RightToc({ items }: { items: PrivacyTocItem[] }) {
   const [active, setActive] = useState(items[0]?.id);
   const observer = useRef<IntersectionObserver | null>(null);
 

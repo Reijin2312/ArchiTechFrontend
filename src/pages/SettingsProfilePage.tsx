@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { http } from '@/shared/api/http';
 import { endpoints } from '@/shared/api/endpoints';
@@ -45,6 +45,8 @@ function sessionStatus(s: Session): Status {
   return 'active';
 }
 
+type ToastEntry = { id: number; type: 'success' | 'error'; message: string; fading?: boolean };
+
 export default function SettingsProfilePage() {
   useWallpaper();
 
@@ -88,6 +90,10 @@ export default function SettingsProfilePage() {
 
   const [avatarCropSrc, setAvatarCropSrc] = useState<string | null>(null);
   const [avatarCropOpen, setAvatarCropOpen] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement | null>(null);
+
+  const [toasts, setToasts] = useState<ToastEntry[]>([]);
+  const toastTimers = useRef<Map<number, ReturnType<typeof setTimeout>[]>>(new Map());
 
   const [show, setShow] = useState<{ active: boolean; expired: boolean; replaced: boolean; revoked: boolean }>({
     active: true,
@@ -101,6 +107,59 @@ export default function SettingsProfilePage() {
   const [sortBy, setSortBy] = useState<SortKey>('created_desc');
 
   const bust = (u: string) => u ? `${u}${u.includes('?') ? '&' : '?'}v=${Date.now()}` : u;
+
+  const removeToast = useCallback((id: number) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+    const timers = toastTimers.current.get(id);
+    if (timers) {
+      timers.forEach((handle) => clearTimeout(handle));
+      toastTimers.current.delete(id);
+    }
+  }, []);
+
+  const closeToast = useCallback((id: number) => {
+    setToasts((prev) => prev.map((t) => (t.id === id ? { ...t, fading: true } : t)));
+    const timers = toastTimers.current.get(id);
+    if (timers) {
+      timers.forEach((handle) => clearTimeout(handle));
+      toastTimers.current.delete(id);
+    }
+    const removeTimer = window.setTimeout(() => removeToast(id), 200);
+    toastTimers.current.set(id, [removeTimer]);
+  }, [removeToast]);
+
+  const pushToast = useCallback(
+    (type: 'success' | 'error', message: string) => {
+      const id = Date.now() + Math.random();
+      setToasts((prev) => [...prev, { id, type, message }]);
+
+      const hideTimer = window.setTimeout(() => {
+        setToasts((prev) => prev.map((t) => (t.id === id ? { ...t, fading: true } : t)));
+      }, 3200);
+      const removeTimer = window.setTimeout(() => removeToast(id), 3600);
+      toastTimers.current.set(id, [hideTimer, removeTimer]);
+    },
+    [removeToast],
+  );
+
+  useEffect(() => {
+    return () => {
+      toastTimers.current.forEach((timers) => timers.forEach((handle) => clearTimeout(handle)));
+      toastTimers.current.clear();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!err) return;
+    pushToast('error', normalizeMessage(err));
+    setErr(null);
+  }, [err, pushToast]);
+
+  useEffect(() => {
+    if (!notice) return;
+    pushToast('success', notice);
+    setNotice(null);
+  }, [notice, pushToast]);
 
   function syncAuth(partial: Partial<{ avatarUrl: string; username: string }>) {
     authStore.setState(s => s.user ? { user: { ...s.user, ...partial } } : s);
@@ -467,6 +526,12 @@ export default function SettingsProfilePage() {
     }
   }
 
+  const handleAvatarCropClose = useCallback(() => {
+    setAvatarCropOpen(false);
+    setAvatarCropSrc(null);
+    if (avatarInputRef.current) avatarInputRef.current.value = '';
+  }, []);
+
   function handleAvatarFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -477,6 +542,7 @@ export default function SettingsProfilePage() {
       setAvatarCropOpen(true);
     };
     reader.readAsDataURL(file);
+    e.target.value = '';
   }
 
   return (
@@ -509,6 +575,7 @@ export default function SettingsProfilePage() {
                   type="file"
                   accept="image/*"
                   onChange={handleAvatarFileChange}
+                  ref={avatarInputRef}
                   className="block w-full text-sm file:mr-3 file:rounded-lg file:border file:border-slate-700 file:bg-slate-900 file:px2 file:py-1.5 file:text-sm hover:file:border-slate-500"
                 />
               </div>
@@ -941,17 +1008,15 @@ export default function SettingsProfilePage() {
             </div>
           </Card>
 
-          {err && <div className="mt-6 rounded-xl border border-red-800 bg-red-950/40 p-3 text-sm text-red-300 backdrop-blur-md backdrop-saturate-150">{String(err)}</div>}
-          {notice && <div className="mt-3 rounded-xl border border-sky-800 bg-sky-950/40 p-3 text-sm text-sky-300 backdrop-blur-md backdrop-saturate-150">{notice}</div>}
           {since && <div className="mt-3 text-center text-xs text-slate-500">Вы с нами с {since}</div>}
         </section>
 
         {avatarCropOpen && avatarCropSrc && (
           <AvatarCropperDialog
             src={avatarCropSrc}
-            onClose={() => setAvatarCropOpen(false)}
+            onClose={handleAvatarCropClose}
             onCropped={async (blob) => {
-              setAvatarCropOpen(false);
+              handleAvatarCropClose();
               setNotice(null);
               setErr(null);
               setBusy('avatar-file');
@@ -1032,6 +1097,7 @@ export default function SettingsProfilePage() {
 
       </main>
     </div>
+    <ToastStack toasts={toasts} onClose={closeToast} />
     </>
   );
 }
@@ -1079,4 +1145,52 @@ function badgeClass(status: Status | string) {
     default:
       return 'rounded-md border border-slate-700 px-2 py-0.5 text-slate-400';
   }
+}
+
+function normalizeMessage(value: any): string {
+  if (!value) return '';
+  if (typeof value === 'string') return value;
+  if (typeof value === 'object') {
+    if (typeof (value as any).message === 'string') return (value as any).message;
+    try {
+      return JSON.stringify(value);
+    } catch {
+      return String(value);
+    }
+  }
+  return String(value);
+}
+
+function ToastStack({ toasts, onClose }: { toasts: ToastEntry[]; onClose: (id: number) => void }) {
+  if (!toasts.length) return null;
+  return (
+    <div className="pointer-events-none fixed inset-x-0 bottom-6 z-40 flex justify-center px-4">
+      <div className="flex w-full max-w-sm flex-col gap-2">
+        {toasts.map((toast) => (
+          <div
+            key={toast.id}
+            className={`pointer-events-auto rounded-2xl border px-4 py-3 text-sm shadow-xl transition-all duration-300 ${
+              toast.fading ? 'translate-y-2 opacity-0' : 'translate-y-0 opacity-100'
+            } ${
+              toast.type === 'error'
+                ? 'border-red-800 bg-red-950/80 text-red-100'
+                : 'border-sky-700 bg-sky-950/80 text-sky-100'
+            }`}
+          >
+            <div className="flex items-start gap-3">
+              <div className="flex-1">{toast.message}</div>
+              <button
+                type="button"
+                aria-label="Закрыть уведомление"
+                onClick={() => onClose(toast.id)}
+                className="text-xs text-slate-300 transition-colors hover:text-white"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }

@@ -1,6 +1,7 @@
-import { useMemo, useEffect } from 'react';
+import { useMemo } from 'react';
 import { authStore } from '@/shared/store/auth';
 import { useWallpaper } from '@/shared/ui/useWallpaper';
+import { useScrollTop } from '@/shared/ui/useScrollTop';
 import { Seo } from '@/shared/seo/seo';
 import { routesMeta } from '@/shared/seo/routesMeta';
 import { motion, type Variants } from 'framer-motion';
@@ -50,10 +51,7 @@ const sectionVariants: Variants = {
 
 export default function ShopPage() {
   useWallpaper();
-
-  useEffect(() => {
-      window.scrollTo({ top: 0, behavior: 'auto' });
-  }, []);
+  useScrollTop();
 
   const user = authStore((s) => s.user);
   const nick = user?.username || 'ваш_ник';
@@ -158,10 +156,10 @@ function LeftNav() {
   ];
   return (
     <motion.nav
-          className="sticky top-20"
-          variants={sideNavVariants}
-          initial="hidden"
-          animate="show"
+      className="sticky top-20 rounded-2xl border border-slate-800/80 bg-slate-950/40 p-4 backdrop-blur-md backdrop-saturate-150"
+      variants={sideNavVariants}
+      initial="hidden"
+      animate="show"
     >
       <h2 className="mb-3 text-sky-400 text-sm font-semibold">Разделы</h2>
       <ul className="space-y-2 text-sm">
@@ -215,7 +213,7 @@ function RightBox({ nick, deepLink }: { nick: string; deepLink: string }) {
           initial="hidden"
           animate="show"
     >
-      <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
+      <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 backdrop-blur-md backdrop-saturate-150">
         <div className="text-sm text-slate-300">Ваш ник</div>
         <div className="mt-1 text-lg font-semibold">{nick}</div>
         <a href={deepLink} className="mt-3 inline-flex rounded-xl bg-sky-600 px-4 py-2 text-sm hover:bg-sky-500">
@@ -236,7 +234,7 @@ function RightBox({ nick, deepLink }: { nick: string; deepLink: string }) {
 
 function QA({ q, children }: { q: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-xl border border-slate-800 bg-slate-900 p-3">
+    <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-3 backdrop-blur-md backdrop-saturate-150">
       <div className="font-semibold">{q}</div>
       <div className="mt-1 text-slate-300 text-sm">{children}</div>
     </div>
