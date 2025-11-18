@@ -1,5 +1,4 @@
 import { Card } from '@/shared/ui/Card';
-import Footer from '@/shared/ui/Footer';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
 import { Seo } from '@/shared/seo/seo';
@@ -28,7 +27,6 @@ export default function ResetDonePage(){
           ? <Link className="btn" to={next}>Перейти сейчас</Link>
           : <Link className="btn primary" to="/auth/login">Перейти ко входу</Link>}
       </Card>
-      <Footer />
     </div>
     </>
   );

@@ -8,7 +8,6 @@ import { Button } from '@/shared/ui/Button';
 import { Input } from '@/shared/ui/Input';
 import { Card } from '@/shared/ui/Card';
 import { FormHint } from '@/shared/ui/FormHint';
-import Footer from '@/shared/ui/Footer';
 import type { ResetFinishReq, Ok } from '@/shared/api/types';
 import { Seo } from '@/shared/seo/seo';
 
@@ -57,7 +56,6 @@ export default function NewPasswordPage() {
 					</div>
 				</form>
 			</Card>
-			<Footer />
 		</div>
 		</>
 	);

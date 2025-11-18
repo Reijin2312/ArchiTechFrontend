@@ -5,6 +5,7 @@ import { endpoints } from '@/shared/api/endpoints';
 import { authStore } from '@/shared/store/auth';
 import { useWallpaper } from '@/shared/ui/useWallpaper';
 import { Seo } from '@/shared/seo/seo';
+import { AvatarCropperDialog } from '@/shared/ui/AvatarCropperDialog';
 
 type SkinModel = 'classic' | 'slim';
 
@@ -63,7 +64,6 @@ export default function SettingsProfilePage() {
   const [birthDate, setBirthDate] = useState(me?.birthDate ?? '');
 
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
-  const [avatarUrlInput, setAvatarUrlInput] = useState('');
 
   const [skinFile, setSkinFile] = useState<File | null>(null);
   const [skinUrlInput, setSkinUrlInput] = useState('');
@@ -85,6 +85,9 @@ export default function SettingsProfilePage() {
   const [delConfirm, setDelConfirm] = useState('');
   const [delBusy, setDelBusy] = useState(false);
   const [delErr, setDelErr]   = useState<string|null>(null);
+
+  const [avatarCropSrc, setAvatarCropSrc] = useState<string | null>(null);
+  const [avatarCropOpen, setAvatarCropOpen] = useState(false);
 
   const [show, setShow] = useState<{ active: boolean; expired: boolean; replaced: boolean; revoked: boolean }>({
     active: true,
@@ -286,29 +289,6 @@ export default function SettingsProfilePage() {
     }
   }
 
-  async function uploadAvatarUrl() {
-    const url = avatarUrlInput.trim();
-    if (!url) return;
-    setBusy('avatar-url');
-    setNotice(null);
-    setErr(null);
-    try {
-      const { data } = await http.post<{ avatarUrl: string }>(
-        `${endpoints.profileAvatar}/url`,
-        { url },
-        { withCredentials: true, headers: { 'Content-Type': 'application/json' } }
-      );
-      setMe((m) => (m ? { ...m, avatarUrl: data.avatarUrl } : m));
-      syncAuth({ avatarUrl: bust(data.avatarUrl) }); 
-      setAvatarUrlInput('');
-      setNotice('Аватар обновлён');
-    } catch (e: any) {
-      setErr(e?.response?.data || e?.message || 'Ошибка загрузки по URL');
-    } finally {
-      setBusy(null);
-    }
-  }
-
   async function uploadSkinFile() {
     if (!skinFile) return;
     setBusy('skin-file'); setNotice(null); setErr(null);
@@ -487,6 +467,18 @@ export default function SettingsProfilePage() {
     }
   }
 
+  function handleAvatarFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setAvatarCropSrc(reader.result as string); // dataURL
+      setAvatarCropOpen(true);
+    };
+    reader.readAsDataURL(file);
+  }
+
   return (
     <>
     <Seo title="Настройки — ArchiTech MC" robots="noindex,follow" />
@@ -516,36 +508,13 @@ export default function SettingsProfilePage() {
                 <input
                   type="file"
                   accept="image/*"
-                  onChange={(e) => setAvatarFile(e.target.files?.[0] || null)}
+                  onChange={handleAvatarFileChange}
                   className="block w-full text-sm file:mr-3 file:rounded-lg file:border file:border-slate-700 file:bg-slate-900 file:px2 file:py-1.5 file:text-sm hover:file:border-slate-500"
                 />
-                <button
-                  disabled={!avatarFile || busy === 'avatar-file'}
-                  onClick={uploadAvatarFile}
-                  className="rounded-xl border border-slate-700 px-3 py-1.5 text-sm hover:border-slate-500 disabled:opacity-50"
-                >
-                  Загрузить файл
-                </button>
               </div>
             </div>
 
             <div className="mt-4">
-              <label className="mb-1 block text-xs text-slate-400">URL картинки</label>
-              <div className="flex gap-2">
-                <input
-                  value={avatarUrlInput}
-                  onChange={(e) => setAvatarUrlInput(e.target.value)}
-                  placeholder="https://…"
-                  className="w-full rounded-xl border border-slate-800 bg-slate-900 px-3 py-2 text-sm outline-none focus:border-slate-600"
-                />
-                <button
-                  disabled={!avatarUrlInput || busy === 'avatar-url'}
-                  onClick={uploadAvatarUrl}
-                  className="rounded-xl border border-slate-700 px-3 py-2 text-sm hover:border-slate-500 disabled:opacity-50"
-                >
-                  Применить
-                </button>
-              </div>
               <p className="mt-1 text-xs text-slate-500">До 2 МБ. PNG/JPG, обрежется до квадрата 512×512.</p>
             </div>
           </Card>
@@ -976,6 +945,39 @@ export default function SettingsProfilePage() {
           {notice && <div className="mt-3 rounded-xl border border-sky-800 bg-sky-950/40 p-3 text-sm text-sky-300 backdrop-blur-md backdrop-saturate-150">{notice}</div>}
           {since && <div className="mt-3 text-center text-xs text-slate-500">Вы с нами с {since}</div>}
         </section>
+
+        {avatarCropOpen && avatarCropSrc && (
+          <AvatarCropperDialog
+            src={avatarCropSrc}
+            onClose={() => setAvatarCropOpen(false)}
+            onCropped={async (blob) => {
+              setAvatarCropOpen(false);
+              setNotice(null);
+              setErr(null);
+              setBusy('avatar-file');
+
+              try {
+                const file = new File([blob], 'avatar.png', { type: 'image/png' });
+                const fd = new FormData();
+                fd.append('file', file);
+
+                const { data } = await http.post<{ avatarUrl: string }>(
+                  endpoints.profileAvatar,
+                  fd,
+                  { withCredentials: true }
+                );
+
+                setMe((m) => (m ? { ...m, avatarUrl: data.avatarUrl } : m));
+                syncAuth({ avatarUrl: bust(data.avatarUrl) });
+                setNotice('Аватар обновлён');
+              } catch (e: any) {
+                setErr(e?.response?.data || e?.message || 'Ошибка загрузки аватара');
+              } finally {
+                setBusy(null);
+              }
+            }}
+          />
+        )}
 
         {delOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center">

@@ -10,7 +10,6 @@ import { Card } from '@/shared/ui/Card';
 import { FormHint } from '@/shared/ui/FormHint';
 import PasswordField from '../components/PasswordField';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import Footer from '@/shared/ui/Footer';
 import type { LoginRes } from '@/shared/api/types';
 import { finalizeAuth } from '@/shared/auth/finalizeAuth';
 import { endpoints } from '@/shared/api/endpoints';
@@ -214,7 +213,6 @@ export default function LoginPage() {
           </div>
         </form>
       </Card>
-      <Footer />
     </div>
     </>
   );

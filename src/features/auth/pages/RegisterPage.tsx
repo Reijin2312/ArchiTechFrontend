@@ -9,7 +9,6 @@ import { Input } from '@/shared/ui/Input';
 import { Card } from '@/shared/ui/Card';
 import { FormHint } from '@/shared/ui/FormHint';
 import PasswordField from '../components/PasswordField';
-import Footer from '@/shared/ui/Footer';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import Turnstile from 'react-turnstile';
 import { useWallpaper } from '@/shared/ui/useWallpaper';
@@ -408,7 +407,6 @@ export default function RegisterPage() {
 
         </form>
       </Card>
-      <Footer />
     </div>
     </>
   );

@@ -8,7 +8,6 @@ import { Button } from '@/shared/ui/Button';
 import { Input } from '@/shared/ui/Input';
 import { Card } from '@/shared/ui/Card';
 import { FormHint } from '@/shared/ui/FormHint';
-import Footer from '@/shared/ui/Footer';
 import { Seo } from '@/shared/seo/seo';
 
 const schema = z.object({
@@ -57,7 +56,6 @@ export default function ChangePasswordPage(){
         </div>
 
       </Card>
-      <Footer />
     </div>
     </>
   );

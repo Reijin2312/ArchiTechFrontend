@@ -2,10 +2,11 @@ import { useEffect, useRef, useState } from 'react';
 import { useWallpaper } from '@/shared/ui/useWallpaper';
 import { Seo } from '@/shared/seo/seo';
 import { routesMeta } from '@/shared/seo/routesMeta';
+import { motion, type Variants } from 'framer-motion';
 
-type TocItem = { id: string; title: string };
+export type TocItem = { id: string; title: string };
 
-const SECTIONS: TocItem[] = [
+export const SECTIONS: TocItem[] = [
   { id: 'intro', title: 'Введение' },
   { id: 'forbidden', title: 'Запрещено' },
   { id: 'chat', title: 'Общение' },
@@ -18,6 +19,47 @@ const SECTIONS: TocItem[] = [
   { id: 'penalties', title: 'Наказания' },
 ];
 
+const pageVariants: Variants = {
+  hidden: { opacity: 0, y: 24, filter: 'blur(8px)' },
+  show: {
+    opacity: 1,
+    y: 0,
+    filter: 'blur(0px)',
+    transition: { duration: 0.5, ease: 'easeOut' },
+  },
+};
+
+const sideNavVariants: Variants = {
+  hidden: { opacity: 0, x: -16, filter: 'blur(6px)' },
+  show: {
+    opacity: 1,
+    x: 0,
+    filter: 'blur(0px)',
+    transition: { duration: 0.45, ease: 'easeOut' },
+  },
+};
+
+const tocVariants: Variants = {
+  hidden: { opacity: 0, x: 16, filter: 'blur(6px)' },
+  show: {
+    opacity: 1,
+    x: 0,
+    filter: 'blur(0px)',
+    transition: { duration: 0.45, ease: 'easeOut', delay: 0.05 },
+  },
+};
+
+const sectionVariants: Variants = {
+  hidden: { opacity: 0, y: 14, scale: 0.98, filter: 'blur(6px)' },
+  show: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    filter: 'blur(0px)',
+    transition: { duration: 0.35, ease: 'easeOut' },
+  },
+};
+
 export default function RulesPage() {
   useWallpaper();
 
@@ -28,11 +70,16 @@ export default function RulesPage() {
   return (
     <>
     <Seo {...routesMeta['/rules']} />
-    <div className="mx-auto w-full max-w-7xl grid grid-cols-12 gap-6 px-4 py-6 text-slate-100">
-      <aside className="col-span-12 md:col-span-3">
+    <motion.div
+      className="mx-auto w-full max-w-7xl grid grid-cols-12 gap-6 px-4 py-6 text-slate-100"
+      variants={pageVariants}
+      initial="hidden"
+      animate="show"
+    >
+      <aside className="hidden md:block md:col-span-3">
         <LeftNav />
       </aside>
-
+      
       <main className="col-span-12 md:col-span-6">
         <h1 className="mb-4 text-3xl font-bold text-center text-[22px] md:text-[24px]">Правила сервера</h1>
         <Callout />
@@ -136,10 +183,10 @@ export default function RulesPage() {
         </Section>
       </main>
 
-      <aside className="col-span-12 md:col-span-3">
+      <aside className="hidden md:block md:col-span-3">
         <RightToc items={SECTIONS} />
       </aside>
-    </div>
+    </motion.div>
     </>
   );
 }
@@ -158,7 +205,12 @@ function Callout() {
 
 function LeftNav() {
   return (
-    <nav className="sticky top-20">
+    <motion.nav
+      className="sticky top-20"
+      variants={sideNavVariants}
+      initial="hidden"
+      animate="show"
+    >
       <h2 className="mb-3 text-sky-400 text-sm font-semibold">Разделы</h2>
       <ul className="space-y-2 text-sm">
         {SECTIONS.map(s => (
@@ -167,7 +219,7 @@ function LeftNav() {
           </li>
         ))}
       </ul>
-    </nav>
+    </motion.nav>
   );
 }
 
@@ -190,7 +242,12 @@ function RightToc({ items }: { items: TocItem[] }) {
   }, [items]);
 
   return (
-    <nav className="sticky top-20">
+    <motion.nav
+      className="sticky top-20"
+      variants={tocVariants}
+      initial="hidden"
+      animate="show"
+    >
       <div className="mb-2 text-slate-300 text-sm">На этой странице</div>
       <ol className="space-y-2 text-sm">
         {items.map((it, i) => {
@@ -205,19 +262,26 @@ function RightToc({ items }: { items: TocItem[] }) {
           );
         })}
       </ol>
-    </nav>
+    </motion.nav>
   );
 }
 
 function Section({ id, title, n, children }: { id: string; title: string; n: number; children: React.ReactNode }) {
   return (
-    <section id={id} className="scroll-mt-24">
+    <motion.section
+      id={id}
+      className="scroll-mt-24"
+      variants={sectionVariants}
+      initial="hidden"
+      whileInView="show"
+      viewport={{ once: true, margin: '-15% 0px' }}
+    >
       <h2 className="mb-3 inline-flex items-center gap-2 rounded-full bg-slate-900/60 px-3 py-1.5 text-lg font-semibold">
         <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-sky-600 text-slate-50 text-sm">{n}</span>
         {title}
       </h2>
       <div className="mb-8 rounded-2xl border border-slate-800 bg-slate-900/60 p-4 backdrop-blur-md backdrop-saturate-150">{children}</div>
-    </section>
+    </motion.section>
   );
 }
 

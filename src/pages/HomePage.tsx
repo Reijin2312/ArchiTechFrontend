@@ -308,38 +308,37 @@ export default function HomePage() {
               <div className="flex w-full items-stretch overflow-hidden rounded-xl border border-slate-800 max-w-md">
               <div className="px-3 hidden sm:grid place-items-center bg-slate-900/60 border-r border-slate-800 text-xs text-slate-300">IP</div>
               <div className="px-3 font-mono flex-1 truncate flex items-center justify-center text-center backdrop-blur-md backdrop-saturate-150">{SERVER_IP}</div>
-              <button
-                onClick={copyIp}
-                className="px-3 py-2 bg-slate-900/60 hover:bg-slate-800 border-l border-slate-800 text-sm grid place-items-center"
-                aria-label={copyOk === 'ok' ? 'Скопировано' : copyOk === 'err' ? 'Ошибка' : 'Копировать IP'}
-                title={copyOk === 'ok' ? 'Скопировано' : copyOk === 'err' ? 'Ошибка' : 'Копировать IP'}
-                type="button"
-              >
-                 <motion.div
-                  animate={
-                    copyOk === 'ok'
-                      ? { scale: [1, 1.2, 1], rotate: [0, -8, 0] }
-                      : copyOk === 'err'
-                        ? { x: [-2, 2, -2, 2, 0] }
-                        : { scale: 1, rotate: 0, x: 0 }
-                  }
-                  transition={{ duration: 0.3 }}
-                  className="grid place-items-center"
+                <button
+                  onClick={copyIp}
+                  className="px-3 py-2 bg-slate-900/60 hover:bg-slate-800 border-l border-slate-800 text-sm grid place-items-center"
+                  aria-label={copyOk === 'ok' ? 'Скопировано' : copyOk === 'err' ? 'Ошибка' : 'Копировать IP'}
+                  title={copyOk === 'ok' ? 'Скопировано' : copyOk === 'err' ? 'Ошибка' : 'Копировать IP'}
+                  type="button"
                 >
-                {copyOk === 'ok' ? (
-          
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="size-5">
-                    <path d="M5 13l4 4L19 7" />
-                  </svg>
-                ) : (
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="size-5">
-                    <path d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2" />
-                    <path d="M10 20h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                  </svg>
-                )}
-                </motion.div>
-              </button>
-
+                  <motion.div
+                    animate={
+                      copyOk === 'ok'
+                        ? { scale: [1, 1.2, 1], rotate: [0, -8, 0] }
+                        : copyOk === 'err'
+                          ? { x: [-2, 2, -2, 2, 0] }
+                          : { scale: 1, rotate: 0, x: 0 }
+                    }
+                    transition={{ duration: 0.3 }}
+                    className="grid place-items-center"
+                  >
+                    {copyOk === 'ok' ? (
+              
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="size-5">
+                        <path d="M5 13l4 4L19 7" />
+                      </svg>
+                    ) : (
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="size-5">
+                        <path d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2" />
+                        <path d="M10 20h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      </svg>
+                    )}
+                  </motion.div>
+                </button>
               </div>
 
               <div className="flex flex-wrap items-center gap-4 text-sm text-slate-300">
@@ -356,7 +355,7 @@ export default function HomePage() {
             </div>
           </div>
 
-        <div className="relative max-w-full"
+        <div className="relative max-w-full overflow-x-hidden"
           onMouseEnter={() => setSliderPaused(true)}
           onMouseLeave={() => setSliderPaused(false)}
           onFocus={() => setSliderPaused(true)}
@@ -388,47 +387,43 @@ export default function HomePage() {
           </div>
 
           <motion.div
-            className="mt-3 flex flex-nowrap gap-3 overflow-x-auto pb-1 -mx-1 px-1 no-scrollbar"
+            className="mt-3 flex flex-nowrap gap-3 overflow-x-auto overflow-y-visible py-1 -mx-1 px-1 no-scrollbar"
             layout
           >
-          {shots.map((_, i) => {
-            const idx = (activeIndex + i) % shots.length
-            const src = shots[idx]
-            const isActive = shot === src
+            {shots.map((_, i) => {
+              const idx = (activeIndex + i) % shots.length
+              const src = shots[idx]
+              const isActive = shot === src
 
-            return (
-              <motion.button
-  key={src}
-  layout
-  variants={thumbVariants}
-  animate={isActive ? 'active' : 'inactive'}
-  whileHover={{ scale: 1.05, opacity: 1 }}
-  whileTap={{ scale: 0.95 }}
-  transition={thumbSpring}
-  onClick={() => changeTo(src)}
-  aria-label="Показать скриншот"
-  className={[
-    // базовые классы
-    'flex-none w-16 aspect-square rounded-xl ring-offset-2 ring-offset-slate-950 border',
-    isActive
-      // активная: бордер прозрачный, только кольцо
-      ? 'border-transparent ring-2 ring-indigo-500/40'
-      // неактивная: только серый бордер, без ring
-      : 'border-slate-800 ring-0 ring-transparent',
-  ].join(' ')}
->
-  <ResponsiveImage
-    name={toName(src) as keyof typeof IMAGES}
-    alt=""
-    width={160}
-    height={160}
-    sizes="64px"
-    className="h-full w-full object-cover rounded-xl"
-  />
-</motion.button>
-
-            )
-          })}
+              return (
+                <motion.button
+                  key={src}
+                  layout
+                  variants={thumbVariants}
+                  animate={isActive ? 'active' : 'inactive'}
+                  whileHover={{ scale: 1.05, opacity: 1 }}
+                  whileTap={{ scale: 0.95 }}
+                  transition={thumbSpring}
+                  onClick={() => changeTo(src)}
+                  aria-label="Показать скриншот"
+                  className={[
+                    'flex-none w-16 aspect-square rounded-xl ring-offset-2 ring-offset-slate-950 border',
+                    isActive
+                      ? 'border-transparent ring-2 ring-indigo-500/40'
+                      : 'border-slate-800 ring-0 ring-transparent',
+                  ].join(' ')}
+                >
+                  <ResponsiveImage
+                    name={toName(src) as keyof typeof IMAGES}
+                    alt=""
+                    width={160}
+                    height={160}
+                    sizes="64px"
+                    className="h-full w-full object-cover rounded-xl"
+                  />
+                </motion.button>
+              )
+            })}
           </motion.div>
         </div>
       </div>
@@ -467,53 +462,57 @@ export default function HomePage() {
         </div>
       </motion.section>
 
-      <motion.section className="mx-auto max-w-7xl px-4 py-10">
+      <motion.section
+        className="mx-auto max-w-7xl px-4 py-10"
+        variants={faqContainer}
+        initial={prefersReducedMotion ? undefined : 'hidden'}
+        whileInView={prefersReducedMotion ? undefined : 'show'}
+        viewport={{ once: true, margin: '-10% 0px' }}
+      >
         <motion.h2
           className="text-2xl font-semibold mb-6"
           variants={faqItem}
         >
-        Команда проекта
+          Команда проекта
         </motion.h2>
 
         <motion.div
           className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
           variants={teamContainer}
-          initial="hidden"
-          whileInView="show"
-          viewport={{ once: true, margin: '-10% 0px' }}
         >
-          {TEAM.map((p) => {
-            const src = avatars[p.name] || AVATAR_FALLBACK
-            return (
-              <motion.div
-                key={p.name}
-                variants={teamItem}
-                whileHover={{ y: -4, scale: 1.01 }}
-                whileTap={{ scale: 0.99 }}
-                className="relative rounded-2xl border border-slate-800 p-4 bg-linear-to-b from-slate-900/60 to-slate-900/20 backdrop-blur-md backdrop-saturate-150 overflow-hidden will-change-transform"
-              >
-                <Link to={`/u/${encodeURIComponent(p.name)}`} className="flex items-center gap-3">
-                  <img
-                    src={src}
-                    alt={p.name}
-                    width={48}
-                    height={48}
-                    loading="lazy"
-                    decoding="async"
-                    className="size-12 rounded-xl object-cover border border-slate-700 bg-slate-800"
-                    onError={(e) => {
-                      const img = e.currentTarget as HTMLImageElement
-                      if (!img.src.endsWith(AVATAR_FALLBACK)) img.src = AVATAR_FALLBACK
-                    }}
-                  />
-                  <div>
-                    <div className="font-medium">{p.name}</div>
-                    <div className="text-sm text-slate-400">{p.role}</div>
-                  </div>
-                </Link>
-              </motion.div>
-            )
-          })}
+
+        {TEAM.map((p) => {
+          const src = avatars[p.name] || AVATAR_FALLBACK
+          return (
+            <motion.div
+              key={p.name}
+              variants={teamItem}
+              whileHover={{ y: -4, scale: 1.01 }}
+              whileTap={{ scale: 0.99 }}
+              className="relative rounded-2xl border border-slate-800 p-4 bg-linear-to-b from-slate-900/60 to-slate-900/20 backdrop-blur-md backdrop-saturate-150 overflow-hidden will-change-transform"
+            >
+              <Link to={`/u/${encodeURIComponent(p.name)}`} className="flex items-center gap-3">
+                <img
+                  src={src}
+                  alt={p.name}
+                  width={48}
+                  height={48}
+                  loading="lazy"
+                  decoding="async"
+                  className="size-12 rounded-xl object-cover border border-slate-700 bg-slate-800"
+                  onError={(e) => {
+                    const img = e.currentTarget as HTMLImageElement
+                    if (!img.src.endsWith(AVATAR_FALLBACK)) img.src = AVATAR_FALLBACK
+                  }}
+                />
+                <div>
+                  <div className="font-medium">{p.name}</div>
+                  <div className="text-sm text-slate-400">{p.role}</div>
+                </div>
+              </Link>
+            </motion.div>
+          )
+        })}
         </motion.div>
       </motion.section>
 
@@ -544,7 +543,7 @@ export default function HomePage() {
                 <div className="pointer-events-none absolute -top-20 -right-16 h-40 w-40 rounded-full bg-emerald-500/10 blur-3xl" />
                 <div className="pointer-events-none absolute -bottom-24 -left-20 h-40 w-40 rounded-full bg-sky-500/10 blur-3xl" />
 
-                <div className="absolute inset-x-0 top-0 h-[1px] bg-linear-to-r from-indigo-500/40 via-sky-500/60 to-emerald-500/40 opacity-80" />
+                <div className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-indigo-500/40 via-sky-500/60 to-emerald-500/40 opacity-80" />
 
                 <div className="flex items-start gap-3">
                   <div className="mt-0.5 size-9 shrink-0 grid place-items-center rounded-xl bg-indigo-600/20 text-indigo-300">
@@ -596,7 +595,7 @@ export default function HomePage() {
                   <div className="pointer-events-none absolute -top-24 -left-16 h-40 w-40 rounded-full bg-rose-500/12 blur-3xl" />
                   <div className="pointer-events-none absolute -bottom-24 -right-20 h-40 w-40 rounded-full bg-amber-400/10 blur-3xl" />
 
-                  <div className="absolute inset-x-0 top-0 h-[1px] bg-linear-to-r from-emerald-500/40 via-sky-500/60 to-indigo-500/40 opacity-80" />
+                  <div className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-emerald-500/40 via-sky-500/60 to-indigo-500/40 opacity-80" />
 
                   <div className="flex items-start gap-3">
                     <div className="mt-0.5 size-9 shrink-0 grid place-items-center rounded-xl bg-emerald-600/20 text-emerald-300">
@@ -851,15 +850,60 @@ function StepsGuide({ version }: { version?: string }) {
     <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
       <div className="flex w-full items-stretch overflow-hidden rounded-xl border border-slate-800">
         <div className="px-3 hidden sm:grid place-items-center bg-slate-900/60 border-r border-slate-800 text-xs text-slate-300">
-          IP адрес
+          IP
         </div>
-        <div className="px-3 py-2 font-mono flex-1 truncate">{SERVER_IP}</div>
-        <button onClick={copy} className="px-3 py-2 bg-slate-900/60 hover:bg-slate-800 border-l border-slate-800 text-sm">
-          {copied === 'ok' ? 'Скопировано' : copied === 'err' ? 'Ошибка' : 'Копировать'}
+        <div className="px-3 py-2 font-mono flex-1 truncate flex items-center justify-center text-center">
+          {SERVER_IP}
+        </div>
+        <button
+          onClick={copy}
+          className="px-3 py-2 bg-slate-900/60 hover:bg-slate-800 border-l border-slate-800 text-sm grid place-items-center"
+          aria-label={copied === 'ok' ? 'Скопировано' : copied === 'err' ? 'Ошибка' : 'Копировать IP'}
+          title={copied === 'ok' ? 'Скопировано' : copied === 'err' ? 'Ошибка' : 'Копировать IP'}
+          type="button"
+        >
+          <motion.div
+            animate={
+              copied === 'ok'
+                ? { scale: [1, 1.2, 1], rotate: [0, -8, 0] }
+                : copied === 'err'
+                ? { x: [-2, 2, -2, 2, 0] }
+                : { scale: 1, rotate: 0, x: 0 }
+            }
+            transition={{ duration: 0.3 }}
+            className="grid place-items-center"
+          >
+            {copied === 'ok' ? (
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="size-5"
+              >
+                <path d="M5 13l4 4L19 7" />
+              </svg>
+            ) : (
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="size-5"
+              >
+                <path d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2" />
+                <path d="M10 20h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+            )}
+          </motion.div>
         </button>
       </div>
       <div className="text-xs text-slate-400 mt-3 text-center">
-        Откройте Minecraft: Java Edition
+        Откройте Minecraft: Java Edition 1.21.1
         {version ? <> версии <b className="text-slate-300">{version}</b></> : null} и вставьте IP
       </div>
     </div>

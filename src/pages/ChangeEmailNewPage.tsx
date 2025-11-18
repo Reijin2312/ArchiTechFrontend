@@ -6,7 +6,6 @@ import { Card } from '@/shared/ui/Card';
 import { Input } from '@/shared/ui/Input';
 import { Button } from '@/shared/ui/Button';
 import { FormHint } from '@/shared/ui/FormHint';
-import Footer from '@/shared/ui/Footer';
 import { Seo } from '@/shared/seo/seo';
 
 export default function ChangeEmailNewPage(){
@@ -43,7 +42,6 @@ export default function ChangeEmailNewPage(){
           <Button variant="ghost" onClick={()=>nav('/settings/profile')}>Отмена</Button>
         </div>
       </Card>
-      <Footer/>
     </div>
     </>
   );

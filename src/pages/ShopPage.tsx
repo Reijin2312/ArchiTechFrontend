@@ -3,8 +3,50 @@ import { authStore } from '@/shared/store/auth';
 import { useWallpaper } from '@/shared/ui/useWallpaper';
 import { Seo } from '@/shared/seo/seo';
 import { routesMeta } from '@/shared/seo/routesMeta';
+import { motion, type Variants } from 'framer-motion';
 
 const TELEGRAM_BOT = 'https://t.me/Archi_payment_bot';
+
+const pageVariants: Variants = {
+  hidden: { opacity: 0, y: 24, filter: 'blur(8px)' },
+  show: {
+    opacity: 1,
+    y: 0,
+    filter: 'blur(0px)',
+    transition: { duration: 0.5, ease: 'easeOut' },
+  },
+};
+
+const sideNavVariants: Variants = {
+  hidden: { opacity: 0, x: -16, filter: 'blur(6px)' },
+  show: {
+    opacity: 1,
+    x: 0,
+    filter: 'blur(0px)',
+    transition: { duration: 0.45, ease: 'easeOut' },
+  },
+};
+
+const tocVariants: Variants = {
+  hidden: { opacity: 0, x: 16, filter: 'blur(6px)' },
+  show: {
+    opacity: 1,
+    x: 0,
+    filter: 'blur(0px)',
+    transition: { duration: 0.45, ease: 'easeOut', delay: 0.05 },
+  },
+};
+
+const sectionVariants: Variants = {
+  hidden: { opacity: 0, y: 14, scale: 0.98, filter: 'blur(6px)' },
+  show: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    filter: 'blur(0px)',
+    transition: { duration: 0.35, ease: 'easeOut' },
+  },
+};
 
 export default function ShopPage() {
   useWallpaper();
@@ -24,7 +66,12 @@ export default function ShopPage() {
   return (
     <>
     <Seo {...routesMeta['/shop']} />
-    <div className="mx-auto w-full max-w-7xl grid grid-cols-12 gap-6 px-4 py-6 text-slate-100">
+    <motion.div
+          className="mx-auto w-full max-w-7xl grid grid-cols-12 gap-6 px-4 py-6 text-slate-100"
+          variants={pageVariants}
+          initial="hidden"
+          animate="show"
+    >
       <aside className="col-span-12 md:col-span-3">
         <LeftNav />
       </aside>
@@ -96,7 +143,7 @@ export default function ShopPage() {
       <aside className="col-span-12 md:col-span-3">
         <RightBox nick={nick} deepLink={deepLink} />
       </aside>
-    </div>
+    </motion.div>
     </>
   );
 }
@@ -110,7 +157,12 @@ function LeftNav() {
     { id: 'faq', title: 'FAQ' },
   ];
   return (
-    <nav className="sticky top-20">
+    <motion.nav
+          className="sticky top-20"
+          variants={sideNavVariants}
+          initial="hidden"
+          animate="show"
+    >
       <h2 className="mb-3 text-sky-400 text-sm font-semibold">Разделы</h2>
       <ul className="space-y-2 text-sm">
         {items.map(i => (
@@ -119,7 +171,7 @@ function LeftNav() {
           </li>
         ))}
       </ul>
-    </nav>
+    </motion.nav>
   );
 }
 
@@ -127,13 +179,20 @@ function Section({
   id, title, n, children,
 }: { id: string; title: string; n: number; children: React.ReactNode }) {
   return (
-    <section id={id} className="scroll-mt-24">
+    <motion.section
+      id={id}
+      className="scroll-mt-24"
+      variants={sectionVariants}
+      initial="hidden"
+      whileInView="show"
+      viewport={{ once: true, margin: '-15% 0px' }}
+    >
       <h2 className="mb-3 inline-flex items-center gap-2 rounded-full bg-slate-900/60 px-3 py-1.5 text-lg font-semibold">
-        <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-sky-600 text-slate-50 text-sm">{n}</span>
-        {title}
+      <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-sky-600 text-slate-50 text-sm">{n}</span>
+      {title}
       </h2>
       <div className="mb-8 rounded-2xl border border-slate-800 bg-slate-900/60 p-4 backdrop-blur-md backdrop-saturate-150">{children}</div>
-    </section>
+    </motion.section>
   );
 }
 
@@ -150,7 +209,12 @@ function CalloutFree() {
 
 function RightBox({ nick, deepLink }: { nick: string; deepLink: string }) {
   return (
-    <div className="sticky top-20 space-y-3">
+    <motion.div
+          className="sticky top-20 space-y-3"
+          variants={tocVariants}
+          initial="hidden"
+          animate="show"
+    >
       <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
         <div className="text-sm text-slate-300">Ваш ник</div>
         <div className="mt-1 text-lg font-semibold">{nick}</div>
@@ -166,7 +230,7 @@ function RightBox({ nick, deepLink }: { nick: string; deepLink: string }) {
         <div className="font-semibold mb-1">Поддержка проекта</div>
         Пожертвования добровольные и осуществляются через бота. Привилегий не дают.
       </div>
-    </div>
+    </motion.div>
   );
 }
 

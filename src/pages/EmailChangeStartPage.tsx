@@ -4,7 +4,6 @@ import { http } from '@/shared/api/http';
 import { endpoints } from '@/shared/api/endpoints';
 import { Card } from '@/shared/ui/Card';
 import { Button } from '@/shared/ui/Button';
-import Footer from '@/shared/ui/Footer';
 import { Seo } from '@/shared/seo/seo';
 
 export default function EmailChangeStartPage(){
@@ -37,7 +36,6 @@ export default function EmailChangeStartPage(){
         <p className="hint mb-3">Шаг 1. Подтвердите владение текущим адресом. Мы отправим код на вашу старую почту.</p>
         <Button onClick={begin} disabled={busy}>Отправить код на старый e-mail</Button>
       </Card>
-      <Footer/>
     </div>
     </>
   );

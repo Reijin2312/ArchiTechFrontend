@@ -5,13 +5,15 @@ import { Button } from '@/shared/ui/Button';
 import { Input } from '@/shared/ui/Input';
 import { Card } from '@/shared/ui/Card';
 import { endpoints } from '@/shared/api/endpoints';
-import Footer from '@/shared/ui/Footer';
 import type { VerifyEmailReq, VerifyEmailRes, ResetConfirmReq, ResetConfirmRes } from '@/shared/api/types';
 import { finalizeAuth } from '@/shared/auth/finalizeAuth';
 import { authStore } from '@/shared/store/auth';
 import { Seo } from '@/shared/seo/seo';
+import { useWallpaper } from '@/shared/ui/useWallpaper';
 
-export default function CodeVerifyPage({ mode }:{ mode: 'email-verify'|'reset'|'email-change-old' }){
+export default function CodeVerifyPage({ mode }:{ mode: 'email-verify'|'reset'|'email-change-old' }) {
+  useWallpaper();
+
   const [sp] = useSearchParams();
   const navigate = useNavigate();
   const [code, setCode] = useState('');
@@ -37,52 +39,52 @@ export default function CodeVerifyPage({ mode }:{ mode: 'email-verify'|'reset'|'
   }, [sp]);
 
   async function confirm() {
-  try {
-    setServerErr(null);
-    if (mode === 'email-verify') {
-      const body: VerifyEmailReq = { ticket, code };
-      const at = authStore.getState().accessToken;
-      const { data } = await http.post<VerifyEmailRes>(
-        endpoints.verifyEmailConfirm,
-        body,
-        { headers: { Authorization: `Bearer ${at}` } }
-      );
+    try {
+      setServerErr(null);
+      if (mode === 'email-verify') {
+        const body: VerifyEmailReq = { ticket, code };
+        const at = authStore.getState().accessToken;
+        const { data } = await http.post<VerifyEmailRes>(
+          endpoints.verifyEmailConfirm,
+          body,
+          { headers: { Authorization: `Bearer ${at}` } }
+        );
 
-      const me = await finalizeAuth(data.accessToken);
+        const me = await finalizeAuth(data.accessToken);
 
-      try {
-        const r = await http.post(endpoints.desktopToken, null, { withCredentials: true });
-        if (r?.data?.accessToken && r?.data?.refreshToken && redirectUri) {
-          await fetch(redirectUri ?? '', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ...r.data, user: me }), mode: 'cors', keepalive: true,
-          });
-        }
-      } catch {}
+        try {
+          const r = await http.post(endpoints.desktopToken, null, { withCredentials: true });
+          if (r?.data?.accessToken && r?.data?.refreshToken && redirectUri) {
+            await fetch(redirectUri ?? '', {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ ...r.data, user: me }), mode: 'cors', keepalive: true,
+            });
+          }
+        } catch {}
 
-      const target = next && next !== '/profile' ? next : `/u/${me.username}`;
-      navigate(target, { replace: true });
-      return;
+        const target = next && next !== '/profile' ? next : `/u/${me.username}`;
+        navigate(target, { replace: true });
+        return;
+      }
+
+      if (mode === 'email-change-old') {
+        const { data } = await http.post(
+          endpoints.accountEmailChangeOldConfirm,
+          { ticket, code },
+          { headers: { Authorization: `Bearer ${at}` } }
+        );
+        navigate(`/settings/email/new?ct=${encodeURIComponent(data.changeToken)}&next=${encodeURIComponent(next)}${redirectUri ? `&redirect_uri=${encodeURIComponent(redirectUri)}` : ''}`, { replace: true });
+        return;
+      }
+
+      const body: ResetConfirmReq = { ticket, code };
+      const { data } = await http.post<ResetConfirmRes>(endpoints.resetConfirm, body);
+      navigate(`/auth/reset/new?token=${encodeURIComponent(data.resetToken)}&email=${encodeURIComponent(email)}&next=${encodeURIComponent(next)}${redirectUri ? `&redirect_uri=${encodeURIComponent(redirectUri)}` : ''}`, { replace: true });
+    } catch (e: any) {
+      const msg = e?.response?.data?.message || e?.message || 'Неверный код';
+      setServerErr(msg);
     }
-
-    if (mode === 'email-change-old') {
-      const { data } = await http.post(
-        endpoints.accountEmailChangeOldConfirm,
-        { ticket, code },
-        { headers: { Authorization: `Bearer ${at}` } }
-      );
-      navigate(`/settings/email/new?ct=${encodeURIComponent(data.changeToken)}&next=${encodeURIComponent(next)}${redirectUri ? `&redirect_uri=${encodeURIComponent(redirectUri)}` : ''}`, { replace: true });
-      return;
-    }
-
-    const body: ResetConfirmReq = { ticket, code };
-    const { data } = await http.post<ResetConfirmRes>(endpoints.resetConfirm, body);
-    navigate(`/auth/reset/new?token=${encodeURIComponent(data.resetToken)}&email=${encodeURIComponent(email)}&next=${encodeURIComponent(next)}${redirectUri ? `&redirect_uri=${encodeURIComponent(redirectUri)}` : ''}`, { replace: true });
-  } catch (e: any) {
-    const msg = e?.response?.data?.message || e?.message || 'Неверный код';
-    setServerErr(msg);
   }
-}
 
   async function resend() {
     try {
@@ -111,7 +113,7 @@ export default function CodeVerifyPage({ mode }:{ mode: 'email-verify'|'reset'|'
   }
 
   return (
-    <>
+    <>  
     <Seo title="Сброс пароля — ArchiTech MC" robots="noindex,follow" />
     <div className="wrap">
       <Card>
@@ -137,7 +139,6 @@ export default function CodeVerifyPage({ mode }:{ mode: 'email-verify'|'reset'|'
           </Button>
         </div>
       </Card>
-      <Footer />
     </div>
     </>
   );
