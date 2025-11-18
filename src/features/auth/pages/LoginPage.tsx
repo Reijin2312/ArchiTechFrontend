@@ -55,7 +55,7 @@ export default function LoginPage() {
   const {
     register,
     handleSubmit,
-    formState: { errors, isSubmitting, isValid },
+    formState: { errors, isSubmitting, isValid, touchedFields },
     getValues,
     setError,
     watch,
@@ -187,7 +187,7 @@ export default function LoginPage() {
             autoComplete="email"
             {...register('email')}
             error={!!errors.email}
-            className={errors.email ? 'is-err' : watch('email') ? 'is-ok' : ''}
+            className={errors.email ? 'is-err' : (touchedFields.email && watch('email') && !errors.email) ? 'is-ok' : ''}
           />
           <FormHint error={!!errors.email}>{errors.email?.message}</FormHint>
 
@@ -196,7 +196,7 @@ export default function LoginPage() {
             autoComplete="current-password"
             {...register('password')}
             error={!!errors.password}
-            className={errors.password ? 'is-err' : watch('password') ? 'is-ok' : ''}
+            className={errors.password ? 'is-err' : (touchedFields.password && watch('password') && !errors.password) ? 'is-ok' : ''}
           />
           <FormHint error={!!errors.password}>{errors.password?.message}</FormHint>
 

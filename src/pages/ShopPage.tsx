@@ -4,50 +4,10 @@ import { useWallpaper } from '@/shared/ui/useWallpaper';
 import { useScrollTop } from '@/shared/ui/useScrollTop';
 import { Seo } from '@/shared/seo/seo';
 import { routesMeta } from '@/shared/seo/routesMeta';
-import { motion, type Variants } from 'framer-motion';
+import { motion } from 'framer-motion';
+import { LeftNav, RightToc, Section, Callout, pageVariants } from '@/shared/ui/PageSidebar';
 
 const TELEGRAM_BOT = 'https://t.me/Archi_payment_bot';
-
-const pageVariants: Variants = {
-  hidden: { opacity: 0, y: 24, filter: 'blur(8px)' },
-  show: {
-    opacity: 1,
-    y: 0,
-    filter: 'blur(0px)',
-    transition: { duration: 0.5, ease: 'easeOut' },
-  },
-};
-
-const sideNavVariants: Variants = {
-  hidden: { opacity: 0, x: -16, filter: 'blur(6px)' },
-  show: {
-    opacity: 1,
-    x: 0,
-    filter: 'blur(0px)',
-    transition: { duration: 0.45, ease: 'easeOut' },
-  },
-};
-
-const tocVariants: Variants = {
-  hidden: { opacity: 0, x: 16, filter: 'blur(6px)' },
-  show: {
-    opacity: 1,
-    x: 0,
-    filter: 'blur(0px)',
-    transition: { duration: 0.45, ease: 'easeOut', delay: 0.05 },
-  },
-};
-
-const sectionVariants: Variants = {
-  hidden: { opacity: 0, y: 14, scale: 0.98, filter: 'blur(6px)' },
-  show: {
-    opacity: 1,
-    y: 0,
-    scale: 1,
-    filter: 'blur(0px)',
-    transition: { duration: 0.35, ease: 'easeOut' },
-  },
-};
 
 export default function ShopPage() {
   useWallpaper();
@@ -71,13 +31,23 @@ export default function ShopPage() {
           animate="show"
     >
       <aside className="col-span-12 md:col-span-3">
-        <LeftNav />
+        <LeftNav items={[
+          { id: 'price', title: 'Доступ' },
+          { id: 'how', title: 'Как активировать' },
+          { id: 'discounts', title: 'Поддержка' },
+          { id: 'policy', title: 'Зачем это нужно' },
+          { id: 'faq', title: 'FAQ' },
+        ]} blurIntensity="xl" bgOpacity="60" />
       </aside>
 
       <main className="col-span-12 md:col-span-6">
         <h1 className="mb-4 text-3xl font-bold text-[22px] md:text-[24px] text-center">Получение проходки</h1>
 
-        <CalloutFree />
+        <Callout title="Честная модель без доната">
+          <p className="text-sm text-slate-300">
+            Проходка <b>бесплатна для всех игроков</b>. Не даёт никаких преимуществ, не открывает платные команды, донатное оружие и тому подобные привилегии.
+          </p>
+        </Callout>
 
         <Section id="how" n={1} title="Активация через Telegram-бота">
           <ol className="list-decimal pl-6 space-y-2 text-slate-300">
@@ -146,73 +116,9 @@ export default function ShopPage() {
   );
 }
 
-function LeftNav() {
-  const items = [
-    { id: 'price', title: 'Доступ' },
-    { id: 'how', title: 'Как активировать' },
-    { id: 'discounts', title: 'Поддержка' },
-    { id: 'policy', title: 'Зачем это нужно' },
-    { id: 'faq', title: 'FAQ' },
-  ];
-  return (
-    <motion.nav
-      className="sticky top-20 rounded-2xl border border-slate-800/80 bg-slate-950/40 p-4 backdrop-blur-md backdrop-saturate-150"
-      variants={sideNavVariants}
-      initial="hidden"
-      animate="show"
-    >
-      <h2 className="mb-3 text-sky-400 text-sm font-semibold">Разделы</h2>
-      <ul className="space-y-2 text-sm">
-        {items.map(i => (
-          <li key={i.id}>
-            <a href={`#${i.id}`} className="text-slate-300 hover:text-sky-300">{i.title}</a>
-          </li>
-        ))}
-      </ul>
-    </motion.nav>
-  );
-}
-
-function Section({
-  id, title, n, children,
-}: { id: string; title: string; n: number; children: React.ReactNode }) {
-  return (
-    <motion.section
-      id={id}
-      className="scroll-mt-24"
-      variants={sectionVariants}
-      initial="hidden"
-      whileInView="show"
-      viewport={{ once: true, margin: '-15% 0px' }}
-    >
-      <h2 className="mb-3 inline-flex items-center gap-2 rounded-full bg-slate-900/60 px-3 py-1.5 text-lg font-semibold">
-      <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-sky-600 text-slate-50 text-sm">{n}</span>
-      {title}
-      </h2>
-      <div className="mb-8 rounded-2xl border border-slate-800 bg-slate-900/60 p-4 backdrop-blur-md backdrop-saturate-150">{children}</div>
-    </motion.section>
-  );
-}
-
-function CalloutFree() {
-  return (
-    <div className="mb-6 rounded-2xl border border-slate-800 bg-slate-900/60 p-4 backdrop-blur-md backdrop-saturate-150">
-      <div className="mb-2 text-base font-semibold">Честная модель без доната</div>
-      <p className="text-sm text-slate-300">
-        Проходка <b>бесплатна для всех игроков</b>. Не даёт никаких преимуществ, не открывает платные команды, донатное оружие и тому подобные привилегии.
-      </p>
-    </div>
-  );
-}
-
 function RightBox({ nick, deepLink }: { nick: string; deepLink: string }) {
   return (
-    <motion.div
-          className="sticky top-20 space-y-3"
-          variants={tocVariants}
-          initial="hidden"
-          animate="show"
-    >
+    <div className="sticky top-20 space-y-3">
       <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 backdrop-blur-md backdrop-saturate-150">
         <div className="text-sm text-slate-300">Ваш ник</div>
         <div className="mt-1 text-lg font-semibold">{nick}</div>
@@ -228,7 +134,7 @@ function RightBox({ nick, deepLink }: { nick: string; deepLink: string }) {
         <div className="font-semibold mb-1">Поддержка проекта</div>
         Пожертвования добровольные и осуществляются через бота. Привилегий не дают.
       </div>
-    </motion.div>
+    </div>
   );
 }
 

@@ -1,7 +1,8 @@
 import { useWallpaper } from '@/shared/ui/useWallpaper';
-import { useEffect, useRef, useState } from 'react';
 import { Seo } from '@/shared/seo/seo';
 import { routesMeta } from '@/shared/seo/routesMeta';
+import { motion, type Variants } from 'framer-motion';
+import { LeftNav, RightToc, Section, Kbd, Callout } from '@/shared/ui/PageSidebar';
 
 export type PrivacyTocItem = { id: string; title: string; n: number };
 export const PRIVACY_SECTIONS: PrivacyTocItem[] = [
@@ -20,6 +21,8 @@ export const PRIVACY_SECTIONS: PrivacyTocItem[] = [
   { id: 'id13', title: 'Контакты оператора', n: 13 },
 ];
 
+
+
 export default function PrivacyPolicyPage() {
   useWallpaper();
 
@@ -28,12 +31,16 @@ export default function PrivacyPolicyPage() {
     <Seo {...routesMeta['/privacy']} />
     <div className="mx-auto w-full max-w-7xl grid grid-cols-12 gap-6 px-4 py-6 text-slate-100">
       <aside className="hidden md:block md:col-span-3">
-        <LeftNav />
+        <LeftNav items={PRIVACY_SECTIONS} />
       </aside>
 
       <main className="col-span-12 md:col-span-6">
         <h1 className="mb-4 text-3xl font-bold text-[22px] md:text-[24px] text-center">Политика конфиденциальности проекта</h1>
-        <Callout />
+        <Callout title="Подсказка по навигации">
+          <ul className="text-sm text-slate-300 space-y-1">
+            <li>Переходите по разделам слева или используйте быстрый поиск по странице: <Kbd>Ctrl</Kbd> + <Kbd>F</Kbd> (Windows / Linux), <Kbd>Cmd</Kbd> + <Kbd>F</Kbd> (macOS).</li>
+          </ul>
+        </Callout>
 
         <Section id="id1" title="Общие положения" n={1}>
          <ol className="list-decimal pl-6 space-y-2 text-slate-300">
@@ -167,86 +174,4 @@ export default function PrivacyPolicyPage() {
   );
 }
 
-function LeftNav() {
-  return (
-    <nav className="sticky top-20">
-      <h2 className="mb-3 text-sky-400 text-sm font-semibold">Разделы</h2>
-      <ul className="space-y-2 text-sm">
-        {PRIVACY_SECTIONS.map((s) => (
-          <li key={s.id}>
-            <a href={`#${s.id}`} className="text-slate-300 hover:text-sky-300">
-              {s.title}
-            </a>
-          </li>
-        ))}
-      </ul>
-    </nav>
-  );
-}
 
-function RightToc({ items }: { items: PrivacyTocItem[] }) {
-  const [active, setActive] = useState(items[0]?.id);
-  const observer = useRef<IntersectionObserver | null>(null);
-
-  useEffect(() => {
-    const headers = items.map((i) => document.getElementById(i.id)).filter(Boolean) as HTMLElement[];
-    observer.current?.disconnect();
-    observer.current = new IntersectionObserver(
-      (entries) => {
-        const vis = entries.filter((e) => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
-        if (vis) setActive(vis.target.id);
-      },
-      { rootMargin: '-40% 0px -50% 0px', threshold: [0, 0.25, 0.5, 1] }
-    );
-    headers.forEach((h) => observer.current!.observe(h));
-    return () => observer.current?.disconnect();
-  }, [items]);
-
-  return (
-    <nav className="sticky top-20">
-      <div className="mb-2 text-slate-300 text-sm">На этой странице</div>
-      <ol className="space-y-2 text-sm">
-        {items.map((it, i) => {
-          const on = active === it.id;
-          return (
-            <li key={it.id} className="flex items-start gap-2">
-              <span className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-slate-700 text-xs text-slate-400">
-                {i + 1}
-              </span>
-              <a href={`#${it.id}`} className={on ? 'text-sky-300' : 'text-slate-300 hover:text-sky-300'}>
-                {it.title}
-              </a>
-            </li>
-          );
-        })}
-      </ol>
-    </nav>
-  );
-}
-
-function Section({ id, title, n, children }: { id: string; title: string; n: number; children: React.ReactNode }) {
-  return (
-    <section id={id} className="scroll-mt-24">
-      <h2 className="mb-3 inline-flex items-center gap-2 rounded-full bg-slate-900/60 px-3 py-1.5 text-lg font-semibold">
-        <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-sky-600 text-slate-50 text-sm">{n}</span>
-        {title}
-      </h2>
-      <div className="mb-8 rounded-2xl border border-slate-800 bg-slate-900/60 p-4 backdrop-blur-md backdrop-saturate-150">{children}</div>
-    </section>
-  );
-}
-
-function Callout() {
-  return (
-    <div className="mb-6 rounded-2xl border border-slate-800 bg-slate-900/60 p-4">
-      <div className="mb-1 text-base font-semibold">Подсказка по навигации</div>
-      <ul className="text-sm text-slate-300 space-y-1">
-        <li>Переходите по разделам слева или используйте быстрый поиск по странице: <Kbd>Ctrl</Kbd> + <Kbd>F</Kbd> (Windows / Linux), <Kbd>Cmd</Kbd> + <Kbd>F</Kbd> (macOS).</li>
-      </ul>
-    </div>
-  );
-}
-
-function Kbd({ children }: { children: React.ReactNode }) {
-  return <kbd className="rounded-md border border-slate-700 bg-slate-900 px-1.5 py-0.5 text-xs">{children}</kbd>;
-}

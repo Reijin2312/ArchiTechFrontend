@@ -1,10 +1,11 @@
 import { useWallpaper } from '@/shared/ui/useWallpaper';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Seo } from '@/shared/seo/seo';
 import { routesMeta } from '@/shared/seo/routesMeta';
 import { useScrollTop } from '@/shared/ui/useScrollTop';
-import { motion, type Variants } from 'framer-motion';
+import { motion } from 'framer-motion';
+import { LeftNav, RightToc, Section, Kbd, Callout, pageVariants } from '@/shared/ui/PageSidebar';
 
 export type WikiTocItem = { id: string; title: string; n: number };
 export const WIKI_SECTIONS: WikiTocItem[] = [
@@ -107,7 +108,6 @@ const MODS: Mod[] = [
   { name: 'More Delight (for Farmers Delight)', cat: 'Food', brief: 'Ещё больше еды!' }
 ];
 
-
 type Cmd = { cmd: string; desc: string; scope: 'server' | 'bot' };
 const CMDS: Cmd[] = [
   { cmd: '/spawn', desc: 'Телепорт на спавн', scope: 'server' },
@@ -120,32 +120,6 @@ const CMDS: Cmd[] = [
   { cmd: 'Бот: моя проходка', desc: 'Срок действия, дата окончания', scope: 'bot' },
   { cmd: 'Бот: пригласить друга', desc: 'Реферальная ссылка и скидки', scope: 'bot' },
 ];
-
-const pageVariants: Variants = {
-  hidden: { opacity: 0, y: 24, filter: 'blur(6px)' },
-  show: { opacity: 1, y: 0, filter: 'blur(0px)', transition: { duration: 0.6, ease: 'easeOut' } },
-};
-
-const sideNavVariants: Variants = {
-  hidden: { opacity: 0, x: -16, filter: 'blur(6px)' },
-  show: { opacity: 1, x: 0, filter: 'blur(0px)', transition: { duration: 0.5, ease: 'easeOut' } },
-};
-
-const tocVariants: Variants = {
-  hidden: { opacity: 0, x: 16, filter: 'blur(6px)' },
-  show: { opacity: 1, x: 0, filter: 'blur(0px)', transition: { duration: 0.5, ease: 'easeOut', delay: 0.05 } },
-};
-
-const sectionVariants: Variants = {
-  hidden: { opacity: 0, y: 18, scale: 0.98, filter: 'blur(8px)' },
-  show: {
-    opacity: 1,
-    y: 0,
-    scale: 1,
-    filter: 'blur(0px)',
-    transition: { duration: 0.4, ease: 'easeOut' },
-  },
-};
 
 export default function WikiPage() {
   useWallpaper();
@@ -161,12 +135,17 @@ export default function WikiPage() {
       animate="show"
     >
       <aside className="hidden md:block md:col-span-3">
-        <LeftNav />
+        <LeftNav items={WIKI_SECTIONS} blurIntensity="xl" bgOpacity="60" />
       </aside>
 
       <main className="col-span-12 md:col-span-6">
         <h1 className="mb-4 text-3xl font-bold text-[22px] md:text-[24px] text-center">Вики сервера</h1>
-        <Callout />
+        <Callout title="Как пользоваться вики">
+          <ul className="text-sm text-slate-300 space-y-1">
+            <li>Переходите по разделам слева или используйте быстрый поиск по странице: <Kbd>Ctrl</Kbd> + <Kbd>F</Kbd> (Windows / Linux), <Kbd>Cmd</Kbd> + <Kbd>F</Kbd> (macOS).</li>
+            <li>Список модов можно фильтровать по названию или категории.</li>
+          </ul>
+        </Callout>
 
         <Section id="intro" title="О сервере и тематика" n={1}>
           <p className="text-slate-300 ">
@@ -258,7 +237,7 @@ export default function WikiPage() {
       </main>
 
       <aside className="hidden md:block md:col-span-3">
-        <RightToc items={WIKI_SECTIONS} />
+        <RightToc items={WIKI_SECTIONS} blurIntensity="xl" bgOpacity="60" linkTransition />
       </aside>
     </motion.div>
     </>
@@ -354,100 +333,6 @@ function FaqSection() {
   );
 }
 
-/* ---------- Small UI ---------- */
-
-function LeftNav() {
-  return (
-    <motion.nav
-      className="sticky top-20 rounded-2xl border border-slate-800/80 bg-slate-950/40 p-4 backdrop-blur"
-      variants={sideNavVariants}
-      initial="hidden"
-      animate="show"
-    >
-      <h2 className="mb-3 text-sky-400 text-sm font-semibold">Разделы</h2>
-      <ul className="space-y-2 text-sm">
-        {WIKI_SECTIONS.map((s) => (
-          <li key={s.id}>
-            <a href={`#${s.id}`} className="text-slate-300 hover:text-sky-300 transition-colors">
-              {s.title}
-            </a>
-          </li>
-        ))}
-      </ul>
-    </motion.nav>
-  );
-}
-
-function RightToc({ items }: { items: WikiTocItem[] }) {
-  const [active, setActive] = useState(items[0]?.id);
-  const observer = useRef<IntersectionObserver | null>(null);
-
-  useEffect(() => {
-    const headers = items.map((i) => document.getElementById(i.id)).filter(Boolean) as HTMLElement[];
-    observer.current?.disconnect();
-    observer.current = new IntersectionObserver(
-      (entries) => {
-        const vis = entries.filter((e) => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
-        if (vis) setActive(vis.target.id);
-      },
-      { rootMargin: '-40% 0px -50% 0px', threshold: [0, 0.25, 0.5, 1] }
-    );
-    headers.forEach((h) => observer.current!.observe(h));
-    return () => observer.current?.disconnect();
-  }, [items]);
-
-  return (
-    <motion.nav
-      className="sticky top-20 rounded-2xl border border-slate-800/80 bg-slate-950/40 p-4 backdrop-blur"
-      variants={tocVariants}
-      initial="hidden"
-      animate="show"
-    >
-      <div className="mb-2 text-slate-300 text-sm">На этой странице</div>
-      <ol className="space-y-2 text-sm">
-        {items.map((it, i) => {
-          const on = active === it.id;
-          return (
-            <li key={it.id} className="flex items-start gap-2">
-              <span className={`mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-xs ${on ? 'border-sky-500 text-sky-300' : 'border-slate-700 text-slate-400'}`}>
-                {i + 1}
-              </span>
-              <a
-                href={`#${it.id}`}
-                className={on ? 'text-sky-300' : 'text-slate-300 hover:text-sky-300 transition-colors'}
-              >
-                {it.title}
-              </a>
-            </li>
-          );
-        })}
-      </ol>
-    </motion.nav>
-  );
-}
-
-function Section({ id, title, n, children }: { id: string; title: string; n: number; children: React.ReactNode }) {
-  return (
-    <motion.section
-      id={id}
-      className="scroll-mt-24"
-      variants={sectionVariants}
-      initial="hidden"
-      whileInView="show"
-      viewport={{ once: true, margin: '-15% 0px' }}
-    >
-      <div className="mb-5 inline-flex items-center gap-3 rounded-full border border-slate-800/70 bg-gradient-to-r from-slate-900 via-slate-900/70 to-slate-900/30 px-4 py-1.5 text-lg font-semibold shadow-[0_0_20px_-12px_rgba(14,165,233,0.9)]">
-        <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-sky-600 text-slate-50 text-sm shadow-lg shadow-sky-600/30">{n}</span>
-        {title}
-      </div>
-      <div className="mb-10 rounded-3xl border border-slate-800/70 bg-slate-900/70 p-5 shadow-2xl shadow-black/20 backdrop-blur-md backdrop-saturate-150 relative overflow-hidden">
-        <div className="absolute inset-0 opacity-40 mix-blend-color-dodge pointer-events-none bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.2),_transparent_50%),radial-gradient(circle_at_bottom,_rgba(14,165,233,0.15),_transparent_45%)]" />
-        <div className="relative z-10">{children}</div>
-      </div>
-    </motion.section>
-  );
-}
-
 function CmdTable({ title, items }: { title: string; items: Cmd[] }) {
   return (
     <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 backdrop-blur-md backdrop-saturate-150">
@@ -472,20 +357,4 @@ function CmdTable({ title, items }: { title: string; items: Cmd[] }) {
       </div>
     </div>
   );
-}
-
-function Callout() {
-  return (
-    <div className="mb-6 rounded-2xl border border-slate-800 bg-slate-900/60 p-4 backdrop-blur-md backdrop-saturate-150">
-      <div className="mb-1 text-base font-semibold">Как пользоваться вики</div>
-      <ul className="text-sm text-slate-300 space-y-1">
-        <li>Переходите по разделам слева или используйте быстрый поиск по странице: <Kbd>Ctrl</Kbd> + <Kbd>F</Kbd> (Windows / Linux), <Kbd>Cmd</Kbd> + <Kbd>F</Kbd> (macOS).</li>
-        <li>Список модов можно фильтровать по названию или категории.</li>
-      </ul>
-    </div>
-  );
-}
-
-function Kbd({ children }: { children: React.ReactNode }) {
-  return <kbd className="rounded-md border border-slate-700 bg-slate-900 px-1.5 py-0.5 text-xs">{children}</kbd>;
 }

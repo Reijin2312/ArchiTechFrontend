@@ -1,9 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
 import { useWallpaper } from '@/shared/ui/useWallpaper';
 import { useScrollTop } from '@/shared/ui/useScrollTop';
 import { Seo } from '@/shared/seo/seo';
 import { routesMeta } from '@/shared/seo/routesMeta';
-import { motion, type Variants } from 'framer-motion';
+import { motion } from 'framer-motion';
+import { LeftNav, RightToc, Section, Kbd, Callout, pageVariants } from '@/shared/ui/PageSidebar';
 
 export type TocItem = { id: string; title: string };
 
@@ -20,46 +20,8 @@ export const SECTIONS: TocItem[] = [
   { id: 'penalties', title: 'Наказания' },
 ];
 
-const pageVariants: Variants = {
-  hidden: { opacity: 0, y: 24, filter: 'blur(8px)' },
-  show: {
-    opacity: 1,
-    y: 0,
-    filter: 'blur(0px)',
-    transition: { duration: 0.5, ease: 'easeOut' },
-  },
-};
 
-const sideNavVariants: Variants = {
-  hidden: { opacity: 0, x: -16, filter: 'blur(6px)' },
-  show: {
-    opacity: 1,
-    x: 0,
-    filter: 'blur(0px)',
-    transition: { duration: 0.45, ease: 'easeOut' },
-  },
-};
 
-const tocVariants: Variants = {
-  hidden: { opacity: 0, x: 16, filter: 'blur(6px)' },
-  show: {
-    opacity: 1,
-    x: 0,
-    filter: 'blur(0px)',
-    transition: { duration: 0.45, ease: 'easeOut', delay: 0.05 },
-  },
-};
-
-const sectionVariants: Variants = {
-  hidden: { opacity: 0, y: 14, scale: 0.98, filter: 'blur(6px)' },
-  show: {
-    opacity: 1,
-    y: 0,
-    scale: 1,
-    filter: 'blur(0px)',
-    transition: { duration: 0.35, ease: 'easeOut' },
-  },
-};
 
 export default function RulesPage() {
   useWallpaper();
@@ -75,12 +37,17 @@ export default function RulesPage() {
       animate="show"
     >
       <aside className="hidden md:block md:col-span-3">
-        <LeftNav />
+        <LeftNav items={SECTIONS} blurIntensity="xl" bgOpacity="60" />
       </aside>
       
       <main className="col-span-12 md:col-span-6">
         <h1 className="mb-4 text-3xl font-bold text-center text-[22px] md:text-[24px]">Правила сервера</h1>
-        <Callout />
+        <Callout title="Рекомендация">
+          <ul className="text-sm text-slate-300 space-y-1">
+            <li>Быстрый поиск по странице: <Kbd>Ctrl</Kbd> + <Kbd>F</Kbd> (Windows / Linux), <Kbd>Cmd</Kbd> + <Kbd>F</Kbd> (macOS).</li>
+            <li>По оставшимся вопросам вы можете обратиться к адмиристрации.</li>
+          </ul>
+        </Callout>
 
         <Section id="intro" title="Введение" n={1}>
           <p className="text-slate-300">
@@ -182,107 +149,9 @@ export default function RulesPage() {
       </main>
 
       <aside className="hidden md:block md:col-span-3">
-        <RightToc items={SECTIONS} />
+        <RightToc items={SECTIONS} blurIntensity="xl" bgOpacity="60" />
       </aside>
     </motion.div>
     </>
   );
-}
-
-function Callout() {
-  return (
-    <div className="mb-6 rounded-2xl border border-slate-800 bg-slate-900/60 p-4 backdrop-blur-md backdrop-saturate-150">
-      <div className="mb-2 text-base font-semibold">Рекомендация</div>
-      <ul className="text-sm text-slate-300 space-y-1">
-        <li>Быстрый поиск по странице: <Kbd>Ctrl</Kbd> + <Kbd>F</Kbd> (Windows / Linux), <Kbd>Cmd</Kbd> + <Kbd>F</Kbd> (macOS).</li>
-        <li>По оставшимся вопросам вы можете обратиться к адмиристрации.</li>
-      </ul>
-    </div>
-  );
-}
-
-function LeftNav() {
-  return (
-    <motion.nav
-      className="sticky top-20 rounded-2xl border border-slate-800/80 bg-slate-950/40 p-4 backdrop-blur-md backdrop-saturate-150"
-      variants={sideNavVariants}
-      initial="hidden"
-      animate="show"
-    >
-      <h2 className="mb-3 text-sky-400 text-sm font-semibold">Разделы</h2>
-      <ul className="space-y-2 text-sm">
-        {SECTIONS.map(s => (
-          <li key={s.id}>
-            <a href={`#${s.id}`} className="text-slate-300 hover:text-sky-300">{s.title}</a>
-          </li>
-        ))}
-      </ul>
-    </motion.nav>
-  );
-}
-
-function RightToc({ items }: { items: TocItem[] }) {
-  const [active, setActive] = useState(items[0]?.id);
-  const obs = useRef<IntersectionObserver | null>(null);
-
-  useEffect(() => {
-    const els = items.map(i => document.getElementById(i.id)).filter(Boolean) as HTMLElement[];
-    if (obs.current) obs.current.disconnect();
-    obs.current = new IntersectionObserver(
-      es => {
-        const top = es.filter(e => e.isIntersecting).sort((a,b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
-        if (top) setActive(top.target.id);
-      },
-      { rootMargin: '-40% 0px -50% 0px', threshold: [0, 0.2, 0.5, 1] }
-    );
-    els.forEach(el => obs.current!.observe(el));
-    return () => obs.current?.disconnect();
-  }, [items]);
-
-  return (
-    <motion.nav
-      className="sticky top-20 rounded-2xl border border-slate-800/80 bg-slate-950/40 p-4 backdrop-blur-md backdrop-saturate-150"
-      variants={tocVariants}
-      initial="hidden"
-      animate="show"
-    >
-      <div className="mb-2 text-slate-300 text-sm">На этой странице</div>
-      <ol className="space-y-2 text-sm">
-        {items.map((it, i) => {
-          const on = active === it.id;
-          return (
-            <li key={it.id} className="flex items-start gap-2">
-              <span className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-slate-700 text-xs text-slate-400">
-                {i + 1}
-              </span>
-              <a href={`#${it.id}`} className={on ? 'text-sky-300' : 'text-slate-300 hover:text-sky-300'}>{it.title}</a>
-            </li>
-          );
-        })}
-      </ol>
-    </motion.nav>
-  );
-}
-
-function Section({ id, title, n, children }: { id: string; title: string; n: number; children: React.ReactNode }) {
-  return (
-    <motion.section
-      id={id}
-      className="scroll-mt-24"
-      variants={sectionVariants}
-      initial="hidden"
-      whileInView="show"
-      viewport={{ once: true, margin: '-15% 0px' }}
-    >
-      <h2 className="mb-3 inline-flex items-center gap-2 rounded-full bg-slate-900/60 px-3 py-1.5 text-lg font-semibold">
-        <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-sky-600 text-slate-50 text-sm">{n}</span>
-        {title}
-      </h2>
-      <div className="mb-8 rounded-2xl border border-slate-800 bg-slate-900/60 p-4 backdrop-blur-md backdrop-saturate-150">{children}</div>
-    </motion.section>
-  );
-}
-
-function Kbd({ children }: { children: React.ReactNode }) {
-  return <kbd className="rounded-md border border-slate-700 bg-slate-900 px-1.5 py-0.5 text-xs">{children}</kbd>;
 }

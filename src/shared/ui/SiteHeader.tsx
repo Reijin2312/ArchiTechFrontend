@@ -5,6 +5,7 @@ import { SECTIONS as RULES_SECTIONS } from '@/pages/RulesPage';
 import { WIKI_SECTIONS } from '@/pages/WikiPage';
 import { PRIVACY_SECTIONS } from '@/pages/PrivacyPolicyPage';
 import { TERMS_SECTIONS } from '@/pages/UserAgreementPage';
+import { SvgTelegram, SvgDiscord, SvgMenu, SvgX } from '@/shared/ui/Icons';
 
 const SERVER_NAME = 'ArchiTech MC';
 const MAIN_URL = '/';
@@ -58,21 +59,6 @@ export default function SiteHeader() {
     return pathname === t || pathname.startsWith(t + '/');
   };
 
-  function SvgTelegram({ className }: { className?: string }) {
-    return (
-      <svg viewBox="0 0 24 24" className={className} fill="currentColor" aria-hidden>
-        <path d="M2.53419 10.491 20.4342 3.72755c.5979-.22564 1.2652.07521 1.4908.67307.0791.21021.0964.43779.0482.65668l-3.0857 14.0805c-.1562.7136-.8611 1.1658-1.5747 1.0086-.1774-.0385-.3442-.1138-.4918-.2198l-6.1453-4.4415c-.3694-.2671-.4533-.784-.1852-1.1543.0289-.0395.0617-.0771.0964-.1118l6.319-6.07213c.1311-.12632.135-.33557.0087-.46768-.109-.11282-.2826-.13404-.4156-.04918L7.88597 13.0975c-.5101.324-1.13978.3973-1.7116.1996l-3.618-1.2516c-.43103-.1485-.65957-.6201-.51107-1.0511.081-.2314.25939-.4166.48889-.5034Z" />
-      </svg>
-    );
-  }
-
-  function SvgDiscord({ className }: { className?: string }) {
-    return (
-      <svg viewBox="0 0 24 24" className={className} fill="currentColor" aria-hidden>
-        <path d="M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 00-.0785-.037 19.7363 19.7363 0 00-4.8852 1.515.0699.0699 0 00-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 00.0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 00-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 01-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 01.0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 01.0785.0095c.1202.099.246.1981.3728.2924a.077.077 0 01-.0066.1276 12.2986 12.2986 0 01-1.873.8914.0766.0766 0 00-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 00.0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 00.0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 00-.0312-.0286zM8.02 15.3312c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9555-2.4189 2.157-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.9555 2.4189-2.1569 2.4189zm7.9748 0c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9554-2.4189 2.1569-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.946 2.4189-2.1568 2.4189Z" />
-      </svg>
-    );
-  }
 
   function MobileToc({ items, onItemClick }: { items: HeaderTocItem[]; onItemClick: () => void }) {
     const [active, setActive] = useState<string | undefined>(items[0]?.id);
@@ -131,7 +117,11 @@ export default function SiteHeader() {
     <>
       <header className="sticky top-0 z-20 backdrop-blur supports-backdrop-filter:bg-slate-950/50 border-b border-slate-800">
         <nav className="mx-auto max-w-7xl px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+          <Link
+            to={MAIN_URL}
+            className="flex items-center gap-3 text-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-500 rounded-xl px-1 -mx-1"
+            aria-label="На главную"
+          >
             <img
               src="/images/favicon-192.png"
               alt="Логотип ArchiTech MC"
@@ -140,7 +130,7 @@ export default function SiteHeader() {
               decoding="async"
             />
             <span className="font-semibold tracking-wide">{SERVER_NAME}</span>
-          </div>
+          </Link>
 
           <div className="hidden md:flex items-center gap-6 text-sm">
             <a
@@ -271,25 +261,9 @@ export default function SiteHeader() {
               aria-label={mobileOpen ? 'Закрыть меню' : 'Открыть меню'}
             >
               {mobileOpen ? (
-                <svg
-                  viewBox="0 0 24 24"
-                  className="h-5 w-5"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                  strokeLinecap="round"
-                >
-                  <path d="M6 6l12 12M18 6L6 18" />
-                </svg>
+                <SvgX className="h-5 w-5" />
               ) : (
-                <svg
-                  viewBox="0 0 24 24"
-                  className="h-5 w-5"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                  strokeLinecap="round"
-                >
-                  <path d="M4 7h16M4 12h16M4 17h16" />
-                </svg>
+                <SvgMenu className="h-5 w-5" />
               )}
             </button>
           </div>
@@ -327,15 +301,7 @@ export default function SiteHeader() {
               className="inline-flex h-8 w-8 items-center justify-center rounded-lg hover:bg-slate-900"
               aria-label="Закрыть меню"
             >
-              <svg
-                viewBox="0 0 24 24"
-                className="h-5 w-5"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                strokeLinecap="round"
-              >
-                <path d="M6 6l12 12M18 6L6 18" />
-              </svg>
+              <SvgX className="h-5 w-5" />
             </button>
           </div>
 

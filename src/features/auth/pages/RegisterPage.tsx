@@ -56,7 +56,7 @@ export default function RegisterPage() {
   const {
     register,
     handleSubmit,
-    formState: { errors, isSubmitting, isValid },
+    formState: { errors, isSubmitting, isValid, touchedFields },
     setError,
     clearErrors,
     watch,
@@ -74,6 +74,16 @@ export default function RegisterPage() {
   const userV  = useWatch({ control, name: 'username' }) ?? '';
   const passV  = useWatch({ control, name: 'password' }) ?? '';
   const pass2V = useWatch({ control, name: 'password2' }) ?? '';
+
+  const allFieldsValid = isValid && 
+    emailV.trim() !== '' && 
+    userV.trim() !== '' && 
+    passV.trim() !== '' && 
+    pass2V.trim() !== '' &&
+    !errors.email && 
+    !errors.username && 
+    !errors.password && 
+    !errors.password2;
 
   const emailAbort = useRef<AbortController | null>(null);
   const userAbort = useRef<AbortController | null>(null);
@@ -302,7 +312,7 @@ export default function RegisterPage() {
             autoComplete="email"
             {...register('email')}
             error={!!errors.email}
-            className={errors.email ? 'is-err' : emailV ? 'is-ok' : ''}
+            className={errors.email ? 'is-err' : (touchedFields.email && emailV && !errors.email) ? 'is-ok' : ''}
           />
           <FormHint error={!!errors.email}>{firstError(errors.email)}</FormHint>
 
@@ -311,7 +321,7 @@ export default function RegisterPage() {
             autoComplete="username"
             {...register('username')}
             error={!!errors.username}
-            className={errors.username ? 'is-err' : userV ? 'is-ok' : ''}
+            className={errors.username ? 'is-err' : (touchedFields.username && userV && !errors.username) ? 'is-ok' : ''}
           />
           <FormHint error={!!errors.username}>{firstError(errors.username)}</FormHint>
 
@@ -320,7 +330,7 @@ export default function RegisterPage() {
             autoComplete="new-password"
             {...register('password')}
             error={!!errors.password}
-            className={errors.password ? 'is-err' : passV ? 'is-ok' : ''}
+            className={errors.password ? 'is-err' : (touchedFields.password && passV && !errors.password) ? 'is-ok' : ''}
           />
           <FormHint error={!!errors.password}>{firstError(errors.password)}</FormHint>
 
@@ -329,7 +339,7 @@ export default function RegisterPage() {
             autoComplete="new-password"
             {...register('password2')}
             error={!!errors.password2}
-            className={errors.password2 ? 'is-err' : pass2V ? 'is-ok' : ''}
+            className={errors.password2 ? 'is-err' : (touchedFields.password2 && pass2V && !errors.password2) ? 'is-ok' : ''}
           />
           <FormHint error={!!errors.password2}>{firstError(errors.password2)}</FormHint>
 
@@ -384,7 +394,7 @@ export default function RegisterPage() {
           <div style={{ marginTop: 12 }}>
             <Button
               type="submit"
-              disabled={!isValid || isSubmitting || !captchaToken || !termsAccepted}
+              disabled={!allFieldsValid || isSubmitting || !captchaToken || !termsAccepted}
               style={{ width: '100%', padding: '12px 16px' }}
             >
             Зарегистрироваться
