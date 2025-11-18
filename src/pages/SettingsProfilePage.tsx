@@ -93,7 +93,7 @@ export default function SettingsProfilePage() {
   const avatarInputRef = useRef<HTMLInputElement | null>(null);
 
   const [toasts, setToasts] = useState<ToastEntry[]>([]);
-  const toastTimers = useRef<Map<number, ReturnType<typeof setTimeout>[]>>(new Map());
+  const toastTimers = useRef<Map<number, number[]>>(new Map());
 
   const [show, setShow] = useState<{ active: boolean; expired: boolean; replaced: boolean; revoked: boolean }>({
     active: true,
@@ -112,7 +112,7 @@ export default function SettingsProfilePage() {
     setToasts((prev) => prev.filter((t) => t.id !== id));
     const timers = toastTimers.current.get(id);
     if (timers) {
-      timers.forEach((handle) => clearTimeout(handle));
+      timers.forEach((handle) => window.clearTimeout(handle));
       toastTimers.current.delete(id);
     }
   }, []);
@@ -121,7 +121,7 @@ export default function SettingsProfilePage() {
     setToasts((prev) => prev.map((t) => (t.id === id ? { ...t, fading: true } : t)));
     const timers = toastTimers.current.get(id);
     if (timers) {
-      timers.forEach((handle) => clearTimeout(handle));
+      timers.forEach((handle) => window.clearTimeout(handle));
       toastTimers.current.delete(id);
     }
     const removeTimer = window.setTimeout(() => removeToast(id), 200);
@@ -144,7 +144,7 @@ export default function SettingsProfilePage() {
 
   useEffect(() => {
     return () => {
-      toastTimers.current.forEach((timers) => timers.forEach((handle) => clearTimeout(handle)));
+      toastTimers.current.forEach((timers) => timers.forEach((handle) => window.clearTimeout(handle)));
       toastTimers.current.clear();
     };
   }, []);
