@@ -1,33 +1,47 @@
 import { useEffect, useState } from 'react';
 
-const MOBILE_QUERY = '(max-width: 768px)';
+const WIDTH_QUERY = '(max-width: 768px)';
+const COARSE_POINTER_QUERY = '(pointer: coarse)';
+
+function getIsMobile() {
+  if (typeof window === 'undefined') return false;
+  const byWidth = window.matchMedia(WIDTH_QUERY).matches;
+  const byPointer = window.matchMedia(COARSE_POINTER_QUERY).matches;
+  const byTouchPoints = navigator.maxTouchPoints ? navigator.maxTouchPoints > 0 : false;
+  return byWidth || (byPointer && window.innerWidth <= 1200) || (byTouchPoints && window.innerWidth <= 1200);
+}
 
 export function useIsMobile() {
-  const [isMobile, setIsMobile] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    return window.matchMedia(MOBILE_QUERY).matches;
-  });
+  const [isMobile, setIsMobile] = useState(getIsMobile);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    const mediaQuery = window.matchMedia(MOBILE_QUERY);
-    const update = (event: MediaQueryListEvent) => setIsMobile(event.matches);
+    const widthMq = window.matchMedia(WIDTH_QUERY);
+    const pointerMq = window.matchMedia(COARSE_POINTER_QUERY);
+    const handleChange = () => setIsMobile(getIsMobile());
 
-    setIsMobile(mediaQuery.matches);
+    handleChange();
 
-    if (mediaQuery.addEventListener) {
-      mediaQuery.addEventListener('change', update);
+    if (widthMq.addEventListener) {
+      widthMq.addEventListener('change', handleChange);
+      pointerMq.addEventListener('change', handleChange);
+      window.addEventListener('resize', handleChange);
     } else {
-      // Safari < 14 fallback
-      mediaQuery.addListener(update);
+      widthMq.addListener(handleChange);
+      pointerMq.addListener(handleChange);
+      window.addEventListener('resize', handleChange);
     }
 
     return () => {
-      if (mediaQuery.removeEventListener) {
-        mediaQuery.removeEventListener('change', update);
+      if (widthMq.removeEventListener) {
+        widthMq.removeEventListener('change', handleChange);
+        pointerMq.removeEventListener('change', handleChange);
+        window.removeEventListener('resize', handleChange);
       } else {
-        mediaQuery.removeListener(update);
+        widthMq.removeListener(handleChange);
+        pointerMq.removeListener(handleChange);
+        window.removeEventListener('resize', handleChange);
       }
     };
   }, []);

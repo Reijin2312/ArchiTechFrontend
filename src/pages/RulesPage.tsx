@@ -1,6 +1,5 @@
 import type { ComponentProps } from 'react';
 import { useWallpaper } from '@/shared/ui/useWallpaper';
-import { useScrollTop } from '@/shared/ui/useScrollTop';
 import { Seo } from '@/shared/seo/seo';
 import { routesMeta } from '@/shared/seo/routesMeta';
 import { motion } from 'framer-motion';
@@ -27,7 +26,6 @@ export const SECTIONS: TocItem[] = [
 
 export default function RulesPage() {
   useWallpaper();
-  useScrollTop();
   const isMobile = useIsMobile();
 
   const Section = (props: ComponentProps<typeof BaseSection>) => (

@@ -6,7 +6,6 @@ import { http } from '@/shared/api/http';
 import { endpoints } from '@/shared/api/endpoints';
 import { isSelf } from '@/shared/auth/isSelf';
 import { useWallpaper } from '@/shared/ui/useWallpaper';
-import { useScrollTop } from '@/shared/ui/useScrollTop';
 import { Seo } from '@/shared/seo/seo';
 import * as THREE from 'three';
 
@@ -16,7 +15,6 @@ type Stats = { servers?: number; sessions?: number; achievements?: number; regis
 
 export default function UserProfilePage() {
   useWallpaper();
-  useScrollTop();
 
   const username = useParams().username!;
   const self = isSelf(username);

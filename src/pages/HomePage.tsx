@@ -8,7 +8,6 @@ const TELEGRAM_URL = 'https://t.me/archi_tech_official'
 const RULES_URL = '/rules'
 const SHOP_URL = '/shop'
 import { useWallpaper } from '@/shared/ui/useWallpaper';
-import { useScrollTop } from '@/shared/ui/useScrollTop';
 import { AnimatePresence, motion, useReducedMotion, type Variants, type Transition, } from 'framer-motion'
 import { Seo } from '@/shared/seo/seo';
 import { routesMeta } from '@/shared/seo/routesMeta';
@@ -34,8 +33,6 @@ export default function HomePage() {
   const isMobile = useIsMobile();
   const disableEntranceMotion = reduceMotion || isMobile;
   const disableInteractiveMotion = reduceMotion;
-
-  useScrollTop();
 
   const [status, setStatus] = useState<McStatus | null>(null)
   const [copyOk, setCopyOk] = useState<'idle' | 'ok' | 'err'>('idle')

@@ -4,7 +4,6 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Seo } from '@/shared/seo/seo';
 import { routesMeta } from '@/shared/seo/routesMeta';
-import { useScrollTop } from '@/shared/ui/useScrollTop';
 import { motion } from 'framer-motion';
 import { LeftNav as BaseLeftNav, RightToc as BaseRightToc, Section as BaseSection, Kbd, Callout, pageVariants } from '@/shared/ui/PageSidebar';
 import { useIsMobile } from '@/shared/ui/useIsMobile';
@@ -125,7 +124,6 @@ const CMDS: Cmd[] = [
 
 export default function WikiPage() {
   useWallpaper();
-  useScrollTop();
   const isMobile = useIsMobile();
 
   const Section = (props: ComponentProps<typeof BaseSection>) => (

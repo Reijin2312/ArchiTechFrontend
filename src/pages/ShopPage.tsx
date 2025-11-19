@@ -1,7 +1,6 @@
 import { useMemo } from 'react';
 import { authStore } from '@/shared/store/auth';
 import { useWallpaper } from '@/shared/ui/useWallpaper';
-import { useScrollTop } from '@/shared/ui/useScrollTop';
 import { Seo } from '@/shared/seo/seo';
 import { routesMeta } from '@/shared/seo/routesMeta';
 import { motion } from 'framer-motion';
@@ -12,7 +11,6 @@ const TELEGRAM_BOT = 'https://t.me/Archi_payment_bot';
 
 export default function ShopPage() {
   useWallpaper();
-  useScrollTop();
   const isMobile = useIsMobile();
 
   const user = authStore((s) => s.user);
