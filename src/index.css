@@ -25,25 +25,36 @@
 @layer base {
   body { @apply bg-slate-950 text-slate-100; }
   
+  body {
+    background-color: #020617; 
+  }
+
   body.has-wallpaper {
     --overlay-alpha: .75;
+    position: relative;
+  }
+
+  body.has-wallpaper::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+
     background-image:
       linear-gradient(rgb(2 6 23 / var(--overlay-alpha)), rgb(2 6 23 / var(--overlay-alpha))),
       var(--bg-url, url('/images/bg.avif'));
-    background-position: center;
+    background-position: center center;
     background-size: cover;
     background-repeat: no-repeat;
-    background-attachment: fixed;
-  }
 
-  @media (max-width: 1024px), (pointer: coarse) {
-    body.has-wallpaper {
-      background-attachment: scroll !important;
-    }
+    will-change: transform;
+    transform: translateZ(0);
   }
 
   @media (prefers-reduced-data: reduce) {
-    .has-wallpaper { background-image: none; }
+    body.has-wallpaper::before {
+      background-image: none;
+    }
   }
 
   input:-webkit-autofill {
