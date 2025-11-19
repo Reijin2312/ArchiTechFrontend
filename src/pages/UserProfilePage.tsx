@@ -9,9 +9,34 @@ import { useWallpaper } from '@/shared/ui/useWallpaper';
 import { Seo } from '@/shared/seo/seo';
 import * as THREE from 'three';
 
-type PublicUser = { id: string; username: string; bio?: string; avatarUrl?: string; skinUrl?: string };
+type PublicUser = {
+  id: string;
+  username: string;
+  bio?: string;
+  avatarUrl?: string;
+  skinUrl?: string
+};
+
 type Me = PublicUser & { email?: string };
-type Stats = { servers?: number; sessions?: number; achievements?: number; registeredAt?: string; online?: boolean };
+
+type Stats = {
+  servers?: number;
+  sessions?: number;
+  achievements?: number;
+  registeredAt?: string;
+  online?: boolean
+};
+
+type McStatus = {
+  online: boolean;
+  version?: string;
+  motd?: string;
+  players?: { online: number; max: number; sample?: { name: string }[] };
+  latencyMs?: number;
+  tps?: number;
+};
+
+import { SERVER_IP } from '@/shared/constants';
 
 export default function UserProfilePage() {
   useWallpaper();
@@ -35,7 +60,7 @@ export default function UserProfilePage() {
       .then(({ data }) => {
         if (!alive) return;
         setUser(data);
-        setStats((s) => s ?? { servers: 3, sessions: 128, achievements: 16, registeredAt: '2024-10-01T12:34:56Z', online: true });
+        setStats((s) => s ?? { servers: 3, sessions: 128, achievements: 16, registeredAt: '2024-10-01T12:34:56Z', online: false });
       })
       .catch((e) => alive && setErr(e?.response?.data?.message || e?.message || 'Ошибка загрузки'))
       .finally(() => alive && setLoading(false));
@@ -44,6 +69,39 @@ export default function UserProfilePage() {
       alive = false;
     };
   }, [username, self]);
+
+  useEffect(() => {
+    if (!user?.username) return;
+
+    let stop = false;
+
+    const checkPlayerStatus = async () => {
+      try {
+        const response = await fetch(`https://api.mcsrvstat.us/2/${SERVER_IP}`, { cache: 'no-store' });
+        if (!response.ok || stop) return;
+        const data = await response.json();
+        if (stop) return;
+
+        const isOnline = data.online && data.players?.list?.some(
+          (playerName: string) => playerName.toLowerCase() === user.username.toLowerCase()
+        );
+
+        setStats((prev) => {
+          if (!prev) return { online: isOnline ?? false };
+          return { ...prev, online: isOnline ?? false };
+        });
+      } catch {}
+    };
+
+    checkPlayerStatus();
+
+    const intervalId = setInterval(checkPlayerStatus, 15000);
+
+    return () => {
+      stop = true;
+      clearInterval(intervalId);
+    };
+  }, [user?.username]);
 
   const since = useMemo(() => {
     const iso = stats?.registeredAt;
@@ -55,23 +113,25 @@ export default function UserProfilePage() {
     <>
     <Seo title="Профиль игрока — ArchiTech MC" robots="noindex,follow" />
     <div className="min-h-dvh flex flex-col">
-      <main className="mx-auto grid w-full max-w-6xl grow grid-cols-12 gap-6 px-4 py-6">
-        <section className="col-span-12 md:col-span-3">
-          <Card>
-            <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-sm font-semibold">Скин</h2>
-              <div className="text-xs text-slate-400">3D</div>
-            </div>
-            <Skin3D
-              className="aspect-3/4 min-h-[220px] w-full overflow-hidden rounded-xl border border-slate-800 bg-slate-900"
-              skinUrl={(user as any)?.skinUrl || ''}
-        
-            />
-          </Card>
-        </section>
+      <main className="mx-auto flex w-full max-w-6xl grow flex-col gap-6 px-4 py-6">
+        <div className="flex flex-col gap-6 md:grid md:grid-cols-12 md:items-stretch">
+          <section className="order-2 flex flex-col md:col-span-3 md:order-1">
+            <Card className="flex h-full flex-col">
+              <div className="mb-3 flex items-center justify-between">
+                <h2 className="text-sm font-semibold">Скин</h2>
+                <div className="text-xs text-slate-400">3D</div>
+              </div>
+              <div className="h-[400px] md:flex-1 md:h-auto">
+                <Skin3D
+                  className="h-full w-full overflow-hidden rounded-xl border border-slate-800 bg-slate-900"
+                  skinUrl={(user as any)?.skinUrl || ''}
+                />
+              </div>
+            </Card>
+          </section>
 
-        <section className="col-span-12 md:col-span-9">
-          <Card className="relative overflow-hidden">
+          <section className="order-1 flex flex-col md:col-span-9 md:order-2">
+            <Card className="relative flex h-full flex-col overflow-hidden">
             {self && (
               <a
                 href="/settings/profile"
@@ -153,8 +213,10 @@ export default function UserProfilePage() {
               </div>
             </div>
           </Card>
+          </section>
+        </div>
 
-          <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <Card>
               <h3 className="mb-3 text-sm font-semibold text-sky-300">Достижения</h3>
               <Empty loading={loading} text="Нет достижений" />
@@ -165,12 +227,11 @@ export default function UserProfilePage() {
             </Card>
           </div>
 
-          {err && (
-            <div className="mt-6 rounded-xl border border-red-800 bg-red-950/40 p-3 text-sm text-red-300">
-              {err}
-            </div>
-          )}
-        </section>
+        {err && (
+          <div className="mt-6 rounded-xl border border-red-800 bg-red-950/40 p-3 text-sm text-red-300">
+            {err}
+          </div>
+        )}
       </main>
 
     </div>

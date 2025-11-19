@@ -18,6 +18,7 @@ import UserAgreementPage from '@/pages/UserAgreementPage';
 import PrivacyPolicyPage from '@/pages/PrivacyPolicyPage';
 import EmailChangeStartPage from '@/pages/EmailChangeStartPage';
 import ChangeEmailNewPage from '@/pages/ChangeEmailNewPage';
+import ContactsPage from '@/pages/ContactsPage';
 
 export const router = createBrowserRouter([
   {
@@ -36,6 +37,7 @@ export const router = createBrowserRouter([
       { path: '/rules', element: <RulesPage />},
       { path: '/shop', element: <ShopPage/>},
       { path: '/wiki', element: <WikiPage/>},
+      { path: '/contacts', element: <ContactsPage />},
       { path: '/terms', element: <UserAgreementPage/>},
       { path: '/privacy', element: <PrivacyPolicyPage/>},
       { path: '/settings/profile', element: <SettingsProfilePage/>},

@@ -29,12 +29,17 @@ const jsonLdSite = {
   }
 };
 
+import { DISCORD_URL, TELEGRAM_URL, SERVER_IP } from '@/shared/constants';
+
 const OG = ORIGIN + "/og/home.jpg";
+const DISCORD = DISCORD_URL;
+const TELEGRAM = TELEGRAM_URL;
+const SUPPORT_EMAIL = 'hello@architech-mc.ru';
 
 export const routesMeta: Record<string, any> = {
   '/': {
     title: 'ArchiTech MC — техномагический Minecraft-сервер без вайпов',
-    description: 'Модифицированный сервер: техномагия, строительство, собственные моды. IP: architech-mc.online.',
+    description: `Модифицированный сервер: техномагия, строительство, собственные моды. IP: ${SERVER_IP}.`,
     canonical: `${ORIGIN}/`,
     og: { url: ORIGIN + "/", type: "website", image: OG },
     twitterCard: "summary_large_image",
@@ -46,7 +51,7 @@ export const routesMeta: Record<string, any> = {
         "@type":"FAQPage",
         "mainEntity":[
           { "@type":"Question", "name":"Как подключиться?",
-            "acceptedAnswer":{ "@type":"Answer", "text":"Зарегестрируйтесь, скачайте лаунчер и подключайтесь по IP architech-mc.online." } },
+            "acceptedAnswer":{ "@type":"Answer", "text":`Зарегестрируйтесь, скачайте лаунчер и подключайтесь по IP ${SERVER_IP}.` } },
           { "@type":"Question", "name":"Есть ли вайпы?",
             "acceptedAnswer":{ "@type":"Answer", "text":"Вайпов нет." } }
         ]
@@ -104,6 +109,31 @@ export const routesMeta: Record<string, any> = {
         "brand":"ArchiTech MC",
         "url": `${ORIGIN}/shop`,
         "image": OG
+      }
+    ]
+  },
+  "/contacts": {
+    title: "Контакты и поддержка | ArchiTech MC",
+    description: "Поддержка, модерация, Discord и Telegram ArchiTech MC. Быстрая связь с администрацией и сообществом.",
+    canonical: `${ORIGIN}/contacts`,
+    og: { url: `${ORIGIN}/contacts`, type: "website", image: OG },
+    twitterCard: "summary_large_image",
+    jsonLd: [
+      breadcrumb([{ name: "Главная", url: ORIGIN + "/" }, { name: "Контакты", url: `${ORIGIN}/contacts` }]),
+      {
+        "@context": "https://schema.org",
+        "@type": "ContactPage",
+        "name": "Контакты ArchiTech MC",
+        "url": `${ORIGIN}/contacts`,
+        "contactPoint": [
+          {
+            "@type": "ContactPoint",
+            "contactType": "customer support",
+            "email": SUPPORT_EMAIL,
+            "availableLanguage": ["Russian"]
+          }
+        ],
+        "sameAs": [DISCORD, TELEGRAM]
       }
     ]
   },

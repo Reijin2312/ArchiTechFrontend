@@ -7,15 +7,11 @@ import { PRIVACY_SECTIONS } from '@/pages/PrivacyPolicyPage';
 import { TERMS_SECTIONS } from '@/pages/UserAgreementPage';
 import { SvgTelegram, SvgDiscord, SvgMenu, SvgX } from '@/shared/ui/Icons';
 
-const SERVER_NAME = 'ArchiTech MC';
+import { SERVER_NAME, RULES_URL, SHOP_URL, WIKI_URL, CONTACTS_URL, DISCORD_URL, TELEGRAM_URL } from '@/shared/constants';
+
 const MAIN_URL = '/';
-const RULES_URL = '/rules';
-const SHOP_URL = '/shop';
-const WIKI_URL = '/wiki';
 const PRIVACY_URL = '/privacy';
-const TERMS_URL = '/terms'; 
-const DISCORD_URL = 'https://discord.gg/x6JwVPwPtw';
-const TELEGRAM_URL = 'https://t.me/archi_tech_official';
+const TERMS_URL = '/terms';
 
 type HeaderTocItem = { id: string; title: string };
 
@@ -160,6 +156,13 @@ export default function SiteHeader() {
               aria-current={isActive(WIKI_URL) ? 'page' : undefined}
             >
               Вики
+            </a>
+            <a
+              href={CONTACTS_URL}
+              className={linkCls(isActive(CONTACTS_URL))}
+              aria-current={isActive(CONTACTS_URL) ? 'page' : undefined}
+            >
+              Контакты
             </a>
 
             <a
@@ -342,6 +345,15 @@ export default function SiteHeader() {
               }`}
             >
               Вики
+            </a>
+            <a
+              href={CONTACTS_URL}
+              onClick={() => setMobileOpen(false)}
+              className={`rounded-lg px-3 py-2 ${
+                isActive(CONTACTS_URL) ? 'bg-slate-800 text-sky-300' : 'text-slate-200 hover:bg-slate-900'
+              }`}
+            >
+              Контакты
             </a>
           </nav>
 

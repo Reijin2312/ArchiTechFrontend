@@ -1,8 +1,6 @@
 import { Link } from 'react-router-dom'
 import { SvgTelegram, SvgDiscord } from '@/shared/ui/Icons';
-
-const DISCORD_URL = 'https://discord.gg/x6JwVPwPtw';
-const TELEGRAM_URL = 'https://t.me/archi_tech_official';
+import { DISCORD_URL, TELEGRAM_URL } from '@/shared/constants';
 
 export default function SiteFooter() {
   return (

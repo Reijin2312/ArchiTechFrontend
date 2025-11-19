@@ -1,12 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-
-const SERVER_NAME = 'ArchiTech MC'
-const SERVER_IP = 'architech-mc.online'
-const DISCORD_URL = 'https://discord.gg/x6JwVPwPtw'
-const TELEGRAM_URL = 'https://t.me/archi_tech_official'
-const RULES_URL = '/rules'
-const SHOP_URL = '/shop'
+import { SERVER_NAME, SERVER_IP, DISCORD_URL, TELEGRAM_URL, RULES_URL, SHOP_URL, LAUNCHER_DOWNLOAD_URL } from '@/shared/constants'
 import { useWallpaper } from '@/shared/ui/useWallpaper';
 import { AnimatePresence, motion, useReducedMotion, type Variants, type Transition, } from 'framer-motion'
 import { Seo } from '@/shared/seo/seo';
@@ -15,6 +9,9 @@ import { ResponsiveImage } from '@/shared/ui/ResponsiveImage'
 import { IMAGES } from '@/shared/images.manifest'
 import { SvgTelegram, SvgDiscord, SvgUserPlus, SvgMcBlockGrass, SvgCheck, SvgCopy, SvgChevronDown } from '@/shared/ui/Icons'
 import { useIsMobile } from '@/shared/ui/useIsMobile';
+import { TEAM_MEMBERS } from '@/shared/data/team';
+import { useTeamAvatars } from '@/shared/hooks/useTeamAvatars';
+import { TeamGrid } from '@/shared/ui/TeamGrid';
 
 type McStatus = {
   online: boolean
@@ -36,6 +33,10 @@ export default function HomePage() {
 
   const [status, setStatus] = useState<McStatus | null>(null)
   const [copyOk, setCopyOk] = useState<'idle' | 'ok' | 'err'>('idle')
+  const [playerAvatars, setPlayerAvatars] = useState<Record<string, string>>({})
+  const [showPlayersList, setShowPlayersList] = useState(false)
+  const playersButtonRef = useRef<HTMLButtonElement>(null)
+  const [playersListPosition, setPlayersListPosition] = useState({ top: 0 })
   const shots = useMemo(
     () => [
       '/images/screen1.png',
@@ -77,50 +78,64 @@ export default function HomePage() {
   }
 
   const toName = (p: string) =>
-  p.split('/').pop()!
-   .replace(/-[a-z0-9]{8,}(?=\.\w+$)/i, '')
-   .replace(/\.(avif|webp)$/i, '.png')
+    p
+      .split('/')
+      .pop()!
+      .replace(/-[a-z0-9]{8,}(?=\.\w+$)/i, '')
+      .replace(/\.(avif|webp)$/i, '.png')
 
-  type PublicUser = {
-    username: string
-    userId: string
-    avatarUrl?: string | null
-    skinUrl?: string | null
+  const swipeState = useRef<{ startX: number; startY: number; deltaX: number; deltaY: number; active: boolean }>({
+    startX: 0,
+    startY: 0,
+    deltaX: 0,
+    deltaY: 0,
+    active: false,
+  })
+
+  function goRelative(direction: 1 | -1) {
+    const currentIndex = shots.indexOf(shot)
+    if (currentIndex === -1) return
+    const nextIndex = (currentIndex + direction + shots.length) % shots.length
+    changeTo(shots[nextIndex])
   }
 
-  const TEAM: { name: string; role: string }[] = [
-    { name: 'Raijin',     role: 'Владелец & программист' },
-    { name: 'Kelbor_Hal', role: 'Мл. Админ' },
-    { name: 'Wolle',      role: 'Тех. Админ' },
-    { name: 'Sile_Scorp', role: 'Дизайнер' },
-    { name: 'Explyp',     role: 'Python-программист' },
-  ]
+  function handleTouchStart(e: React.TouchEvent<HTMLDivElement>) {
+    if (e.touches.length !== 1) return
+    const touch = e.touches[0]
+    swipeState.current = {
+      startX: touch.clientX,
+      startY: touch.clientY,
+      deltaX: 0,
+      deltaY: 0,
+      active: true,
+    }
+  }
 
-  const [avatars, setAvatars] = useState<Record<string, string>>({})
-  const AVATAR_FALLBACK = '/images/avatar-fallback.png'
+  function handleTouchMove(e: React.TouchEvent<HTMLDivElement>) {
+    if (!swipeState.current.active) return
+    const touch = e.touches[0]
+    swipeState.current.deltaX = touch.clientX - swipeState.current.startX
+    swipeState.current.deltaY = touch.clientY - swipeState.current.startY
 
-  useEffect(() => {
-    let alive = true
-    ;(async () => {
-      const pairs = await Promise.all(
-        TEAM.map(async (p) => {
-          try {
-            const r = await fetch(`/api/v1/users/by-name?username=${encodeURIComponent(p.name)}`)
-            if (!r.ok) return [p.name, ''] as const
-            const u: PublicUser = await r.json()
-            return [p.name, u.avatarUrl || ''] as const
-          } catch {
-            return [p.name, ''] as const
-          }
-        })
-      )
-      if (!alive) return
-      const next: Record<string, string> = {}
-      for (const [k, v] of pairs) if (v) next[k] = v
-      setAvatars(next)
-    })()
-    return () => { alive = false }
-  }, [])
+    if (Math.abs(swipeState.current.deltaX) > Math.abs(swipeState.current.deltaY)) {
+      e.preventDefault()
+    }
+  }
+
+  function handleTouchEnd() {
+    if (!swipeState.current.active) return
+    const { deltaX, deltaY } = swipeState.current
+    swipeState.current.active = false
+    if (Math.abs(deltaX) > 40 && Math.abs(deltaX) > Math.abs(deltaY)) {
+      goRelative(deltaX < 0 ? 1 : -1)
+    }
+  }
+
+  function handleTouchCancel() {
+    swipeState.current.active = false
+  }
+
+  const avatars = useTeamAvatars(TEAM_MEMBERS)
 
   function changeTo(newSrc: string) {
     if (newSrc === shot) return
@@ -147,18 +162,42 @@ export default function HomePage() {
     let stop = false
     ;(async () => {
       try {
-        const r = await fetch('/api/mc/status', { cache: 'no-store' })
+        const r = await fetch(`https://api.mcsrvstat.us/2/${SERVER_IP}`, { cache: 'no-store' })
         if (!r.ok) throw new Error('status failed')
-        const data: McStatus = await r.json()
-        if (!stop) setStatus(data)
+        const data = await r.json()
+        if (!stop) {
+          setStatus({
+            online: data.online ?? false,
+            version: data.version,
+            motd: data.motd?.clean?.[0] || data.motd?.raw?.[0],
+            players: data.online ? {
+              online: data.players?.online ?? 0,
+              max: data.players?.max ?? 0,
+              sample: data.players?.list?.map((name: string) => ({ name })) ?? []
+            } : undefined
+          })
+        }
       } catch {
         if (!stop) setStatus({ online: false })
       }
     })()
     const id = setInterval(() => {
-      fetch('/api/mc/status', { cache: 'no-store' })
+      fetch(`https://api.mcsrvstat.us/2/${SERVER_IP}`, { cache: 'no-store' })
         .then(r => (r.ok ? r.json() : null))
-        .then(d => d && setStatus(d))
+        .then(d => {
+          if (d) {
+            setStatus({
+              online: d.online ?? false,
+              version: d.version,
+              motd: d.motd?.clean?.[0] || d.motd?.raw?.[0],
+              players: d.online ? {
+                online: d.players?.online ?? 0,
+                max: d.players?.max ?? 0,
+                sample: d.players?.list?.map((name: string) => ({ name })) ?? []
+              } : undefined
+            })
+          }
+        })
         .catch(() => {})
     }, 15000)
     return () => {
@@ -185,8 +224,40 @@ export default function HomePage() {
     if (!status.online) return 'Offline'
     const c = status.players?.online ?? 0
     const m = status.players?.max ?? 0
-    return `${c}/${m}`
+    return `${c} / ${m}`
   }, [status])
+
+  useEffect(() => {
+    const players = status?.players?.sample ?? []
+    if (!players.length) {
+      setPlayerAvatars({})
+      return
+    }
+
+    let alive = true
+    ;(async () => {
+      const avatars: Record<string, string> = {}
+      await Promise.all(
+        players.map(async (player) => {
+          try {
+            const r = await fetch(`/api/v1/users/by-name?username=${encodeURIComponent(player.name)}`)
+            if (!r.ok) return
+            const data = await r.json()
+            if (data.avatarUrl && alive) avatars[player.name] = data.avatarUrl
+          } catch {}
+        }),
+      )
+      if (alive) setPlayerAvatars(avatars)
+    })()
+
+    return () => {
+      alive = false
+    }
+  }, [status?.players?.sample])
+
+  useEffect(() => {
+    if (!isMobile) setShowPlayersList(false)
+  }, [isMobile])
 
   async function copyIp() {
     try {
@@ -197,25 +268,6 @@ export default function HomePage() {
       setCopyOk('err')
       setTimeout(() => setCopyOk('idle'), 2000)
     }
-  }
-
-  const teamContainer: Variants = {
-    hidden: { opacity: 0 },
-    show: {
-      opacity: 1,
-      transition: { staggerChildren: 0.06 },
-    },
-  }
-
-  const teamItem: Variants = {
-    hidden: { opacity: 0, y: 16, filter: 'blur(8px)', scale: 0.98 },
-    show: {
-      opacity: 1,
-      y: 0,
-      filter: 'blur(0px)',
-      scale: 1,
-      transition: { duration: 0.4, ease: 'easeOut' },
-    },
   }
 
   const faqContainer: Variants = {
@@ -288,23 +340,120 @@ export default function HomePage() {
 
               <div className="flex flex-wrap items-center gap-4 text-sm text-slate-300">
                 <Badge label={status?.online ? 'Онлайн' : 'Офлайн'} ok={!!status?.online} reduceMotion={disableInteractiveMotion} />
-                <span>Онлайн: <strong className="text-slate-100">{onlineText}</strong></span>
-                {status?.version && <span>Версия: <strong className="text-slate-100">{status.version}</strong></span>}
+                <div
+                  className="relative"
+                  onMouseEnter={() => !isMobile && setShowPlayersList(true)}
+                  onMouseLeave={() => !isMobile && setShowPlayersList(false)}
+                >
+                  <button
+                    ref={playersButtonRef}
+                    type="button"
+                    onClick={() => {
+                      if (isMobile) {
+                        const button = playersButtonRef.current
+                        if (button) {
+                          const rect = button.getBoundingClientRect()
+                          setPlayersListPosition({
+                            top: rect.top - 8
+                          })
+                        }
+                        setShowPlayersList((v) => !v)
+                      }
+                    }}
+                    className="cursor-pointer bg-transparent border-0 text-sm text-slate-300 p-0 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 rounded"
+                  >
+                    Игроки: <strong className="text-slate-100">{onlineText}</strong>
+                  </button>
+                  <AnimatePresence>
+                    {showPlayersList && status?.online && status?.players?.sample && status.players.sample.length > 0 && (
+                      <>
+                        {isMobile && (
+                          <div
+                            className="fixed inset-0 z-40 bg-black/20"
+                            onClick={() => setShowPlayersList(false)}
+                          />
+                        )}
+                        <motion.div
+                          initial={{ opacity: 0, y: 8, scale: 0.95 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, y: 8, scale: 0.95 }}
+                          transition={{ duration: 0.2 }}
+                          className={`${isMobile ? 'fixed right-4' : 'absolute left-0 top-full mt-2'} z-50 ${isMobile ? 'w-[calc(100vw-2rem)] max-w-64' : 'w-64'} rounded-xl border border-slate-800 bg-slate-950/95 backdrop-blur-md shadow-xl p-3`}
+                          style={isMobile ? {
+                            top: `${playersListPosition.top}px`,
+                            transform: 'translateY(-100%)'
+                          } : undefined}
+                        >
+                        <div className="text-xs font-semibold text-slate-400 mb-2 px-1 flex items-center justify-between gap-2">
+                          <span>Игроки онлайн ({status.players.sample.length})</span>
+                          {isMobile && (
+                            <button
+                              type="button"
+                              onClick={() => setShowPlayersList(false)}
+                              className="text-slate-400 hover:text-white text-xs"
+                            >
+                              Закрыть
+                            </button>
+                          )}
+                        </div>
+                        <div className="max-h-64 overflow-y-auto space-y-1.5">
+                          {status.players.sample.map((player) => {
+                            const avatar = playerAvatars[player.name]
+                            return (
+                              <Link
+                                key={player.name}
+                                to={`/u/${encodeURIComponent(player.name)}`}
+                                className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-900/60 transition-colors group"
+                              >
+                                {avatar ? (
+                                  <img
+                                    src={avatar}
+                                    alt={player.name}
+                                    width={24}
+                                    height={24}
+                                    className="w-6 h-6 rounded-lg object-cover border border-slate-700"
+                                    loading="lazy"
+                                    decoding="async"
+                                  />
+                                ) : (
+                                  <div className="w-6 h-6 rounded-lg border border-slate-700 bg-slate-800 flex items-center justify-center text-xs text-slate-400">
+                                    {player.name[0]?.toUpperCase() || '?'}
+                                  </div>
+                                )}
+                                <span className="text-sm text-slate-200 group-hover:text-slate-100 truncate flex-1">
+                                  {player.name}
+                                </span>
+                              </Link>
+                            )
+                          })}
+                        </div>
+                      </motion.div>
+                      </>
+                    )}
+                  </AnimatePresence>
+                </div>
+                {status?.version && <span>Версия: <strong className="text-slate-100">{status.version} Neoforge</strong></span>}
                 {typeof status?.tps === 'number' && <span>TPS: <strong className="text-slate-100">{status.tps.toFixed(1)}</strong></span>}
                 {typeof status?.latencyMs === 'number' && <span>Пинг: <strong className="text-slate-100">{status.latencyMs}ms</strong></span>}
               </div>
 
               <div>
-                <a href="https://launcher.architech-mc.ru/download/launcher/latest" className="inline-flex rounded-xl px-5 py-3 bg-indigo-600 hover:bg-indigo-500 text-center">Скачать лаунчер</a>
+                <a href={LAUNCHER_DOWNLOAD_URL} className="inline-flex rounded-xl px-5 py-3 bg-indigo-600 hover:bg-indigo-500 text-center">Скачать лаунчер</a>
               </div>
             </div>
           </div>
 
-        <div className="relative max-w-full overflow-x-hidden"
+        <div
+          className="relative max-w-full overflow-x-hidden"
           onMouseEnter={() => setSliderPaused(true)}
           onMouseLeave={() => setSliderPaused(false)}
           onFocus={() => setSliderPaused(true)}
-          onBlur={() => setSliderPaused(false)}>
+          onBlur={() => setSliderPaused(false)}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+          onTouchCancel={handleTouchCancel}
+        >
             <div className="aspect-16/10 w-full overflow-hidden rounded-2xl border border-slate-800 shadow-xl">
             <div className="relative h-full w-full overflow-hidden">
               <AnimatePresence initial={false} custom={direction}>
@@ -332,7 +481,7 @@ export default function HomePage() {
           </div>
 
           <motion.div
-            className="mt-3 flex flex-nowrap gap-3 overflow-x-auto overflow-y-visible py-1 -mx-1 px-1 no-scrollbar"
+            className="mt-3 flex flex-nowrap gap-3 overflow-x-auto overflow-y-visible py-1 -mx-1 px-2 no-scrollbar"
             layout
           >
             {shots.map((_, i) => {
@@ -384,7 +533,7 @@ export default function HomePage() {
           <CardCTA 
             title={<span className="inline-flex items-center gap-2"><SvgMcBlockGrass className="h-5" />Лаунчер</span>}
             text="Автоматическое обновление модов" 
-            href="https://launcher.architech-mc.ru/download/launcher/latest"
+            href={LAUNCHER_DOWNLOAD_URL}
             button="Скачать"
             reduceMotion={disableInteractiveMotion}
           />
@@ -426,44 +575,7 @@ export default function HomePage() {
           Команда проекта
         </motion.h2>
 
-        <motion.div
-          className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
-          variants={disableEntranceMotion ? undefined : teamContainer}
-        >
-
-        {TEAM.map((p) => {
-          const src = avatars[p.name] || AVATAR_FALLBACK
-          return (
-            <motion.div
-              key={p.name}
-              variants={disableEntranceMotion ? undefined : teamItem}
-              whileHover={{ y: -4, scale: 1.01 }}
-              whileTap={{ scale: 0.99 }}
-              className="relative rounded-2xl border border-slate-800 p-4 bg-linear-to-b from-slate-900/60 to-slate-900/20 backdrop-blur-md backdrop-saturate-150 overflow-hidden will-change-transform"
-            >
-              <Link to={`/u/${encodeURIComponent(p.name)}`} className="flex items-center gap-3">
-                <img
-                  src={src}
-                  alt={p.name}
-                  width={48}
-                  height={48}
-                  loading="lazy"
-                  decoding="async"
-                  className="size-12 rounded-xl object-cover border border-slate-700 bg-slate-800"
-                  onError={(e) => {
-                    const img = e.currentTarget as HTMLImageElement
-                    if (!img.src.endsWith(AVATAR_FALLBACK)) img.src = AVATAR_FALLBACK
-                  }}
-                />
-                <div>
-                  <div className="font-medium">{p.name}</div>
-                  <div className="text-sm text-slate-400">{p.role}</div>
-                </div>
-              </Link>
-            </motion.div>
-          )
-        })}
-        </motion.div>
+        <TeamGrid team={TEAM_MEMBERS} avatars={avatars} disableMotion={disableEntranceMotion} />
       </motion.section>
 
       <motion.section
@@ -594,7 +706,7 @@ function Badge({ label, ok, reduceMotion }: { label: string; ok?: boolean; reduc
   return (
     <span
       className={[
-        'inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs border',
+        'inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-xs border',
         ok
           ? 'border-emerald-700/50 bg-emerald-500/10 text-emerald-300'
           : 'border-rose-700/50 bg-rose-500/10 text-rose-300',
@@ -808,8 +920,8 @@ function StepsGuide({ version, disableMotion }: { version?: string; disableMotio
         </button>
       </div>
       <div className="text-xs text-slate-400 mt-3 text-center">
-        Откройте Minecraft: Java Edition 1.21.1
-        {version ? <> версии <b className="text-slate-300">{version}</b></> : null} и вставьте IP
+        Откройте Minecraft: Java Edition
+        {version ? <> <b className="text-slate-300">{version}</b></> : null} и вставьте IP
       </div>
     </div>
   </div>

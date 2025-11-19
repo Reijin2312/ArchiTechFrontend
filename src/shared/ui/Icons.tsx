@@ -14,6 +14,25 @@ export const SvgDiscord: React.FC<IconProps> = ({ className, ...props }) => (
   </svg>
 );
 
+export const SvgHeadphones: React.FC<IconProps> = ({ className, ...props }) => (
+  <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth={1.6} {...props}>
+    <path d="M4 13v4a3 3 0 003 3h1a2 2 0 002-2v-3a2 2 0 00-2-2H4zm12 0h4v4a3 3 0 01-3 3h-1a2 2 0 01-2-2v-3a2 2 0 012-2zm4 0a8 8 0 10-16 0" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+
+export const SvgShield: React.FC<IconProps> = ({ className, ...props }) => (
+  <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth={1.6} {...props}>
+    <path d="M12 21c5-2 8-5 8-11V6l-8-3-8 3v4c0 6 3 9 8 11z" strokeLinecap="round" strokeLinejoin="round" />
+    <path d="M9 12l2 2 4-4" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+
+export const SvgArrowUpRight: React.FC<IconProps> = ({ className, ...props }) => (
+  <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth={1.8} {...props}>
+    <path d="M7 17 17 7m0 0H9m8 0v8" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+
 export const SvgUserPlus: React.FC<IconProps> = ({ className, ...props }) => (
   <svg
     viewBox="0 0 29 29"

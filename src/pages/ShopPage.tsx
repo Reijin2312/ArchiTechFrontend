@@ -7,7 +7,7 @@ import { motion } from 'framer-motion';
 import { LeftNav as BaseLeftNav, Section as BaseSection, Callout, pageVariants } from '@/shared/ui/PageSidebar';
 import { useIsMobile } from '@/shared/ui/useIsMobile';
 
-const TELEGRAM_BOT = 'https://t.me/Archi_payment_bot';
+import { TELEGRAM_BOT_URL } from '@/shared/constants';
 
 export default function ShopPage() {
   useWallpaper();
@@ -18,7 +18,7 @@ export default function ShopPage() {
 
   const deepLink = useMemo(() => {
     const p = new URLSearchParams({ start: `activate-${nick}` }).toString();
-    return `${TELEGRAM_BOT}?${p}`;
+    return `${TELEGRAM_BOT_URL}?${p}`;
   }, [nick]);
 
   return (
@@ -65,7 +65,7 @@ export default function ShopPage() {
               Открыть бота и активировать
             </a>
             <a
-              href={TELEGRAM_BOT}
+              href={TELEGRAM_BOT_URL}
               className="rounded-xl border border-slate-700 px-4 py-2 text-sm hover:border-slate-500"
             >
               Открыть профиль бота
