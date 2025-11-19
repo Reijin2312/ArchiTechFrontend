@@ -88,6 +88,12 @@ export function RightToc({
   const observer = useRef<IntersectionObserver | null>(null);
 
   useEffect(() => {
+    if (disableMotion) {
+      observer.current?.disconnect();
+      observer.current = null;
+      return;
+    }
+
     const headers = items.map((i) => document.getElementById(i.id)).filter(Boolean) as HTMLElement[];
     observer.current?.disconnect();
     observer.current = new IntersectionObserver(
@@ -99,7 +105,7 @@ export function RightToc({
     );
     headers.forEach((h) => observer.current!.observe(h));
     return () => observer.current?.disconnect();
-  }, [items]);
+  }, [items, disableMotion]);
 
   const blurClass = blurIntensity === 'xl' ? 'backdrop-blur-xl' : 'backdrop-blur-md';
   const bgClass = bgOpacity === '60' ? 'bg-slate-950/60' : 'bg-slate-950/40';
