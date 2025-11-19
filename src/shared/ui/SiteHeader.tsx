@@ -13,7 +13,7 @@ const RULES_URL = '/rules';
 const SHOP_URL = '/shop';
 const WIKI_URL = '/wiki';
 const PRIVACY_URL = '/privacy';
-const TERMS_URL = '/terms';
+const TERMS_URL = '/terms'; 
 const DISCORD_URL = 'https://discord.gg/x6JwVPwPtw';
 const TELEGRAM_URL = 'https://t.me/archi_tech_official';
 
