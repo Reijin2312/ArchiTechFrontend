@@ -119,7 +119,7 @@ export default function SiteHeader() {
         <nav className="mx-auto max-w-7xl px-4 py-3 flex items-center justify-between">
           <Link
             to={MAIN_URL}
-            className="flex items-center gap-3 text-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-500 rounded-xl px-1 -mx-1"
+            className="flex items-center gap-3 text-slate-100 focus-visible:outline2 focus-visible:outline-sky-500 rounded-xl px-1 -mx-1"
             aria-label="На главную"
           >
             <img

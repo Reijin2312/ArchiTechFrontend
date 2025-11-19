@@ -1,3 +1,4 @@
+import type { ComponentProps } from 'react';
 import { useWallpaper } from '@/shared/ui/useWallpaper';
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -5,7 +6,8 @@ import { Seo } from '@/shared/seo/seo';
 import { routesMeta } from '@/shared/seo/routesMeta';
 import { useScrollTop } from '@/shared/ui/useScrollTop';
 import { motion } from 'framer-motion';
-import { LeftNav, RightToc, Section, Kbd, Callout, pageVariants } from '@/shared/ui/PageSidebar';
+import { LeftNav as BaseLeftNav, RightToc as BaseRightToc, Section as BaseSection, Kbd, Callout, pageVariants } from '@/shared/ui/PageSidebar';
+import { useIsMobile } from '@/shared/ui/useIsMobile';
 
 export type WikiTocItem = { id: string; title: string; n: number };
 export const WIKI_SECTIONS: WikiTocItem[] = [
@@ -124,15 +126,26 @@ const CMDS: Cmd[] = [
 export default function WikiPage() {
   useWallpaper();
   useScrollTop();
+  const isMobile = useIsMobile();
+
+  const Section = (props: ComponentProps<typeof BaseSection>) => (
+    <BaseSection {...props} disableMotion={isMobile} />
+  );
+  const LeftNav = (props: ComponentProps<typeof BaseLeftNav>) => (
+    <BaseLeftNav {...props} disableMotion={isMobile} />
+  );
+  const RightToc = (props: ComponentProps<typeof BaseRightToc>) => (
+    <BaseRightToc {...props} disableMotion={isMobile} />
+  );
 
   return (
     <>
     <Seo {...routesMeta['/wiki']} />
     <motion.div
       className="mx-auto w-full max-w-7xl grid grid-cols-12 gap-6 px-4 py-6 text-slate-100"
-      variants={pageVariants}
-      initial="hidden"
-      animate="show"
+      variants={isMobile ? undefined : pageVariants}
+      initial={isMobile ? false : 'hidden'}
+      animate={isMobile ? false : 'show'}
     >
       <aside className="hidden md:block md:col-span-3">
         <LeftNav items={WIKI_SECTIONS} blurIntensity="xl" bgOpacity="60" />
@@ -185,7 +198,7 @@ export default function WikiPage() {
           </ol>
         </Section>
 
-        <ModsSection />
+        <ModsSection disableMotion={isMobile} />
 
         <Section id="progress" title="Прогрессия техномагии" n={4}>
           <ul className="space-y-3 text-slate-300">
@@ -207,7 +220,7 @@ export default function WikiPage() {
           </ul>
         </Section>
 
-        <CommandsSection />
+        <CommandsSection disableMotion={isMobile} />
 
         <Section id="economy" title="Экономика" n={6}>
           <ul className="list-disc pl-5 space-y-1 text-slate-300">
@@ -224,7 +237,7 @@ export default function WikiPage() {
           </ul>
         </Section>
 
-        <FaqSection />
+        <FaqSection disableMotion={isMobile} />
 
         <Section id="links" title="Ссылки" n={9}>
           <ul className="list-disc pl-5 text-slate-300">
@@ -244,7 +257,9 @@ export default function WikiPage() {
   );
 }
 
-function ModsSection() {
+type SectionComponentProps = ComponentProps<typeof BaseSection>;
+
+function ModsSection({ disableMotion }: { disableMotion: SectionComponentProps['disableMotion'] }) {
   const [q, setQ] = useState('');
   const data = useMemo(
     () =>
@@ -257,7 +272,7 @@ function ModsSection() {
   );
 
   return (
-    <Section id="mods" title="Список модов" n={3}>
+    <BaseSection id="mods" title="Список модов" n={3} disableMotion={disableMotion}>
       <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-slate-300">Основные категории: Tech, Magic, QoL, World, Core.</p>
         <input
@@ -294,25 +309,25 @@ function ModsSection() {
           </tbody>
         </table>
       </div>
-    </Section>
+    </BaseSection>
   );
 }
 
-function CommandsSection() {
+function CommandsSection({ disableMotion }: { disableMotion: SectionComponentProps['disableMotion'] }) {
   const server = CMDS.filter((c) => c.scope === 'server');
   const bot = CMDS.filter((c) => c.scope === 'bot');
 
   return (
-    <Section id="commands" title="Команды сервера и бота" n={5}>
+    <BaseSection id="commands" title="Команды сервера и бота" n={5} disableMotion={disableMotion}>
       <div className="grid gap-4 md:grid-cols-2">
         <CmdTable title="Сервер" items={server} />
         <CmdTable title="Telegram-бот" items={bot} />
       </div>
-    </Section>
+    </BaseSection>
   );
 }
 
-function FaqSection() {
+function FaqSection({ disableMotion }: { disableMotion: SectionComponentProps['disableMotion'] }) {
   const qa = [
     { q: 'Как попасть на сервер?', a: 'Купить проходку в Telegram-боте, привязать ник, дождаться записи в whitelist.' },
     { q: 'Список модов фиксированный?', a: 'Да. Клиентские QoL-моды без преимущества допустимы, если не нарушают античит.' },
@@ -320,7 +335,7 @@ function FaqSection() {
     { q: 'Можно переносить базу?', a: 'Да. Предупредите соседей и снимите клеймы перед переездом.' },
   ];
   return (
-    <Section id="faq" title="FAQ" n={8}>
+    <BaseSection id="faq" title="FAQ" n={8} disableMotion={disableMotion}>
       <div className="space-y-3">
         {qa.map((x) => (
           <div key={x.q} className="rounded-xl border border-slate-800 bg-slate-900/60 p-3 backdrop-blur-md backdrop-saturate-150">
@@ -329,7 +344,7 @@ function FaqSection() {
           </div>
         ))}
       </div>
-    </Section>
+    </BaseSection>
   );
 }
 

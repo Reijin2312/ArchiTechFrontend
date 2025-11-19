@@ -1,9 +1,11 @@
+import type { ComponentProps } from 'react';
 import { useWallpaper } from '@/shared/ui/useWallpaper';
 import { useScrollTop } from '@/shared/ui/useScrollTop';
 import { Seo } from '@/shared/seo/seo';
 import { routesMeta } from '@/shared/seo/routesMeta';
 import { motion } from 'framer-motion';
-import { LeftNav, RightToc, Section, Kbd, Callout, pageVariants } from '@/shared/ui/PageSidebar';
+import { LeftNav as BaseLeftNav, RightToc as BaseRightToc, Section as BaseSection, Kbd, Callout, pageVariants } from '@/shared/ui/PageSidebar';
+import { useIsMobile } from '@/shared/ui/useIsMobile';
 
 export type TocItem = { id: string; title: string };
 
@@ -26,15 +28,26 @@ export const SECTIONS: TocItem[] = [
 export default function RulesPage() {
   useWallpaper();
   useScrollTop();
+  const isMobile = useIsMobile();
+
+  const Section = (props: ComponentProps<typeof BaseSection>) => (
+    <BaseSection {...props} disableMotion={isMobile} />
+  );
+  const LeftNav = (props: ComponentProps<typeof BaseLeftNav>) => (
+    <BaseLeftNav {...props} disableMotion={isMobile} />
+  );
+  const RightToc = (props: ComponentProps<typeof BaseRightToc>) => (
+    <BaseRightToc {...props} disableMotion={isMobile} />
+  );
 
   return (
     <>
     <Seo {...routesMeta['/rules']} />
     <motion.div
       className="mx-auto w-full max-w-7xl grid grid-cols-12 gap-6 px-4 py-6 text-slate-100"
-      variants={pageVariants}
-      initial="hidden"
-      animate="show"
+      variants={isMobile ? undefined : pageVariants}
+      initial={isMobile ? false : 'hidden'}
+      animate={isMobile ? false : 'show'}
     >
       <aside className="hidden md:block md:col-span-3">
         <LeftNav items={SECTIONS} blurIntensity="xl" bgOpacity="60" />

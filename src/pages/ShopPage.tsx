@@ -5,13 +5,15 @@ import { useScrollTop } from '@/shared/ui/useScrollTop';
 import { Seo } from '@/shared/seo/seo';
 import { routesMeta } from '@/shared/seo/routesMeta';
 import { motion } from 'framer-motion';
-import { LeftNav, RightToc, Section, Callout, pageVariants } from '@/shared/ui/PageSidebar';
+import { LeftNav as BaseLeftNav, Section as BaseSection, Callout, pageVariants } from '@/shared/ui/PageSidebar';
+import { useIsMobile } from '@/shared/ui/useIsMobile';
 
 const TELEGRAM_BOT = 'https://t.me/Archi_payment_bot';
 
 export default function ShopPage() {
   useWallpaper();
   useScrollTop();
+  const isMobile = useIsMobile();
 
   const user = authStore((s) => s.user);
   const nick = user?.username || 'ваш_ник';
@@ -26,12 +28,12 @@ export default function ShopPage() {
     <Seo {...routesMeta['/shop']} />
     <motion.div
           className="mx-auto w-full max-w-7xl grid grid-cols-12 gap-6 px-4 py-6 text-slate-100"
-          variants={pageVariants}
-          initial="hidden"
-          animate="show"
+          variants={isMobile ? undefined : pageVariants}
+          initial={isMobile ? false : 'hidden'}
+          animate={isMobile ? false : 'show'}
     >
       <aside className="col-span-12 md:col-span-3">
-        <LeftNav items={[
+        <BaseLeftNav disableMotion={isMobile} items={[
           { id: 'price', title: 'Доступ' },
           { id: 'how', title: 'Как активировать' },
           { id: 'discounts', title: 'Поддержка' },
@@ -49,7 +51,7 @@ export default function ShopPage() {
           </p>
         </Callout>
 
-        <Section id="how" n={1} title="Активация через Telegram-бота">
+        <BaseSection id="how" n={1} title="Активация через Telegram-бота" disableMotion={isMobile}>
           <ol className="list-decimal pl-6 space-y-2 text-slate-300">
             <li>Перейдите к боту по кнопке ниже.</li>
             <li>Выберите «Активировать проходку» и следуйте шагам.</li>
@@ -71,9 +73,9 @@ export default function ShopPage() {
               Открыть профиль бота
             </a>
           </div>
-        </Section>
+        </BaseSection>
 
-        <Section id="discounts" n={2} title="Поддержка проекта">
+        <BaseSection id="discounts" n={2} title="Поддержка проекта" disableMotion={isMobile}>
           <ul className="list-disc pl-5 space-y-2 text-slate-300">
             <li>
               <b>Добровольные пожертвования:</b> через того же бота. Не дают привилегий и не влияют на геймплей.
@@ -82,15 +84,15 @@ export default function ShopPage() {
               <b>PR/творчество:</b> посты, обзоры, гайды, арты, видеоролики — напишите администрации. Возможны благодарности от проекта.
             </li>
           </ul>
-        </Section>
+        </BaseSection>
 
-        <Section id="policy" n={3} title="Зачем это нужно">
+        <BaseSection id="policy" n={3} title="Зачем это нужно" disableMotion={isMobile}>
           <p className="text-slate-300">
             Проходка — способ учёта новых игроков и защиты сервера. <b>Не даёт донат-привилегий.</b>
           </p>
-        </Section>
+        </BaseSection>
 
-        <Section id="faq" n={4} title="FAQ">
+        <BaseSection id="faq" n={4} title="FAQ" disableMotion={isMobile}>
           <dl className="space-y-3">
             <QA q="Когда активируется проходка?">
               Сразу после подтверждения вашей заявки из бота администратором.
@@ -105,7 +107,7 @@ export default function ShopPage() {
               Нет. Доступ разрёшен только верифицированным игрокам.
             </QA>
           </dl>
-        </Section>
+        </BaseSection>
       </main>
 
       <aside className="col-span-12 md:col-span-3">

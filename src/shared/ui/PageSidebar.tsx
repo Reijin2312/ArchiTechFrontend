@@ -40,18 +40,19 @@ type LeftNavProps = {
   items: TocItem[];
   blurIntensity?: 'md' | 'xl';
   bgOpacity?: '40' | '60';
+  disableMotion?: boolean;
 };
 
-export function LeftNav({ items, blurIntensity = 'md', bgOpacity = '40' }: LeftNavProps) {
+export function LeftNav({ items, blurIntensity = 'md', bgOpacity = '40', disableMotion = false }: LeftNavProps) {
   const blurClass = blurIntensity === 'xl' ? 'backdrop-blur-xl' : 'backdrop-blur-md';
   const bgClass = bgOpacity === '60' ? 'bg-slate-950/60' : 'bg-slate-950/40';
   
   return (
     <nav className={`sticky top-20 rounded-2xl border border-slate-800/80 ${bgClass} p-4 ${blurClass} backdrop-saturate-150`}>
       <motion.div
-        variants={sideNavVariants}
-        initial="hidden"
-        animate="show"
+        variants={disableMotion ? undefined : sideNavVariants}
+        initial={disableMotion ? false : 'hidden'}
+        animate={disableMotion ? false : 'show'}
       >
         <h2 className="mb-3 text-sky-400 text-sm font-semibold">Разделы</h2>
         <ul className="space-y-2 text-sm">
@@ -73,9 +74,16 @@ type RightTocProps = {
   blurIntensity?: 'md' | 'xl';
   bgOpacity?: '40' | '60';
   linkTransition?: boolean;
+  disableMotion?: boolean;
 };
 
-export function RightToc({ items, blurIntensity = 'md', bgOpacity = '40', linkTransition = false }: RightTocProps) {
+export function RightToc({
+  items,
+  blurIntensity = 'md',
+  bgOpacity = '40',
+  linkTransition = false,
+  disableMotion = false,
+}: RightTocProps) {
   const [active, setActive] = useState(items[0]?.id);
   const observer = useRef<IntersectionObserver | null>(null);
 
@@ -99,9 +107,9 @@ export function RightToc({ items, blurIntensity = 'md', bgOpacity = '40', linkTr
   return (
     <nav className={`sticky top-20 rounded-2xl border border-slate-800/80 ${bgClass} p-4 ${blurClass} backdrop-saturate-150`}>
       <motion.div
-        variants={tocVariants}
-        initial="hidden"
-        animate="show"
+        variants={disableMotion ? undefined : tocVariants}
+        initial={disableMotion ? false : 'hidden'}
+        animate={disableMotion ? false : 'show'}
       >
         <div className="mb-2 text-slate-300 text-sm">На этой странице</div>
         <ol className="space-y-2 text-sm">
@@ -132,16 +140,17 @@ type SectionProps = {
   title: string;
   n: number;
   children: React.ReactNode;
+  disableMotion?: boolean;
 };
 
-export function Section({ id, title, n, children }: SectionProps) {
+export function Section({ id, title, n, children, disableMotion = false }: SectionProps) {
   return (
     <section id={id} className="scroll-mt-24">
       <motion.div
-        variants={sectionVariants}
-        initial="hidden"
-        whileInView="show"
-        viewport={{ once: true, amount: 0.01 }}
+        variants={disableMotion ? undefined : sectionVariants}
+        initial={disableMotion ? false : 'hidden'}
+        whileInView={disableMotion ? undefined : 'show'}
+        viewport={disableMotion ? undefined : { once: true, amount: 0.01 }}
       >
         <h2 className="mb-3 inline-flex items-center gap-2 rounded-full bg-slate-900/60 px-3 py-1.5 text-lg font-semibold">
           <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-sky-600 text-slate-50 text-sm">{n}</span>

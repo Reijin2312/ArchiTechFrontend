@@ -15,6 +15,7 @@ import { routesMeta } from '@/shared/seo/routesMeta';
 import { ResponsiveImage } from '@/shared/ui/ResponsiveImage'
 import { IMAGES } from '@/shared/images.manifest'
 import { SvgTelegram, SvgDiscord, SvgUserPlus, SvgMcBlockGrass, SvgCheck, SvgCopy, SvgChevronDown } from '@/shared/ui/Icons'
+import { useIsMobile } from '@/shared/ui/useIsMobile';
 
 type McStatus = {
   online: boolean
@@ -29,6 +30,9 @@ export default function HomePage() {
   useWallpaper();
 
   const prefersReducedMotion = useReducedMotion();
+  const isMobile = useIsMobile();
+  const disableEntranceMotion = prefersReducedMotion || isMobile;
+  const disableInteractiveMotion = prefersReducedMotion;
 
   useScrollTop();
 
@@ -166,7 +170,7 @@ export default function HomePage() {
   }, [])
 
   useEffect(() => {
-    if (prefersReducedMotion) return
+    if (disableInteractiveMotion) return
     if (sliderPaused) return
 
     const id = window.setInterval(() => {
@@ -176,7 +180,7 @@ export default function HomePage() {
     }, 5000)
 
     return () => window.clearInterval(id)
-  }, [shot, sliderPaused, prefersReducedMotion])
+  }, [shot, sliderPaused, disableInteractiveMotion])
 
   const onlineText = useMemo(() => {
     if (!status) return '—'
@@ -240,8 +244,8 @@ export default function HomePage() {
     <div className="min-h-dvh text-slate-100 relative overflow-x-hidden">
      <motion.section
         className="mx-auto max-w-7xl px-4 pb-10 pt-10 md:pt-16"
-        initial={prefersReducedMotion ? undefined : { opacity: 0, y: 24, filter: 'blur(8px)' }}
-        animate={prefersReducedMotion ? undefined : { opacity: 1, y: 0, filter: 'blur(0px)' }}
+        initial={disableEntranceMotion ? undefined : { opacity: 0, y: 24, filter: 'blur(8px)' }}
+        animate={disableEntranceMotion ? undefined : { opacity: 1, y: 0, filter: 'blur(0px)' }}
         transition={{ duration: 0.5, ease: 'easeOut' }}
       >
         <div className="grid md:grid-cols-2 gap-10 md:gap-14 items-stretch">
@@ -285,7 +289,7 @@ export default function HomePage() {
               </div>
 
               <div className="flex flex-wrap items-center gap-4 text-sm text-slate-300">
-                <Badge label={status?.online ? 'Онлайн' : 'Офлайн'} ok={!!status?.online} />
+                <Badge label={status?.online ? 'Онлайн' : 'Офлайн'} ok={!!status?.online} reduceMotion={disableInteractiveMotion} />
                 <span>Онлайн: <strong className="text-slate-100">{onlineText}</strong></span>
                 {status?.version && <span>Версия: <strong className="text-slate-100">{status.version}</strong></span>}
                 {typeof status?.tps === 'number' && <span>TPS: <strong className="text-slate-100">{status.tps.toFixed(1)}</strong></span>}
@@ -310,9 +314,9 @@ export default function HomePage() {
                   key={shot}
                   className="absolute inset-0 h-full w-full"
                   custom={direction}
-                  initial={prefersReducedMotion ? false : { opacity: 0, x: 40 * direction, scale: 1.02 }}
+                  initial={disableInteractiveMotion ? false : { opacity: 0, x: 40 * direction, scale: 1.02 }}
                   animate={{ opacity: 1, x: 0, scale: 1 }}
-                  exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, x: -40 * direction, scale: 0.98 }}
+                  exit={disableInteractiveMotion ? { opacity: 0 } : { opacity: 0, x: -40 * direction, scale: 0.98 }}
                   transition={{ type: 'spring', stiffness: 260, damping: 30 }}
                 >
                   <ResponsiveImage
@@ -374,8 +378,8 @@ export default function HomePage() {
 
       <motion.section
         className="mx-auto max-w-7xl px-4 py-10"
-        initial={prefersReducedMotion ? undefined : { y: 24 }}
-        animate={prefersReducedMotion ? undefined : { y: 0 }}
+        initial={disableEntranceMotion ? undefined : { y: 24 }}
+        animate={disableEntranceMotion ? undefined : { y: 0 }}
         transition={{ duration: 0.5, ease: 'easeOut' }}
       >
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -384,23 +388,28 @@ export default function HomePage() {
             text="Автоматическое обновление модов" 
             href="https://launcher.architech-mc.ru/download/launcher/latest"
             button="Скачать"
+            reduceMotion={disableInteractiveMotion}
           />
           <CardCTA 
             title={<span className="inline-flex items-center gap-2"><SvgUserPlus className="h-5" />Доступ на сервер</span>}
             text="Получить проходку в Telegram-боте" 
             href={SHOP_URL} 
-            button="Перейти" />
+            button="Перейти"
+            reduceMotion={disableInteractiveMotion}
+          />
           <CardCTA
             title={<span className="inline-flex items-center gap-2"><SvgDiscord className="h-5" />Discord</span>}
             text="Посиделки в голосовых каналах"
             href={DISCORD_URL}
             button="Вступить"
+            reduceMotion={disableInteractiveMotion}
           />
           <CardCTA
             title={<span className="inline-flex items-center gap-2"><SvgTelegram className="h-5" />Telegram</span>}
             text="Новости, уведомления, анонсы"
             href={TELEGRAM_URL}
             button="Подписаться"
+            reduceMotion={disableInteractiveMotion}
           />
         </div>
       </motion.section>
@@ -408,20 +417,20 @@ export default function HomePage() {
       <motion.section
         className="mx-auto max-w-7xl px-4 py-10"
         variants={faqContainer}
-        initial={prefersReducedMotion ? undefined : 'hidden'}
-        whileInView={prefersReducedMotion ? undefined : 'show'}
+        initial={disableEntranceMotion ? undefined : 'hidden'}
+        whileInView={disableEntranceMotion ? undefined : 'show'}
         viewport={{ once: true, margin: '-10% 0px' }}
       >
         <motion.h2
           className="text-2xl font-semibold mb-6"
-          variants={faqItem}
+          variants={disableEntranceMotion ? undefined : faqItem}
         >
           Команда проекта
         </motion.h2>
 
         <motion.div
           className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
-          variants={teamContainer}
+          variants={disableEntranceMotion ? undefined : teamContainer}
         >
 
         {TEAM.map((p) => {
@@ -429,7 +438,7 @@ export default function HomePage() {
           return (
             <motion.div
               key={p.name}
-              variants={teamItem}
+              variants={disableEntranceMotion ? undefined : teamItem}
               whileHover={{ y: -4, scale: 1.01 }}
               whileTap={{ scale: 0.99 }}
               className="relative rounded-2xl border border-slate-800 p-4 bg-linear-to-b from-slate-900/60 to-slate-900/20 backdrop-blur-md backdrop-saturate-150 overflow-hidden will-change-transform"
@@ -462,23 +471,23 @@ export default function HomePage() {
       <motion.section
         className="mx-auto max-w-7xl px-4 py-10"
         variants={faqContainer}
-        initial={prefersReducedMotion ? undefined : 'hidden'}
-        whileInView={prefersReducedMotion ? undefined : 'show'}
+        initial={disableEntranceMotion ? undefined : 'hidden'}
+        whileInView={disableEntranceMotion ? undefined : 'show'}
         viewport={{ once: true, margin: '-10% 0px' }}
       >
         <motion.h2
           className="text-2xl font-semibold mb-6"
-          variants={faqItem}
+          variants={disableEntranceMotion ? undefined : faqItem}
         >
           FAQ
         </motion.h2>
 
         <motion.div className="grid gap-3">
-          <motion.div variants={faqItem}>
-          <Faq q="Как попасть на сервер?" a={<StepsGuide version={status?.version} />} />
+          <motion.div variants={disableEntranceMotion ? undefined : faqItem}>
+          <Faq q="Как попасть на сервер?" a={<StepsGuide version={status?.version} disableMotion={disableEntranceMotion} />} />
           </motion.div>
 
-          <motion.div variants={faqItem}>
+          <motion.div variants={disableEntranceMotion ? undefined : faqItem}>
           <Faq
             q="Проводятся ли вайпы?"
             a={
@@ -530,7 +539,7 @@ export default function HomePage() {
             />
             </motion.div>
 
-            <motion.div variants={faqItem}>
+            <motion.div variants={disableEntranceMotion ? undefined : faqItem}>
             <Faq
               q="Правила?"
               a={
@@ -583,7 +592,7 @@ export default function HomePage() {
           );
         }
 
-function Badge({ label, ok }: { label: string; ok?: boolean }) {
+function Badge({ label, ok, reduceMotion }: { label: string; ok?: boolean; reduceMotion?: boolean }) {
   return (
     <span
       className={[
@@ -598,8 +607,9 @@ function Badge({ label, ok }: { label: string; ok?: boolean }) {
         style={{ backgroundColor: ok ? '#22c55e' : '#ef4444' }}
         aria-hidden
         animate={
-          ok
-            ? {
+          reduceMotion || !ok
+            ? { scale: 1, boxShadow: 'none' }
+            : {
                 scale: [1, 1.6, 1],
                 boxShadow: [
                   '0 0 0 0 rgba(34,197,94,0.6)',
@@ -607,9 +617,8 @@ function Badge({ label, ok }: { label: string; ok?: boolean }) {
                   '0 0 0 0 rgba(34,197,94,0)',
                 ],
               }
-            : { scale: 1, boxShadow: 'none' }
         }
-        transition={{ duration: 1.3, repeat: Infinity, repeatDelay: 0.7 }}
+        transition={reduceMotion ? undefined : { duration: 1.3, repeat: Infinity, repeatDelay: 0.7 }}
       />
       {label}
     </span>
@@ -620,8 +629,8 @@ const SHINE_EVERY = 4.5
 const SHINE_DURATION = 0.85
 
 function CardCTA({
-  title, text, href, button,
-}: { title: React.ReactNode; text: string; href: string; button: string }) {
+  title, text, href, button, reduceMotion,
+}: { title: React.ReactNode; text: string; href: string; button: string; reduceMotion?: boolean }) {
   const initialDelay = useMemo(() => Math.random() * SHINE_EVERY, [])
 
   return (
@@ -630,21 +639,23 @@ function CardCTA({
       className="relative rounded-2xl border border-slate-800 p-5 bg-linear-to-b from-slate-900/60 to-slate-900/20 backdrop-blur-md backdrop-saturate-150 overflow-hidden"
     >
     
-    <motion.span
-      aria-hidden
-      className="pointer-events-none absolute inset-y-0 -left-1/3 w-1/3 bg-linear-to-r from-transparent via-white/10 to-transparent"
-      initial={{ x: '-40%', opacity: 0 }}
-      animate={{ x: ['-40%', '160%'], opacity: [0, 1, 0] }}
-      transition={{
-        duration: SHINE_DURATION,
-        ease: 'easeOut',
-        delay: initialDelay,
-        repeat: Infinity,
-        repeatType: 'loop',
-        repeatDelay: SHINE_EVERY
-      }}
-      style={{ willChange: 'transform, opacity' }}
-    />
+    {!reduceMotion && (
+      <motion.span
+        aria-hidden
+        className="pointer-events-none absolute inset-y-0 -left-1/3 w-1/3 bg-linear-to-r from-transparent via-white/10 to-transparent"
+        initial={{ x: '-40%', opacity: 0 }}
+        animate={{ x: ['-40%', '160%'], opacity: [0, 1, 0] }}
+        transition={{
+          duration: SHINE_DURATION,
+          ease: 'easeOut',
+          delay: initialDelay,
+          repeat: Infinity,
+          repeatType: 'loop',
+          repeatDelay: SHINE_EVERY
+        }}
+        style={{ willChange: 'transform, opacity' }}
+      />
+    )}
 
     <div className="font-medium text-lg">{title}</div>
     <div className="text-sm text-slate-300 mt-1 mb-4">{text}</div>
@@ -654,7 +665,7 @@ function CardCTA({
 }
 
 
-function StepsGuide({ version }: { version?: string }) {
+function StepsGuide({ version, disableMotion }: { version?: string; disableMotion?: boolean }) {
   const [copied, setCopied] = useState<'idle' | 'ok' | 'err'>('idle')
   async function copy() {
     try {
@@ -680,14 +691,14 @@ function StepsGuide({ version }: { version?: string }) {
   return (
     <motion.div
       className="grid gap-4 md:grid-cols-3"
-      variants={container}
-      initial="hidden"
-      whileInView="show"
-      viewport={{ once: true, margin: '-10% 0px' }}
+      variants={disableMotion ? undefined : container}
+      initial={disableMotion ? undefined : 'hidden'}
+      whileInView={disableMotion ? undefined : 'show'}
+      viewport={disableMotion ? undefined : { once: true, margin: '-10% 0px' }}
     >
 
     <motion.div
-      variants={item}
+      variants={disableMotion ? undefined : item}
       whileHover={{ y: -6, scale: 1.01 }}
       whileTap={{ scale: 0.99 }}
       className="relative rounded-2xl border border-slate-800 bg-slate-900/40 overflow-hidden will-change-transform"
@@ -696,9 +707,9 @@ function StepsGuide({ version }: { version?: string }) {
     <motion.span
       aria-hidden
       className="absolute inset-x-0 top-0 h-0.5 bg-linear-to-r from-indigo-500 via-sky-500 to-emerald-500 origin-left"
-      initial={{ scaleX: 0 }}
-      animate={{ scaleX: 1 }}
-      transition={{ duration: 0.5 }}
+      initial={disableMotion ? undefined : { scaleX: 0 }}
+      animate={disableMotion ? undefined : { scaleX: 1 }}
+      transition={disableMotion ? undefined : { duration: 0.5 }}
     />
 
     <div className="p-5">
@@ -716,7 +727,7 @@ function StepsGuide({ version }: { version?: string }) {
     </motion.div>
 
     <motion.div
-      variants={item}
+      variants={disableMotion ? undefined : item}
       whileHover={{ y: -6, scale: 1.01 }}
       whileTap={{ scale: 0.99 }}
       className="relative rounded-2xl border border-slate-800 bg-slate-900/40 overflow-hidden will-change-transform"
@@ -725,9 +736,9 @@ function StepsGuide({ version }: { version?: string }) {
     <motion.span
       aria-hidden
       className="absolute inset-x-0 top-0 h-0.5 bg-linear-to-r from-indigo-500 via-sky-500 to-emerald-500 origin-left"
-      initial={{ scaleX: 0 }}
-      animate={{ scaleX: 1 }}
-      transition={{ duration: 0.6, delay: 0.05 }}
+      initial={disableMotion ? undefined : { scaleX: 0 }}
+      animate={disableMotion ? undefined : { scaleX: 1 }}
+      transition={disableMotion ? undefined : { duration: 0.6, delay: 0.05 }}
     />
 
     <div className="p-5">
@@ -745,7 +756,7 @@ function StepsGuide({ version }: { version?: string }) {
   </motion.div>
 
   <motion.div
-    variants={item}
+    variants={disableMotion ? undefined : item}
     whileHover={{ y: -6, scale: 1.01 }}
     whileTap={{ scale: 0.99 }}
     className="relative rounded-2xl border border-slate-800 bg-slate-900/40 overflow-hidden will-change-transform"
@@ -754,9 +765,9 @@ function StepsGuide({ version }: { version?: string }) {
   <motion.span
     aria-hidden
     className="absolute inset-x-0 top-0 h-0.5 bg-linear-to-r from-indigo-500 via-sky-500 to-emerald-500 origin-left"
-    initial={{ scaleX: 0 }}
-    animate={{ scaleX: 1 }}
-    transition={{ duration: 0.6, delay: 0.1 }}
+    initial={disableMotion ? undefined : { scaleX: 0 }}
+    animate={disableMotion ? undefined : { scaleX: 1 }}
+    transition={disableMotion ? undefined : { duration: 0.6, delay: 0.1 }}
   />
 
   <div className="p-5">
