@@ -30,9 +30,10 @@ export default function HomePage() {
   useWallpaper();
 
   const prefersReducedMotion = useReducedMotion();
+  const reduceMotion = Boolean(prefersReducedMotion);
   const isMobile = useIsMobile();
-  const disableEntranceMotion = prefersReducedMotion || isMobile;
-  const disableInteractiveMotion = prefersReducedMotion;
+  const disableEntranceMotion = reduceMotion || isMobile;
+  const disableInteractiveMotion = reduceMotion;
 
   useScrollTop();
 
