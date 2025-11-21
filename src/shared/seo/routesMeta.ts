@@ -76,6 +76,27 @@ export const routesMeta: Record<string, any> = {
       }
     ]
   },
+  "/about": {
+    title: "О сервере — история, сезоны и сообщество | ArchiTech MC",
+    description: "История ArchiTech MC: четыре сезона развития, уникальные моды, отмена вайпов и дружное сообщество. Галерея построек и достижения игроков.",
+    canonical: `${ORIGIN}/about`,
+    og: { url: `${ORIGIN}/about`, type: "website", image: OG },
+    twitterCard: "summary_large_image",
+    jsonLd: [
+      breadcrumb([{name:"Главная", url: ORIGIN + "/"}, {name:"О сервере", url: ORIGIN + "/about"}]),
+      {
+        "@context":"https://schema.org",
+        "@type":"Article",
+        "headline":"О сервере ArchiTech MC",
+        "author":{"@type":"Organization","name":"ArchiTech MC"},
+        "image": OG,
+        "mainEntityOfPage": `${ORIGIN}/about`,
+        "datePublished": "2022-05-01",
+        "dateModified": "2024-01-01",
+        "description": "Техномагический Minecraft-сервер с богатой историей, четырьмя сезонами развития и отменой вайпов."
+      }
+    ]
+  },
   "/rules": {
     title: "Правила сервера | ArchiTech MC",
     description: "Актуальные правила поведения и наказания на ArchiTech MC.",

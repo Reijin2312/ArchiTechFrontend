@@ -22,6 +22,7 @@ export default function SiteFooter() {
         </div>
 
         <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2">
+          <a href="/about" className="hover:text-white">О сервере</a>
           <a href="/contacts" rel="noopener noreferrer" className="hover:text-white">Контакты</a>
           <a href="/terms" className="hover:text-white">Пользовательское соглашение</a>
           <a href="/privacy" rel="noopener noreferrer" className="hover:text-white">Политика конфиденциальности</a>

@@ -1,20 +1,33 @@
-import { useEffect, useMemo, useState, useRef } from 'react';
-import * as skinview3d from 'skinview3d';
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { http } from '@/shared/api/http';
 import { endpoints } from '@/shared/api/endpoints';
 import { isSelf } from '@/shared/auth/isSelf';
 import { useWallpaper } from '@/shared/ui/useWallpaper';
 import { Seo } from '@/shared/seo/seo';
-import * as THREE from 'three';
+import { ProfileBanner } from '@/shared/ui/ProfileBanner';
+import { Badge } from '@/shared/ui/Badge';
+import { SocialLinks } from '@/shared/ui/SocialLinks';
+import { getThemeGradient } from '@/shared/ui/ThemeSelector';
+import { Skin3DViewer } from '@/shared/ui/Skin3DViewer';
+import { UserSessions } from '@/shared/ui/UserSessions';
+import { ProfileThemeProvider, useProfileTheme } from '@/shared/ui/ProfileThemeContext';
 
 type PublicUser = {
   id: string;
   username: string;
+  displayName?: string;
   bio?: string;
   avatarUrl?: string;
-  skinUrl?: string
+  skinUrl?: string;
+  bannerUrl?: string;
+  profileTheme?: string;
+  customThemeColor1?: string;
+  customThemeColor2?: string;
+  profileWallpaper?: string;
+  customStatus?: string;
+  socialLinks?: Array<{ type: string; value: string }>;
+  registeredAt?: string;
 };
 
 type Me = PublicUser & { email?: string };
@@ -39,8 +52,6 @@ type McStatus = {
 import { SERVER_IP } from '@/shared/constants';
 
 export default function UserProfilePage() {
-  useWallpaper();
-
   const username = useParams().username!;
   const self = isSelf(username);
 
@@ -48,6 +59,9 @@ export default function UserProfilePage() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
+
+  // Use profile wallpaper if available, otherwise default
+  useWallpaper(user?.profileWallpaper || '/images/bg.avif');
 
   useEffect(() => {
     let alive = true;
@@ -60,7 +74,7 @@ export default function UserProfilePage() {
       .then(({ data }) => {
         if (!alive) return;
         setUser(data);
-        setStats((s) => s ?? { servers: 3, sessions: 128, achievements: 16, registeredAt: '2024-10-01T12:34:56Z', online: false });
+        setStats((s) => s ?? { servers: 3, sessions: 128, achievements: 16, online: false });
       })
       .catch((e) => alive && setErr(e?.response?.data?.message || e?.message || 'Ошибка загрузки'))
       .finally(() => alive && setLoading(false));
@@ -104,14 +118,20 @@ export default function UserProfilePage() {
   }, [user?.username]);
 
   const since = useMemo(() => {
-    const iso = stats?.registeredAt;
+    const iso = user?.registeredAt;
     if (!iso) return null;
     try { return new Date(iso).toLocaleDateString(); } catch { return null; }
-  }, [stats?.registeredAt]);
+  }, [user?.registeredAt]);
 
   return (
     <>
     <Seo title="Профиль игрока — ArchiTech MC" robots="noindex,follow" />
+    
+    <ProfileThemeProvider
+      themeId={(user as any)?.profileTheme}
+      customColor1={(user as any)?.customThemeColor1}
+      customColor2={(user as any)?.customThemeColor2}
+    >
     <div className="min-h-dvh flex flex-col">
       <main className="mx-auto flex w-full max-w-6xl grow flex-col gap-6 px-4 py-6">
         <div className="flex flex-col gap-6 md:grid md:grid-cols-12 md:items-stretch">
@@ -122,7 +142,7 @@ export default function UserProfilePage() {
                 <div className="text-xs text-slate-400">3D</div>
               </div>
               <div className="h-[400px] md:flex-1 md:h-auto">
-                <Skin3D
+                <Skin3DViewer
                   className="h-full w-full overflow-hidden rounded-xl border border-slate-800 bg-slate-900"
                   skinUrl={(user as any)?.skinUrl || ''}
                 />
@@ -132,10 +152,24 @@ export default function UserProfilePage() {
 
           <section className="order-1 flex flex-col md:col-span-9 md:order-2">
             <Card className="relative flex h-full flex-col overflow-hidden">
+            
+            {/* Banner background with gradient fade */}
+            {(user as any)?.bannerUrl && (
+              <div className="absolute left-0 right-0 top-0 h-48 overflow-hidden">
+                <img
+                  src={(user as any).bannerUrl}
+                  alt="Profile banner"
+                  className="h-full w-full object-cover"
+                  style={{ imageRendering: 'pixelated' }}
+                />
+                <div className="absolute inset-0 bg-linear-to-b from-transparent via-transparent to-slate-900" />
+              </div>
+            )}
+            
             {self && (
               <a
                 href="/settings/profile"
-                className="absolute right-4 top-4 inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-700 bg-slate-900/70 text-slate-200 hover:border-slate-500 hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-300"
+                className="absolute right-4 top-4 z-10 inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-700 bg-slate-900/70 text-slate-200 hover:border-slate-500 hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-300 backdrop-blur-sm"
                 aria-label="Редактировать профиль"
               >
                 <svg
@@ -155,11 +189,16 @@ export default function UserProfilePage() {
               </a>
             )}
 
-            <div className="mt-2 flex justify-center">
+            <div className="relative z-10 mt-28 flex justify-center">
               <Avatar url={(user as any)?.avatarUrl} loading={loading} />
             </div>
 
             <div className="pt-4 text-center">
+              {(user as any)?.displayName && (
+                <div className="mb-1 text-xl font-semibold text-slate-300">
+                  {(user as any).displayName}
+                </div>
+              )}
               <div className="mb-1 flex items-center justify-center gap-2">
                 <h1 className="truncate text-2xl font-bold">
                   {loading ? 'Загрузка…' : user ? `${user.username}` : '—'}
@@ -177,6 +216,13 @@ export default function UserProfilePage() {
                 )}
               </div>
 
+              {/* Custom Status */}
+              {(user as any)?.customStatus && (
+                <div className="mb-2 text-sm text-slate-300">
+                  {(user as any).customStatus}
+                </div>
+              )}
+
               <div className="mb-4 text-xs text-slate-400">
                 {since && <span>с {since}</span>}
                 {self && <span className="ml-2 rounded-md border border-slate-700 px-2 py-0.5 text-sky-400">это вы</span>}
@@ -185,6 +231,17 @@ export default function UserProfilePage() {
               <p className="mx-auto max-w-2xl whitespace-pre-wrap text-sm text-slate-200">
                 {loading ? '…' : user?.bio || 'Описание не заполнено'}
               </p>
+
+              {/* Social Links */}
+              {(user as any)?.socialLinks && Object.keys((user as any).socialLinks).length > 0 && (
+                <div className="mt-4">
+                  <SocialLinks 
+                    links={(user as any).socialLinks} 
+                    onChange={() => {}} 
+                    readOnly 
+                  />
+                </div>
+              )}
 
               <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
                 {self ? (
@@ -219,13 +276,30 @@ export default function UserProfilePage() {
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <Card>
               <h3 className="mb-3 text-sm font-semibold text-sky-300">Достижения</h3>
-              <Empty loading={loading} text="Нет достижений" />
-            </Card>
-            <Card>
-              <h3 className="mb-3 text-sm font-semibold text-sky-300">Недавние сессии</h3>
-              <Empty loading={loading} text="Нет данных" />
+              {loading ? (
+                <Empty loading={true} text="" />
+              ) : (user as any)?.achievements && (user as any).achievements.length > 0 ? (
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                  {(user as any).achievements
+                    .filter((ach: any) => ach.unlocked)
+                    .map((ach: any, idx: number) => (
+                      <Badge
+                        key={idx}
+                        icon={ach.icon}
+                        title={ach.title}
+                        description={ach.description}
+                        unlocked={true}
+                        unlockedAt={ach.unlockedAt}
+                      />
+                    ))}
+                </div>
+              ) : (
+                <Empty loading={false} text="Нет достижений" />
+              )}
             </Card>
           </div>
+
+        <UserSessions username={username} />
 
         {err && (
           <div className="mt-6 rounded-xl border border-red-800 bg-red-950/40 p-3 text-sm text-red-300">
@@ -235,153 +309,26 @@ export default function UserProfilePage() {
       </main>
 
     </div>
+    </ProfileThemeProvider>
     </>
   );
 }
 
-function Skin3D(props: { className?: string; skinUrl: string; spin?: boolean }) {
-  const { className, skinUrl, spin } = props as any;
-  const wrapRef = useRef<HTMLDivElement | null>(null);
-  const viewerRef = useRef<any>(null);
-  const controlsRef = useRef<OrbitControls | null>(null);
-  const roRef = useRef<ResizeObserver | null>(null);
-
-  useEffect(() => {
-    if (!wrapRef.current) return;
-
-    const viewer = new skinview3d.SkinViewer({
-      canvas: document.createElement('canvas'),
-      width: 300,
-      height: 480,
-    });
-    viewerRef.current = viewer;
-
-    wrapRef.current.innerHTML = '';
-    wrapRef.current.appendChild(viewer.canvas);
-
-    viewer.background = '#0f172a';
-    viewer.camera.fov = 40;
-    viewer.camera.zoom = 1;
-    viewer.camera.near = 0.01;
-    viewer.camera.far = 1000;
-    viewer.camera.updateProjectionMatrix();
-    viewer.cameraLight.intensity = 2;
-    viewer.globalLight.intensity = 2;
-    viewer.animation = new skinview3d.IdleAnimation();
-    viewer.animation.speed = 1;
-
-    const controls = new OrbitControls((viewer as any).camera, viewer.canvas);
-    controls.enableDamping = true;
-    controls.dampingFactor = 0.08;
-    controls.enablePan = false;
-    controls.addEventListener('change', () => viewer.render());
-    controlsRef.current = controls;
-
-    const cv = viewer.canvas as HTMLCanvasElement;
-    cv.style.position = 'absolute';
-    cv.style.inset = '0';
-    cv.style.width = '100%';
-    cv.style.height = '100%';
-    cv.style.display = 'block';
-
-    const PAD = 1.05;
-
-    const frameToFit = () => {
-      const v = viewerRef.current;
-      if (!v) return;
-
-      const obj = (v as any).playerObject ?? (v as any).scene;
-      if (!obj) return;
-
-      const box = new THREE.Box3().setFromObject(obj);
-      const size = box.getSize(new THREE.Vector3());
-      const center = box.getCenter(new THREE.Vector3());
-
-      const el = wrapRef.current!;
-      const cw = Math.max(1, el.clientWidth);
-      const ch = Math.max(1, el.clientHeight);
-      const aspect = cw / ch;
-
-      const vFovEffRad = THREE.MathUtils.degToRad(v.camera.fov / Math.max(v.camera.zoom, 1e-6));
-      const hFovEffRad = 2 * Math.atan(Math.tan(vFovEffRad / 2) * aspect);
-
-      const halfH = size.y * 0.5;
-      const halfW = 0.5 * Math.max(size.x, size.z);
-
-      const distV = halfH / Math.tan(vFovEffRad / 2);
-      const distH = halfW / Math.tan(hFovEffRad / 2);
-      const dist = Math.max(distV, distH) * PAD;
-
-      const oldTarget = (controlsRef.current?.target ?? center).clone();
-      const dir = v.camera.position.clone().sub(oldTarget);
-      if (!isFinite(dir.length()) || dir.length() < 1e-3) dir.set(-0.35, 0.3, 1);
-      dir.setLength(dist);
-
-      controlsRef.current?.target.copy(center);
-      v.camera.position.copy(center).add(dir);
-
-      v.camera.near = Math.max(0.01, dist / 100);
-      v.camera.far = Math.max(v.camera.near * 10, dist * 100);
-
-      v.camera.updateProjectionMatrix();
-      controlsRef.current?.update();
-      v.render();
-    };
-
-    const fitPixels = () => {
-      const el = wrapRef.current!;
-      const cw = Math.max(1, Math.floor(el.clientWidth));
-      const ch = Math.max(1, Math.floor(el.clientHeight));
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
-
-      viewer.setSize(cw, ch);
-      const r = (viewer as any).renderer;
-      if (r?.setPixelRatio) r.setPixelRatio(dpr);
-
-      viewer.camera.aspect = cw / ch;
-      viewer.camera.updateProjectionMatrix();
-
-      frameToFit();
-    }
-
-    Promise.resolve(viewer.loadSkin(skinUrl as any)).catch(() => {}).finally(() => {
-      fitPixels();
-    });
-
-    const ro = new ResizeObserver(fitPixels);
-    ro.observe(wrapRef.current!);
-    roRef.current = ro;
-
-    const onResize = () => fitPixels();
-    window.addEventListener('resize', onResize);
-
-    fitPixels();
-
-    return () => {
-      window.removeEventListener('resize', onResize);
-      roRef.current?.disconnect();
-      controls.dispose();
-      viewer.dispose();
-      viewerRef.current = null;
-      controlsRef.current = null;
-    };
-  }, [skinUrl]);
-
-  useEffect(() => {
-    const viewer = viewerRef.current;
-    if (!viewer) return;
-    viewer.autoRotate = !!spin;
-    viewer.autoRotateSpeed = 1.2;
-    viewer.render();
-  }, [spin]);
-
-  return <div ref={wrapRef} className={`${className || ''} relative`} aria-label="3D-просмотр скина" />;
-}
-
-function Card(props: { children: React.ReactNode; className?: string }) {
+function Card(props: { children: React.ReactNode; className?: string; style?: React.CSSProperties }) {
+  const { getThemeStyle } = useProfileTheme();
+  const customStyle = getThemeStyle();
+  const hasCustomTheme = Object.keys(customStyle).length > 0;
+  
+  const finalStyle = {
+    backgroundColor: 'rgba(15, 23, 42, 0.6)',
+    ...customStyle,
+    ...props.style
+  };
+  
   return (
     <section
-      className={`rounded-2xl border border-slate-800 bg-slate-900/60 p-4 shadow-[0_1px_0_#ffffff10_inset,0_20px_40px_-20px_#000 backdrop-blur-md backdrop-saturate-150] ${props.className || ''}`}
+      className={`rounded-2xl border border-slate-800 backdrop-blur-md backdrop-saturate-150 p-4 shadow-[0_1px_0_#ffffff10_inset,0_20px_40px_-20px_#000] ${props.className || ''}`}
+      style={finalStyle}
     >
       {props.children}
     </section>

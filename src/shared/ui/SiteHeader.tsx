@@ -10,6 +10,7 @@ import { SvgTelegram, SvgDiscord, SvgMenu, SvgX } from '@/shared/ui/Icons';
 import { SERVER_NAME, RULES_URL, SHOP_URL, WIKI_URL, CONTACTS_URL, DISCORD_URL, TELEGRAM_URL } from '@/shared/constants';
 
 const MAIN_URL = '/';
+const ABOUT_URL = '/about';
 const PRIVACY_URL = '/privacy';
 const TERMS_URL = '/terms';
 
@@ -137,11 +138,11 @@ export default function SiteHeader() {
               Главная
             </a>
             <a
-              href={RULES_URL}
-              className={linkCls(isActive(RULES_URL))}
-              aria-current={isActive(RULES_URL) ? 'page' : undefined}
+              href={ABOUT_URL}
+              className={linkCls(isActive(ABOUT_URL))}
+              aria-current={isActive(ABOUT_URL) ? 'page' : undefined}
             >
-              Правила
+              О сервере
             </a>
             <a
               href={SHOP_URL}
@@ -151,11 +152,11 @@ export default function SiteHeader() {
               Проходка
             </a>
             <a
-              href={WIKI_URL}
-              className={linkCls(isActive(WIKI_URL))}
-              aria-current={isActive(WIKI_URL) ? 'page' : undefined}
+              href={RULES_URL}
+              className={linkCls(isActive(RULES_URL))}
+              aria-current={isActive(RULES_URL) ? 'page' : undefined}
             >
-              Вики
+              Правила
             </a>
             <a
               href={CONTACTS_URL}
@@ -164,7 +165,13 @@ export default function SiteHeader() {
             >
               Контакты
             </a>
-
+            <a
+              href={WIKI_URL}
+              className={linkCls(isActive(WIKI_URL))}
+              aria-current={isActive(WIKI_URL) ? 'page' : undefined}
+            >
+              Вики
+            </a>
             <a
               href={TELEGRAM_URL}
               rel="noopener noreferrer"
@@ -279,7 +286,6 @@ export default function SiteHeader() {
           mobileOpen ? 'opacity-100 visible pointer-events-auto' : 'opacity-0 invisible pointer-events-none'
         }`}
       >
-        {/* затемнение */}
         <button
           type="button"
           className="absolute inset-0 bg-black/50"
@@ -287,13 +293,11 @@ export default function SiteHeader() {
           aria-label="Закрыть меню"
         />
 
-        {/* панель справа */}
         <div
           className={`absolute inset-y-0 right-0 w-72 max-w-[80%] border-l border-slate-800 p-4 flex flex-col transform transition-transform bg-slate-950/40 backdrop-blur supports-backdrop-filter:bg-slate-950/50 ${
             mobileOpen ? 'translate-x-0' : 'translate-x-full'
           }`}
         >
-          {/* Верхняя строка: Навигация + крестик */}
           <div className="mb-4 flex items-center justify-between">
             <span className="text-xs font-semibold tracking-[0.18em] uppercase text-slate-300">
               Навигация
@@ -320,13 +324,13 @@ export default function SiteHeader() {
               Главная
             </a>
             <a
-              href={RULES_URL}
+              href={ABOUT_URL}
               onClick={() => setMobileOpen(false)}
               className={`rounded-lg px-3 py-2 ${
-                isActive(RULES_URL) ? 'bg-slate-800 text-sky-300' : 'text-slate-200 hover:bg-slate-900'
+                isActive(ABOUT_URL) ? 'bg-slate-800 text-sky-300' : 'text-slate-200 hover:bg-slate-900'
               }`}
             >
-              Правила
+              О сервере
             </a>
             <a
               href={SHOP_URL}
@@ -338,13 +342,13 @@ export default function SiteHeader() {
               Проходка
             </a>
             <a
-              href={WIKI_URL}
+              href={RULES_URL}
               onClick={() => setMobileOpen(false)}
               className={`rounded-lg px-3 py-2 ${
-                isActive(WIKI_URL) ? 'bg-slate-800 text-sky-300' : 'text-slate-200 hover:bg-slate-900'
+                isActive(RULES_URL) ? 'bg-slate-800 text-sky-300' : 'text-slate-200 hover:bg-slate-900'
               }`}
             >
-              Вики
+              Правила
             </a>
             <a
               href={CONTACTS_URL}
@@ -354,6 +358,15 @@ export default function SiteHeader() {
               }`}
             >
               Контакты
+            </a>
+            <a
+              href={WIKI_URL}
+              onClick={() => setMobileOpen(false)}
+              className={`rounded-lg px-3 py-2 ${
+                isActive(WIKI_URL) ? 'bg-slate-800 text-sky-300' : 'text-slate-200 hover:bg-slate-900'
+              }`}
+            >
+              Вики
             </a>
           </nav>
 

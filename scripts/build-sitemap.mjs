@@ -1,6 +1,6 @@
 import { writeFileSync } from 'node:fs';
 const ORIGIN = 'https://architech-mc.ru';
-const routes = ['/', '/rules', '/shop', '/wiki', '/terms', '/privacy'];
+const routes = ['/', '/rules', '/shop', '/wiki', '/about', '/terms', '/privacy'];
 const now = new Date().toISOString();
 
 const urls = routes.map(p => `

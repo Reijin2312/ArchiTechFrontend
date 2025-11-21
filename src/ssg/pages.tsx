@@ -2,6 +2,7 @@ import HomePage from '../pages/HomePage'
 import RulesPage from '../pages/RulesPage'
 import ShopPage from '../pages/ShopPage'
 import WikiPage from '../pages/WikiPage'
+import AboutServerPage from '../pages/AboutServerPage'
 import UserAgreementPage from '../pages/UserAgreementPage'
 import PrivacyPolicyPage from '../pages/PrivacyPolicyPage'
 import SiteHeader from '../shared/ui/SiteHeader'
@@ -12,6 +13,7 @@ export const pages = {
   '/rules': () => (<><SiteHeader/><main><RulesPage/></main><SiteFooter/></>),
   '/shop': () => (<><SiteHeader/><main><ShopPage/></main><SiteFooter/></>),
   '/wiki': () => (<><SiteHeader/><main><WikiPage/></main><SiteFooter/></>),
+  '/about': () => (<><SiteHeader/><main><AboutServerPage/></main><SiteFooter/></>),
   '/terms': () => (<><SiteHeader/><main><UserAgreementPage/></main><SiteFooter/></>),
   '/privacy': () => (<><SiteHeader/><main><PrivacyPolicyPage/></main><SiteFooter/></>),
 };

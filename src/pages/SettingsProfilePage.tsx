@@ -6,6 +6,20 @@ import { authStore } from '@/shared/store/auth';
 import { useWallpaper } from '@/shared/ui/useWallpaper';
 import { Seo } from '@/shared/seo/seo';
 import { AvatarCropperDialog } from '@/shared/ui/AvatarCropperDialog';
+import { DragDropZone } from '@/shared/ui/DragDropZone';
+import { ProgressBar } from '@/shared/ui/ProgressBar';
+import { Badge } from '@/shared/ui/Badge';
+import { StatusSelect } from '@/shared/ui/StatusSelect';
+import { SocialLinks } from '@/shared/ui/SocialLinks';
+import { ProfileBanner } from '@/shared/ui/ProfileBanner';
+import { ThemeSelector } from '@/shared/ui/ThemeSelector';
+import { SkinGallery } from '@/shared/ui/SkinGallery';
+import { Skin3DPreview } from '@/shared/ui/Skin3DPreview';
+import { WallpaperPicker } from '@/shared/ui/WallpaperPicker';
+import { BannerPicker } from '@/shared/ui/BannerPicker';
+import { AvatarPicker } from '@/shared/ui/AvatarPicker';
+import { SkinPicker } from '@/shared/ui/SkinPicker';
+import { ProfileThemeProvider, useProfileTheme } from '@/shared/ui/ProfileThemeContext';
 
 type SkinModel = 'classic' | 'slim';
 
@@ -22,6 +36,7 @@ type Profile = {
   skinUrl: string;
   skinModel?: SkinModel;
   email?: string;
+  registeredAt?: string;
 };
 
 type Session = {
@@ -77,9 +92,6 @@ export default function SettingsProfilePage() {
   const [newUsername, setNewUsername] = useState('');
   const [usernameOk, setUsernameOk] = useState<boolean | null>(null);
 
-  const [phone, setPhone] = useState('');
-  const [phoneCode, setPhoneCode] = useState('');
-
   const [sessions, setSessions] = useState<Session[]>([]);
 
   const [delOpen, setDelOpen] = useState(false);
@@ -106,7 +118,46 @@ export default function SettingsProfilePage() {
   type SortKey = 'created_desc' | 'created_asc' | 'expires_desc' | 'expires_asc';
   const [sortBy, setSortBy] = useState<SortKey>('created_desc');
 
+  // Новые состояния для улучшенного профиля
+  const [bannerUrl, setBannerUrl] = useState<string>('');
+  const [profileTheme, setProfileTheme] = useState<string>('default');
+  const [customThemeColor1, setCustomThemeColor1] = useState<string>('#0ea5e9');
+  const [customThemeColor2, setCustomThemeColor2] = useState<string>('#1e40af');
+  const [profileWallpaper, setProfileWallpaper] = useState<string>('');
+  const [userStatus, setUserStatus] = useState<string>('online');
+  const [customStatus, setCustomStatus] = useState<string>('');
+  const [socialLinks, setSocialLinks] = useState<Array<{ type: string; value: string }>>([]);
+  const [savedSkins, setSavedSkins] = useState<Array<{ id: string; name: string; url: string; model: SkinModel; savedAt: string }>>([]);
+  const [achievements, setAchievements] = useState<Array<{ id: string; icon: string; title: string; description: string; unlocked: boolean; unlockedAt?: string }>>([
+    { id: '1', icon: '🎨', title: 'Первый аватар', description: 'Загрузить свой первый аватар', unlocked: false },
+    { id: '2', icon: '👕', title: 'Модник', description: 'Сохранить 5 скинов', unlocked: false },
+    { id: '3', icon: '💯', title: 'Сотня', description: '100 сессий на сервере', unlocked: false },
+    { id: '4', icon: '🏆', title: 'Легенда', description: 'Играть больше года', unlocked: false },
+  ]);
+  const [show3DSkin, setShow3DSkin] = useState(true);
+  const [autoSaveEnabled, setAutoSaveEnabled] = useState(false);
+
   const bust = (u: string) => u ? `${u}${u.includes('?') ? '&' : '?'}v=${Date.now()}` : u;
+
+  // Вычисление прогресса заполнения профиля
+  const profileCompletion = useMemo(() => {
+    if (!me) return 0;
+    let filled = 0;
+    const total = 10;
+    
+    if (me.avatarUrl) filled++;
+    if (me.displayName) filled++;
+    if (me.bio && me.bio.length > 10) filled++;
+    if (me.location) filled++;
+    if (me.website) filled++;
+    if (me.birthDate) filled++;
+    if (bannerUrl) filled++;
+    if (socialLinks.length > 0) filled++;
+    if (savedSkins.length > 0) filled++;
+    if (me.skinUrl) filled++;
+
+    return Math.round((filled / total) * 100);
+  }, [me, bannerUrl, socialLinks, savedSkins]);
 
   const removeToast = useCallback((id: number) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
@@ -184,6 +235,17 @@ export default function SettingsProfilePage() {
         setEmail(p.email ?? '');
         setNewUsername(p.username ?? '');
         setSkinModel(p.skinModel === 'slim' ? 'slim' : 'classic');
+        
+        // Загрузка новых полей профиля
+        if ((p as any).bannerUrl) setBannerUrl((p as any).bannerUrl);
+        if ((p as any).profileTheme) setProfileTheme((p as any).profileTheme);
+        if ((p as any).customThemeColor1) setCustomThemeColor1((p as any).customThemeColor1);
+        if ((p as any).customThemeColor2) setCustomThemeColor2((p as any).customThemeColor2);
+        if ((p as any).profileWallpaper) setProfileWallpaper((p as any).profileWallpaper);
+        if ((p as any).userStatus) setUserStatus((p as any).userStatus);
+        if ((p as any).customStatus) setCustomStatus((p as any).customStatus);
+        if ((p as any).socialLinks) setSocialLinks((p as any).socialLinks);
+        
         try {
           const sessResp = await http.get<{ sessions: Session[] }>(endpoints.accountSessions, { withCredentials: true });
           if (alive) setSessions(sessResp.data.sessions || []);
@@ -288,13 +350,38 @@ export default function SettingsProfilePage() {
     try {
       await http.put(
         endpoints.profileMe,
-        { displayName, bio, location: locationTxt, website, birthDate },
+        { 
+          displayName, 
+          bio, 
+          location: locationTxt, 
+          website, 
+          birthDate,
+          bannerUrl,
+          profileTheme,
+          customThemeColor1,
+          customThemeColor2,
+          profileWallpaper,
+          userStatus,
+          customStatus,
+          socialLinks: socialLinks && socialLinks.length > 0 ? socialLinks : null
+        },
         { withCredentials: true, headers: { 'Content-Type': 'application/json' } }
       );
       setNotice('Профиль сохранён');
       const meResp = await http.get<Profile>(endpoints.profileMe, { withCredentials: true });
-      setMe(meResp.data);
-      if (!email && meResp.data.email) setEmail(meResp.data.email);
+      const p = meResp.data;
+      setMe(p);
+      if (!email && p.email) setEmail(p.email);
+      
+      // Обновить локальные состояния из ответа сервера
+      if ((p as any).bannerUrl) setBannerUrl((p as any).bannerUrl);
+      if ((p as any).profileTheme) setProfileTheme((p as any).profileTheme);
+      if ((p as any).customThemeColor1) setCustomThemeColor1((p as any).customThemeColor1);
+      if ((p as any).customThemeColor2) setCustomThemeColor2((p as any).customThemeColor2);
+      if ((p as any).profileWallpaper) setProfileWallpaper((p as any).profileWallpaper);
+      if ((p as any).userStatus) setUserStatus((p as any).userStatus);
+      if ((p as any).customStatus) setCustomStatus((p as any).customStatus);
+      if ((p as any).socialLinks) setSocialLinks((p as any).socialLinks);
     } catch (e: any) {
       setErr(e?.response?.data || e?.message || 'Ошибка сохранения профиля');
     } finally {
@@ -348,12 +435,13 @@ export default function SettingsProfilePage() {
     }
   }
 
-  async function uploadSkinFile() {
-    if (!skinFile) return;
+  async function uploadSkinFile(file?: File) {
+    const fileToUpload = file || skinFile;
+    if (!fileToUpload) return;
     setBusy('skin-file'); setNotice(null); setErr(null);
     try {
       const fd = new FormData();
-      fd.append('file', skinFile);
+      fd.append('file', fileToUpload);
 
       const url = `${endpoints.profileSkin}?model=${encodeURIComponent(skinModel)}`;
 
@@ -448,45 +536,6 @@ export default function SettingsProfilePage() {
     }
   }
 
-  async function bindPhone() {
-    if (!phone?.trim()) return;
-    setBusy('phone');
-    setNotice(null);
-    setErr(null);
-    try {
-      await http.post(
-        endpoints.accountPhoneBind,
-        { phone: phone.trim() },
-        { withCredentials: true, headers: { 'Content-Type': 'application/json' } }
-      );
-      setNotice('Код отправлен. Введите код подтверждения ниже.');
-    } catch (e: any) {
-      setErr(e?.response?.data || e?.message || 'Ошибка привязки телефона');
-    } finally {
-      setBusy(null);
-    }
-  }
-
-  async function verifyPhone() {
-    if (!phoneCode?.trim()) return;
-    setBusy('phone-verify');
-    setNotice(null);
-    setErr(null);
-    try {
-      await http.post(
-        endpoints.accountPhoneVerify,
-        { code: phoneCode.trim() },
-        { withCredentials: true, headers: { 'Content-Type': 'application/json' } }
-      );
-      setNotice('Телефон подтверждён');
-      setPhoneCode('');
-    } catch (e: any) {
-      setErr(e?.response?.data || e?.message || 'Ошибка подтверждения телефона');
-    } finally {
-      setBusy(null);
-    }
-  }
-
   async function refreshSessions() {
     try {
       const resp = await http.get<{ sessions: Session[] }>(endpoints.accountSessions, { withCredentials: true });
@@ -532,97 +581,65 @@ export default function SettingsProfilePage() {
     if (avatarInputRef.current) avatarInputRef.current.value = '';
   }, []);
 
-  function handleAvatarFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
+  function handleAvatarFileChange(file: File) {
     const reader = new FileReader();
     reader.onload = () => {
       setAvatarCropSrc(reader.result as string); // dataURL
       setAvatarCropOpen(true);
     };
     reader.readAsDataURL(file);
-    e.target.value = '';
   }
 
   return (
     <>
-    <Seo title="Настройки — ArchiTech MC" robots="noindex,follow" />
-    <div className="min-h-dvh flex flex-col">
-      <main className="mx-auto grid w-full max-w-6xl grow grid-cols-12 gap-6 px-4 py-6">
-        {/* Левый столбец */}
-        <section className="col-span-12 md:col-span-4">
-          <Card>
-            <h2 className="mb-3 text-sm font-semibold text-sky-300">Аватар</h2>
-            <div className="flex items-center gap-4">
-              <div className="h-28 w-28 overflow-hidden rounded-2xl border border-slate-800 bg-slate-900">
-                {loading ? (
-                  <div className="h-full w-full animate-pulse bg-slate-800" />
-                ) : (
-                  <img
-                    src={me?.avatarUrl}
-                    alt="Аватар"
-                    width={128}
-                    height={128}
-                    loading="lazy"
-                    decoding="async"
-                    className="h-full w-full object-cover"
-                  />
-                )}
-              </div>
-              <div className="flex-1 space-y-2">
-                <input
-                  type="file"
-                  accept="image/*"
+      <Seo title="Настройки — ArchiTech MC" robots="noindex,follow" />
+      <ProfileThemeProvider
+        themeId={profileTheme}
+        customColor1={customThemeColor1}
+        customColor2={customThemeColor2}
+      >
+        <div className="min-h-dvh flex flex-col">
+          <main className="mx-auto grid w-full max-w-6xl grow grid-cols-12 gap-6 px-4 py-6">
+            {/* Прогресс заполнения профиля - полная ширина */}
+            <section className="col-span-12">
+              <Card>
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <h2 className="text-sm font-semibold text-sky-300">Заполненность профиля</h2>
+                    <p className="text-xs text-slate-500">Заполните все поля для максимального прогресса</p>
+                  </div>
+                  <div className="text-2xl font-bold text-sky-400">{profileCompletion}%</div>
+                </div>
+                <ProgressBar value={profileCompletion} max={100} showPercentage={false} color="sky" />
+              </Card>
+            </section>
+
+            {/* Левый столбец */}
+            <section className="col-span-12 md:col-span-4">
+              <Card>
+                <h2 className="mb-3 text-sm font-semibold text-sky-300">Аватар</h2>
+                <AvatarPicker
+                  value={me?.avatarUrl || ''}
+                  busy={busy === 'avatar-file'}
+                  loading={loading}
                   onChange={handleAvatarFileChange}
-                  ref={avatarInputRef}
-                  className="block w-full text-sm file:mr-3 file:rounded-lg file:border file:border-slate-700 file:bg-slate-900 file:px2 file:py-1.5 file:text-sm hover:file:border-slate-500"
                 />
-              </div>
-            </div>
+              </Card>
 
-            <div className="mt-4">
-              <p className="mt-1 text-xs text-slate-500">До 2 МБ. PNG/JPG, обрежется до квадрата 512×512.</p>
-            </div>
-          </Card>
-
-          <Card className="mt-6">
-            <h2 className="mb-3 text-sm font-semibold text-sky-300">Скин</h2>
-            <div className="flex items-center gap-4">
-              <div className="h-28 w-28 overflow-hidden rounded-2xl border border-slate-800 bg-slate-900">
-                {loading ? (
-                  <div className="h-full w-full animate-pulse bg-slate-800" />
-                ) : (
-                  <img
-                    src={me?.skinUrl}
-                    alt="Скин"
-                    width={128}
-                    height={128}
-                    loading="lazy"
-                    decoding="async"
-                    className="h-full w-full object-cover"
-                  />
-                )}
-              </div>
-              <div className="flex-1 space-y-2">
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => setSkinFile(e.target.files?.[0] || null)}
-                  className="block w-full text-sm file:mr-3 file:rounded-lg file:border file:border-slate-700 file:bg-slate-900 file:px2 file:py-1.5 file:text-sm hover:file:border-slate-500"
+              <Card className="mt-6">
+                <h2 className="mb-3 text-sm font-semibold text-sky-300">Скин</h2>
+                <SkinPicker
+                  value={me?.skinUrl || ''}
+                  busy={busy === 'skin-file'}
+                  loading={loading}
+                  onChange={(file) => {
+                    setSkinFile(file);
+                    uploadSkinFile(file);
+                  }}
                 />
-                <button
-                  disabled={!skinFile || busy === 'skin-file'}
-                  onClick={uploadSkinFile}
-                  className="rounded-xl border border-slate-700 px-3 py-1.5 text-sm hover:border-slate-500 disabled:opacity-50"
-                >
-                  Загрузить файл
-                </button>
-              </div>
-            </div>
 
-            <div className="mt-4">
-              <label className="mb-1 block text-xs text-slate-400">URL картинки</label>
+                <div className="mt-4">
+                  <label className="mb-1 block text-xs text-slate-400">URL картинки</label>
               <div className="flex gap-2">
                 <input
                   value={skinUrlInput}
@@ -638,43 +655,70 @@ export default function SettingsProfilePage() {
                   Применить
                 </button>
               </div>
-              <p className="mt-1 text-xs text-slate-500">До 2 МБ. PNG/JPG. Без обрезки.</p>
+            </div>
 
-              <div className="mt-4">
-                <label className="mb-1 block text-xs text-slate-400">Модель скина</label>
-                <div className="flex gap-2 text-xs">
-                  <button
-                    type="button"
-                    onClick={() => setSkinModel('classic')}
-                    className={
-                      'rounded-lg border px-3 py-1 ' +
-                      (skinModel === 'classic'
-                        ? 'border-sky-700 bg-sky-900/40 text-sky-300'
-                        : 'border-slate-700 text-slate-300 hover:border-slate-500')
-                    }
-                  >
-                    Classic (Steve)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSkinModel('slim')}
-                    className={
-                      'rounded-lg border px-3 py-1 ' +
-                      (skinModel === 'slim'
-                        ? 'border-sky-700 bg-sky-900/40 text-sky-300'
-                        : 'border-slate-700 text-slate-300 hover:border-slate-500')
-                    }
-                  >
-                    Slim (Alex)
-                  </button>
-                </div>
-                <p className="mt-1 text-xs text-slate-500">
-                  Classic — широкие руки, Slim — узкие руки. Игра должна знать выбранную модель.
-                </p>
+            <div className="mt-4">
+              <div className="mb-1 flex items-center gap-2">
+                <label className="text-xs text-slate-400">Модель скина</label>
+                <button
+                  type="button"
+                  title="Classic — широкие руки (Steve), Slim — узкие руки (Alex). Игра должна знать выбранную модель."
+                  className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-slate-700 text-[10px] text-slate-400 hover:border-slate-500 hover:text-slate-300"
+                >
+                  ?
+                </button>
               </div>
-
+              <div className="flex gap-2 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setSkinModel('classic')}
+                  className={
+                    'rounded-lg border px-3 py-1 ' +
+                    (skinModel === 'classic'
+                      ? 'border-sky-700 bg-sky-900/40 text-sky-300'
+                      : 'border-slate-700 text-slate-300 hover:border-slate-500')
+                  }
+                >
+                  Classic (Steve)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSkinModel('slim')}
+                  className={
+                    'rounded-lg border px-3 py-1 ' +
+                    (skinModel === 'slim'
+                      ? 'border-sky-700 bg-sky-900/40 text-sky-300'
+                      : 'border-slate-700 text-slate-300 hover:border-slate-500')
+                  }
+                >
+                  Slim (Alex)
+                </button>
+              </div>
             </div>
           </Card>
+
+          {/* 3D превью скина */}
+          {me?.skinUrl && show3DSkin && (
+            <Card className="mt-6 flex flex-col">
+              <div className="mb-3 flex items-center justify-between">
+                <h2 className="text-sm font-semibold text-sky-300">3D Превью скина</h2>
+                <button
+                  type="button"
+                  onClick={() => setShow3DSkin(false)}
+                  className="text-xs text-slate-400 hover:text-slate-300"
+                >
+                  Скрыть
+                </button>
+              </div>
+              <div className="h-[400px]">
+                <Skin3DPreview 
+                  skinUrl={me.skinUrl} 
+                  autoRotate 
+                  className="h-full w-full overflow-hidden rounded-xl border border-slate-800 bg-slate-900"
+                />
+              </div>
+            </Card>
+          )}
 
           <Card className="mt-6">
             <h2 className="mb-3 text-sm font-semibold text-sky-300">Сессии</h2>
@@ -835,15 +879,41 @@ export default function SettingsProfilePage() {
                 min="1900-01-01"
                 max={new Date().toISOString().slice(0, 10)}
               />
+              <div className="mt-2 flex flex-col gap-1 text-xs text-slate-400">
+                {birthDate && (() => {
+                  try {
+                    const birth = new Date(birthDate);
+                    const today = new Date();
+                    let age = today.getFullYear() - birth.getFullYear();
+                    const monthDiff = today.getMonth() - birth.getMonth();
+                    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+                      age--;
+                    }
+                    return <span>Возраст: {age} {age === 1 ? 'год' : age < 5 ? 'года' : 'лет'}</span>;
+                  } catch { return null; }
+                })()}
+                {me?.registeredAt && (() => {
+                  try {
+                    const reg = new Date(me.registeredAt);
+                    const today = new Date();
+                    let years = today.getFullYear() - reg.getFullYear();
+                    const monthDiff = today.getMonth() - reg.getMonth();
+                    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < reg.getDate())) {
+                      years--;
+                    }
+                    return <span>С нами {years > 0 ? `${years} ${years === 1 ? 'год' : years < 5 ? 'года' : 'лет'}` : 'менее года'}</span>;
+                  } catch { return null; }
+                })()}
+              </div>
             </InputRow>
 
             <div className="mt-4 flex justify-end">
               <button
                 disabled={busy === 'profile'}
                 onClick={saveProfile}
-                className="rounded-xl border border-slate-700 px-3 py-1.5 text-sm hover:border-slate-500 disabled:opacity-50"
+                className="rounded-xl bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-500 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-sky-600/20 transition-all"
               >
-                Сохранить профиль
+                💾 Сохранить профиль
               </button>
             </div>
           </Card>
@@ -852,32 +922,36 @@ export default function SettingsProfilePage() {
             <h2 className="mb-4 text-sm font-semibold text-sky-300">Учётная запись</h2>
 
             <InputRow label="Email">
-              <div className="flex w-full items-center gap-2">
+              <div className="flex w-full items-stretch gap-2">
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="user@example.com"
-                  className={inp()}
+                  className={inp() + ' flex-1'}
                 />
                 <button
                   type="button"
                   onClick={() => nav('/settings/email')}
-                  className="whitespace-nowrap rounded-xl border border-slate-700 px-3 py-2 text-sm hover:border-slate-500"
+                  className="flex items-center justify-center rounded-xl border border-slate-700 px-3 py-2 text-sm hover:border-slate-500 hover:bg-slate-800"
+                  title="Изменить email"
                 >
-                  Изменить
+                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                  </svg>
                 </button>
               </div>
             </InputRow>
 
             <InputRow label="Пароль">
-              <div className="flex w-full items-center gap-2">
+              <div className="flex w-full items-stretch gap-2">
                 <input
                   type="password"
                   value={pwdDummy}
                   onChange={(e) => setPwdDummy(e.target.value)}
                   placeholder="••••••••"
-                  className={inp()}
+                  className={inp() + ' flex-1'}
                 />
                 <button
                   type="button"
@@ -905,16 +979,20 @@ export default function SettingsProfilePage() {
                       setBusy(null);
                     }
                   }}
-                  className="whitespace-nowrap rounded-xl border border-slate-700 px-3 py-2 text-sm hover:border-slate-500 disabled:opacity-50"
+                  className="flex items-center justify-center rounded-xl border border-slate-700 px-3 py-2 text-sm hover:border-slate-500 hover:bg-slate-800 disabled:opacity-50"
+                  title="Изменить пароль"
                 >
-                  Изменить
+                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                  </svg>
                 </button>
               </div>
             </InputRow>
 
             <InputRow label="Логин">
-              <div className="flex w-full items-center gap-2">
-                <input value={newUsername} onChange={(e) => setNewUsername(e.target.value)} className={inp()} />
+              <div className="flex w-full items-stretch gap-2">
+                <input value={newUsername} onChange={(e) => setNewUsername(e.target.value)} className={inp() + ' flex-1'} />
                 <button
                   disabled={
                     busy === 'username' ||
@@ -923,9 +1001,13 @@ export default function SettingsProfilePage() {
                     newUsername.trim().toLowerCase() === (me?.username || '').toLowerCase()
                   }
                   onClick={changeUsername}
-                  className="whitespace-nowrap rounded-xl border border-slate-700 px-3 py-2 text-sm hover:border-slate-500 disabled:opacity-50"
+                  className="flex items-center justify-center rounded-xl border border-slate-700 px-3 py-2 text-sm hover:border-slate-500 hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  title="Сменить логин"
                 >
-                  Сменить
+                  <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                  </svg>
                 </button>
               </div>
               {usernameOk === false && <p className="mt-1 text-xs text-red-400">Логин занят или некорректен</p>}
@@ -935,48 +1017,122 @@ export default function SettingsProfilePage() {
             </InputRow>
           </Card>
 
-          {/* Телефон */}
+          {/* Статус и социальные сети */}
           <Card className="mt-6">
-            <h2 className="mb-4 text-sm font-semibold text-sky-300">Телефон</h2>
+            <h2 className="mb-4 text-sm font-semibold text-sky-300">Статус</h2>
+            <StatusSelect
+              value={userStatus}
+              customStatus={customStatus}
+              onChange={(statusId, customText) => {
+                setUserStatus(statusId);
+                setCustomStatus(customText || '');
+              }}
+            />
+          </Card>
 
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <InputRow label="Номер">
-                <input
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="+49 151 2345678"
-                  className={inp()}
-                />
-              </InputRow>
-              <div className="flex items-end">
-                <button
-                  disabled={busy === 'phone' || !phone.trim()}
-                  onClick={bindPhone}
-                  className="h-10 rounded-xl border border-slate-700 px-3 text-sm hover:border-slate-500 disabled:opacity-50"
-                >
-                  Отправить код
-                </button>
-              </div>
-            </div>
+          <Card className="mt-6">
+            <h2 className="mb-4 text-sm font-semibold text-sky-300">Социальные сети</h2>
+            <SocialLinks
+              links={socialLinks as any}
+              onChange={(links) => setSocialLinks(links as any)}
+              editable
+            />
+          </Card>
 
-            <div className="mt-3 grid grid-cols-1 gap-4 md:grid-cols-2">
-              <InputRow label="Код подтверждения">
-                <input
-                  value={phoneCode}
-                  onChange={(e) => setPhoneCode(e.target.value)}
-                  placeholder="123456"
-                  className={inp()}
+          {/* Тема профиля */}
+          <Card className="mt-6">
+            <ThemeSelector
+              value={profileTheme}
+              customColor1={customThemeColor1}
+              customColor2={customThemeColor2}
+              onChange={(themeId, color1, color2) => {
+                setProfileTheme(themeId);
+                if (color1) setCustomThemeColor1(color1);
+                if (color2) setCustomThemeColor2(color2);
+              }}
+            />
+          </Card>
+
+          {/* Обои профиля */}
+          <Card className="mt-6">
+            <h2 className="mb-4 text-sm font-semibold text-sky-300">Обои профиля</h2>
+            <p className="mb-3 text-xs text-slate-400">Большое изображение, которое заменит фон сайта на вашей странице профиля</p>
+            <WallpaperPicker
+              value={profileWallpaper}
+              busy={busy === 'wallpaper'}
+              onChange={async (file: File) => {
+                setBusy('wallpaper');
+                try {
+                  const fd = new FormData();
+                  fd.append('file', file);
+                  const { data } = await http.post<{ url: string }>(
+                    '/api/v1/profile/wallpaper',
+                    fd,
+                    { withCredentials: true }
+                  );
+                  setProfileWallpaper(data.url);
+                  setMe((m) => m ? { ...m, profileWallpaper: data.url } as any : m);
+                  pushToast('success', 'Обои обновлены');
+                } catch (e: any) {
+                  pushToast('error', e?.response?.data || 'Ошибка загрузки обоев');
+                } finally {
+                  setBusy(null);
+                }
+              }}
+              onClear={() => setProfileWallpaper('')}
+            />
+          </Card>
+
+          {/* Баннер профиля */}
+          <Card className="mt-6">
+            <h2 className="mb-4 text-sm font-semibold text-sky-300">Баннер профиля</h2>
+            <p className="mb-3 text-xs text-slate-400">Широкое изображение в шапке вашего профиля</p>
+            <BannerPicker
+              value={bannerUrl}
+              busy={busy === 'banner'}
+              onChange={async (file: File) => {
+                setBusy('banner');
+                try {
+                  const fd = new FormData();
+                  fd.append('file', file);
+                  const { data } = await http.post<{ bannerUrl: string }>('/api/v1/profile/banner', fd, { withCredentials: true });
+                  setBannerUrl(data.bannerUrl);
+                  setMe((m) => m ? { ...m, bannerUrl: data.bannerUrl } as any : m);
+                  pushToast('success', 'Баннер обновлён');
+                } catch (e: any) {
+                  pushToast('error', e?.response?.data || 'Ошибка загрузки баннера');
+                } finally {
+                  setBusy(null);
+                }
+              }}
+              onClear={() => setBannerUrl('')}
+            />
+          </Card>
+
+          {/* Галерея скинов */}
+          <Card className="mt-6">
+            <SkinGallery
+              skins={savedSkins as any}
+              onSelect={() => {}}
+              onDelete={() => {}}
+              onSave={() => {}}
+            />
+          </Card>
+
+          {/* Достижения */}
+          <Card className="mt-6">
+            <h2 className="mb-4 text-sm font-semibold text-sky-300">Достижения</h2>
+            <div className="grid grid-cols-2 gap-3">
+              {achievements.map((achievement) => (
+                <Badge
+                  key={achievement.id}
+                  icon={achievement.icon}
+                  title={achievement.title}
+                  description={achievement.description}
+                  unlocked={achievement.unlocked}
+                  unlockedAt={achievement.unlockedAt}
                 />
-              </InputRow>
-              <div className="flex items-end">
-                <button
-                  disabled={busy === 'phone-verify' || !phoneCode.trim()}
-                  onClick={verifyPhone}
-                  className="h-10 rounded-xl border border-slate-700 px-3 text-sm hover:border-slate-500 disabled:opacity-50"
-                >
-                  Подтвердить телефон
-                </button>
-              </div>
+              ))}
             </div>
           </Card>
 
@@ -1094,17 +1250,28 @@ export default function SettingsProfilePage() {
             </div>
           </div>
         )}
-
-      </main>
-    </div>
-    <ToastStack toasts={toasts} onClose={closeToast} />
+          </main>
+        </div>
+      </ProfileThemeProvider>
+      <ToastStack toasts={toasts} onClose={closeToast} />
     </>
   );
 }
 
 function Card(props: { children: React.ReactNode; className?: string }) {
+  const { getThemeStyle } = useProfileTheme();
+  const customStyle = getThemeStyle();
+  
+  const finalStyle = {
+    backgroundColor: 'rgba(15, 23, 42, 0.6)',
+    ...customStyle
+  };
+  
   return (
-    <section className={`rounded-2xl border border-slate-800 bg-slate-900/60 p-4 shadow-[0_1px_0_#ffffff10_inset,0_20px_40px_-20px_#000 backdrop-blur-md backdrop-saturate-150] ${props.className || ''}`}>
+    <section 
+      className={`rounded-2xl border border-slate-800 backdrop-blur-md backdrop-saturate-150 p-4 shadow-[0_1px_0_#ffffff10_inset,0_20px_40px_-20px_#000] ${props.className || ''}`}
+      style={finalStyle}
+    >
       {props.children}
     </section>
   );
