@@ -1,6 +1,7 @@
 import { authStore, type User } from '@/shared/store/auth';
 import { endpoints } from '@/shared/api/endpoints';
 import { http } from '@/shared/api/http';
+import { initEncryption } from '@/shared/lib/encryption';
 
 export async function bootstrapAuth() {
   try {
@@ -11,6 +12,8 @@ export async function bootstrapAuth() {
     authStore.getState().setAuth(null, accessToken);
     const me = await http.get<User>('/api/v1/profile');
     authStore.getState().setAuth(me.data, accessToken);
+    
+    initEncryption().catch(e => console.error('Failed to init encryption:', e));
   } catch {
     authStore.getState().clear();
   }

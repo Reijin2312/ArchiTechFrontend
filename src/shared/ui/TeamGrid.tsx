@@ -45,7 +45,7 @@ export function TeamGrid({ team, avatars, disableMotion, className }: TeamGridPr
             whileTap={disableMotion ? undefined : { scale: 0.99 }}
             className="relative rounded-2xl border border-slate-800 p-4 bg-linear-to-b from-slate-900/60 to-slate-900/20 backdrop-blur-md backdrop-saturate-150 overflow-hidden will-change-transform"
           >
-            <Link to={`/u/${encodeURIComponent(member.name)}`} className="flex items-center gap-3">
+            <a href={`/u/${encodeURIComponent(member.name)}`} className="flex items-center gap-3">
               <img
                 src={src}
                 alt={member.name}
@@ -63,7 +63,7 @@ export function TeamGrid({ team, avatars, disableMotion, className }: TeamGridPr
                 <div className="font-medium">{member.name}</div>
                 <div className="text-sm text-slate-400">{member.role}</div>
               </div>
-            </Link>
+            </a>
           </motion.div>
         );
       })}

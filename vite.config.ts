@@ -12,7 +12,7 @@ export default defineConfig({
     proxy: {
       '/api': { target: 'http://localhost:51788', changeOrigin: true },
       "/media": { target: "http://localhost:51788", changeOrigin: true },
-      '^/ws/.*': { target: 'http://localhost:51788', ws: true, changeOrigin: true },
+      '/ws': { target: 'http://localhost:51788', ws: true, changeOrigin: true },
     },
   },
   resolve: {
