@@ -2,9 +2,9 @@ import { http } from '@/shared/api/http';
 import { endpoints } from '@/shared/api/endpoints';
 
 export interface ChatWebSocketMessage {
-  type: 'new_message';
-  chatId: number;
-  message: {
+  type: 'new_message' | 'friend_request' | 'friend_accept' | 'friend_reject';
+  chatId?: number;
+  message?: {
     messageId: number;
     chatId: number;
     senderId: string;
@@ -23,6 +23,16 @@ export interface ChatWebSocketMessage {
     readByUser2: boolean;
     deliveredAt?: string;
     readAt?: string;
+  };
+  // Для заявок в друзья
+  friendRequest?: {
+    requestId: number;
+    userId: string;
+    username: string;
+    displayName?: string;
+    avatarUrl?: string;
+    status?: 'PENDING' | 'ACCEPTED' | 'REJECTED';
+    createdAt: string;
   };
 }
 

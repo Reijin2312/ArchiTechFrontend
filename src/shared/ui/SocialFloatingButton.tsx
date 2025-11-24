@@ -22,12 +22,14 @@ import type {
 } from '@/shared/api/types';
 import * as encryption from '@/shared/lib/encryption';
 
-type Tab = 'friends' | 'search' | 'incoming' | 'outgoing' | 'chat';
+type Tab = 'friends' | 'search' | 'requests' | 'chat';
+type RequestsSubTab = 'incoming' | 'outgoing';
 
 export function SocialFloatingButton() {
   const user = authStore(s => s.user);
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>('friends');
+  const [requestsSubTab, setRequestsSubTab] = useState<RequestsSubTab>('incoming');
   const [friends, setFriends] = useState<Friend[]>([]);
   const [incomingRequests, setIncomingRequests] = useState<FriendRequest[]>([]);
   const [outgoingRequests, setOutgoingRequests] = useState<FriendRequest[]>([]);
@@ -73,16 +75,18 @@ export function SocialFloatingButton() {
     isOpenRef.current = isOpen;
   }, [isOpen]);
 
-  // Подключение к WebSocket (только при открытии/закрытии)
+  // Подключение к WebSocket (всегда, когда пользователь залогинен)
   useEffect(() => {
-    if (!user || !isOpen) return;
+    if (!user) return;
     
+    console.log('🔌 Connecting WebSocket for user:', user.id);
     chatWebSocket.connect(user.id);
     
     return () => {
+      console.log('🔌 Disconnecting WebSocket');
       chatWebSocket.disconnect();
     };
-  }, [user, isOpen]);
+  }, [user]);
 
   // Подписка на WebSocket сообщения (ОДИН РАЗ при монтировании компонента)
   useEffect(() => {
@@ -90,57 +94,87 @@ export function SocialFloatingButton() {
 
     const unsubscribe = chatWebSocket.subscribe(async (wsMessage) => {
       const currentUser = userRef.current;
-      const isCurrentlyOpen = isOpenRef.current;
 
-      if (!currentUser || !isCurrentlyOpen) return;
+      if (!currentUser) return;
+
+      // ===== Обработка заявок в друзья (ВСЕГДА, даже если окно закрыто) =====
+      if (wsMessage.type === 'friend_request' && wsMessage.friendRequest) {
+        console.log('📨 New friend request received:', wsMessage.friendRequest);
+        setIncomingRequests(prev => {
+          // Проверяем, нет ли уже такой заявки
+          if (prev.some(r => r.requestId === wsMessage.friendRequest!.requestId)) {
+            return prev;
+          }
+          return [wsMessage.friendRequest!, ...prev];
+        });
+        return;
+      }
+
+      if (wsMessage.type === 'friend_accept' && wsMessage.friendRequest) {
+        console.log('✅ Friend request accepted:', wsMessage.friendRequest);
+        // Удаляем из входящих
+        setIncomingRequests(prev => prev.filter(r => r.userId !== wsMessage.friendRequest!.userId));
+        // Удаляем из исходящих
+        setOutgoingRequests(prev => prev.filter(r => r.userId !== wsMessage.friendRequest!.userId));
+        // Перезагружаем список друзей
+        try {
+          const { data } = await http.get<FriendsListResponse>(endpoints.friendsList);
+          setFriends(data.friends);
+          console.log('✅ Friends list updated after accept');
+        } catch (err) {
+          console.error('Failed to reload friends:', err);
+        }
+        return;
+      }
+
+      if (wsMessage.type === 'friend_reject' && wsMessage.friendRequest) {
+        console.log('❌ Friend request rejected:', wsMessage.friendRequest);
+        setIncomingRequests(prev => prev.filter(r => r.userId !== wsMessage.friendRequest!.userId));
+        setOutgoingRequests(prev => prev.filter(r => r.userId !== wsMessage.friendRequest!.userId));
+        return;
+      }
+
+      // ===== Обработка сообщений (только если окно открыто) =====
+      const isCurrentlyOpen = isOpenRef.current;
+      if (!isCurrentlyOpen) return;
 
       if (wsMessage.type !== 'new_message') return;
       if (selectedChatRef.current !== wsMessage.chatId) return;
 
-      const msg = wsMessage.message;
+      const msg = wsMessage.message!;
 
       console.log('WebSocket message received:', wsMessage);
 
-      // Дедупликация по messageId (на случай StrictMode / нескольких подписчиков)
+      // Дедупликация по messageId
       if (processedMessageIds.current.has(msg.messageId)) {
         console.log('❌ Message already processed, skipping:', msg.messageId);
         return;
       }
       processedMessageIds.current.add(msg.messageId);
 
-      // ✨ НОВОЕ: Показываем зашифрованный текст, затем асинхронно расшифровываем
-      let decryptedText = msg.encryptedContent; // Временно показываем шифротекст
-
-      const baseMessage: ChatMessage = {
-        messageId: msg.messageId,
-        senderId: msg.senderId,
-        encryptedContent: decryptedText,
-        messageType: msg.messageType,
-        imagePath: msg.imagePath,
-        createdAt: msg.createdAt,
-      };
-
-      // ---------- 2. Обновляем state БЕЗ побочных эффектов ----------
-      setMessages(prev => {
-        // Идемпотентность: не добавляем повторно одно и то же messageId,
-        // даже если updater вызовут два раза (StrictMode)
-        if (prev.some(m => m.messageId === msg.messageId)) {
-          return prev;
-        }
-        return [...prev, baseMessage];
-      });
-
-      // ✨ НОВОЕ: Асинхронная расшифровка ВСЕХ сообщений через chat key
+      // ✅ ИСПРАВЛЕНО: Расшифровываем ПЕРЕД добавлением в state (без мерцания)
       const encKeys = encryptionKeysRef.current;
       const currentChatId = selectedChatRef.current;
 
       if (msg.encryptionMetadata && encKeys && currentChatId === msg.chatId) {
         (async () => {
           try {
-            // Получаем chat key (должен быть уже в кэше)
+            // Получаем chat key
             const chatKey = await ensureChatKey(msg.chatId);
             if (!chatKey) {
               console.warn('Chat key not available for message', msg.messageId);
+              // Добавляем с ошибкой
+              setMessages(prev => {
+                if (prev.some(m => m.messageId === msg.messageId)) return prev;
+                return [...prev, {
+                  messageId: msg.messageId,
+                  senderId: msg.senderId,
+                  encryptedContent: '🔒 [Ключ недоступен]',
+                  messageType: msg.messageType,
+                  imagePath: msg.imagePath,
+                  createdAt: msg.createdAt,
+                }];
+              });
               return;
             }
             
@@ -152,13 +186,13 @@ export function SocialFloatingButton() {
             if (metadata.signature) {
               try {
                 const keys = await ensureRecipientKey(msg.senderId);
-                senderSignKey = keys.signKey;
+                senderSignKey = keys?.signKey;
               } catch (e) {
                 console.warn('Could not get sender sign key for message', msg.messageId, e);
               }
             }
 
-            // ✨ ИСПОЛЬЗУЕМ CHAT KEY
+            // Расшифровываем
             const plain = await encryption.decryptMessageWithChatKey(
               {
                 encryptedContent: msg.encryptedContent,
@@ -168,17 +202,47 @@ export function SocialFloatingButton() {
               senderSignKey,
             );
 
-            setMessages(prev =>
-              prev.map(m =>
-                m.messageId === msg.messageId
-                  ? { ...m, encryptedContent: plain }
-                  : m,
-              ),
-            );
+            // Добавляем уже расшифрованное сообщение
+            setMessages(prev => {
+              if (prev.some(m => m.messageId === msg.messageId)) return prev;
+              return [...prev, {
+                messageId: msg.messageId,
+                senderId: msg.senderId,
+                encryptedContent: plain,
+                messageType: msg.messageType,
+                imagePath: msg.imagePath,
+                createdAt: msg.createdAt,
+              }];
+            });
           } catch (e) {
             console.warn('Failed to decrypt message via WebSocket', msg.messageId, e);
+            // Добавляем с ошибкой
+            setMessages(prev => {
+              if (prev.some(m => m.messageId === msg.messageId)) return prev;
+              return [...prev, {
+                messageId: msg.messageId,
+                senderId: msg.senderId,
+                encryptedContent: '🔒 [Ошибка расшифровки]',
+                messageType: msg.messageType,
+                imagePath: msg.imagePath,
+                createdAt: msg.createdAt,
+              }];
+            });
           }
         })();
+      } else {
+        // Нет метаданных шифрования - добавляем как есть
+        setMessages(prev => {
+          if (prev.some(m => m.messageId === msg.messageId)) return prev;
+          return [...prev, {
+            messageId: msg.messageId,
+            senderId: msg.senderId,
+            encryptedContent: msg.encryptedContent,
+            messageType: msg.messageType,
+            imagePath: msg.imagePath,
+            createdAt: msg.createdAt,
+          }];
+        });
       }
 
     });
@@ -189,13 +253,22 @@ export function SocialFloatingButton() {
     };
   }, []);
 
+  // Загружаем базовые данные при монтировании (для счётчиков)
+  useEffect(() => {
+    if (!user) return;
+    loadIncomingRequests();
+    loadOutgoingRequests();
+    console.log('📊 Loading initial friend requests for badge counts');
+  }, [user]);
+
   useEffect(() => {
     if (!user || !isOpen) return;
     loadFriends();
-    loadIncomingRequests();
-    loadOutgoingRequests();
     loadChats();
     initEncryption();
+    // Перезагружаем заявки при открытии для актуальности
+    loadIncomingRequests();
+    loadOutgoingRequests();
   }, [user, isOpen]);
 
   // Загружаем сообщения при выборе чата (один раз)
@@ -320,7 +393,54 @@ export function SocialFloatingButton() {
   const loadChats = async () => {
     try {
       const { data } = await http.get<ChatListResponse>(endpoints.chatList);
-      setChats(data.chats);
+      
+      // Расшифровываем последние сообщения
+      const keys = encryptionKeys || await encryption.unlockKeys();
+      if (!keys) {
+        setChats(data.chats);
+        return;
+      }
+
+      const chatsWithDecrypted = await Promise.all(
+        data.chats.map(async (chat) => {
+          if (!chat.lastMessage || !chat.lastMessage.encryptionMetadata) {
+            return chat;
+          }
+
+          try {
+            const chatKey = await ensureChatKey(chat.chatId);
+            if (!chatKey) {
+              return chat;
+            }
+
+            const metadata = typeof chat.lastMessage.encryptionMetadata === 'string'
+              ? JSON.parse(chat.lastMessage.encryptionMetadata)
+              : chat.lastMessage.encryptionMetadata;
+
+            const decrypted = await encryption.decryptMessageWithChatKey(
+              {
+                encryptedContent: chat.lastMessage.encryptedContent,
+                encryptionMetadata: metadata,
+              },
+              chatKey,
+              undefined, // Подпись не проверяем для превью
+            );
+
+            return {
+              ...chat,
+              lastMessage: {
+                ...chat.lastMessage,
+                encryptedContent: decrypted,
+              },
+            };
+          } catch (e) {
+            console.error('Failed to decrypt last message for chat', chat.chatId, e);
+            return chat;
+          }
+        })
+      );
+
+      setChats(chatsWithDecrypted);
     } catch (err) {
       console.error('Failed to load chats:', err);
     }
@@ -374,7 +494,7 @@ export function SocialFloatingButton() {
             if (metadata.signature) {
               try {
                 const keys = await ensureRecipientKey(m.senderId);
-                senderSignKey = keys.signKey;
+                senderSignKey = keys?.signKey;
               } catch (e) {
                   console.warn('Could not get sender sign key for message', m.messageId, e);
               }
@@ -416,9 +536,8 @@ export function SocialFloatingButton() {
   };
 
     /**
-     * ✨ НОВАЯ ФУНКЦИЯ: Получить или создать chat key для чата
-     * Если ключ существует на сервере - разворачиваем его
-     * Если нет - генерируем новый и сохраняем wrapped версии для обоих участников
+     * ✅ ПРОСТО: Получить chat key - загружаем wrapped key с сервера и разворачиваем
+     * НЕ генерируем новый ключ НИКОГДА - ключ создаётся только при создании чата
      */
     const ensureChatKey = async (chatId: number): Promise<CryptoKey | null> => {
       // Проверяем есть ли уже в памяти
@@ -427,9 +546,9 @@ export function SocialFloatingButton() {
         return chatKeys.get(chatId)!;
       }
     
-      console.log('💾 Chat key not in cache, need to fetch/unwrap for chatId:', chatId);
+      console.log('💾 Chat key not in cache, fetching from server for chatId:', chatId);
     
-      // ✨ Автоматическая разблокировка ключей если нужно
+      // Автоматическая разблокировка ключей если нужно
       let currentKeys = encryptionKeys;
       if (!currentKeys) {
         console.log('🔐 Encryption keys not loaded, attempting auto-unlock...');
@@ -442,14 +561,19 @@ export function SocialFloatingButton() {
         }
       }
     
-      try {
-        // Пытаемся загрузить wrapped key с сервера
-        console.log('🔍 Fetching wrapped key from server for chatId:', chatId);
-        const { data } = await http.get(endpoints.chatWrappedKeyGet(chatId));
+    try {
+      // Загружаем wrapped key с сервера
+      console.log('🔍 Fetching wrapped key from server for chatId:', chatId);
+      const { data } = await http.get(endpoints.chatWrappedKeyGet(chatId));
       
-        console.log('📦 Received wrapped key:', data.wrappedKey.substring(0, 50) + '...');
+      console.log('📥 Server response:', data);
       
-        // Разворачиваем ключ своим приватным ключом
+      if (!data.wrappedKey) {
+        console.error('❌ Server returned empty wrapped key:', data);
+        return null;
+      }
+      
+      console.log('📦 Received wrapped key:', data.wrappedKey.substring(0, 50) + '...');        // Разворачиваем ключ своим приватным ключом
         console.log('🔓 Unwrapping chat key with private key...');
         const chatKey = await encryption.unwrapChatKey(data.wrappedKey, currentKeys.privateKey);
       
@@ -459,24 +583,17 @@ export function SocialFloatingButton() {
       
         return chatKey;
       } catch (err: any) {
-        // Если ключ не найден (404) - генерируем новый
-        if (err?.response?.status === 404) {
-          console.log('🔑 No wrapped key found on server, generating new chat key...');
-          return await generateAndSaveChatKey(chatId);
-        }
-      
-        console.error('❌ Failed to get wrapped key:', err);
+        console.error('❌ Failed to get wrapped key:', err?.response?.status || err.message);
         return null;
       }
     };
   
   /**
-   * ✨ НОВАЯ ФУНКЦИЯ: Генерация и сохранение нового chat key
-   * Если получатель ещё не сгенерировал ключи - сохраняем только свой wrapped key
-   * ⚠️ ВАЖНО: Генерирует новый ключ ТОЛЬКО если его нет на сервере
+   * ✅ ОСНОВНАЯ ФУНКЦИЯ: Создание chat key при создании чата
+   * Генерирует ключ и сразу создаёт wrapped keys для ОБОИХ участников
    */
-  const generateAndSaveChatKey = async (chatId: number): Promise<CryptoKey | null> => {
-    // ✨ Автоматическая разблокировка ключей если нужно
+  const createChatKeyForNewChat = async (participantId: string): Promise<{ chatKey: CryptoKey; wrappedForMe: string; wrappedForRecipient: string } | null> => {
+    // Автоматическая разблокировка ключей если нужно
     let currentKeys = encryptionKeys;
     if (!currentKeys) {
       console.log('🔐 Encryption keys not loaded, attempting auto-unlock...');
@@ -484,82 +601,49 @@ export function SocialFloatingButton() {
       if (currentKeys) {
         setEncryptionKeys(currentKeys);
       } else {
-        console.error('Failed to unlock encryption keys');
+        console.error('❌ Failed to unlock encryption keys');
         return null;
       }
     }
   
     try {
-      // ⚠️ ВАЖНО: Сначала проверяем, может уже есть wrapped key на сервере
-      // (это может произойти если собеседник уже создал ключ для нас)
-      try {
-        console.log('🔍 Double-checking if wrapped key exists on server...');
-        const { data } = await http.get(endpoints.chatWrappedKeyGet(chatId));
-        if (data.wrappedKey) {
-          console.log('✅ Found existing wrapped key, unwrapping instead of generating new...');
-          const existingKey = await encryption.unwrapChatKey(data.wrappedKey, currentKeys.privateKey);
-          setChatKeys(prev => new Map(prev).set(chatId, existingKey));
-          return existingKey;
-        }
-      } catch (e) {
-        // 404 = ключа нет, продолжаем генерацию
-        console.log('No existing wrapped key found, will generate new one');
-      }
-      
-      // Получаем информацию о чате и собеседнике
-      const chat = chats.find(c => c.chatId === chatId);
-      if (!chat) {
-        console.error('Chat not found:', chatId);
-        return null;
-      }
-    
-      // Генерируем новый AES-256 ключ для чата
+      // 1️⃣ Генерируем новый AES-256 ключ для чата
       console.log('🔑 Generating new AES-256 chat key...');
       const chatKey = await encryption.generateChatKey();
     
-      // Оборачиваем его своим публичным ключом
+      // 2️⃣ Оборачиваем его своим публичным ключом
       console.log('🔒 Wrapping chat key for self...');
       const wrappedForMe = await encryption.wrapChatKey(chatKey, currentKeys.publicKey);
     
-      // ✅ Пытаемся обернуть для собеседника (но не требуем его ключ обязательно)
-      let recipientWrappedKey: string | null = null;
-      try {
-        console.log('🔒 Attempting to wrap chat key for recipient...');
-        const recipientKeys = await ensureRecipientKey(chat.participantId);
-        if (recipientKeys) {
-          recipientWrappedKey = await encryption.wrapChatKey(chatKey, recipientKeys.encryptKey);
-          console.log('✅ Recipient wrapped key created');
-        }
-      } catch (e) {
-        console.warn('⚠️ Could not wrap key for recipient (will wrap when they log in):', e);
+      // 3️⃣ ОБЯЗАТЕЛЬНО получаем ключ собеседника и оборачиваем для него
+      console.log('🔒 Getting recipient public key...');
+      const recipientKeys = await ensureRecipientKey(participantId);
+      if (!recipientKeys) {
+        console.error('❌ Failed to get recipient public key');
+        throw new Error('Не удалось получить публичный ключ собеседника. Убедитесь что он залогинился хотя бы раз.');
       }
-    
-    // Сохраняем свой wrapped key на сервере (обязательно)
-    console.log('💾 Saving my wrapped key to server...');
-    await http.post(endpoints.chatWrappedKeySave, {
-      chatId,
-      wrappedKey: wrappedForMe
-    });
-  
-    // ✅ Если удалось обернуть для собеседника - сохраняем и его wrapped key
-    if (recipientWrappedKey) {
-      console.log('💾 Saving recipient wrapped key to server...');
-      await http.post(endpoints.chatWrappedKeySaveForParticipant, {
-        chatId,
-        participantId: chat.participantId,
-        wrappedKey: recipientWrappedKey
-      });
-      console.log('✅ Recipient wrapped key saved');
-    }      // Кэшируем
-      setChatKeys(prev => new Map(prev).set(chatId, chatKey));
-      console.log('✅ New chat key generated and saved');
-    
-      return chatKey;
+      
+      console.log('🔒 Wrapping chat key for recipient...');
+      const wrappedForRecipient = await encryption.wrapChatKey(chatKey, recipientKeys.encryptKey);
+      console.log('✅ Chat key wrapped for BOTH participants');
+      
+      return { chatKey, wrappedForMe, wrappedForRecipient };
+      
     } catch (err) {
-      console.error('Failed to generate and save chat key:', err);
+      console.error('❌ Failed to create chat key:', err);
       return null;
     }
-  };  const initEncryption = async () => {
+  };
+  
+  /**
+   * ⚠️ DEPRECATED: Не используется - ключи создаются только при создании чата
+   */
+  const generateAndSaveChatKey = async (chatId: number): Promise<CryptoKey | null> => {
+    console.error('❌ generateAndSaveChatKey called - this should not happen!');
+    return null;
+  };
+
+  const initEncryption = async () => {
     console.log('Initializing encryption...');
     // ✅ ИСПРАВЛЕНО: Используем loadKeysLegacy (временно без пароля)
     const existing = await encryption.loadKeysLegacy();
@@ -657,65 +741,50 @@ export function SocialFloatingButton() {
 
   const openChatWith = async (participantId: string) => {
     try {
-      // ✨ Автоматическая разблокировка ключей если нужно
-      if (!encryptionKeys) {
-        console.log('🔐 Encryption keys not loaded, attempting auto-unlock...');
-        const unlockedKeys = await encryption.unlockKeys();
-        if (unlockedKeys) {
-          setEncryptionKeys(unlockedKeys);
-        } else {
-          // Пытаемся полностью сбросить и переинициализировать ключи
-          console.warn('⚠️ Failed to unlock keys, attempting full reset...');
-          const resetKeys = await encryption.resetAndReinitializeKeys();
-          if (resetKeys) {
-            setEncryptionKeys(resetKeys);
-            console.log('✅ Keys reset and initialized successfully');
-          } else {
-            alert('Не удалось инициализировать ключи шифрования. Перезагрузите страницу и попробуйте снова.');
-            return;
-          }
-        }
-      }
-      
-      const currentKeys = encryptionKeys || await encryption.unlockKeys();
-      if (!currentKeys) {
-        alert('Ключи шифрования не инициализированы');
+      // 1️⃣ Создаём chat key и wrapped keys для обоих
+      console.log('📝 Creating chat key for new chat...');
+      const keyData = await createChatKeyForNewChat(participantId);
+      if (!keyData) {
+        alert('Не удалось создать ключи шифрования для чата');
         return;
       }
       
-      console.log('🔑 Generating chat key for new chat...');
-      const chatKey = await encryption.generateChatKey();
-      
-      // Wrap для себя
-      const wrappedForMe = await encryption.wrapChatKey(chatKey, currentKeys.publicKey);
-      
-      // ✅ Попытка wrap для собеседника (может быть null если ключа нет)
-      const recipientKeys = await ensureRecipientKey(participantId);
-      const wrappedForRecipient = recipientKeys 
-        ? await encryption.wrapChatKey(chatKey, recipientKeys.encryptKey)
-        : null;
-      
-      console.log('💾 Creating chat with wrapped keys...');
-      const { data } = await http.post<CreateChatResponse>(endpoints.chatCreate, { 
-        participantId,
-        wrappedKeyForMe: wrappedForMe,
-        wrappedKeyForRecipient: wrappedForRecipient || undefined // null → undefined для бэкенда
+      console.log('🔑 Generated keys:', {
+        wrappedForMeLength: keyData.wrappedForMe.length,
+        wrappedForRecipientLength: keyData.wrappedForRecipient.length
       });
       
-      // Кэшируем chat key
-      setChatKeys(prev => new Map(prev).set(data.chatId, chatKey));
-      console.log('✅ Chat created with wrapped keys');
+      // 2️⃣ Создаём чат на сервере с wrapped keys
+      console.log('💾 Creating chat with wrapped keys...');
+      console.log('📤 Sending to server:', {
+        participantId,
+        wrappedKeyForMe: keyData.wrappedForMe.substring(0, 50) + '...',
+        wrappedKeyForRecipient: keyData.wrappedForRecipient.substring(0, 50) + '...'
+      });
       
-      if (!wrappedForRecipient) {
-        console.warn('⚠️ Recipient will need to generate wrapped key on first login');
-      }
+      const { data } = await http.post<CreateChatResponse>(endpoints.chatCreate, { 
+        participantId,
+        wrappedKeyForMe: keyData.wrappedForMe,
+        wrappedKeyForRecipient: keyData.wrappedForRecipient
+      });
       
+      console.log('📥 Server response:', data);
+      
+      // 3️⃣ Кэшируем chat key
+      setChatKeys(prev => new Map(prev).set(data.chatId, keyData.chatKey));
+      console.log('✅ Chat created with wrapped keys for BOTH users, chatId:', data.chatId);
+      
+      // ⏳ Даём серверу время сохранить wrapped keys
+      console.log('⏳ Waiting 500ms for server to save wrapped keys...');
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // 4️⃣ Открываем чат
       setSelectedChat(data.chatId);
       await loadChats();
       await loadMessages(data.chatId);
       setActiveTab('chat');
     } catch (e) {
-      console.error('Failed to open chat', e);
+      console.error('❌ Failed to open chat:', e);
       alert(e instanceof Error ? e.message : 'Не удалось открыть чат');
     }
   };
@@ -754,34 +823,25 @@ export function SocialFloatingButton() {
       
       if (!chat) {
         // Создаём новый чат
-        console.log('Creating new chat with user:', recipientId);
+        console.log('📝 Creating new chat with user:', recipientId);
         
-          // ✨ НОВОЕ: Генерируем chat key и wrapped keys
-          console.log('🔑 Generating chat key for new chat...');
-          const newChatKey = await encryption.generateChatKey();
+        // 1️⃣ Создаём chat key и wrapped keys для обоих
+        const keyData = await createChatKeyForNewChat(recipientId);
+        if (!keyData) {
+          alert('Не удалось создать ключи шифрования для чата');
+          return;
+        }
         
-          // Wrap для себя
-          const wrappedForMe = await encryption.wrapChatKey(newChatKey, currentKeys.publicKey);
-        
-          // ✅ Попытка wrap для собеседника (может быть null)
-          const recipientKeys = await ensureRecipientKey(recipientId);
-          const wrappedForRecipient = recipientKeys 
-            ? await encryption.wrapChatKey(newChatKey, recipientKeys.encryptKey)
-            : null;
-        
+        // 2️⃣ Создаём чат на сервере с wrapped keys
         const { data: createData } = await http.post<{ chatId: number }>(endpoints.chatCreate, {
-            participantId: recipientId,
-            wrappedKeyForMe: wrappedForMe,
-            wrappedKeyForRecipient: wrappedForRecipient || undefined
+          participantId: recipientId,
+          wrappedKeyForMe: keyData.wrappedForMe,
+          wrappedKeyForRecipient: keyData.wrappedForRecipient
         });
         
-          // Кэшируем chat key
-          setChatKeys(prev => new Map(prev).set(createData.chatId, newChatKey));
-          console.log('✅ Chat created with wrapped keys, chatId:', createData.chatId);
-        
-          if (!wrappedForRecipient) {
-            console.warn('⚠️ Recipient will need to generate wrapped key on first login');
-          }
+        // 3️⃣ Кэшируем chat key
+        setChatKeys(prev => new Map(prev).set(createData.chatId, keyData.chatKey));
+        console.log('✅ Chat created with wrapped keys for BOTH users, chatId:', createData.chatId);
         
         const friend = friends.find(f => f.userId === recipientId);
         chat = {
@@ -807,7 +867,7 @@ export function SocialFloatingButton() {
         const encrypted = await encryption.encryptMessageWithChatKey(
         message, 
           chatKey,
-        encryptionKeys.signPrivateKey
+        currentKeys.signPrivateKey
       );
       
         console.log('✅ Message encrypted with chat key');
@@ -867,7 +927,7 @@ export function SocialFloatingButton() {
       const form = new FormData();
       form.append('file', file);
       const { data } = await http.post<UploadImageResponse>(endpoints.chatUpload, form, { headers: { 'Content-Type': 'multipart/form-data' }});
-      await sendMessageToUser(chat.participantId, '[image]' + data.imagePath, 'image', data.imagePath);
+      await sendMessageToUser(chat.participantId, '', 'image', data.imagePath);
     } catch (e) {
       console.error('Failed to upload image', e);
     }
@@ -887,12 +947,23 @@ export function SocialFloatingButton() {
     const displayName = friend?.displayName || friend?.username || chat?.participantId.slice(0, 8) || 'Пользователь';
     return (
       <div className="flex flex-col h-full">
-        <div className="flex-none border-b border-slate-800 p-2 flex items-center gap-2">
+        <div className="flex-none border-b border-slate-800/50 p-3 flex items-center gap-3 bg-slate-900/40">
+          {/* Кнопка назад */}
+          <button
+            onClick={() => { setSelectedChat(null); setMessages([]); }}
+            className="p-2 hover:bg-slate-800 rounded-lg transition-colors"
+            title="Назад к списку"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+          
           {friend?.avatarUrl && (
-            <img src={friend.avatarUrl} alt="" className="w-8 h-8 rounded-lg object-cover border border-slate-700" />
+            <img src={friend.avatarUrl} alt="" className="w-10 h-10 rounded-full object-cover border-2 border-slate-700/50 shadow-lg" />
           )}
           <div className="flex-1 min-w-0">
-            <div className="text-sm font-medium truncate">{displayName}</div>
+            <div className="text-sm font-semibold truncate">{displayName}</div>
             {friend?.username && friend.displayName && (
               <div className="text-xs text-slate-400 truncate">@{friend.username}</div>
             )}
@@ -910,24 +981,45 @@ export function SocialFloatingButton() {
                 alert('Ошибка удаления чата');
               }
             }}
-            className="px-2 py-1 text-xs bg-red-600/20 hover:bg-red-600/40 rounded transition-colors"
+            className="p-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-all"
             title="Удалить чат"
           >
-            🗑️
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
           </button>
         </div>
-        <div className="flex-1 overflow-y-auto px-3 py-2 space-y-2">
+        <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
           {messages.length === 0 ? (
-            <div className="text-center py-8 text-slate-400 text-sm">Нет сообщений</div>
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center space-y-2">
+                <div className="text-6xl opacity-20">💬</div>
+                <p className="text-slate-400 text-sm">Нет сообщений</p>
+                <p className="text-slate-500 text-xs">Начните общение</p>
+              </div>
+            </div>
           ) : (
             messages.map(m => (
               <div key={m.messageId} className={`flex ${m.senderId === user!.id ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[70%] rounded-lg px-3 py-2 text-sm whitespace-pre-wrap wrap-break-word ${m.senderId === user!.id ? 'bg-indigo-600/60' : 'bg-slate-800/70'}`}>
+                <div className={`max-w-[75%] rounded-2xl px-4 py-2.5 text-sm whitespace-pre-wrap break-words shadow-lg ${
+                  m.senderId === user!.id
+                    ? 'bg-gradient-to-br from-indigo-600 to-indigo-700 text-white shadow-indigo-500/30'
+                    : 'bg-slate-800/90 text-slate-100 shadow-slate-900/50 border border-slate-700/50'
+                }`}>
                   {m.messageType === 'image' && m.imagePath ? (
-                    <img src={`/media/${m.imagePath}`} alt="img" className="rounded mb-1 max-h-64 max-w-full object-contain cursor-pointer" onClick={() => window.open(`/media/${m.imagePath}`, '_blank')} />
+                    <img
+                      src={`/media/${m.imagePath}`}
+                      alt="img"
+                      className="rounded-xl mb-2 max-h-64 w-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                      onClick={() => window.open(`/media/${m.imagePath}`, '_blank')}
+                    />
                   ) : null}
-                  {m.messageType === 'text' && m.encryptedContent}
-                  <div className="mt-1 text-[10px] text-slate-400 text-right">
+                  {m.encryptedContent && m.encryptedContent.trim() && (
+                    <div className="leading-relaxed">{m.encryptedContent}</div>
+                  )}
+                  <div className={`mt-1.5 text-[10px] text-right opacity-70 ${
+                    m.senderId === user!.id ? 'text-indigo-200' : 'text-slate-400'
+                  }`}>
                     {new Date(m.createdAt).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
                   </div>
                 </div>
@@ -936,26 +1028,33 @@ export function SocialFloatingButton() {
           )}
           <div ref={messagesEndRef} />
         </div>
-        <div className="flex-none p-2 border-t border-slate-800 space-y-2">
-          <div className="flex gap-2">
+        <div className="flex-none p-3 border-t border-slate-800/50 bg-slate-900/30">
+          <div className="flex gap-2 mb-2">
             <input
               value={messageInput}
               onChange={e => setMessageInput(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChatMessage(); } }}
-              className="flex-1 bg-slate-800/60 border border-slate-700 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              placeholder="Сообщение..."
+              className="flex-1 bg-slate-800/80 border border-slate-700/50 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all placeholder:text-slate-500"
+              placeholder="Введите сообщение..."
             />
             <button
               onClick={sendChatMessage}
-              className="px-3 py-2 rounded bg-indigo-600 hover:bg-indigo-500 text-sm font-medium"
-            >Отправить</button>
+              className="px-5 py-2.5 rounded-xl bg-gradient-to-br from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-sm font-medium transition-all shadow-lg shadow-indigo-500/30 hover:shadow-indigo-500/50"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+              </svg>
+            </button>
           </div>
-          <div>
-            <label className="text-xs text-slate-400 cursor-pointer inline-flex items-center gap-2">
-              <input type="file" className="hidden" accept="image/*" onChange={e => { const f = e.target.files?.[0]; if (f) uploadImage(f); }} />
-              <span className="px-2 py-1 rounded border border-slate-700 hover:border-indigo-500">Загрузить картинку</span>
-            </label>
-          </div>
+          <label className="inline-flex items-center gap-2 cursor-pointer group">
+            <input type="file" className="hidden" accept="image/*" onChange={e => { const f = e.target.files?.[0]; if (f) uploadImage(f); }} />
+            <span className="text-xs text-slate-400 group-hover:text-indigo-400 transition-colors flex items-center gap-1.5">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              Прикрепить изображение
+            </span>
+          </label>
         </div>
       </div>
     );
@@ -1023,17 +1122,11 @@ export function SocialFloatingButton() {
                   count={chats.length}
                 />
                 <TabButton
-                  active={activeTab === 'incoming'}
-                  onClick={() => setActiveTab('incoming')}
-                  label="Входящие"
-                  count={incomingCount}
+                  active={activeTab === 'requests'}
+                  onClick={() => setActiveTab('requests')}
+                  label="Заявки"
+                  count={incomingCount + outgoingCount}
                   badge={hasNotifications}
-                />
-                <TabButton
-                  active={activeTab === 'outgoing'}
-                  onClick={() => setActiveTab('outgoing')}
-                  label="Исходящие"
-                  count={outgoingCount}
                 />
                 <TabButton
                   active={activeTab === 'search'}
@@ -1043,7 +1136,7 @@ export function SocialFloatingButton() {
               </div>
 
               {/* Content */}
-              <div className="flex-1 overflow-y-auto p-3">
+              <div className="flex-1 overflow-hidden">
                 <AnimatePresence mode="wait">
                   {activeTab === 'friends' && (
                     <motion.div
@@ -1052,6 +1145,7 @@ export function SocialFloatingButton() {
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, x: 20 }}
                       transition={{ duration: 0.15 }}
+                      className="h-full overflow-y-auto p-3"
                     >
                       <FriendsList friends={friends} onRemove={removeFriend} onOpenChat={openChatWith} />
                     </motion.div>
@@ -1064,6 +1158,7 @@ export function SocialFloatingButton() {
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, x: 20 }}
                       transition={{ duration: 0.15 }}
+                      className="h-full overflow-y-auto p-3"
                     >
                       <SearchUsers
                         query={searchQuery}
@@ -1076,34 +1171,51 @@ export function SocialFloatingButton() {
                     </motion.div>
                   )}
 
-                  {activeTab === 'incoming' && (
+                  {activeTab === 'requests' && (
                     <motion.div
-                      key="incoming"
+                      key="requests"
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, x: 20 }}
                       transition={{ duration: 0.15 }}
+                      className="h-full overflow-y-auto p-3"
                     >
-                      <IncomingRequests
-                        requests={incomingRequests}
-                        onAccept={acceptRequest}
-                        onReject={rejectRequest}
-                      />
-                    </motion.div>
-                  )}
-
-                  {activeTab === 'outgoing' && (
-                    <motion.div
-                      key="outgoing"
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: 20 }}
-                      transition={{ duration: 0.15 }}
-                    >
-                      <OutgoingRequests
-                        requests={outgoingRequests}
-                        onCancel={cancelRequest}
-                      />
+                      {/* Sub-tabs для заявок */}
+                      <div className="flex gap-2 mb-3">
+                        <button
+                          onClick={() => setRequestsSubTab('incoming')}
+                          className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                            requestsSubTab === 'incoming'
+                              ? 'bg-gradient-to-br from-indigo-600 to-indigo-700 text-white shadow-lg shadow-indigo-500/30'
+                              : 'bg-slate-800/60 text-slate-300 hover:bg-slate-800 border border-slate-700/50'
+                          }`}
+                        >
+                          Входящие {incomingCount > 0 && `(${incomingCount})`}
+                        </button>
+                        <button
+                          onClick={() => setRequestsSubTab('outgoing')}
+                          className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                            requestsSubTab === 'outgoing'
+                              ? 'bg-gradient-to-br from-indigo-600 to-indigo-700 text-white shadow-lg shadow-indigo-500/30'
+                              : 'bg-slate-800/60 text-slate-300 hover:bg-slate-800 border border-slate-700/50'
+                          }`}
+                        >
+                          Исходящие {outgoingCount > 0 && `(${outgoingCount})`}
+                        </button>
+                      </div>
+                      
+                      {requestsSubTab === 'incoming' ? (
+                        <IncomingRequests
+                          requests={incomingRequests}
+                          onAccept={acceptRequest}
+                          onReject={rejectRequest}
+                        />
+                      ) : (
+                        <OutgoingRequests
+                          requests={outgoingRequests}
+                          onCancel={cancelRequest}
+                        />
+                      )}
                     </motion.div>
                   )}
                   {activeTab === 'chat' && (
@@ -1113,20 +1225,24 @@ export function SocialFloatingButton() {
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, x: 20 }}
                       transition={{ duration: 0.15 }}
-                      className="h-full"
+                      className="h-full flex flex-col overflow-hidden"
                     >
-                      <div className="mb-2 flex flex-wrap gap-1">
-                        {chats.map(c => (
-                          <button
-                            key={c.chatId}
-                            onClick={() => { setSelectedChat(c.chatId); loadMessages(c.chatId); }}
-                            className={`px-2 py-1 rounded text-xs border ${selectedChat === c.chatId ? 'border-indigo-500 bg-indigo-600/30' : 'border-slate-700 bg-slate-800/40 hover:border-slate-600'}`}
-                          >
-                            {c.participantId.slice(0,8)}
-                          </button>
-                        ))}
-                      </div>
-                      {renderChatView()}
+                      {!selectedChat ? (
+                        /* Список чатов */
+                        <div className="h-full overflow-y-auto p-3 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
+                          <ChatsList 
+                            chats={chats} 
+                            friends={friends}
+                            currentUserId={user!.id}
+                            onSelectChat={(chatId) => { setSelectedChat(chatId); loadMessages(chatId); }}
+                          />
+                        </div>
+                      ) : (
+                        /* Открытый чат */
+                        <div className="h-full flex flex-col overflow-hidden">
+                          {renderChatView()}
+                        </div>
+                      )}
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -1330,7 +1446,7 @@ function SearchUsers({
               <Link to={`/u/${user.username}`} className="flex items-center gap-2 flex-1 min-w-0">
                 {user.avatarUrl ? (
                   <img
-                    src={user.avatarUrl}
+                    src={user.avatarUrl.startsWith('http') || user.avatarUrl.startsWith('/') ? user.avatarUrl : `/media/${user.avatarUrl}`}
                     alt={user.username}
                     className="w-10 h-10 rounded-lg object-cover border border-slate-700"
                   />
@@ -1520,6 +1636,113 @@ function OutgoingRequests({
           )}
         </motion.div>
       ))}
+    </div>
+  );
+}
+
+function ChatsList({ 
+  chats, 
+  friends,
+  currentUserId,
+  onSelectChat 
+}: { 
+  chats: PrivateChat[]
+  friends: Friend[]
+  currentUserId: string
+  onSelectChat: (chatId: number) => void
+}) {
+  if (chats.length === 0) {
+    return (
+      <div className="text-center py-8">
+        <div className="text-6xl opacity-20 mb-3">💬</div>
+        <p className="text-slate-400 text-sm">Нет чатов</p>
+        <p className="text-slate-500 text-xs mt-1">Откройте чат с другом</p>
+      </div>
+    );
+  }
+
+  const formatDate = (dateStr: string) => {
+    try {
+      const date = new Date(dateStr);
+      const now = new Date();
+      const diffMs = now.getTime() - date.getTime();
+      const diffMins = Math.floor(diffMs / (1000 * 60));
+      
+      if (diffMins < 1) return 'Только что';
+      if (diffMins < 60) return `${diffMins} мин. назад`;
+      
+      const diffHours = Math.floor(diffMins / 60);
+      if (diffHours < 24) return `${diffHours} ч. назад`;
+      
+      const diffDays = Math.floor(diffHours / 24);
+      if (diffDays === 1) return 'Вчера';
+      if (diffDays < 7) return `${diffDays} дн. назад`;
+      
+      return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+    } catch {
+      return '';
+    }
+  };
+
+  return (
+    <div className="space-y-2">
+      {chats.map((chat) => {
+        const friend = friends.find(f => f.userId === chat.participantId);
+        const displayName = friend?.displayName || friend?.username || chat.participantId.slice(0, 8);
+        const lastMsg = chat.lastMessage;
+        const hasUnread = lastMsg && (
+          (lastMsg.senderId !== currentUserId) && 
+          (chat.participantId === lastMsg.senderId)
+        );
+
+        return (
+          <motion.div
+            key={chat.chatId}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            onClick={() => onSelectChat(chat.chatId)}
+            className="group cursor-pointer flex items-center gap-3 p-3 rounded-xl border border-slate-800 bg-slate-900/40 hover:bg-slate-900/70 hover:border-slate-700 transition-all"
+          >
+            {friend?.avatarUrl ? (
+              <img
+                src={friend.avatarUrl}
+                alt={displayName}
+                className="w-12 h-12 rounded-full object-cover border-2 border-slate-700/50"
+              />
+            ) : (
+              <div className="w-12 h-12 rounded-full bg-slate-800 border-2 border-slate-700/50 flex items-center justify-center text-slate-400 text-lg font-semibold">
+                {displayName[0]?.toUpperCase()}
+              </div>
+            )}
+            
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between gap-2 mb-1">
+                <div className={`text-sm font-semibold truncate ${hasUnread ? 'text-white' : 'text-slate-200'}`}>
+                  {displayName}
+                </div>
+                {lastMsg && (
+                  <div className="text-xs text-slate-500 flex-shrink-0">
+                    {formatDate(lastMsg.createdAt)}
+                  </div>
+                )}
+              </div>
+              
+              {lastMsg ? (
+                <div className="flex items-center gap-2">
+                  <div className={`text-xs truncate flex-1 ${hasUnread ? 'text-slate-300 font-medium' : 'text-slate-400'}`}>
+                    {lastMsg.messageType === 'image' ? '🖼️ Изображение' : lastMsg.encryptedContent}
+                  </div>
+                  {hasUnread && (
+                    <div className="w-2 h-2 rounded-full bg-indigo-500 flex-shrink-0 animate-pulse"></div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-xs text-slate-500">Нет сообщений</div>
+              )}
+            </div>
+          </motion.div>
+        );
+      })}
     </div>
   );
 }
