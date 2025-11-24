@@ -188,7 +188,7 @@ export default function RegisterPage() {
   const next = new URLSearchParams(search).get('next') || '/profile';
 
   async function onSubmit(v: Form) {
-    if (!captchaToken || !termsAccepted) return;
+    if (!termsAccepted) return;
     try {
       const resp = await http.post<RegisterRes>(
         '/api/auth/register',
@@ -394,7 +394,7 @@ export default function RegisterPage() {
           <div style={{ marginTop: 12 }}>
             <Button
               type="submit"
-              disabled={!allFieldsValid || isSubmitting || !captchaToken || !termsAccepted}
+              disabled={!allFieldsValid || isSubmitting || !termsAccepted}
               style={{ width: '100%', padding: '12px 16px' }}
             >
             Зарегистрироваться

@@ -18,6 +18,7 @@ interface StoredKey {
 class SecureStorage {
   private db: IDBDatabase | null = null;
   private masterKey: CryptoKey | null = null;
+  private currentSalt: Uint8Array | null = null;
 
   /**
    * Инициализация IndexedDB
@@ -76,8 +77,8 @@ class SecureStorage {
    * Инициализация с паролем пользователя
    */
   async init(password: string): Promise<void> {
-    const salt = crypto.getRandomValues(new Uint8Array(16));
-    this.masterKey = await this.deriveMasterKey(password, salt);
+    this.currentSalt = crypto.getRandomValues(new Uint8Array(16));
+    this.masterKey = await this.deriveMasterKey(password, this.currentSalt);
     await this.initDB();
   }
 
@@ -87,6 +88,7 @@ class SecureStorage {
   async unlock(password: string, salt: Uint8Array): Promise<boolean> {
     try {
       this.masterKey = await this.deriveMasterKey(password, salt);
+      this.currentSalt = salt;
       await this.initDB();
       
       // Проверяем правильность пароля попыткой расшифровать данные
@@ -96,6 +98,13 @@ class SecureStorage {
       this.masterKey = null;
       return false;
     }
+  }
+
+  /**
+   * Получить текущую соль, использованную для деривации мастер-ключа
+   */
+  getCurrentSalt(): Uint8Array | null {
+    return this.currentSalt;
   }
 
   /**

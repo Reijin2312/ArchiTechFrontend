@@ -43,6 +43,9 @@ export function SocialFloatingButton() {
   const [recipientPublicKeys, setRecipientPublicKeys] = useState<Map<string, CryptoKey>>(new Map());
   const [recipientSignKeys, setRecipientSignKeys] = useState<Map<string, CryptoKey>>(new Map());
   
+    // ✨ НОВОЕ: хранение unwrapped chat keys для каждого чата
+    const [chatKeys, setChatKeys] = useState<Map<number, CryptoKey>>(new Map());
+  
   const pendingMessagesRef = useRef<Map<string, string>>(new Map()); // nonce -> plaintext
   const processedMessageIds = useRef<Set<number | string>>(new Set()); // Для предотвращения дублей (число или "число_decrypted")
   
@@ -105,40 +108,8 @@ export function SocialFloatingButton() {
       }
       processedMessageIds.current.add(msg.messageId);
 
-      const isOwn = msg.senderId === currentUser.id;
-
-      // ---------- 1. Считаем текст сообщения И ВРАЩАЕМ pending ВНЕ setMessages ----------
-      let decryptedText = msg.encryptedContent;
-
-      if (isOwn) {
-        // Свое сообщение: пытаемся достать plaintext из pending по nonce
-        let nonce: string | undefined;
-
-        if (msg.encryptionMetadata) {
-          try {
-            const metadata = typeof msg.encryptionMetadata === 'string'
-              ? JSON.parse(msg.encryptionMetadata)
-              : msg.encryptionMetadata;
-            nonce = metadata.nonce;
-          } catch (e) {
-            console.warn('Failed to parse encryptionMetadata for own message', e);
-          }
-        }
-
-        if (nonce && pendingMessagesRef.current.has(nonce)) {
-          decryptedText = pendingMessagesRef.current.get(nonce)!;
-          pendingMessagesRef.current.delete(nonce);
-          console.log('✅ Own message text restored from pending by nonce');
-        } else {
-          // Свои старые сообщения – только маркер (plaintext мы нигде не храним)
-          decryptedText = '[Отправлено]';
-          console.log('ℹ️ Own message not found in pending, using placeholder');
-        }
-      } else {
-        // Чужое сообщение – сначала показываем как есть (шифротекст),
-        // затем асинхронно расшифровываем и обновляем
-        decryptedText = msg.encryptedContent;
-      }
+      // ✨ НОВОЕ: Показываем зашифрованный текст, затем асинхронно расшифровываем
+      let decryptedText = msg.encryptedContent; // Временно показываем шифротекст
 
       const baseMessage: ChatMessage = {
         messageId: msg.messageId,
@@ -159,12 +130,20 @@ export function SocialFloatingButton() {
         return [...prev, baseMessage];
       });
 
-      // ---------- 3. Асинхронная расшифровка чужих сообщений ----------
+      // ✨ НОВОЕ: Асинхронная расшифровка ВСЕХ сообщений через chat key
       const encKeys = encryptionKeysRef.current;
+      const currentChatId = selectedChatRef.current;
 
-      if (!isOwn && msg.encryptionMetadata && encKeys) {
+      if (msg.encryptionMetadata && encKeys && currentChatId === msg.chatId) {
         (async () => {
           try {
+            // Получаем chat key (должен быть уже в кэше)
+            const chatKey = await ensureChatKey(msg.chatId);
+            if (!chatKey) {
+              console.warn('Chat key not available for message', msg.messageId);
+              return;
+            }
+            
             const metadata = typeof msg.encryptionMetadata === 'string'
               ? JSON.parse(msg.encryptionMetadata)
               : msg.encryptionMetadata;
@@ -179,12 +158,13 @@ export function SocialFloatingButton() {
               }
             }
 
-            const plain = await encryption.decryptMessage(
+            // ✨ ИСПОЛЬЗУЕМ CHAT KEY
+            const plain = await encryption.decryptMessageWithChatKey(
               {
                 encryptedContent: msg.encryptedContent,
                 encryptionMetadata: metadata,
               },
-              encKeys.privateKey,
+              chatKey,
               senderSignKey,
             );
 
@@ -196,7 +176,7 @@ export function SocialFloatingButton() {
               ),
             );
           } catch (e) {
-            console.warn('Failed to decrypt incoming message', msg.messageId, e);
+            console.warn('Failed to decrypt message via WebSocket', msg.messageId, e);
           }
         })();
       }
@@ -222,7 +202,8 @@ export function SocialFloatingButton() {
   useEffect(() => {
     if (!selectedChat || !isOpen) return;
     loadMessages(selectedChat, false);
-  }, [selectedChat]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedChat, isOpen]);
   
   // Автопрокрутка при изменении messages
   useEffect(() => {
@@ -348,51 +329,80 @@ export function SocialFloatingButton() {
   const loadMessages = async (chatId: number, append = false) => {
     try {
       const { data } = await http.get<ChatMessagesResponse>(endpoints.chatMessages(chatId));
-      if (!encryptionKeys) {
-        setMessages(data.messages);
-        return;
+      
+      // ✨ Автоматическая разблокировка ключей если нужно
+      let currentKeys = encryptionKeys;
+      if (!currentKeys) {
+        console.log('🔐 Encryption keys not loaded, attempting auto-unlock...');
+        currentKeys = await encryption.unlockKeys();
+        if (currentKeys) {
+          setEncryptionKeys(currentKeys);
+        } else {
+          console.error('Failed to unlock encryption keys for message decryption');
+          setMessages(data.messages.map(m => ({ 
+            ...m, 
+            encryptedContent: '[Ключи шифрования недоступны]' 
+          })));
+          return;
+        }
       }
+      
+        // ✨ НОВОЕ: Загружаем chat key для этого чата
+        const chatKey = await ensureChatKey(chatId);
+        if (!chatKey) {
+          console.error('Failed to get chat key for chatId:', chatId);
+          setMessages(data.messages.map(m => ({ 
+            ...m, 
+            encryptedContent: '[Ключ чата не найден]' 
+          })));
+          return;
+        }
+      
       const decrypted: ChatMessage[] = [];
       for (const m of data.messages) {
-        console.log('📧 Processing message:', m.messageId);
-        console.log('   m.senderId:', m.senderId, 'type:', typeof m.senderId);
-        console.log('   user?.id:', user?.id, 'type:', typeof user?.id);
-        console.log('   Equal (===)?', m.senderId === user?.id);
-        console.log('   String compare?', String(m.senderId) === String(user?.id));
-        
-        // ✅ ИСПРАВЛЕНО: Свои сообщения не расшифровываем (E2E значит plaintext не хранится)
-        if (m.senderId === user?.id) {
-          console.log('✅ Own message, skipping decryption');
-          decrypted.push({ ...m, encryptedContent: '[Отправлено]' });
-          continue;
-        }
-        
+          // ✨ НОВОЕ: Расшифровываем ВСЕ сообщения (включая свои) с помощью chat key
         if (m.encryptionMetadata) {
           try {
-            // Парсим encryptionMetadata только если это строка
             const metadata = typeof m.encryptionMetadata === 'string' 
               ? JSON.parse(m.encryptionMetadata)
               : m.encryptionMetadata;
             
-            // Получаем signPublicKey отправителя для проверки подписи
+            console.log(`🔓 Decrypting message ${m.messageId}...`);
+            
+              // Получаем ключ подписи отправителя для проверки
             let senderSignKey: CryptoKey | undefined;
             if (metadata.signature) {
               try {
                 const keys = await ensureRecipientKey(m.senderId);
                 senderSignKey = keys.signKey;
               } catch (e) {
-                console.warn('Could not get sender sign key for message', m.messageId);
+                  console.warn('Could not get sender sign key for message', m.messageId, e);
               }
             }
               
-            const dec = await encryption.decryptMessage({
+              // ✨ ИСПОЛЬЗУЕМ CHAT KEY для расшифровки
+              const dec = await encryption.decryptMessageWithChatKey({
               encryptedContent: m.encryptedContent,
               encryptionMetadata: metadata
-            }, encryptionKeys.privateKey, senderSignKey);
+              }, chatKey, senderSignKey);
+            console.log(`✅ Message ${m.messageId} decrypted successfully`);
             decrypted.push({ ...m, encryptedContent: dec });
           } catch (e) {
-            console.warn('Failed to decrypt message', m.messageId, e);
-            decrypted.push({ ...m, encryptedContent: '[Не удалось расшифровать: ' + (e instanceof Error ? e.message : '') + ']' });
+            console.error('❌ Failed to decrypt message', m.messageId, ':', e);
+            const errorMsg = e instanceof Error ? e.message : '';
+            
+            // Если это проблема с неверным ключом - информируем пользователя
+            if (errorMsg.includes('wrong key') || errorMsg.includes('OperationError')) {
+              decrypted.push({ 
+                ...m, 
+                encryptedContent: '🔒 [Сообщение зашифровано старым ключом и не может быть расшифровано. Удалите чат и начните заново.]' 
+              });
+            } else {
+              decrypted.push({ 
+                ...m, 
+                encryptedContent: '[Не удалось расшифровать: ' + errorMsg + ']' 
+              });
+            }
           }
         } else {
           decrypted.push(m);
@@ -405,7 +415,151 @@ export function SocialFloatingButton() {
     }
   };
 
-  const initEncryption = async () => {
+    /**
+     * ✨ НОВАЯ ФУНКЦИЯ: Получить или создать chat key для чата
+     * Если ключ существует на сервере - разворачиваем его
+     * Если нет - генерируем новый и сохраняем wrapped версии для обоих участников
+     */
+    const ensureChatKey = async (chatId: number): Promise<CryptoKey | null> => {
+      // Проверяем есть ли уже в памяти
+      if (chatKeys.has(chatId)) {
+        console.log('✅ Using cached chat key for chatId:', chatId);
+        return chatKeys.get(chatId)!;
+      }
+    
+      console.log('💾 Chat key not in cache, need to fetch/unwrap for chatId:', chatId);
+    
+      // ✨ Автоматическая разблокировка ключей если нужно
+      let currentKeys = encryptionKeys;
+      if (!currentKeys) {
+        console.log('🔐 Encryption keys not loaded, attempting auto-unlock...');
+        currentKeys = await encryption.unlockKeys();
+        if (currentKeys) {
+          setEncryptionKeys(currentKeys);
+        } else {
+          console.error('Failed to unlock encryption keys');
+          return null;
+        }
+      }
+    
+      try {
+        // Пытаемся загрузить wrapped key с сервера
+        console.log('🔍 Fetching wrapped key from server for chatId:', chatId);
+        const { data } = await http.get(endpoints.chatWrappedKeyGet(chatId));
+      
+        console.log('📦 Received wrapped key:', data.wrappedKey.substring(0, 50) + '...');
+      
+        // Разворачиваем ключ своим приватным ключом
+        console.log('🔓 Unwrapping chat key with private key...');
+        const chatKey = await encryption.unwrapChatKey(data.wrappedKey, currentKeys.privateKey);
+      
+        // Кэшируем
+        setChatKeys(prev => new Map(prev).set(chatId, chatKey));
+        console.log('✅ Chat key unwrapped and cached for chatId:', chatId);
+      
+        return chatKey;
+      } catch (err: any) {
+        // Если ключ не найден (404) - генерируем новый
+        if (err?.response?.status === 404) {
+          console.log('🔑 No wrapped key found on server, generating new chat key...');
+          return await generateAndSaveChatKey(chatId);
+        }
+      
+        console.error('❌ Failed to get wrapped key:', err);
+        return null;
+      }
+    };
+  
+  /**
+   * ✨ НОВАЯ ФУНКЦИЯ: Генерация и сохранение нового chat key
+   * Если получатель ещё не сгенерировал ключи - сохраняем только свой wrapped key
+   * ⚠️ ВАЖНО: Генерирует новый ключ ТОЛЬКО если его нет на сервере
+   */
+  const generateAndSaveChatKey = async (chatId: number): Promise<CryptoKey | null> => {
+    // ✨ Автоматическая разблокировка ключей если нужно
+    let currentKeys = encryptionKeys;
+    if (!currentKeys) {
+      console.log('🔐 Encryption keys not loaded, attempting auto-unlock...');
+      currentKeys = await encryption.unlockKeys();
+      if (currentKeys) {
+        setEncryptionKeys(currentKeys);
+      } else {
+        console.error('Failed to unlock encryption keys');
+        return null;
+      }
+    }
+  
+    try {
+      // ⚠️ ВАЖНО: Сначала проверяем, может уже есть wrapped key на сервере
+      // (это может произойти если собеседник уже создал ключ для нас)
+      try {
+        console.log('🔍 Double-checking if wrapped key exists on server...');
+        const { data } = await http.get(endpoints.chatWrappedKeyGet(chatId));
+        if (data.wrappedKey) {
+          console.log('✅ Found existing wrapped key, unwrapping instead of generating new...');
+          const existingKey = await encryption.unwrapChatKey(data.wrappedKey, currentKeys.privateKey);
+          setChatKeys(prev => new Map(prev).set(chatId, existingKey));
+          return existingKey;
+        }
+      } catch (e) {
+        // 404 = ключа нет, продолжаем генерацию
+        console.log('No existing wrapped key found, will generate new one');
+      }
+      
+      // Получаем информацию о чате и собеседнике
+      const chat = chats.find(c => c.chatId === chatId);
+      if (!chat) {
+        console.error('Chat not found:', chatId);
+        return null;
+      }
+    
+      // Генерируем новый AES-256 ключ для чата
+      console.log('🔑 Generating new AES-256 chat key...');
+      const chatKey = await encryption.generateChatKey();
+    
+      // Оборачиваем его своим публичным ключом
+      console.log('🔒 Wrapping chat key for self...');
+      const wrappedForMe = await encryption.wrapChatKey(chatKey, currentKeys.publicKey);
+    
+      // ✅ Пытаемся обернуть для собеседника (но не требуем его ключ обязательно)
+      let recipientWrappedKey: string | null = null;
+      try {
+        console.log('🔒 Attempting to wrap chat key for recipient...');
+        const recipientKeys = await ensureRecipientKey(chat.participantId);
+        if (recipientKeys) {
+          recipientWrappedKey = await encryption.wrapChatKey(chatKey, recipientKeys.encryptKey);
+          console.log('✅ Recipient wrapped key created');
+        }
+      } catch (e) {
+        console.warn('⚠️ Could not wrap key for recipient (will wrap when they log in):', e);
+      }
+    
+    // Сохраняем свой wrapped key на сервере (обязательно)
+    console.log('💾 Saving my wrapped key to server...');
+    await http.post(endpoints.chatWrappedKeySave, {
+      chatId,
+      wrappedKey: wrappedForMe
+    });
+  
+    // ✅ Если удалось обернуть для собеседника - сохраняем и его wrapped key
+    if (recipientWrappedKey) {
+      console.log('💾 Saving recipient wrapped key to server...');
+      await http.post(endpoints.chatWrappedKeySaveForParticipant, {
+        chatId,
+        participantId: chat.participantId,
+        wrappedKey: recipientWrappedKey
+      });
+      console.log('✅ Recipient wrapped key saved');
+    }      // Кэшируем
+      setChatKeys(prev => new Map(prev).set(chatId, chatKey));
+      console.log('✅ New chat key generated and saved');
+    
+      return chatKey;
+    } catch (err) {
+      console.error('Failed to generate and save chat key:', err);
+      return null;
+    }
+  };  const initEncryption = async () => {
     console.log('Initializing encryption...');
     // ✅ ИСПРАВЛЕНО: Используем loadKeysLegacy (временно без пароля)
     const existing = await encryption.loadKeysLegacy();
@@ -459,7 +613,7 @@ export function SocialFloatingButton() {
     }
   };
 
-  const ensureRecipientKey = async (userId: string): Promise<{ encryptKey: CryptoKey; signKey?: CryptoKey }> => {
+  const ensureRecipientKey = async (userId: string): Promise<{ encryptKey: CryptoKey; signKey?: CryptoKey } | null> => {
     console.log('Ensuring recipient key for:', userId);
     
     // 🔧 ВРЕМЕННО: Всегда загружаем свежие ключи с сервера (без кэша)
@@ -495,26 +649,101 @@ export function SocialFloatingButton() {
       console.log('Keys imported and cached for:', userId);
       return { encryptKey: key, signKey };
     } catch (e) {
-      console.error('Failed to fetch recipient key for:', userId, e);
-      throw new Error('Не удалось получить ключ шифрования получателя. Попросите его открыть приложение.');
+      console.warn('⚠️ Recipient key not found for:', userId);
+      // ✅ НЕ выбрасываем ошибку — возвращаем null и работаем без wrapped key получателя
+      return null;
     }
   };
 
   const openChatWith = async (participantId: string) => {
     try {
-      const { data } = await http.post<CreateChatResponse>(endpoints.chatCreate, { participantId });
+      // ✨ Автоматическая разблокировка ключей если нужно
+      if (!encryptionKeys) {
+        console.log('🔐 Encryption keys not loaded, attempting auto-unlock...');
+        const unlockedKeys = await encryption.unlockKeys();
+        if (unlockedKeys) {
+          setEncryptionKeys(unlockedKeys);
+        } else {
+          // Пытаемся полностью сбросить и переинициализировать ключи
+          console.warn('⚠️ Failed to unlock keys, attempting full reset...');
+          const resetKeys = await encryption.resetAndReinitializeKeys();
+          if (resetKeys) {
+            setEncryptionKeys(resetKeys);
+            console.log('✅ Keys reset and initialized successfully');
+          } else {
+            alert('Не удалось инициализировать ключи шифрования. Перезагрузите страницу и попробуйте снова.');
+            return;
+          }
+        }
+      }
+      
+      const currentKeys = encryptionKeys || await encryption.unlockKeys();
+      if (!currentKeys) {
+        alert('Ключи шифрования не инициализированы');
+        return;
+      }
+      
+      console.log('🔑 Generating chat key for new chat...');
+      const chatKey = await encryption.generateChatKey();
+      
+      // Wrap для себя
+      const wrappedForMe = await encryption.wrapChatKey(chatKey, currentKeys.publicKey);
+      
+      // ✅ Попытка wrap для собеседника (может быть null если ключа нет)
+      const recipientKeys = await ensureRecipientKey(participantId);
+      const wrappedForRecipient = recipientKeys 
+        ? await encryption.wrapChatKey(chatKey, recipientKeys.encryptKey)
+        : null;
+      
+      console.log('💾 Creating chat with wrapped keys...');
+      const { data } = await http.post<CreateChatResponse>(endpoints.chatCreate, { 
+        participantId,
+        wrappedKeyForMe: wrappedForMe,
+        wrappedKeyForRecipient: wrappedForRecipient || undefined // null → undefined для бэкенда
+      });
+      
+      // Кэшируем chat key
+      setChatKeys(prev => new Map(prev).set(data.chatId, chatKey));
+      console.log('✅ Chat created with wrapped keys');
+      
+      if (!wrappedForRecipient) {
+        console.warn('⚠️ Recipient will need to generate wrapped key on first login');
+      }
+      
       setSelectedChat(data.chatId);
       await loadChats();
       await loadMessages(data.chatId);
       setActiveTab('chat');
     } catch (e) {
       console.error('Failed to open chat', e);
+      alert(e instanceof Error ? e.message : 'Не удалось открыть чат');
     }
   };
 
   // Отправить сообщение пользователю (с автосозданием чата если нужно)
   const sendMessageToUser = async (recipientId: string, message: string, messageType: 'text' | 'image' = 'text', imagePath?: string) => {
+    // ✨ Автоматическая разблокировка ключей если нужно
     if (!encryptionKeys) {
+      console.log('🔐 Encryption keys not loaded, attempting auto-unlock...');
+      const unlockedKeys = await encryption.unlockKeys();
+      if (unlockedKeys) {
+        setEncryptionKeys(unlockedKeys);
+      } else {
+        // Пытаемся полностью сбросить и переинициализировать ключи
+        console.warn('⚠️ Failed to unlock keys, attempting full reset...');
+        const resetKeys = await encryption.resetAndReinitializeKeys();
+        if (resetKeys) {
+          setEncryptionKeys(resetKeys);
+          console.log('✅ Keys reset and initialized successfully');
+        } else {
+          alert('Не удалось инициализировать ключи шифрования. Перезагрузите страницу и попробуйте снова.');
+          return;
+        }
+      }
+    }
+    
+    const currentKeys = encryptionKeys || await encryption.unlockKeys();
+    if (!currentKeys) {
       alert('Ключи шифрования не инициализированы');
       return;
     }
@@ -526,9 +755,34 @@ export function SocialFloatingButton() {
       if (!chat) {
         // Создаём новый чат
         console.log('Creating new chat with user:', recipientId);
+        
+          // ✨ НОВОЕ: Генерируем chat key и wrapped keys
+          console.log('🔑 Generating chat key for new chat...');
+          const newChatKey = await encryption.generateChatKey();
+        
+          // Wrap для себя
+          const wrappedForMe = await encryption.wrapChatKey(newChatKey, currentKeys.publicKey);
+        
+          // ✅ Попытка wrap для собеседника (может быть null)
+          const recipientKeys = await ensureRecipientKey(recipientId);
+          const wrappedForRecipient = recipientKeys 
+            ? await encryption.wrapChatKey(newChatKey, recipientKeys.encryptKey)
+            : null;
+        
         const { data: createData } = await http.post<{ chatId: number }>(endpoints.chatCreate, {
-          participantId: recipientId
+            participantId: recipientId,
+            wrappedKeyForMe: wrappedForMe,
+            wrappedKeyForRecipient: wrappedForRecipient || undefined
         });
+        
+          // Кэшируем chat key
+          setChatKeys(prev => new Map(prev).set(createData.chatId, newChatKey));
+          console.log('✅ Chat created with wrapped keys, chatId:', createData.chatId);
+        
+          if (!wrappedForRecipient) {
+            console.warn('⚠️ Recipient will need to generate wrapped key on first login');
+          }
+        
         const friend = friends.find(f => f.userId === recipientId);
         chat = {
           chatId: createData.chatId,
@@ -540,42 +794,23 @@ export function SocialFloatingButton() {
         setSelectedChat(createData.chatId);
       }
       
-      // Получаем публичный ключ получателя
-      console.log('📤 Getting recipient encryption key for:', recipientId);
-      const keys = await ensureRecipientKey(recipientId);
-      console.log('✅ Got recipient keys - encrypt:', !!keys.encryptKey, 'sign:', !!keys.signKey);
+        // ✨ НОВОЕ: Получаем chat key (или создаём если нужно)
+        console.log('🔑 Getting chat key for chatId:', chat.chatId);
+        const chatKey = await ensureChatKey(chat.chatId);
+        if (!chatKey) {
+          alert('Не удалось получить ключ шифрования чата');
+          return;
+        }
       
-      // ✅ ИСПРАВЛЕНО: Шифруем с цифровой подписью и используем nonce
-      console.log('🔐 Encrypting message with E2E and signature...');
-      console.log('   - Message length:', message.length);
-      console.log('   - Has signPrivateKey:', !!encryptionKeys.signPrivateKey);
-      
-      const encrypted = await encryption.encryptMessage(
+        // ✨ НОВОЕ: Шифруем с помощью chat key (не RSA!)
+        console.log('🔐 Encrypting message with chat key...');
+        const encrypted = await encryption.encryptMessageWithChatKey(
         message, 
-        keys.encryptKey, 
+          chatKey,
         encryptionKeys.signPrivateKey
       );
       
-      console.log('✅ Message encrypted successfully');
-      console.log('   - Has signature:', !!encrypted.encryptionMetadata.signature);
-      console.log('   - Nonce:', encrypted.encryptionMetadata.nonce.substring(0, 16) + '...');
-      console.log('   - Timestamp:', new Date(encrypted.encryptionMetadata.timestamp).toISOString());
-      
-      // Сохраняем в pending по nonce (безопаснее чем по encryptedContent)
-      const nonce = encrypted.encryptionMetadata.nonce;
-      pendingMessagesRef.current.set(nonce, message);
-      console.log('✅ Added to pending by nonce');
-      console.log('   - Nonce:', nonce.substring(0, 20) + '...');
-      console.log('   - Message:', message.substring(0, 30));
-      console.log('   - Pending size:', pendingMessagesRef.current.size);
-      
-      // Автоочистка pending через 30 секунд (на случай если WebSocket не придёт)
-      setTimeout(() => {
-        if (pendingMessagesRef.current.has(nonce)) {
-          pendingMessagesRef.current.delete(nonce);
-          console.log('🗑️ Cleaned up stale pending message');
-        }
-      }, 30000);
+        console.log('✅ Message encrypted with chat key');
       
       // Отправляем на сервер
       console.log('Sending to server...');
@@ -662,6 +897,24 @@ export function SocialFloatingButton() {
               <div className="text-xs text-slate-400 truncate">@{friend.username}</div>
             )}
           </div>
+          <button
+            onClick={async () => {
+              if (!confirm('Удалить чат? Все сообщения будут удалены.')) return;
+              try {
+                await http.delete(endpoints.chatDelete(selectedChat));
+                setChats(prev => prev.filter(c => c.chatId !== selectedChat));
+                setSelectedChat(null);
+                setMessages([]);
+              } catch (e) {
+                console.error('Failed to delete chat:', e);
+                alert('Ошибка удаления чата');
+              }
+            }}
+            className="px-2 py-1 text-xs bg-red-600/20 hover:bg-red-600/40 rounded transition-colors"
+            title="Удалить чат"
+          >
+            🗑️
+          </button>
         </div>
         <div className="flex-1 overflow-y-auto px-3 py-2 space-y-2">
           {messages.length === 0 ? (
@@ -669,7 +922,7 @@ export function SocialFloatingButton() {
           ) : (
             messages.map(m => (
               <div key={m.messageId} className={`flex ${m.senderId === user!.id ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[70%] rounded-lg px-3 py-2 text-sm whitespace-pre-wrap break-words ${m.senderId === user!.id ? 'bg-indigo-600/60' : 'bg-slate-800/70'}`}>
+                <div className={`max-w-[70%] rounded-lg px-3 py-2 text-sm whitespace-pre-wrap wrap-break-word ${m.senderId === user!.id ? 'bg-indigo-600/60' : 'bg-slate-800/70'}`}>
                   {m.messageType === 'image' && m.imagePath ? (
                     <img src={`/media/${m.imagePath}`} alt="img" className="rounded mb-1 max-h-64 max-w-full object-contain cursor-pointer" onClick={() => window.open(`/media/${m.imagePath}`, '_blank')} />
                   ) : null}
@@ -1007,7 +1260,7 @@ function FriendsList({ friends, onRemove, onOpenChat }: { friends: Friend[], onR
           </Link>
           <button
             onClick={() => onOpenChat(friend.userId)}
-            className="opacity-0 group-hover:opacity-100 p-1.5 text-xs rounded hover:bg-slate-800 hover:text-indigo-300 transition-all"
+            className="p-1.5 text-xs rounded bg-indigo-600/20 hover:bg-indigo-600/40 hover:text-indigo-300 transition-all border border-indigo-600/30"
             title="Написать"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

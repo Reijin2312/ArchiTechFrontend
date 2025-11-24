@@ -8,7 +8,15 @@ export async function finalizeAuth(accessToken: string): Promise<User> {
   const me = await http.get<User>(endpoints.profileMe);
   authStore.getState().setAuth(me.data, accessToken);
   
-  initEncryption().catch(e => console.error('Failed to init encryption:', e));
+  // ✅ ОБЯЗАТЕЛЬНАЯ инициализация ключей шифрования
+  try {
+    console.log('🔐 Initializing encryption keys...');
+    await initEncryption();
+    console.log('✅ Encryption keys ready');
+  } catch (e) {
+    console.error('❌ Failed to init encryption:', e);
+    // Не блокируем вход, но логируем ошибку
+  }
   
   return me.data;
 }
