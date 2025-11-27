@@ -71,16 +71,24 @@ class ChatWebSocketService {
       const { data } = await http.post<{ ticket: string }>(endpoints.chatWsTicket);
       const ticket = data.ticket;
 
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const host = window.location.hostname;
+      const envUrl = (import.meta as any)?.env?.VITE_CHAT_WS_URL as string | undefined;
+      const envPort = (import.meta as any)?.env?.VITE_CHAT_WS_PORT as string | undefined;
+      const apiOrigin = (import.meta as any)?.env?.VITE_API_BASE as string | undefined;
 
-      const port = '51789';
+      if (envUrl) {
+        const fullUrl = `${envUrl}?ticket=${encodeURIComponent(ticket)}`;
+        console.log('Connecting to WebSocket (env URL):', fullUrl, 'for user:', this.userId);
+        this.ws = new WebSocket(fullUrl);
+      } else {
+        const base = apiOrigin ? new URL(apiOrigin) : new URL(window.location.origin);
+        const protocol = base.protocol === 'https:' ? 'wss:' : 'ws:';
+        const host = base.hostname;
+        const port = envPort || '51789';
+        const wsUrl = `${protocol}//${host}:${port}/ws/chat?ticket=${encodeURIComponent(ticket)}`;
+        console.log('Connecting to WebSocket:', wsUrl, 'for user:', this.userId);
+        this.ws = new WebSocket(wsUrl);
+      }
 
-      const wsUrl = `${protocol}//${host}:${port}/ws/chat?ticket=${encodeURIComponent(ticket)}`;
-
-      console.log('Connecting to WebSocket:', wsUrl, 'for user:', this.userId);
-
-      this.ws = new WebSocket(wsUrl);
 
       this.ws.onopen = () => {
         console.log('WebSocket connected');

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Input } from '@/shared/ui/Input';
+import { Input } from '@/shared/ui/form/Input';
 
 interface PasswordFieldProps extends React.InputHTMLAttributes<HTMLInputElement> {
   error?: boolean;

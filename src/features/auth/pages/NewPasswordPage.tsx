@@ -4,10 +4,10 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { http } from '@/shared/api/http';
 import { endpoints } from '@/shared/api/endpoints';
-import { Button } from '@/shared/ui/Button';
-import { Input } from '@/shared/ui/Input';
-import { Card } from '@/shared/ui/Card';
-import { FormHint } from '@/shared/ui/FormHint';
+import { Button } from '@/shared/ui/button/Button';
+import { Input } from '@/shared/ui/form/Input';
+import { Card } from '@/shared/ui/card/Card';
+import { FormHint } from '@/shared/ui/form/FormHint';
 import type { ResetFinishReq, Ok } from '@/shared/api/types';
 import { Seo } from '@/shared/seo/seo';
 

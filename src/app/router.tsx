@@ -1,25 +1,25 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom';
-import HomePage from '@/pages/HomePage';
+import HomePage from '@/pages/public/HomePage';
 import LoginPage from '@/features/auth/pages/LoginPage';
 import RegisterPage from '@/features/auth/pages/RegisterPage';
 import CodeVerifyPage from '@/features/auth/pages/CodeVerifyPage';
 import NewPasswordPage from '@/features/auth/pages/NewPasswordPage';
 import ResetDonePage from '@/features/auth/pages/ResetDonePage';
 import Layout from '@/app/Layout';
-import UserProfilePage from '@/pages/UserProfilePage';
-import RedirectToMyProfile from '@/pages/RedirectToMyProfile';
-import RulesPage from '@/pages/RulesPage';
-import ShopPage from '@/pages/ShopPage';
-import WikiPage from '@/pages/WikiPage';
-import SettingsProfilePage from '@/pages/SettingsProfilePage';
-import ChangeEmailPage from '@/pages/EmailChangeStartPage';
-import ChangePasswordPage from '@/pages/ChangePasswordPage';
-import UserAgreementPage from '@/pages/UserAgreementPage';
-import PrivacyPolicyPage from '@/pages/PrivacyPolicyPage';
-import EmailChangeStartPage from '@/pages/EmailChangeStartPage';
-import ChangeEmailNewPage from '@/pages/ChangeEmailNewPage';
-import ContactsPage from '@/pages/ContactsPage';
-import AboutServerPage from '@/pages/AboutServerPage';
+import UserProfilePage from '@/pages/public/UserProfilePage';
+import RedirectToMyProfile from '@/pages/settings/RedirectToMyProfile';
+import RulesPage from '@/pages/public/RulesPage';
+import ShopPage from '@/pages/public/ShopPage';
+import WikiPage from '@/pages/public/WikiPage';
+import SettingsProfilePage from '@/pages/settings/SettingsProfile/SettingsProfilePage';
+import ChangeEmailPage from '@/pages/settings/EmailChangeStartPage';
+import ChangePasswordPage from '@/pages/settings/ChangePasswordPage';
+import UserAgreementPage from '@/pages/legal/UserAgreementPage';
+import PrivacyPolicyPage from '@/pages/legal/PrivacyPolicyPage';
+import EmailChangeStartPage from '@/pages/settings/EmailChangeStartPage';
+import ChangeEmailNewPage from '@/pages/settings/ChangeEmailNewPage';
+import ContactsPage from '@/pages/public/ContactsPage';
+import AboutServerPage from '@/pages/public/AboutServerPage';
 
 export const router = createBrowserRouter([
   {

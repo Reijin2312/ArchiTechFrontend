@@ -1,15 +1,17 @@
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { http } from '@/shared/api/http';
-import { Button } from '@/shared/ui/Button';
-import { Input } from '@/shared/ui/Input';
-import { Card } from '@/shared/ui/Card';
+import { Button } from '@/shared/ui/button/Button';
+import { Input } from '@/shared/ui/form/Input';
+import { Card } from '@/shared/ui/card/Card';
 import { endpoints } from '@/shared/api/endpoints';
 import type { VerifyEmailReq, VerifyEmailRes, ResetConfirmReq, ResetConfirmRes } from '@/shared/api/types';
 import { finalizeAuth } from '@/shared/auth/finalizeAuth';
+import { notifyLauncher } from '@/shared/auth/utils';
+import { useRedirectUri } from '@/shared/hooks/useRedirectUri';
 import { authStore } from '@/shared/store/auth';
 import { Seo } from '@/shared/seo/seo';
-import { useWallpaper } from '@/shared/ui/useWallpaper';
+import { useWallpaper } from '@/shared/ui/wallpaper/useWallpaper';
 
 export default function CodeVerifyPage({ mode }:{ mode: 'email-verify'|'reset'|'email-change-old' }) {
   useWallpaper();
@@ -23,7 +25,7 @@ export default function CodeVerifyPage({ mode }:{ mode: 'email-verify'|'reset'|'
   const ticket = sp.get('ticket') || '';
   const email  = sp.get('email')  || '';
   const next   = sp.get('next')   || '/profile';
-  const redirectUri = sp.get('redirect_uri') || sessionStorage.getItem('redirect_uri') || '';
+  const { redirectUri } = useRedirectUri();
 
   const at = authStore.getState().accessToken;
 
@@ -33,10 +35,7 @@ export default function CodeVerifyPage({ mode }:{ mode: 'email-verify'|'reset'|'
     return () => clearTimeout(t);
   }, [resendLock]);
 
-  useEffect(() => {
-    const raw = sp.get('redirect_uri');
-    if (raw) sessionStorage.setItem('redirect_uri', raw);
-  }, [sp]);
+  // redirectUri управляется useRedirectUri
 
   async function confirm() {
     try {
@@ -55,10 +54,7 @@ export default function CodeVerifyPage({ mode }:{ mode: 'email-verify'|'reset'|'
         try {
           const r = await http.post(endpoints.desktopToken, null, { withCredentials: true });
           if (r?.data?.accessToken && r?.data?.refreshToken && redirectUri) {
-            await fetch(redirectUri ?? '', {
-              method: 'POST', headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ ...r.data, user: me }), mode: 'cors', keepalive: true,
-            });
+            await notifyLauncher(redirectUri, { ...r.data, user: me });
           }
         } catch {}
 

@@ -5,6 +5,7 @@
  */
 
 import { secureStorage } from './secureStorage';
+import { logger } from '@/shared/lib/logger';
 
 export interface EncryptionKeys {
   publicKey: CryptoKey
@@ -114,13 +115,13 @@ export async function importPublicKey(publicKey: string): Promise<CryptoKey> {
  * Импорт публичного ключа для проверки подписи
  */
 export async function importSignPublicKey(signPublicKey: string): Promise<CryptoKey> {
-  console.log('importSignPublicKey called with:', typeof signPublicKey, signPublicKey.substring(0, 100));
+  logger.crypto('🔐', 'importSignPublicKey called with:', typeof signPublicKey, signPublicKey.substring(0, 100));
   
   try {
     // Пробуем парсить как JWK
     const jwk = JSON.parse(signPublicKey);
-    console.log('Parsed as JWK:', jwk);
-    console.log('JWK has kty:', jwk.kty, 'alg:', jwk.alg, 'key_ops:', jwk.key_ops);
+    logger.crypto('🧩', 'Parsed as JWK:', jwk);
+    logger.crypto('🧩', 'JWK meta kty/alg/ops:', jwk.kty, jwk.alg, jwk.key_ops);
     
     const key = await crypto.subtle.importKey(
       'jwk',
@@ -133,9 +134,11 @@ export async function importSignPublicKey(signPublicKey: string): Promise<Crypto
       ['verify']
     );
     console.log('✅ Successfully imported as JWK');
+      logger.crypto('✅', 'Successfully imported as JWK');
     return key;
   } catch (e) {
     console.log('Failed to parse as JWK, trying SPKI...', e);
+      logger.warn('Failed to parse as JWK, trying SPKI...', e);
     // Если не JWK, то это PEM/SPKI
     try {
       const keyData = base64ToArrayBuffer(signPublicKey);
@@ -150,9 +153,14 @@ export async function importSignPublicKey(signPublicKey: string): Promise<Crypto
         ['verify']
       );
       console.log('✅ Successfully imported as SPKI');
+        logger.crypto('✅', 'Successfully imported as SPKI');
       return key;
     } catch (spkiError) {
       console.error('❌ Failed to import as SPKI too:', spkiError);
+        logger.error('Failed to import as SPKI too:', spkiError);
+        logger.crypto('🔐', 'Initializing encryption keys...');
+        logger.crypto('✅', 'Encryption keys ready');
+        logger.error('Failed to init encryption:', e);
       throw spkiError;
     }
   }
@@ -498,7 +506,7 @@ export async function generateChatKey(): Promise<CryptoKey> {
     encryptedMessage: EncryptedMessage,
     chatKey: CryptoKey,
     senderSignPublicKey?: CryptoKey,
-    maxAgeMs: number = 86400000 // 24 часа
+    maxAgeMs: number = Number.POSITIVE_INFINITY // messages never expire
   ): Promise<string> {
     console.log('🔍 Decrypting message with metadata:', encryptedMessage.encryptionMetadata);
     
@@ -507,12 +515,11 @@ export async function generateChatKey(): Promise<CryptoKey> {
       throw new Error('Missing IV in encryption metadata');
     }
     
-    // Проверяем timestamp для защиты от replay атак
-    if (encryptedMessage.encryptionMetadata.timestamp) {
+    // Do not expire messages: only check time when maxAge is finite
+    if (Number.isFinite(maxAgeMs) && encryptedMessage.encryptionMetadata.timestamp) {
       const messageAge = Date.now() - encryptedMessage.encryptionMetadata.timestamp
       if (messageAge > maxAgeMs || messageAge < -60000) {
-        console.warn('Message timestamp is suspicious:', new Date(encryptedMessage.encryptionMetadata.timestamp))
-        // Не бросаем ошибку, просто предупреждаем (для старых сообщений)
+        console.warn("Message timestamp is suspicious:", new Date(encryptedMessage.encryptionMetadata.timestamp))
       }
     }
 
@@ -583,6 +590,7 @@ export async function clearAllKeys(): Promise<void> {
   localStorage.removeItem('chat_master_salt')
   
   console.log('✅ All encryption keys cleared')
+  logger.crypto('🧹', 'All encryption keys cleared');
 }
 
 /**
@@ -607,9 +615,10 @@ export async function saveKeys(keys: EncryptionKeys, password: string): Promise<
   // Сохраняем публичные ключи вне secureStorage (они не секретные)
   localStorage.setItem('chat_public_key', keys.publicKeyPem)
   localStorage.setItem('chat_sign_public_key', keys.signPublicKeyPem)
-  localStorage.setItem('chat_master_salt', arrayBufferToBase64(salt.buffer))
+  localStorage.setItem('chat_master_salt', arrayBufferToBase64(salt.buffer as ArrayBuffer))
 
   console.log('✅ Keys saved securely (IndexedDB + master salt)')
+  logger.crypto('✅', 'Keys saved securely (IndexedDB + master salt)');
 }
 
 /**
@@ -626,6 +635,11 @@ async function loadKeys(password: string): Promise<EncryptionKeys | null> {
       signPublicKey: !!signPublicKeyPem,
       salt: !!saltBase64
     });
+    logger.error('Missing key data in localStorage:', {
+      publicKey: !!publicKeyPem,
+      signPublicKey: !!signPublicKeyPem,
+      salt: !!saltBase64
+    });
     return null;
   }
 
@@ -634,24 +648,30 @@ async function loadKeys(password: string): Promise<EncryptionKeys | null> {
     const salt = new Uint8Array(saltBuffer)
     
     console.log('🔓 Attempting to unlock secure storage...');
+    logger.crypto('🔓', 'Attempting to unlock secure storage...');
     const unlocked = await secureStorage.unlock(password, salt)
     if (!unlocked) {
       console.error('❌ Failed to unlock secure storage with derived password')
+      logger.error('Failed to unlock secure storage with derived password');
       return null
     }
     console.log('✅ Secure storage unlocked');
+    logger.crypto('✅', 'Secure storage unlocked');
 
     console.log('📥 Retrieving private keys from secure storage...');
+    logger.crypto('📥', 'Retrieving private keys from secure storage...');
     const privateKeyPem = await secureStorage.get('chat_private_key')
     const signPrivateKeyPem = await secureStorage.get('chat_sign_private_key')
     
     if (!privateKeyPem || !signPrivateKeyPem) {
       console.error('❌ Private keys not found in secure storage');
+      logger.error('Private keys not found in secure storage');
       return null;
     }
     console.log('✅ Private keys retrieved');
 
     console.log('🔑 Importing cryptographic keys...');
+    logger.crypto('🔑', 'Importing cryptographic keys...');
     const privateKeyData = base64ToArrayBuffer(privateKeyPem)
     const privateKey = await crypto.subtle.importKey(
       'pkcs8',
@@ -689,6 +709,7 @@ async function loadKeys(password: string): Promise<EncryptionKeys | null> {
     )
 
     console.log('✅ All keys imported successfully');
+    logger.crypto('✅', 'All keys imported successfully');
     return {
       publicKey,
       privateKey,
@@ -699,6 +720,7 @@ async function loadKeys(password: string): Promise<EncryptionKeys | null> {
     }
   } catch (e) {
     console.error('❌ Failed to load keys from secure storage:', e)
+    logger.error('Failed to load keys from secure storage:', e);
     return null
   }
 }
@@ -720,6 +742,7 @@ export async function loadKeysLegacy(): Promise<EncryptionKeys | null> {
   
   if (oldPrivateKeyPem && publicKeyPem) {
     console.warn('⚠️ Found keys in localStorage (insecure). Please set a password to migrate.')
+    logger.warn('Found keys in localStorage (insecure). Please set a password to migrate.');
     // Возвращаем старые ключи для миграции
     try {
       const privateKeyData = base64ToArrayBuffer(oldPrivateKeyPem)
@@ -781,9 +804,11 @@ export async function loadKeysLegacy(): Promise<EncryptionKeys | null> {
         )
         signPublicKeyPem = oldSignPublicKeyPem
         console.log('✅ Loaded existing signature keys')
+        logger.crypto('✅', 'Loaded existing signature keys');
       } else {
         // Генерируем новые ключи для подписи
         console.log('⚠️ Generating new signature keys (old keys missing)')
+        logger.warn('Generating new signature keys (old keys missing)');
         const signatureKeyPair = await crypto.subtle.generateKey(
           {
             name: 'RSA-PSS',
@@ -818,6 +843,7 @@ export async function loadKeysLegacy(): Promise<EncryptionKeys | null> {
       }
     } catch (e) {
       console.error('Failed to load legacy keys:', e)
+      logger.error('Failed to load legacy keys:', e);
       return null
     }
   }
@@ -836,6 +862,7 @@ export async function initEncryption(): Promise<void> {
   if (hasMasterSalt) {
     // Ключи существуют, но еще не загружены - запрашиваем пароль
     console.log('🔐 Encryption keys exist, waiting for password unlock...')
+    logger.crypto('🔐', 'Encryption keys exist, waiting for password unlock...');
     // Пароль будет запрошен через UI при необходимости
     return
   }
@@ -845,6 +872,7 @@ export async function initEncryption(): Promise<void> {
   
   if (existing) {
     console.log('⚠️ Found legacy keys in localStorage, migrating to secure storage...');
+    logger.warn('Found legacy keys in localStorage, migrating to secure storage...');
     
     // Генерируем мастер-пароль автоматически из учетных данных
     const { authStore } = await import('@/shared/store/auth');
@@ -852,6 +880,7 @@ export async function initEncryption(): Promise<void> {
     
     if (!userId) {
       console.error('Cannot migrate: no user ID available');
+      logger.error('Cannot migrate: no user ID available');
       return;
     }
     
@@ -864,6 +893,7 @@ export async function initEncryption(): Promise<void> {
     localStorage.removeItem('chat_private_key');
     localStorage.removeItem('chat_sign_private_key');
     console.log('✅ Keys migrated to secure storage');
+    logger.crypto('✅', 'Keys migrated to secure storage');
     
     // Всегда проверяем и обновляем ключи на сервере
     try {
@@ -879,12 +909,15 @@ export async function initEncryption(): Promise<void> {
         const { data } = await http.get(endpoints.chatKeysGet(userId));
         if (!data.signPublicKey) {
           console.log('⚠️ Server has no signPublicKey, updating...');
+          logger.warn('Server has no signPublicKey, updating...');
           needsUpload = true;
         } else {
           console.log('✅ Both keys exist on server');
+          logger.crypto('✅', 'Both keys exist on server');
         }
       } catch (e) {
         console.log('Public keys not found on server, uploading...');
+        logger.warn('Public keys not found on server, uploading...');
         needsUpload = true;
       }
       
@@ -892,6 +925,7 @@ export async function initEncryption(): Promise<void> {
         const publicKeyJwk = await crypto.subtle.exportKey('jwk', existing.publicKey);
         const signPublicKeyJwk = await crypto.subtle.exportKey('jwk', existing.signPublicKey);
         console.log('Uploading keys to server...');
+        logger.crypto('⬆️', 'Uploading keys to server...');
         
         await http.post(endpoints.chatKeysSave, {
           publicKey: JSON.stringify(publicKeyJwk),
@@ -899,15 +933,18 @@ export async function initEncryption(): Promise<void> {
           keyType: 'RSA'
         });
         console.log('✅ Public keys uploaded to server');
+        logger.crypto('✅', 'Public keys uploaded to server');
       }
     } catch (err) {
       console.error('Failed to sync keys with server:', err);
+      logger.error('Failed to sync keys with server:', err);
     }
     
     return;
   }
   
   console.log('Generating new encryption keys...');
+  logger.crypto('🔧', 'Generating new encryption keys...');
   const keys = await generateKeyPair();
   
   // Генерируем мастер-пароль автоматически
@@ -915,6 +952,8 @@ export async function initEncryption(): Promise<void> {
   const userId = authStore.getState().user?.id;
   
   if (!userId) {
+    console.error('Cannot generate keys: no user ID available');
+    logger.error('Cannot generate keys: no user ID available');
     throw new Error('Cannot generate keys: no user ID available');
   }
   
@@ -923,6 +962,7 @@ export async function initEncryption(): Promise<void> {
   // Сохраняем ключи в secureStorage с паролем
   await saveKeys(keys, password);
   console.log('✅ Keys saved securely with auto-generated password')
+  logger.crypto('✅', 'Keys saved securely with auto-generated password');
   
   // Отправляем публичный ключ на сервер
   setTimeout(async () => {
@@ -937,8 +977,10 @@ export async function initEncryption(): Promise<void> {
         keyType: 'RSA'
       });
       console.log('Public keys saved to server');
+      logger.crypto('✅', 'Public keys saved to server');
     } catch (e) {
       console.error('Failed to save public keys to server:', e);
+      logger.error('Failed to save public keys to server:', e);
     }
   }, 1000);
 }
@@ -1061,6 +1103,7 @@ async function deriveMasterPasswordFromUser(userId: string): Promise<string> {
     console.error('❌ Failed to derive master password:', e);
     // Fallback на userId (небезопасно, но лучше чем ничего)
     console.warn('⚠️ Falling back to userId-only derivation (less secure)');
+    logger.warn('Falling back to userId-only derivation (less secure)');
     const input = `architech-chat-encryption-${userId}`;
     const encoder = new TextEncoder();
     const data = encoder.encode(input);
@@ -1088,6 +1131,7 @@ function generateRandomSalt(): string {
  */
 export async function resetAndReinitializeKeys(): Promise<EncryptionKeys | null> {
   console.warn('⚠️ Resetting encryption keys...');
+  logger.warn('Resetting encryption keys...');
   
   try {
     // Очищаем все старые данные
@@ -1101,13 +1145,16 @@ export async function resetAndReinitializeKeys(): Promise<EncryptionKeys | null>
     
     if (keys) {
       console.log('✅ Keys reset and reinitialized successfully');
+      logger.crypto('✅', 'Keys reset and reinitialized successfully');
     } else {
       console.error('❌ Failed to reinitialize keys after reset');
+      logger.error('Failed to reinitialize keys after reset');
     }
     
     return keys;
   } catch (e) {
     console.error('❌ Failed to reset and reinitialize keys:', e);
+    logger.error('Failed to reset and reinitialize keys:', e);
     return null;
   }
 }

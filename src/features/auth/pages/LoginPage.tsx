@@ -4,16 +4,16 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { http } from '@/shared/api/http';
 import { authStore } from '@/shared/store/auth';
-import { Button } from '@/shared/ui/Button';
-import { Input } from '@/shared/ui/Input';
-import { Card } from '@/shared/ui/Card';
-import { FormHint } from '@/shared/ui/FormHint';
+import { Button } from '@/shared/ui/button/Button';
+import { Input } from '@/shared/ui/form/Input';
+import { Card } from '@/shared/ui/card/Card';
+import { FormHint } from '@/shared/ui/form/FormHint';
 import PasswordField from '../components/PasswordField';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import type { LoginRes } from '@/shared/api/types';
 import { finalizeAuth } from '@/shared/auth/finalizeAuth';
 import { endpoints } from '@/shared/api/endpoints';
-import { useWallpaper } from '@/shared/ui/useWallpaper';
+import { useWallpaper } from '@/shared/ui/wallpaper/useWallpaper';
 import { Seo } from '@/shared/seo/seo';
 
 const schema = z.object({
@@ -37,19 +37,17 @@ export default function LoginPage() {
   useEffect(() => {
     const raw = sp.get('redirect_uri');
     if (raw) sessionStorage.setItem('redirect_uri', raw);
-  }, [search]);
+  }, [search, sp]);
 
   const redirectUri = (() => {
     if (!rawRedirect) return null;
-    let s = rawRedirect;
     try {
-      for (let i = 0; i < 2 && /^https?%3A/i.test(s); i++) s = decodeURIComponent(s);
-      const u = new URL(s);
-      if (!/^https?:$/.test(u.protocol)) return null;
-      if (!/^(localhost|127\.0\.0\.1|::1)$/i.test(u.hostname)) return null;
-      if (!(u.pathname === '/cb' || u.pathname === '/cb/')) return null;
-      return `${u.origin}/cb`;
-    } catch { return null; }
+      const url = new URL(rawRedirect);
+      if (url.protocol === 'http:' && url.hostname === 'localhost') return rawRedirect;
+      return null;
+    } catch {
+      return null;
+    }
   })();
 
   const {
@@ -57,7 +55,6 @@ export default function LoginPage() {
     handleSubmit,
     formState: { errors, isSubmitting, isValid, touchedFields },
     getValues,
-    setError,
     watch,
   } = useForm<Form>({
     resolver: zodResolver(schema),
@@ -78,59 +75,57 @@ export default function LoginPage() {
 
     let cancelled = false;
     (async () => {
-      try {      
-        let me = await http.get(endpoints.profileMe, { withCredentials: true })
-          .then(r => r.data).catch(() => null);
-
-        let { data } = await http.post(endpoints.desktopToken, null, {
-          withCredentials: true, validateStatus: () => true,
+      try {
+        let me = await http.get(endpoints.profileMe, { withCredentials: true });
+        let data = await http.post(endpoints.desktopToken, null, {
+          withCredentials: true,
+          validateStatus: () => true,
         });
 
-        if (!data?.accessToken || !data?.refreshToken) {
-          const r2 = await http.post(endpoints.desktopToken, null, {
-            withCredentials: true, validateStatus: () => true,
-          });
-          if (r2?.data) data = r2.data;
-        }
-
-        if (!cancelled && data?.accessToken && data?.refreshToken) {
+        if (data?.data?.accessToken && data?.data?.refreshToken) {
+          const { accessToken, refreshToken } = data.data;
           await notifyLauncher({
-            accessToken: data.accessToken,
-            refreshToken: data.refreshToken,
-            user: authStore.getState().user ?? me,
+            accessToken,
+            refreshToken,
+            user: authStore.getState().user ?? me.data,
           });
-          me = await finalizeAuth(data.accessToken).catch(() => me);
-          if (me?.username) {
-            navigate(`/u/${me.username}`, { replace: true });
-            return;
+          
+          if (!cancelled) {
+            const user = await finalizeAuth(accessToken).catch(() => me.data);
+            if (user?.username) {
+              navigate(`/u/${user.username}`, { replace: true });
+            }
           }
         }
       } catch {}
     })();
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [redirectUri, navigate]);
 
   async function onSubmit(v: Form) {
     try {
       const { data } = await http.post<LoginRes>(endpoints.login, v);
-      const { accessToken, refreshToken, user } = data;
       const me = await finalizeAuth(data.accessToken);
-      await notifyLauncher({accessToken, refreshToken, user: user ?? me,});
-      setServerErr(null);
-      navigate(`/u/${me.username}`, { replace: true });
+
+      if (redirectUri && data.refreshToken) {
+        await notifyLauncher({
+          accessToken: data.accessToken,
+          refreshToken: data.refreshToken,
+          user: me,
+        });
+        if (me?.username) navigate(`/u/${me.username}`, { replace: true });
+      } else if (me?.username) {
+        navigate(`/u/${me.username}`, { replace: true });
+      }
     } catch (e: any) {
-      const msg =
-        e?.response?.data?.message ||
-        e?.response?.data?.error ||
-        e?.message ||
-        'Неверная почта или пароль';
-      setServerErr(msg);
-      setError('password', { type: 'server', message: msg });
+      setServerErr(e?.response?.data || e?.message || 'Ошибка входа');
     }
   }
 
-  async function notifyLauncher(tokens: {accessToken: string; refreshToken: string; user: any}) {
+  async function notifyLauncher(tokens: { accessToken: string; refreshToken: string; user: any }) {
     if (!redirectUri) return;
     try {
       await fetch(redirectUri, {

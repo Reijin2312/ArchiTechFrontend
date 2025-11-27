@@ -4,15 +4,17 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { http } from '@/shared/api/http';
 import { authStore } from '@/shared/store/auth';
-import { Button } from '@/shared/ui/Button';
-import { Input } from '@/shared/ui/Input';
-import { Card } from '@/shared/ui/Card';
-import { FormHint } from '@/shared/ui/FormHint';
+import { Button } from '@/shared/ui/button/Button';
+import { Input } from '@/shared/ui/form/Input';
+import { Card } from '@/shared/ui/card/Card';
+import { FormHint } from '@/shared/ui/form/FormHint';
 import PasswordField from '../components/PasswordField';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import Turnstile from 'react-turnstile';
-import { useWallpaper } from '@/shared/ui/useWallpaper';
+import { useWallpaper } from '@/shared/ui/wallpaper/useWallpaper';
 import { Seo } from '@/shared/seo/seo';
+import { notifyLauncher } from '@/shared/auth/utils';
+import { useRedirectUri } from '@/shared/hooks/useRedirectUri';
 
 const schema = z
   .object({
@@ -50,8 +52,7 @@ export default function RegisterPage() {
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const [termsAccepted, setTermsAccepted] = useState(false);
 
-  const params = new URLSearchParams(window.location.search);
-  const redirectUri = params.get("redirect_uri");
+  const { redirectUri } = useRedirectUri();
 
   const {
     register,
@@ -207,7 +208,7 @@ export default function RegisterPage() {
       if (resp.status === 200 && (resp.data as any)?.accessToken) {
         const d = resp.data as any;
 
-        await notifyLauncher({accessToken: d.accessToken,refreshToken: d.refreshToken, user: d.user,});
+        await notifyLauncher(redirectUri, {accessToken: d.accessToken,refreshToken: d.refreshToken, user: d.user,});
       
 		    authStore.getState().setAuth(d.user, d.accessToken);  
         setServerErr(null);
@@ -257,17 +258,7 @@ export default function RegisterPage() {
     }
   }
 
-  async function notifyLauncher(tokens: { accessToken: string; refreshToken: string; user: any }) {
-    if (!redirectUri) return;
-    try {
-      await fetch(redirectUri, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(tokens),
-        mode: "cors",
-      });
-    } catch {}
-  }
+  // Используем общую утилиту notifyLauncher
 
   useEffect(() => {
     if (serverErr) setServerErr(null);

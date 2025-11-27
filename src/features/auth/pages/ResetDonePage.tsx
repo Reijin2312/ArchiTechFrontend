@@ -1,4 +1,4 @@
-import { Card } from '@/shared/ui/Card';
+import { Card } from '@/shared/ui/card/Card';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
 import { Seo } from '@/shared/seo/seo';
