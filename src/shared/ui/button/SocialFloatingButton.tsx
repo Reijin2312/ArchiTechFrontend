@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { http } from '@/shared/api/http';
@@ -6,6 +6,7 @@ import { endpoints } from '@/shared/api/endpoints';
 import { authStore } from '@/shared/store/auth';
 import { chatWebSocket } from '@/shared/api/chatWebSocket';
 import { logger } from '@/shared/lib/logger';
+import * as encryption from '@/shared/lib/encryption';
 import type { 
   Friend, 
   FriendRequest, 
@@ -21,7 +22,6 @@ import type {
   CreateChatResponse,
   UploadImageResponse
 } from '@/shared/api/types';
-import * as encryption from '@/shared/lib/encryption';
 
 type Tab = 'friends' | 'search' | 'requests' | 'chat';
 type RequestsSubTab = 'incoming' | 'outgoing';
@@ -45,21 +45,18 @@ export function SocialFloatingButton() {
   const [encryptionKeys, setEncryptionKeys] = useState<encryption.EncryptionKeys | null>(null);
   const [recipientPublicKeys, setRecipientPublicKeys] = useState<Map<string, CryptoKey>>(new Map());
   const [recipientSignKeys, setRecipientSignKeys] = useState<Map<string, CryptoKey>>(new Map());
+    
+  const [chatKeys, setChatKeys] = useState<Map<number, CryptoKey>>(new Map());
   
-    // вњЁ РќРћР’РћР•: С…СЂР°РЅРµРЅРёРµ unwrapped chat keys РґР»СЏ РєР°Р¶РґРѕРіРѕ С‡Р°С‚Р°
-    const [chatKeys, setChatKeys] = useState<Map<number, CryptoKey>>(new Map());
-  
-  const pendingMessagesRef = useRef<Map<string, string>>(new Map()); // nonce -> plaintext
-  const processedMessageIds = useRef<Set<number | string>>(new Set()); // Р”Р»СЏ РїСЂРµРґРѕС‚РІСЂР°С‰РµРЅРёСЏ РґСѓР±Р»РµР№ (С‡РёСЃР»Рѕ РёР»Рё "С‡РёСЃР»Рѕ_decrypted")
-  
+  const pendingMessagesRef = useRef<Map<string, string>>(new Map());
+  const processedMessageIds = useRef<Set<number | string>>(new Set());
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
   const selectedChatRef = useRef(selectedChat);
   const encryptionKeysRef = useRef(encryptionKeys);
   const userRef = useRef(user);
   const isOpenRef = useRef(isOpen);
-  
-  // РћР±РЅРѕРІР»СЏРµРј refs РїСЂРё РёР·РјРµРЅРµРЅРёРё Р·РЅР°С‡РµРЅРёР№
+
   useEffect(() => {
     selectedChatRef.current = selectedChat;
   }, [selectedChat]);
@@ -76,7 +73,6 @@ export function SocialFloatingButton() {
     isOpenRef.current = isOpen;
   }, [isOpen]);
 
-  // РџРѕРґРєР»СЋС‡РµРЅРёРµ Рє WebSocket (РІСЃРµРіРґР°, РєРѕРіРґР° РїРѕР»СЊР·РѕРІР°С‚РµР»СЊ Р·Р°Р»РѕРіРёРЅРµРЅ)
   useEffect(() => {
     if (!user) return;
     
@@ -89,7 +85,6 @@ export function SocialFloatingButton() {
     };
   }, [user]);
 
-  // РџРѕРґРїРёСЃРєР° РЅР° WebSocket СЃРѕРѕР±С‰РµРЅРёСЏ (РћР”РРќ Р РђР— РїСЂРё РјРѕРЅС‚РёСЂРѕРІР°РЅРёРё РєРѕРјРїРѕРЅРµРЅС‚Р°)
   useEffect(() => {
     logger.chat('рџ”Њ', 'Setting up WebSocket subscription (ONCE on mount)');
 
@@ -98,11 +93,9 @@ export function SocialFloatingButton() {
 
       if (!currentUser) return;
 
-      // ===== РћР±СЂР°Р±РѕС‚РєР° Р·Р°СЏРІРѕРє РІ РґСЂСѓР·СЊСЏ (Р’РЎР•Р“Р”Рђ, РґР°Р¶Рµ РµСЃР»Рё РѕРєРЅРѕ Р·Р°РєСЂС‹С‚Рѕ) =====
       if (wsMessage.type === 'friend_request' && wsMessage.friendRequest) {
         logger.chat('рџ“Ё', 'New friend request received:', wsMessage.friendRequest);
         setIncomingRequests(prev => {
-          // РџСЂРѕРІРµСЂСЏРµРј, РЅРµС‚ Р»Рё СѓР¶Рµ С‚Р°РєРѕР№ Р·Р°СЏРІРєРё
           if (prev.some(r => r.requestId === wsMessage.friendRequest!.requestId)) {
             return prev;
           }
@@ -113,11 +106,8 @@ export function SocialFloatingButton() {
 
       if (wsMessage.type === 'friend_accept' && wsMessage.friendRequest) {
         logger.chat('вњ…', 'Friend request accepted:', wsMessage.friendRequest);
-        // РЈРґР°Р»СЏРµРј РёР· РІС…РѕРґСЏС‰РёС…
         setIncomingRequests(prev => prev.filter(r => r.userId !== wsMessage.friendRequest!.userId));
-        // РЈРґР°Р»СЏРµРј РёР· РёСЃС…РѕРґСЏС‰РёС…
         setOutgoingRequests(prev => prev.filter(r => r.userId !== wsMessage.friendRequest!.userId));
-        // РџРµСЂРµР·Р°РіСЂСѓР¶Р°РµРј СЃРїРёСЃРѕРє РґСЂСѓР·РµР№
         try {
           const { data } = await http.get<FriendsListResponse>(endpoints.friendsList);
           setFriends(data.friends);
@@ -135,14 +125,12 @@ export function SocialFloatingButton() {
         return;
       }
 
-      // ===== потоковые события чата =====
       if (wsMessage.type !== 'new_message') return;
 
       const msg = wsMessage.message!;
 
       logger.chat('📨', 'WebSocket message received:', wsMessage);
 
-      // Пропускаем дубликаты
       if (processedMessageIds.current.has(msg.messageId)) {
         logger.chat('⚠️', 'Message already processed, skipping:', msg.messageId);
         return;
@@ -153,18 +141,15 @@ export function SocialFloatingButton() {
       const currentChatId = selectedChatRef.current;
 
       if (currentChatId !== msg.chatId) {
-        // Обновляем список чатов, чтобы показать новое сообщение и непрочитанные
         loadChats();
       }
 
       if (msg.encryptionMetadata && encKeys && currentChatId === msg.chatId) {
         (async () => {
           try {
-            // РџРѕР»СѓС‡Р°РµРј chat key
             const chatKey = await ensureChatKey(msg.chatId);
             if (!chatKey) {
               logger.warn('Chat key not available for message', msg.messageId);
-              // Р”РѕР±Р°РІР»СЏРµРј СЃ РѕС€РёР±РєРѕР№
               setMessages(prev => {
                 if (prev.some(m => m.messageId === msg.messageId)) return prev;
                 return [...prev, {
@@ -193,7 +178,6 @@ export function SocialFloatingButton() {
               }
             }
 
-            // Р Р°СЃС€РёС„СЂРѕРІС‹РІР°РµРј
             const plain = await encryption.decryptMessageWithChatKey(
               {
                 encryptedContent: msg.encryptedContent,
@@ -203,7 +187,6 @@ export function SocialFloatingButton() {
               senderSignKey,
             );
 
-            // Р”РѕР±Р°РІР»СЏРµРј СѓР¶Рµ СЂР°СЃС€РёС„СЂРѕРІР°РЅРЅРѕРµ СЃРѕРѕР±С‰РµРЅРёРµ
             setMessages(prev => {
               if (prev.some(m => m.messageId === msg.messageId)) return prev;
               return [...prev, {
@@ -254,7 +237,6 @@ export function SocialFloatingButton() {
     };
   }, []);
 
-  // Р—Р°РіСЂСѓР¶Р°РµРј Р±Р°Р·РѕРІС‹Рµ РґР°РЅРЅС‹Рµ РїСЂРё РјРѕРЅС‚РёСЂРѕРІР°РЅРёРё (РґР»СЏ СЃС‡С‘С‚С‡РёРєРѕРІ)
   useEffect(() => {
     if (!user) return;
     loadIncomingRequests();
@@ -267,19 +249,15 @@ export function SocialFloatingButton() {
     loadFriends();
     loadChats();
     initEncryption();
-    // РџРµСЂРµР·Р°РіСЂСѓР¶Р°РµРј Р·Р°СЏРІРєРё РїСЂРё РѕС‚РєСЂС‹С‚РёРё РґР»СЏ Р°РєС‚СѓР°Р»СЊРЅРѕСЃС‚Рё
     loadIncomingRequests();
     loadOutgoingRequests();
   }, [user, isOpen]);
 
-  // Р—Р°РіСЂСѓР¶Р°РµРј СЃРѕРѕР±С‰РµРЅРёСЏ РїСЂРё РІС‹Р±РѕСЂРµ С‡Р°С‚Р° (РѕРґРёРЅ СЂР°Р·)
   useEffect(() => {
     if (!selectedChat || !isOpen) return;
     loadMessages(selectedChat, false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedChat, isOpen]);
   
-  // РђРІС‚РѕРїСЂРѕРєСЂСѓС‚РєР° РїСЂРё РёР·РјРµРЅРµРЅРёРё messages
   useEffect(() => {
     if (messages.length > 0) {
       setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
@@ -390,7 +368,6 @@ export function SocialFloatingButton() {
     }
   };
 
-  // Chat related loaders and helpers
   const markChatRead = async (chatId: number, lastId: number) => {
     try {
       await http.post(endpoints.chatRead, { chatId, lastReadMessageId: lastId });
@@ -403,7 +380,6 @@ export function SocialFloatingButton() {
     try {
       const { data } = await http.get<ChatListResponse>(endpoints.chatList);
       
-      // Р Р°СЃС€РёС„СЂРѕРІС‹РІР°РµРј РїРѕСЃР»РµРґРЅРёРµ СЃРѕРѕР±С‰РµРЅРёСЏ
       const keys = encryptionKeys || await encryption.unlockKeys();
       if (!keys) {
         setChats(data.chats);
@@ -432,7 +408,7 @@ export function SocialFloatingButton() {
                 encryptionMetadata: metadata,
               },
               chatKey,
-              undefined, // РџРѕРґРїРёСЃСЊ РЅРµ РїСЂРѕРІРµСЂСЏРµРј РґР»СЏ РїСЂРµРІСЊСЋ
+              undefined,
             );
 
             return {
@@ -459,7 +435,6 @@ export function SocialFloatingButton() {
     try {
       const { data } = await http.get<ChatMessagesResponse>(endpoints.chatMessages(chatId));
       
-      // вњЁ РђРІС‚РѕРјР°С‚РёС‡РµСЃРєР°СЏ СЂР°Р·Р±Р»РѕРєРёСЂРѕРІРєР° РєР»СЋС‡РµР№ РµСЃР»Рё РЅСѓР¶РЅРѕ
       let currentKeys = encryptionKeys;
       if (!currentKeys) {
         console.log('рџ”ђ Encryption keys not loaded, attempting auto-unlock...');
@@ -470,35 +445,31 @@ export function SocialFloatingButton() {
           console.error('Failed to unlock encryption keys for message decryption');
           setMessages(data.messages.map(m => ({ 
             ...m, 
-            encryptedContent: '[РљР»СЋС‡Рё С€РёС„СЂРѕРІР°РЅРёСЏ РЅРµРґРѕСЃС‚СѓРїРЅС‹]' 
+            encryptedContent: '[Ключ шифрования недоступен]' 
           })));
           return;
         }
       }
       
-        // вњЁ РќРћР’РћР•: Р—Р°РіСЂСѓР¶Р°РµРј chat key РґР»СЏ СЌС‚РѕРіРѕ С‡Р°С‚Р°
         const chatKey = await ensureChatKey(chatId);
         if (!chatKey) {
           console.error('Failed to get chat key for chatId:', chatId);
           setMessages(data.messages.map(m => ({ 
             ...m, 
-            encryptedContent: '[РљР»СЋС‡ С‡Р°С‚Р° РЅРµ РЅР°Р№РґРµРЅ]' 
+            encryptedContent: '[Ключ чата не найден]' 
           })));
           return;
         }
       
       const decrypted: ChatMessage[] = [];
       for (const m of data.messages) {
-          // вњЁ РќРћР’РћР•: Р Р°СЃС€РёС„СЂРѕРІС‹РІР°РµРј Р’РЎР• СЃРѕРѕР±С‰РµРЅРёСЏ (РІРєР»СЋС‡Р°СЏ СЃРІРѕРё) СЃ РїРѕРјРѕС‰СЊСЋ chat key
         if (m.encryptionMetadata) {
             const metadata = typeof m.encryptionMetadata === 'string' 
               ? JSON.parse(m.encryptionMetadata)
               : m.encryptionMetadata;
             
             console.log(`рџ”“ Decrypting message ${m.messageId}...`);
-            
-              // РџРѕР»СѓС‡Р°РµРј РєР»СЋС‡ РїРѕРґРїРёСЃРё РѕС‚РїСЂР°РІРёС‚РµР»СЏ РґР»СЏ РїСЂРѕРІРµСЂРєРё
-            let senderSignKey: CryptoKey | undefined;
+               let senderSignKey: CryptoKey | undefined;
             if (metadata.signature) {
               try {
                 const keys = await ensureRecipientKey(m.senderId);
@@ -508,9 +479,7 @@ export function SocialFloatingButton() {
               }
             }
               
-          
           try {
-            // Decrypt with chat key
             const dec = await encryption.decryptMessageWithChatKey({
               encryptedContent: m.encryptedContent,
               encryptionMetadata: metadata
@@ -522,7 +491,6 @@ export function SocialFloatingButton() {
             const errorMsg = e instanceof Error ? e.message : "";
 
             if (errorMsg.includes('wrong key') || errorMsg.includes('OperationError')) {
-            // Retry once with refreshed chat key
               try {
                 const refreshedKey = await ensureChatKey(chatId, true);
                 if (refreshedKey) {
@@ -556,13 +524,6 @@ export function SocialFloatingButton() {
     }
   };
 
-    /**
-     * вњ… РџР РћРЎРўРћ: РџРѕР»СѓС‡РёС‚СЊ chat key - Р·Р°РіСЂСѓР¶Р°РµРј wrapped key СЃ СЃРµСЂРІРµСЂР° Рё СЂР°Р·РІРѕСЂР°С‡РёРІР°РµРј
-     * РќР• РіРµРЅРµСЂРёСЂСѓРµРј РЅРѕРІС‹Р№ РєР»СЋС‡ РќРРљРћР“Р”Рђ - РєР»СЋС‡ СЃРѕР·РґР°С‘С‚СЃСЏ С‚РѕР»СЊРєРѕ РїСЂРё СЃРѕР·РґР°РЅРёРё С‡Р°С‚Р°
-     */
-  /**
-   * Получить chat key: скачиваем wrapped key и разворачиваем. Новый ключ не генерируем.
-   */
   const ensureChatKey = async (chatId: number, forceReload = false): Promise<CryptoKey | null> => {
     if (!forceReload && chatKeys.has(chatId)) {
       console.log('✅ Using cached chat key for chatId:', chatId);
@@ -579,7 +540,6 @@ export function SocialFloatingButton() {
   
     console.log('🔍 Chat key not in cache, fetching from server for chatId:', chatId);
   
-    // Авто-разблокировка master key
     let currentKeys = encryptionKeys;
     if (!currentKeys) {
       console.log('🔓 Encryption keys not loaded, attempting auto-unlock...');
@@ -616,12 +576,7 @@ export function SocialFloatingButton() {
     }
   };
   
-  /**
-   * вњ… РћРЎРќРћР’РќРђРЇ Р¤РЈРќРљР¦РРЇ: РЎРѕР·РґР°РЅРёРµ chat key РїСЂРё СЃРѕР·РґР°РЅРёРё С‡Р°С‚Р°
-   * Р“РµРЅРµСЂРёСЂСѓРµС‚ РєР»СЋС‡ Рё СЃСЂР°Р·Сѓ СЃРѕР·РґР°С‘С‚ wrapped keys РґР»СЏ РћР‘РћРРҐ СѓС‡Р°СЃС‚РЅРёРєРѕРІ
-   */
   const createChatKeyForNewChat = async (participantId: string): Promise<{ chatKey: CryptoKey; wrappedForMe: string; wrappedForRecipient: string } | null> => {
-    // РђРІС‚РѕРјР°С‚РёС‡РµСЃРєР°СЏ СЂР°Р·Р±Р»РѕРєРёСЂРѕРІРєР° РєР»СЋС‡РµР№ РµСЃР»Рё РЅСѓР¶РЅРѕ
     let currentKeys = encryptionKeys;
     if (!currentKeys) {
       console.log('рџ”ђ Encryption keys not loaded, attempting auto-unlock...');
@@ -635,20 +590,16 @@ export function SocialFloatingButton() {
     }
   
     try {
-      // 1пёЏвѓЈ Р“РµРЅРµСЂРёСЂСѓРµРј РЅРѕРІС‹Р№ AES-256 РєР»СЋС‡ РґР»СЏ С‡Р°С‚Р°
       console.log('рџ”‘ Generating new AES-256 chat key...');
       const chatKey = await encryption.generateChatKey();
     
-      // 2пёЏвѓЈ РћР±РѕСЂР°С‡РёРІР°РµРј РµРіРѕ СЃРІРѕРёРј РїСѓР±Р»РёС‡РЅС‹Рј РєР»СЋС‡РѕРј
       console.log('рџ”’ Wrapping chat key for self...');
       const wrappedForMe = await encryption.wrapChatKey(chatKey, currentKeys.publicKey);
     
-      // 3пёЏвѓЈ РћР‘РЇР—РђРўР•Р›Р¬РќРћ РїРѕР»СѓС‡Р°РµРј РєР»СЋС‡ СЃРѕР±РµСЃРµРґРЅРёРєР° Рё РѕР±РѕСЂР°С‡РёРІР°РµРј РґР»СЏ РЅРµРіРѕ
-      console.log('рџ”’ Getting recipient public key...');
       const recipientKeys = await ensureRecipientKey(participantId);
       if (!recipientKeys) {
         console.error('вќЊ Failed to get recipient public key');
-        throw new Error('РќРµ СѓРґР°Р»РѕСЃСЊ РїРѕР»СѓС‡РёС‚СЊ РїСѓР±Р»РёС‡РЅС‹Р№ РєР»СЋС‡ СЃРѕР±РµСЃРµРґРЅРёРєР°. РЈР±РµРґРёС‚РµСЃСЊ С‡С‚Рѕ РѕРЅ Р·Р°Р»РѕРіРёРЅРёР»СЃСЏ С…РѕС‚СЏ Р±С‹ СЂР°Р·.');
+        throw new Error('Не удалось получить публичный ключ собеседника. Убедитесь, что он залогинился хотя бы раз.');
       }
       
       console.log('рџ”’ Wrapping chat key for recipient...');
@@ -663,14 +614,6 @@ export function SocialFloatingButton() {
     }
   };
   
-  /**
-   * вљ пёЏ DEPRECATED: РќРµ РёСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ - РєР»СЋС‡Рё СЃРѕР·РґР°СЋС‚СЃСЏ С‚РѕР»СЊРєРѕ РїСЂРё СЃРѕР·РґР°РЅРёРё С‡Р°С‚Р°
-   */
-  const generateAndSaveChatKey = async (chatId: number): Promise<CryptoKey | null> => {
-    console.error('вќЊ generateAndSaveChatKey called - this should not happen!');
-    return null;
-  };
-
   const initEncryption = async () => {
     try {
       let keys = await encryption.unlockKeys();
@@ -717,6 +660,7 @@ export function SocialFloatingButton() {
       console.error('Failed to init chat encryption', e);
     }
   };
+
   const ensureRecipientKey = async (userId: string): Promise<{ encryptKey: CryptoKey; signKey?: CryptoKey } | null> => {
     try {
       const { data } = await http.get(endpoints.chatKeysGet(userId));
@@ -766,14 +710,12 @@ export function SocialFloatingButton() {
     }
   };
   const sendMessageToUser = async (recipientId: string, message: string, messageType: 'text' | 'image' = 'text', imagePath?: string) => {
-    // вњЁ РђРІС‚РѕРјР°С‚РёС‡РµСЃРєР°СЏ СЂР°Р·Р±Р»РѕРєРёСЂРѕРІРєР° РєР»СЋС‡РµР№ РµСЃР»Рё РЅСѓР¶РЅРѕ
     if (!encryptionKeys) {
       console.log('Encryption keys not loaded, attempting auto-unlock...');
       const unlockedKeys = await encryption.unlockKeys();
       if (unlockedKeys) {
         setEncryptionKeys(unlockedKeys);
       } else {
-        // РџС‹С‚Р°РµРјСЃСЏ РїРѕР»РЅРѕСЃС‚СЊСЋ СЃР±СЂРѕСЃРёС‚СЊ Рё РїРµСЂРµРёРЅРёС†РёР°Р»РёР·РёСЂРѕРІР°С‚СЊ РєР»СЋС‡Рё
         console.warn('Failed to unlock keys, attempting full reset...');
         const resetKeys = await encryption.resetAndReinitializeKeys();
         if (resetKeys) {
@@ -788,37 +730,31 @@ export function SocialFloatingButton() {
     
     const currentKeys = encryptionKeys || await encryption.unlockKeys();
     if (!currentKeys) {
-      alert('РљР»СЋС‡Рё С€РёС„СЂРѕРІР°РЅРёСЏ РЅРµ РёРЅРёС†РёР°Р»РёР·РёСЂРѕРІР°РЅС‹');
+      alert('Ключ шифрования не инициализирован');
       return;
     }
     
     try {
-      // РџСЂРѕРІРµСЂСЏРµРј РµСЃС‚СЊ Р»Рё СѓР¶Рµ С‡Р°С‚ СЃ СЌС‚РёРј РїРѕР»СЊР·РѕРІР°С‚РµР»РµРј
       let chat = chats.find(c => c.participantId === recipientId);
       
       if (!chat) {
-        // РЎРѕР·РґР°С‘Рј РЅРѕРІС‹Р№ С‡Р°С‚
-        console.log('рџ“ќ Creating new chat with user:', recipientId);
+        console.log('✅ Creating new chat with user:', recipientId);
         
-        // 1пёЏвѓЈ РЎРѕР·РґР°С‘Рј chat key Рё wrapped keys РґР»СЏ РѕР±РѕРёС…
         const keyData = await createChatKeyForNewChat(recipientId);
         if (!keyData) {
-          alert('РќРµ СѓРґР°Р»РѕСЃСЊ СЃРѕР·РґР°С‚СЊ РєР»СЋС‡Рё С€РёС„СЂРѕРІР°РЅРёСЏ РґР»СЏ С‡Р°С‚Р°');
+          alert('Не удалось создать ключ шифрования для чата');
           return;
         }
         
-        // 2пёЏвѓЈ РЎРѕР·РґР°С‘Рј С‡Р°С‚ РЅР° СЃРµСЂРІРµСЂРµ СЃ wrapped keys
         const { data: createData } = await http.post<{ chatId: number }>(endpoints.chatCreate, {
           participantId: recipientId,
           wrappedKeyForMe: keyData.wrappedForMe,
           wrappedKeyForRecipient: keyData.wrappedForRecipient
         });
         
-        // 3пёЏвѓЈ РљСЌС€РёСЂСѓРµРј chat key
         setChatKeys(prev => new Map(prev).set(createData.chatId, keyData.chatKey));
-        console.log('вњ… Chat created with wrapped keys for BOTH users, chatId:', createData.chatId);
+        console.log('✅ Chat created with wrapped keys for BOTH users, chatId:', createData.chatId);
         
-        const friend = friends.find(f => f.userId === recipientId);
         chat = {
           chatId: createData.chatId,
           participantId: recipientId,
@@ -829,25 +765,22 @@ export function SocialFloatingButton() {
         setSelectedChat(createData.chatId);
       }
       
-        // вњЁ РќРћР’РћР•: РџРѕР»СѓС‡Р°РµРј chat key (РёР»Рё СЃРѕР·РґР°С‘Рј РµСЃР»Рё РЅСѓР¶РЅРѕ)
-        console.log('рџ”‘ Getting chat key for chatId:', chat.chatId);
-        const chatKey = await ensureChatKey(chat.chatId);
-        if (!chatKey) {
-          alert('РќРµ СѓРґР°Р»РѕСЃСЊ РїРѕР»СѓС‡РёС‚СЊ РєР»СЋС‡ С€РёС„СЂРѕРІР°РЅРёСЏ С‡Р°С‚Р°');
-          return;
-        }
-      
-        // вњЁ РќРћР’РћР•: РЁРёС„СЂСѓРµРј СЃ РїРѕРјРѕС‰СЊСЋ chat key (РЅРµ RSA!)
-        console.log('рџ”ђ Encrypting message with chat key...');
-        const encrypted = await encryption.encryptMessageWithChatKey(
+      console.log('✅ Getting chat key for chatId:', chat.chatId);
+      const chatKey = await ensureChatKey(chat.chatId);
+      if (!chatKey) {
+        alert('Ключ шифрования не получен');
+        return;
+      }
+    
+      console.log('✅ Encrypting message with chat key...');
+      const encrypted = await encryption.encryptMessageWithChatKey(
         message, 
-          chatKey,
+        chatKey,
         currentKeys.signPrivateKey
       );
       
-        console.log('вњ… Message encrypted with chat key');
+      console.log('✅ Message encrypted with chat key');
       
-      // РћС‚РїСЂР°РІР»СЏРµРј РЅР° СЃРµСЂРІРµСЂ
       console.log('Sending to server...');
       
       const { data } = await http.post<SendMessageResponse>(endpoints.chatSend, {
@@ -887,7 +820,7 @@ export function SocialFloatingButton() {
       setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 30);
     } catch (e) {
       console.error('Failed to send message to user', e);
-      alert(e instanceof Error ? e.message : 'РћС€РёР±РєР° РѕС‚РїСЂР°РІРєРё СЃРѕРѕР±С‰РµРЅРёСЏ');
+      alert(e instanceof Error ? e.message : 'Ошибка отправки сообщения');
     }
   };
   
@@ -898,7 +831,6 @@ export function SocialFloatingButton() {
       return;
     }
     
-    // Р•СЃР»Рё РІС‹Р±СЂР°РЅ РєРѕРЅРєСЂРµС‚РЅС‹Р№ С‡Р°С‚ - РѕС‚РїСЂР°РІР»СЏРµРј РІ РЅРµРіРѕ
     if (selectedChat) {
       const chat = chats.find(c => c.chatId === selectedChat);
       if (!chat) {
@@ -925,7 +857,6 @@ export function SocialFloatingButton() {
     }
   };
 
-  // Render chat view
   const renderChatView = () => {
     if (selectedChat == null) {
       return (
@@ -940,7 +871,6 @@ export function SocialFloatingButton() {
     return (
       <div className="flex flex-col h-full">
         <div className="flex-none border-b border-slate-800/50 p-3 flex items-center gap-3 bg-slate-900/40">
-          {/* Кнопка назад */}
           <button
             onClick={() => { setSelectedChat(null); setMessages([]); }}
             className="p-2 hover:bg-slate-800 rounded-lg transition-colors"
@@ -960,6 +890,7 @@ export function SocialFloatingButton() {
               <div className="text-xs text-slate-400 truncate">@{friend.username}</div>
             )}
           </div>
+
           <button
             onClick={async () => {
               if (!confirm('Удалить чат? Все сообщения будут удалены.')) return;
@@ -993,9 +924,9 @@ export function SocialFloatingButton() {
           ) : (
             messages.map(m => (
               <div key={m.messageId} className={`flex ${m.senderId === user!.id ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[75%] rounded-2xl px-4 py-2.5 text-sm whitespace-pre-wrap break-words shadow-lg ${
+                <div className={`max-w-[75%] rounded-2xl px-4 py-2.5 text-sm whitespace-pre-wrap wrap-break-word shadow-lg ${
                   m.senderId === user!.id
-                    ? 'bg-gradient-to-br from-indigo-600 to-indigo-700 text-white shadow-indigo-500/30'
+                    ? 'bg-linear-to-br from-indigo-600 to-indigo-700 text-white shadow-indigo-500/30'
                     : 'bg-slate-800/90 text-slate-100 shadow-slate-900/50 border border-slate-700/50'
                 }`}>
                   {m.messageType === 'image' && m.imagePath ? (
@@ -1031,20 +962,21 @@ export function SocialFloatingButton() {
             />
             <button
               onClick={sendChatMessage}
-              className="px-5 py-2.5 rounded-xl bg-gradient-to-br from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-sm font-medium transition-all shadow-lg shadow-indigo-500/30 hover:shadow-indigo-500/50"
+              className="px-5 py-2.5 rounded-xl bg-linear-to-br from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-sm font-medium transition-all shadow-lg shadow-indigo-500/30 hover:shadow-indigo-500/50"
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
               </svg>
             </button>
           </div>
+
           <label className="inline-flex items-center gap-2 cursor-pointer group">
             <input type="file" className="hidden" accept="image/*" onChange={e => { const f = e.target.files?.[0]; if (f) uploadImage(f); }} />
             <span className="text-xs text-slate-400 group-hover:text-indigo-400 transition-colors flex items-center gap-1.5">
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
-              РџСЂРёРєСЂРµРїРёС‚СЊ РёР·РѕР±СЂР°Р¶РµРЅРёРµ
+              Прикрепить изображение
             </span>
           </label>
         </div>
@@ -1060,7 +992,6 @@ export function SocialFloatingButton() {
 
   return (
     <>
-      {/* Overlay */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
@@ -1074,7 +1005,6 @@ export function SocialFloatingButton() {
         )}
       </AnimatePresence>
 
-      {/* Floating Panel */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
@@ -1085,7 +1015,6 @@ export function SocialFloatingButton() {
             className="fixed bottom-24 right-6 w-96 max-w-[calc(100vw-3rem)] h-[600px] max-h-[calc(100vh-8rem)] z-50"
           >
             <div className="h-full flex flex-col rounded-2xl border border-slate-800 bg-slate-950/95 backdrop-blur-xl shadow-2xl overflow-hidden">
-              {/* Header */}
               <div className="flex items-center justify-between px-4 py-3 border-b border-slate-800 bg-slate-900/60">
                 <h2 className="text-lg font-semibold">Друзья</h2>
                 <button
@@ -1172,27 +1101,26 @@ export function SocialFloatingButton() {
                       transition={{ duration: 0.15 }}
                       className="h-full overflow-y-auto p-3"
                     >
-                      {/* Sub-tabs РґР»СЏ Р·Р°СЏРІРѕРє */}
                       <div className="flex gap-2 mb-3">
                         <button
                           onClick={() => setRequestsSubTab('incoming')}
                           className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
                             requestsSubTab === 'incoming'
-                              ? 'bg-gradient-to-br from-indigo-600 to-indigo-700 text-white shadow-lg shadow-indigo-500/30'
+                              ? 'bg-linear-to-br from-indigo-600 to-indigo-700 text-white shadow-lg shadow-indigo-500/30'
                               : 'bg-slate-800/60 text-slate-300 hover:bg-slate-800 border border-slate-700/50'
                           }`}
                         >
-                          Р’С…РѕРґСЏС‰РёРµ {incomingCount > 0 && `(${incomingCount})`}
+                          Входящие {incomingCount > 0 && `(${incomingCount})`}
                         </button>
                         <button
                           onClick={() => setRequestsSubTab('outgoing')}
                           className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
                             requestsSubTab === 'outgoing'
-                              ? 'bg-gradient-to-br from-indigo-600 to-indigo-700 text-white shadow-lg shadow-indigo-500/30'
+                              ? 'bg-linear-to-br from-indigo-600 to-indigo-700 text-white shadow-lg shadow-indigo-500/30'
                               : 'bg-slate-800/60 text-slate-300 hover:bg-slate-800 border border-slate-700/50'
                           }`}
                         >
-                          РСЃС…РѕРґСЏС‰РёРµ {outgoingCount > 0 && `(${outgoingCount})`}
+                          Исходящие {outgoingCount > 0 && `(${outgoingCount})`}
                         </button>
                       </div>
                       
@@ -1244,13 +1172,12 @@ export function SocialFloatingButton() {
         )}
       </AnimatePresence>
 
-      {/* Floating Button */}
       <motion.button
         onClick={() => setIsOpen(!isOpen)}
         className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg hover:shadow-xl transition-all flex items-center justify-center"
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
-        aria-label="РћС‚РєСЂС‹С‚СЊ СЃРѕС†РёР°Р»СЊРЅСѓСЋ СЃРµС‚СЊ"
+        aria-label="Открыть социальную сеть"
       >
         {hasNotifications && (
           <span className="absolute -top-1 -right-1 w-5 h-5 bg-rose-500 rounded-full flex items-center justify-center text-xs font-bold">
@@ -1322,12 +1249,12 @@ function FriendsList({ friends, onRemove, onOpenChat }: { friends: Friend[], onR
       const diffMs = now.getTime() - date.getTime();
       const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
       
-      if (diffDays === 0) return 'РЎРµРіРѕРґРЅСЏ';
-      if (diffDays === 1) return 'Р’С‡РµСЂР°';
-      if (diffDays < 7) return `${diffDays} РґРЅ. РЅР°Р·Р°Рґ`;
-      if (diffDays < 30) return `${Math.floor(diffDays / 7)} РЅРµРґ. РЅР°Р·Р°Рґ`;
-      if (diffDays < 365) return `${Math.floor(diffDays / 30)} РјРµСЃ. РЅР°Р·Р°Рґ`;
-      return `${Math.floor(diffDays / 365)} Рі. РЅР°Р·Р°Рґ`;
+      if (diffDays === 0) return 'Сегодня';
+      if (diffDays === 1) return 'Вчера';
+      if (diffDays < 7) return `${diffDays} дн. назад`;
+      if (diffDays < 30) return `${Math.floor(diffDays / 7)} нед. назад`;
+      if (diffDays < 365) return `${Math.floor(diffDays / 30)} мес. назад`;
+      return `${Math.floor(diffDays / 365)} г. назад`;
     } catch {
       return null;
     }
@@ -1360,7 +1287,7 @@ function FriendsList({ friends, onRemove, onOpenChat }: { friends: Friend[], onR
                 <div className="text-xs text-slate-400 truncate">{friend.displayName}</div>
               )}
               {friend.acceptedAt && (
-                <div className="text-xs text-slate-500 truncate" title={`Р”СЂСѓР·СЊСЏ СЃ ${new Date(friend.acceptedAt).toLocaleString('ru')}`}>
+                <div className="text-xs text-slate-500 truncate" title={`Друг с ${new Date(friend.acceptedAt).toLocaleString('ru')}`}>
                   {formatDate(friend.acceptedAt)}
                 </div>
               )}
@@ -1369,7 +1296,7 @@ function FriendsList({ friends, onRemove, onOpenChat }: { friends: Friend[], onR
           <button
             onClick={() => onOpenChat(friend.userId)}
             className="p-1.5 text-xs rounded bg-indigo-600/20 hover:bg-indigo-600/40 hover:text-indigo-300 transition-all border border-indigo-600/30"
-            title="РќР°РїРёСЃР°С‚СЊ"
+            title="Написать"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
@@ -1378,7 +1305,7 @@ function FriendsList({ friends, onRemove, onOpenChat }: { friends: Friend[], onR
           <button
             onClick={() => onRemove(friend.userId)}
             className="opacity-0 group-hover:opacity-100 p-1.5 text-xs rounded hover:bg-slate-800 hover:text-rose-300 transition-all"
-            title="РЈРґР°Р»РёС‚СЊ"
+            title="Удалить"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -1423,7 +1350,7 @@ function SearchUsers({
       )}
 
       {!loading && query.length >= 2 && results.length === 0 && (
-        <div className="text-center py-6 text-slate-400 text-sm">РќРёС‡РµРіРѕ РЅРµ РЅР°Р№РґРµРЅРѕ</div>
+        <div className="text-center py-6 text-slate-400 text-sm">Упс! Никого не найдено :(</div>
       )}
 
       {!loading && results.length > 0 && (
@@ -1457,7 +1384,7 @@ function SearchUsers({
 
               {user.friendStatus === 'ACCEPTED' && (
                 <span className="px-2 py-1 text-xs text-emerald-300 bg-emerald-500/10 border border-emerald-700/50 rounded">
-                  вњ“
+                  ✓
                 </span>
               )}
               {user.friendStatus === 'PENDING' && (
@@ -1501,7 +1428,7 @@ function IncomingRequests({
   if (requests.length === 0) {
     return (
       <div className="text-center py-8 text-slate-400 text-sm">
-        РќРµС‚ РІС…РѕРґСЏС‰РёС… Р·Р°СЏРІРѕРє
+        Нет входящих заявок
       </div>
     );
   }
@@ -1570,7 +1497,7 @@ function OutgoingRequests({
   if (requests.length === 0) {
     return (
       <div className="text-center py-8 text-slate-400 text-sm">
-        РќРµС‚ РёСЃС…РѕРґСЏС‰РёС… Р·Р°СЏРІРѕРє
+        Нет исходящих заявок
       </div>
     );
   }
@@ -1713,7 +1640,7 @@ function ChatsList({
                   {displayName}
                 </div>
                 {lastMsg && (
-                  <div className="text-xs text-slate-500 flex-shrink-0">
+                  <div className="text-xs text-slate-500 shrink-0">
                     {formatDate(lastMsg.createdAt)}
                   </div>
                 )}
@@ -1725,7 +1652,7 @@ function ChatsList({
                     {lastMsg.messageType === 'image' ? '🖼️ Изображение' : lastMsg.encryptedContent}
                   </div>
                   {hasUnread && (
-                    <div className="w-2 h-2 rounded-full bg-indigo-500 flex-shrink-0 animate-pulse"></div>
+                    <div className="w-2 h-2 rounded-full bg-indigo-500 shrink-0 animate-pulse"></div>
                   )}
                 </div>
               ) : (

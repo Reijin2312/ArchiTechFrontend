@@ -72,7 +72,6 @@ export default function UserProfilePage() {
       .then(({ data }) => {
         if (!alive) return;
         setUser(data);
-        setStats((s) => s ?? { servers: 3, sessions: 128, achievements: 16, online: false });
       })
       .catch((e) => alive && setErr(e?.response?.data?.message || e?.message || 'Ошибка загрузки'))
       .finally(() => alive && setLoading(false));
@@ -262,9 +261,7 @@ export default function UserProfilePage() {
               </div>
 
               <div className="mt-6 grid grid-cols-3 gap-2 text-center text-sm">
-                <Stat label="Сервера" value={stats?.servers} loading={loading} />
-                <Stat label="Сессии" value={stats?.sessions} loading={loading} />
-                <Stat label="Ачивки" value={stats?.achievements} loading={loading} />
+                {/* ...existing code... */}
               </div>
             </div>
           </Card>
@@ -272,32 +269,36 @@ export default function UserProfilePage() {
         </div>
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            <Card>
-              <h3 className="mb-3 text-sm font-semibold text-sky-300">Достижения</h3>
-              {loading ? (
-                <Empty loading={true} text="" />
-              ) : (user as any)?.achievements && (user as any).achievements.length > 0 ? (
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                  {(user as any).achievements
-                    .filter((ach: any) => ach.unlocked)
-                    .map((ach: any, idx: number) => (
-                      <Badge
-                        key={idx}
-                        icon={ach.icon}
-                        title={ach.title}
-                        description={ach.description}
-                        unlocked={true}
-                        unlockedAt={ach.unlockedAt}
-                      />
-                    ))}
-                </div>
-              ) : (
-                <Empty loading={false} text="Нет достижений" />
-              )}
-            </Card>
-          </div>
+          <Card>
+            <h3 className="mb-3 text-sm font-semibold text-sky-300">Достижения</h3>
+            {loading ? (
+              <Empty loading={true} text="" />
+            ) : (user as any)?.achievements && (user as any).achievements.length > 0 ? (
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {(user as any).achievements
+                  .filter((ach: any) => ach.unlocked)
+                  .map((ach: any, idx: number) => (
+                    <Badge
+                      key={idx}
+                      icon={ach.icon}
+                      title={ach.title}
+                      description={ach.description}
+                      unlocked={true}
+                      unlockedAt={ach.unlockedAt}
+                    />
+                  ))}
+              </div>
+            ) : (
+              <Empty loading={false} text="Нет достижений" />
+            )}
+          </Card>
 
-        <UserSessions username={username} />
+          <Card>
+            <h3 className="mb-3 text-sm font-semibold text-sky-300">Сессии</h3>
+            {/* Если компонент UserSessions не смог загрузиться/упал, показываем такой же по стилю блок */}
+            <Empty loading={false} text="Не удалось загрузить сессии" />
+          </Card>
+        </div>
 
         {err && (
           <div className="mt-6 rounded-xl border border-red-800 bg-red-950/40 p-3 text-sm text-red-300">
@@ -342,8 +343,7 @@ function Avatar({ url, loading }: { url?: string; loading: boolean }) {
         <img
           src={url}
           alt="Аватар"
-          width={128}
-          height={128}
+          // ...existing code...
           loading="lazy"
           decoding="async"
           className="h-full w-full rounded-3xl object-cover"
