@@ -80,6 +80,8 @@ export interface ChatMessage {
   encryptionMetadata?: string
   createdAt: string
   isRead?: boolean
+  replyToId?: number
+  replyToMessage?: ChatMessage
 }
 
 export interface PrivateChat {
@@ -103,6 +105,7 @@ export interface SendMessageRequest {
   messageType?: 'text' | 'image'
   imagePath?: string
   encryptionMetadata?: Record<string, any>
+  replyToId?: number
 }
 
 export interface SendMessageResponse {

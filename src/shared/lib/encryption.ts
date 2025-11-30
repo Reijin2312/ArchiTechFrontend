@@ -1023,6 +1023,22 @@ export async function unlockKeys(): Promise<EncryptionKeys | null> {
       }
     }
     
+    if (!keys) {
+      console.warn('?? Unlock failed, attempting auto-reset and regeneration...');
+      try {
+        await clearAllKeys();
+        await initEncryption();
+        keys = await loadKeys(password);
+        if (keys) {
+          console.log('? Keys regenerated automatically after unlock failure');
+          logger.crypto('?:', 'Keys regenerated automatically after unlock failure');
+        }
+      } catch (resetErr) {
+        console.error('? Auto-regeneration after unlock failure failed:', resetErr);
+        logger.error('Auto-regeneration after unlock failure failed:', resetErr as any);
+      }
+    }
+
     if (keys) {
       console.log('✅ Keys unlocked successfully');
     } else {

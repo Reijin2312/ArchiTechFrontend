@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+﻿import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { http } from '@/shared/api/http';
@@ -47,10 +47,13 @@ export function SocialFloatingButton() {
   const [recipientSignKeys, setRecipientSignKeys] = useState<Map<string, CryptoKey>>(new Map());
     
   const [chatKeys, setChatKeys] = useState<Map<number, CryptoKey>>(new Map());
+  const [lastActivityTime, setLastActivityTime] = useState(Date.now());
+  const [replyingTo, setReplyingTo] = useState<ChatMessage | null>(null);
   
   const pendingMessagesRef = useRef<Map<string, string>>(new Map());
   const processedMessageIds = useRef<Set<number | string>>(new Set());
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const markReadTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   const selectedChatRef = useRef(selectedChat);
   const encryptionKeysRef = useRef(encryptionKeys);
@@ -84,6 +87,84 @@ export function SocialFloatingButton() {
       chatWebSocket.disconnect();
     };
   }, [user]);
+
+  // Initialize encryption on mount
+  useEffect(() => {
+    if (!user) return;
+    
+    const initKeys = async () => {
+      if (encryptionKeys) return;
+      
+      logger.chat('🔑', 'Auto-initializing encryption keys...');
+      try {
+        await initEncryption();
+      } catch (err) {
+        console.error('Failed to auto-init encryption:', err);
+      }
+    };
+    
+    initKeys();
+  }, [user]);
+
+  // Трекинг активности пользователя для read receipts
+  useEffect(() => {
+    const updateActivity = () => setLastActivityTime(Date.now());
+    
+    window.addEventListener('mousemove', updateActivity);
+    window.addEventListener('keydown', updateActivity);
+    window.addEventListener('click', updateActivity);
+    window.addEventListener('scroll', updateActivity);
+    
+    return () => {
+      window.removeEventListener('mousemove', updateActivity);
+      window.removeEventListener('keydown', updateActivity);
+      window.removeEventListener('click', updateActivity);
+      window.removeEventListener('scroll', updateActivity);
+    };
+  }, []);
+
+  // IntersectionObserver для автоматической отметки прочитанного
+  useEffect(() => {
+    if (!selectedChat || !user) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const inactiveTime = Date.now() - lastActivityTime;
+        if (inactiveTime > 300000) {
+          console.log('⚠️ User inactive, observer paused');
+          return;
+        }
+
+        entries.forEach((entry) => {
+          if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
+            const messageEl = entry.target as HTMLElement;
+            const messageId = messageEl.dataset.messageId;
+            const senderId = messageEl.dataset.senderId;
+            
+            // Отмечаем прочитанным только чужие сообщения
+            if (messageId && senderId && senderId !== user.id && selectedChat) {
+              console.log('👀 Message', messageId, 'is visible, marking as read');
+              markChatRead(selectedChat, parseInt(messageId)).catch(() => {});
+            }
+          }
+        });
+      },
+      {
+        root: null,
+        rootMargin: '0px',
+        threshold: 0.5 // 50% видимости
+      }
+    );
+
+    // Наблюдаем за всеми сообщениями
+    const messageElements = document.querySelectorAll('.message-item');
+    console.log('🔍 Observing', messageElements.length, 'messages');
+    messageElements.forEach(el => observer.observe(el));
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [messages, selectedChat, user, lastActivityTime]);
 
   useEffect(() => {
     logger.chat('рџ”Њ', 'Setting up WebSocket subscription (ONCE on mount)');
@@ -122,6 +203,18 @@ export function SocialFloatingButton() {
         logger.chat('вќЊ', 'Friend request rejected:', wsMessage.friendRequest);
         setIncomingRequests(prev => prev.filter(r => r.userId !== wsMessage.friendRequest!.userId));
         setOutgoingRequests(prev => prev.filter(r => r.userId !== wsMessage.friendRequest!.userId));
+        return;
+      }
+
+      // Обработка события прочтения сообщений
+      if (wsMessage.type === 'message_read' && wsMessage.chatId && wsMessage.lastReadMessageId) {
+        console.log('✅ Received message_read event for chat', wsMessage.chatId, 'up to message', wsMessage.lastReadMessageId);
+        setMessages(prev => prev.map(m =>
+          m.messageId <= wsMessage.lastReadMessageId! && m.senderId === currentUser.id
+            ? { ...m, isRead: true }
+            : m
+        ));
+        loadChats(); // Обновляем список чатов
         return;
       }
 
@@ -196,9 +289,15 @@ export function SocialFloatingButton() {
                 messageType: msg.messageType,
                 imagePath: msg.imagePath,
                 createdAt: msg.createdAt,
+                isRead: msg.senderId === currentUser.id ? msg.isRead : false,
+                replyToId: msg.replyToId,
+                replyToMessage: msg.replyToMessage,
               }];
             });
-            markChatRead(msg.chatId, msg.messageId).catch(() => {});
+            // Отмечаем прочитанным чужое сообщение
+            if (msg.senderId !== currentUser.id) {
+              markChatRead(msg.chatId, msg.messageId).catch(() => {});
+            }
           } catch (e) {
             logger.warn('Failed to decrypt message via WebSocket', msg.messageId, e);
             setMessages(prev => {
@@ -210,6 +309,9 @@ export function SocialFloatingButton() {
                 messageType: msg.messageType,
                 imagePath: msg.imagePath,
                 createdAt: msg.createdAt,
+                isRead: false,
+                replyToId: msg.replyToId,
+                replyToMessage: msg.replyToMessage,
               }];
             });
           }
@@ -224,9 +326,15 @@ export function SocialFloatingButton() {
             messageType: msg.messageType,
             imagePath: msg.imagePath,
             createdAt: msg.createdAt,
+            isRead: msg.senderId === currentUser.id ? msg.isRead : false,
+            replyToId: msg.replyToId,
+            replyToMessage: msg.replyToMessage,
           }];
         });
-        markChatRead(msg.chatId, msg.messageId).catch(() => {});
+        // Отмечаем прочитанным чужое сообщение
+        if (msg.senderId !== currentUser.id) {
+          markChatRead(msg.chatId, msg.messageId).catch(() => {});
+        }
       }
 
     });
@@ -369,11 +477,33 @@ export function SocialFloatingButton() {
   };
 
   const markChatRead = async (chatId: number, lastId: number) => {
-    try {
-      await http.post(endpoints.chatRead, { chatId, lastReadMessageId: lastId });
-    } catch (err) {
-      logger.warn('Failed to mark chat read', err);
+    // Проверяем активность: если последнее действие было > 5 минут назад, не отмечаем
+    const inactiveTime = Date.now() - lastActivityTime;
+    if (inactiveTime > 300000) {
+      console.log('⚠️ User inactive, not marking as read');
+      return;
     }
+    
+    // Debounce: откладываем отправку на 500мс
+    if (markReadTimeoutRef.current) {
+      clearTimeout(markReadTimeoutRef.current);
+    }
+    
+    markReadTimeoutRef.current = setTimeout(async () => {
+      try {
+        console.log('✅ Marking message', lastId, 'in chat', chatId, 'as read');
+        await http.post(endpoints.chatRead, { chatId, lastReadMessageId: lastId });
+        
+        // Обновляем локальное состояние сообщений
+        setMessages(prev => prev.map(m => 
+          m.messageId <= lastId && m.senderId !== user?.id
+            ? { ...m, isRead: true }
+            : m
+        ));
+      } catch (err) {
+        logger.warn('Failed to mark chat read', err);
+      }
+    }, 500);
   };
 
   const loadChats = async () => {
@@ -515,7 +645,9 @@ export function SocialFloatingButton() {
       }
       setMessages(append ? prev => [...prev, ...decrypted] : decrypted);
       const last = decrypted[decrypted.length - 1];
-      if (last) {
+      if (last && last.senderId !== user?.id) {
+        // Отмечаем прочитанными все чужие сообщения сразу при загрузке
+        console.log('📬 Marking all messages as read up to', last.messageId);
         markChatRead(chatId, last.messageId).catch(() => {});
       }
       setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
@@ -599,7 +731,7 @@ export function SocialFloatingButton() {
       const recipientKeys = await ensureRecipientKey(participantId);
       if (!recipientKeys) {
         console.error('вќЊ Failed to get recipient public key');
-        throw new Error('Не удалось получить публичный ключ собеседника. Убедитесь, что он залогинился хотя бы раз.');
+        alert('Не удалось получить публичный ключ собеседника.\n\nВозможные причины:\n Собеседник ещё ни разу не открывал чат\n Собеседнику нужно перезагрузить страницу\n\nПопросите собеседника зайти в чат хотя бы раз.'); return null;
       }
       
       console.log('рџ”’ Wrapping chat key for recipient...');
@@ -621,6 +753,11 @@ export function SocialFloatingButton() {
       if (!keys) {
         await encryption.initEncryption();
         keys = await encryption.unlockKeys();
+      }
+
+      if (!keys) {
+        console.warn('Unlock still failing, attempting full reset and reinit...');
+        keys = await encryption.resetAndReinitializeKeys();
       }
 
       if (!keys) {
@@ -686,10 +823,31 @@ export function SocialFloatingButton() {
 
   const openChatWith = async (participantId: string) => {
     try {
+      // Ensure encryption is ready
+      let currentKeys = encryptionKeys;
+      if (!currentKeys) {
+        console.log('🔑 Encryption keys not ready, initializing...');
+        await initEncryption();
+        
+        // Wait for initialization
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
+        currentKeys = await encryption.unlockKeys();
+        if (!currentKeys) {
+          console.warn('Unlock failed in openChatWith, attempting full reset...');
+          currentKeys = await encryption.resetAndReinitializeKeys();
+        }
+
+        if (!currentKeys) {
+          alert('�� 㤠���� ���樠����஢��� ���� ��஢����.\n\n���஡��:\n1. ��१���㧨�� ��࠭���\n2. ������ ��� ��㧥�\n3. ���஡����� � ०��� ��������');
+          return;
+        }
+        setEncryptionKeys(currentKeys);
+      }
+      
       const keyData = await createChatKeyForNewChat(participantId);
       if (!keyData) {
-        alert('Could not prepare chat keys');
-        return;
+        return; // Error already shown
       }
 
       const { data } = await http.post<CreateChatResponse>(endpoints.chatCreate, {
@@ -788,7 +946,8 @@ export function SocialFloatingButton() {
         encryptedContent: encrypted.encryptedContent,
         encryptionMetadata: encrypted.encryptionMetadata,
         messageType,
-        imagePath
+        imagePath,
+        replyToId: replyingTo?.messageId
       });
       
       console.log('✅ Message sent, messageId:', data.messageId);
@@ -801,6 +960,8 @@ export function SocialFloatingButton() {
         messageType,
         imagePath,
         createdAt,
+        replyToId: replyingTo?.messageId,
+        replyToMessage: replyingTo || undefined,
       }]);
 
       setChats(prev => prev.map(c => c.chatId === chat!.chatId ? {
@@ -813,10 +974,11 @@ export function SocialFloatingButton() {
           imagePath,
           createdAt,
           encryptionMetadata: '',
+          replyToId: replyingTo?.messageId,
         },
       } : c));
 
-      markChatRead(chat!.chatId, data.messageId).catch(() => {});
+      setReplyingTo(null);
       setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 30);
     } catch (e) {
       console.error('Failed to send message to user', e);
@@ -923,12 +1085,33 @@ export function SocialFloatingButton() {
             </div>
           ) : (
             messages.map(m => (
-              <div key={m.messageId} className={`flex ${m.senderId === user!.id ? 'justify-end' : 'justify-start'}`}>
+              <div 
+                key={m.messageId}
+                data-message-id={m.messageId}
+                data-sender-id={m.senderId}
+                className={`message-item flex ${m.senderId === user!.id ? 'justify-end' : 'justify-start'} group`}
+              >
                 <div className={`max-w-[75%] rounded-2xl px-4 py-2.5 text-sm whitespace-pre-wrap wrap-break-word shadow-lg ${
                   m.senderId === user!.id
                     ? 'bg-linear-to-br from-indigo-600 to-indigo-700 text-white shadow-indigo-500/30'
                     : 'bg-slate-800/90 text-slate-100 shadow-slate-900/50 border border-slate-700/50'
                 }`}>
+                  {m.replyToMessage && (
+                    <div className={`mb-2 p-2 rounded-lg border-l-2 ${
+                      m.senderId === user!.id
+                        ? 'bg-indigo-800/40 border-indigo-400'
+                        : 'bg-slate-700/40 border-slate-500'
+                    }`}>
+                      <div className={`text-[10px] font-medium mb-1 ${
+                        m.senderId === user!.id ? 'text-indigo-300' : 'text-slate-400'
+                      }`}>
+                        {m.replyToMessage.senderId === user!.id ? 'Вы' : friends.find(f => f.userId === m.replyToMessage!.senderId)?.username || 'Пользователь'}
+                      </div>
+                      <div className={`text-xs opacity-80 ${m.replyToMessage.messageType === 'image' ? 'italic' : 'line-clamp-2'}`}>
+                        {m.replyToMessage.messageType === 'image' ? '🖼️ Изображение' : m.replyToMessage.encryptedContent}
+                      </div>
+                    </div>
+                  )}
                   {m.messageType === 'image' && m.imagePath ? (
                     <img
                       src={`/media/${m.imagePath}`}
@@ -940,18 +1123,57 @@ export function SocialFloatingButton() {
                   {m.encryptedContent && m.encryptedContent.trim() && (
                     <div className="leading-relaxed">{m.encryptedContent}</div>
                   )}
-                  <div className={`mt-1.5 text-[10px] text-right opacity-70 ${
+                  <div className={`mt-1.5 text-[10px] text-right opacity-70 flex items-center justify-end gap-1 ${
                     m.senderId === user!.id ? 'text-indigo-200' : 'text-slate-400'
                   }`}>
                     {new Date(m.createdAt).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
+                    {m.senderId === user!.id && (
+                      <span className="ml-1">
+                        {m.isRead ? (
+                          <span className="text-indigo-300">✓✓</span>
+                        ) : (
+                          <span className="text-indigo-400/60">✓</span>
+                        )}
+                      </span>
+                    )}
                   </div>
                 </div>
+                <button
+                  onClick={() => setReplyingTo(m)}
+                  className="ml-2 p-1.5 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-slate-800 transition-all"
+                  title="Ответить"
+                >
+                  <svg className="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                  </svg>
+                </button>
               </div>
             ))
           )}
           <div ref={messagesEndRef} />
         </div>
         <div className="flex-none p-3 border-t border-slate-800/50 bg-slate-900/30">
+          {replyingTo && (
+            <div className="mb-2 px-3 py-2 rounded-lg bg-slate-800/60 border border-slate-700/50 flex items-start gap-2">
+              <div className="flex-1 min-w-0">
+                <div className="text-xs text-indigo-400 font-medium mb-1">
+                  Ответ на сообщение {replyingTo.senderId === user!.id ? 'себе' : friends.find(f => f.userId === replyingTo.senderId)?.username || 'пользователю'}:
+                </div>
+                <div className="text-xs text-slate-300 truncate">
+                  {replyingTo.messageType === 'image' ? '🖼️ Изображение' : replyingTo.encryptedContent}
+                </div>
+              </div>
+              <button
+                onClick={() => setReplyingTo(null)}
+                className="p-1 hover:bg-slate-700 rounded transition-colors"
+                title="Отменить ответ"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          )}
           <div className="flex gap-2 mb-2">
             <input
               value={messageInput}
@@ -1235,8 +1457,8 @@ function FriendsList({ friends, onRemove, onOpenChat }: { friends: Friend[], onR
   if (friends.length === 0) {
     return (
       <div className="text-center py-8 text-slate-400 text-sm">
-        <p>РЈ РІР°СЃ РїРѕРєР° РЅРµС‚ РґСЂСѓР·РµР№</p>
-        <p className="text-xs mt-1">РСЃРїРѕР»СЊР·СѓР№С‚Рµ РїРѕРёСЃРє</p>
+        <p>У вас пока нет друзей</p>
+        <p className="text-xs mt-1">Используйте поиск</p>
       </div>
     );
   }
@@ -1465,7 +1687,7 @@ function IncomingRequests({
             <button
               onClick={() => onAccept(req.userId)}
               className="p-1.5 text-xs rounded bg-emerald-600 hover:bg-emerald-500"
-              title="РџСЂРёРЅСЏС‚СЊ"
+              title="Принять"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -1474,7 +1696,7 @@ function IncomingRequests({
             <button
               onClick={() => onReject(req.userId)}
               className="p-1.5 text-xs rounded border border-slate-700 hover:border-rose-500 hover:text-rose-300"
-              title="РћС‚РєР»РѕРЅРёС‚СЊ"
+              title="Отклонить"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -1529,13 +1751,13 @@ function OutgoingRequests({
                 <div className="text-xs text-slate-400 truncate">{req.displayName}</div>
               )}
               {req.status === 'ACCEPTED' && (
-                <div className="text-xs text-emerald-300 truncate">вњ“ РџСЂРёРЅСЏС‚Р°</div>
+                <div className="text-xs text-emerald-300 truncate">✓ Принята</div>
               )}
               {req.status === 'REJECTED' && (
-                <div className="text-xs text-rose-300 truncate">вњ• РћС‚РєР»РѕРЅРµРЅР°</div>
+                <div className="text-xs text-rose-300 truncate">✗ Отклонена</div>
               )}
               {req.status === 'PENDING' && (
-                <div className="text-xs text-amber-300 truncate">вЏі РћР¶РёРґР°РµС‚</div>
+                <div className="text-xs text-amber-300 truncate">⏳ Ожидает</div>
               )}
             </div>
           </Link>
@@ -1543,7 +1765,7 @@ function OutgoingRequests({
             <button
               onClick={() => onCancel(req.userId)}
               className="p-1.5 text-xs rounded border border-slate-700 hover:border-rose-500 hover:text-rose-300"
-              title="РћС‚РјРµРЅРёС‚СЊ"
+              title="Отменить"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -1665,3 +1887,5 @@ function ChatsList({
     </div>
   );
 }
+
+

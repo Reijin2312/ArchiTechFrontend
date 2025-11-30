@@ -2,8 +2,9 @@ import { http } from '@/shared/api/http';
 import { endpoints } from '@/shared/api/endpoints';
 
 export interface ChatWebSocketMessage {
-  type: 'new_message' | 'friend_request' | 'friend_accept' | 'friend_reject';
+  type: 'new_message' | 'friend_request' | 'friend_accept' | 'friend_reject' | 'message_read';
   chatId?: number;
+  lastReadMessageId?: number;
   message?: {
     messageId: number;
     chatId: number;
@@ -19,10 +20,19 @@ export interface ChatWebSocketMessage {
       signature?: string;
     };
     createdAt: string;
+    isRead?: boolean;
     readByUser1: boolean;
     readByUser2: boolean;
     deliveredAt?: string;
     readAt?: string;
+    replyToId?: number;
+    replyToMessage?: {
+      messageId: number;
+      senderId: string;
+      encryptedContent: string;
+      messageType: 'text' | 'image';
+      createdAt: string;
+    };
   };
   // Для заявок в друзья
   friendRequest?: {
