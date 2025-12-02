@@ -1,5 +1,4 @@
-import { create } from 'zustand';
-import { clearAllKeys } from '@/shared/lib/encryption';
+import { create } from "zustand";
 
 export type User = { id: string; username: string; email?: string };
 
@@ -14,13 +13,7 @@ export const authStore = create<State & Actions>((set) => ({
   accessToken: null,
   setAuth: (u, a) => set({ user: u, accessToken: a }),
   clear: () => {
-    // 🔒 ИСПРАВЛЕНО: Очищаем все ключи шифрования при logout
-    clearAllKeys().catch(err => console.error('Failed to clear encryption keys:', err));
-    
-    // Очищаем старые небезопасные данные из localStorage
-    localStorage.removeItem('chat_private_key');
-    localStorage.removeItem('chat_sign_private_key');
-    
+    // Keep chat keys so cloud chats remain available after re-login.
     set({ user: null, accessToken: null });
   },
 }));

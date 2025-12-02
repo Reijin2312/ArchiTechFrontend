@@ -137,7 +137,7 @@ export interface MarkReadRequest {
 
 export interface PublicKeyRequest {
   publicKey: string
-  keyType?: 'RSA' | 'ECDH'
+  keyType?: 'AES'
 }
 
 export interface PublicKeyResponse {

@@ -1,8 +1,3 @@
-/**
- * Logger с поддержкой уровней логирования
- * В production mode отключается
- */
-
 type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
 const IS_PRODUCTION = import.meta.env?.PROD ?? false;
@@ -45,14 +40,12 @@ export const logger = {
     }
   },
 
-  // Для чата с эмоджи
   chat(emoji: string, message: string, ...args: unknown[]) {
     if (shouldLog('debug')) {
       console.log(`${emoji} ${message}`, ...args);
     }
   },
 
-  // Для шифрования
   crypto(emoji: string, message: string, ...args: unknown[]) {
     if (shouldLog('debug')) {
       console.log(`${emoji} ${message}`, ...args);
