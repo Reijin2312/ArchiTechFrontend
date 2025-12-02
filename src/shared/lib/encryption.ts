@@ -578,18 +578,46 @@ export async function generateChatKey(): Promise<CryptoKey> {
   }
 
 /**
- * Очистка всех ключей и данных (для logout)
+ * Очистка всех ключей и данных (для logout или при критических ошибках)
  */
 export async function clearAllKeys(): Promise<void> {
-  // Очищаем secureStorage
-  await secureStorage.clear()
+  try {
+    // Очищаем secureStorage
+    await secureStorage.clear();
+  } catch (e) {
+    console.warn('⚠️ Failed to clear secure storage, attempting database deletion...', e);
+    // Если не удалось очистить через API, удаляем всю базу
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const deleteRequest = indexedDB.deleteDatabase('SecureChatStorage');
+        deleteRequest.onsuccess = () => {
+          console.log('✅ IndexedDB database deleted successfully');
+          resolve();
+        };
+        deleteRequest.onerror = () => {
+          console.error('❌ Failed to delete IndexedDB database');
+          reject(deleteRequest.error);
+        };
+        deleteRequest.onblocked = () => {
+          console.warn('⚠️ Database deletion blocked - close all tabs');
+          reject(new Error('Database deletion blocked'));
+        };
+      });
+    } catch (dbError) {
+      console.error('❌ Failed to delete database:', dbError);
+    }
+  }
   
   // Очищаем localStorage
-  localStorage.removeItem('chat_public_key')
-  localStorage.removeItem('chat_sign_public_key')
-  localStorage.removeItem('chat_master_salt')
+  localStorage.removeItem('chat_public_key');
+  localStorage.removeItem('chat_sign_public_key');
+  localStorage.removeItem('chat_master_salt');
   
-  console.log('✅ All encryption keys cleared')
+  // Очищаем старые ключи если они есть
+  localStorage.removeItem('chat_private_key');
+  localStorage.removeItem('chat_sign_private_key');
+  
+  console.log('✅ All encryption keys cleared');
   logger.crypto('🧹', 'All encryption keys cleared');
 }
 

@@ -50,6 +50,8 @@ chatMessages: (chatId: number, before?: number, limit = 50) => `/api/v1/chat/${c
 chatSend: '/api/v1/chat/send',
 chatUpload: '/api/v1/chat/upload',
 chatRead: '/api/v1/chat/read',
+chatMessageEdit: (messageId: number) => `/api/v1/chat/message/${messageId}/edit`,
+chatMessageDelete: (messageId: number) => `/api/v1/chat/message/${messageId}/delete`,
 chatKeysSave: '/api/v1/chat/keys/save',
 chatKeysGet: (userId: string) => `/api/v1/chat/keys/${userId}`,
 chatWrappedKeySave: '/api/v1/chat/wrapped-key/save',

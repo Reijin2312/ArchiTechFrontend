@@ -77,11 +77,13 @@ export interface ChatMessage {
   encryptedContent: string
   messageType: 'text' | 'image'
   imagePath?: string
+  imageUrl?: string
   encryptionMetadata?: string
   createdAt: string
   isRead?: boolean
   replyToId?: number
   replyToMessage?: ChatMessage
+  edited?: boolean
 }
 
 export interface PrivateChat {

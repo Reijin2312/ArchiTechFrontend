@@ -2,9 +2,18 @@ import { http } from '@/shared/api/http';
 import { endpoints } from '@/shared/api/endpoints';
 
 export interface ChatWebSocketMessage {
-  type: 'new_message' | 'friend_request' | 'friend_accept' | 'friend_reject' | 'message_read';
+  type: 'new_message' | 'friend_request' | 'friend_accept' | 'friend_reject' | 'message_read' | 'message_edited' | 'message_deleted';
   chatId?: number;
   lastReadMessageId?: number;
+  messageId?: number;
+  encryptedContent?: string;
+  encryptionMetadata?: string | {
+    iv: string;
+    encryptedKey: string;
+    timestamp: number;
+    nonce: string;
+    signature?: string;
+  };
   message?: {
     messageId: number;
     chatId: number;
@@ -12,6 +21,7 @@ export interface ChatWebSocketMessage {
     encryptedContent: string;
     messageType: 'text' | 'image';
     imagePath?: string;
+    imageUrl?: string;
     encryptionMetadata?: string | {
       iv: string;
       encryptedKey: string;

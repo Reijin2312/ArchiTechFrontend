@@ -4,7 +4,7 @@
  */
 
 const DB_NAME = 'SecureChatStorage';
-const DB_VERSION = 1;
+const DB_VERSION = 2; // Увеличена версия для обработки миграции
 const STORE_NAME = 'encrypted_keys';
 
 interface StoredKey {
@@ -21,7 +21,7 @@ class SecureStorage {
   private currentSalt: Uint8Array | null = null;
 
   /**
-   * Инициализация IndexedDB
+   * Инициализация IndexedDB с обработкой ошибок версионирования
    */
   private async initDB(): Promise<IDBDatabase> {
     if (this.db) return this.db;
@@ -29,21 +29,55 @@ class SecureStorage {
     return new Promise((resolve, reject) => {
       const request = indexedDB.open(DB_NAME, DB_VERSION);
 
-      request.onerror = () => reject(request.error);
+      request.onerror = (event) => {
+        const error = (event.target as IDBOpenDBRequest).error;
+        console.error('❌ IndexedDB error:', error);
+        
+        // Если ошибка связана с версией, пытаемся удалить и пересоздать БД
+        if (error && error.name === 'VersionError') {
+          console.warn('⚠️ Version conflict detected, attempting to delete and recreate database...');
+          indexedDB.deleteDatabase(DB_NAME);
+          // Повторяем попытку после небольшой задержки
+          setTimeout(() => {
+            const retryRequest = indexedDB.open(DB_NAME, DB_VERSION);
+            retryRequest.onsuccess = () => {
+              this.db = retryRequest.result;
+              resolve(this.db);
+            };
+            retryRequest.onerror = () => reject(retryRequest.error);
+            retryRequest.onupgradeneeded = this.handleUpgrade;
+          }, 100);
+        } else {
+          reject(error);
+        }
+      };
+      
       request.onsuccess = () => {
         this.db = request.result;
         resolve(this.db);
       };
 
-      request.onupgradeneeded = (event) => {
-        const db = (event.target as IDBOpenDBRequest).result;
-        
-        if (!db.objectStoreNames.contains(STORE_NAME)) {
-          db.createObjectStore(STORE_NAME, { keyPath: 'id' });
-        }
-      };
+      request.onupgradeneeded = this.handleUpgrade;
     });
   }
+
+  /**
+   * Обработка обновления схемы БД
+   */
+  private handleUpgrade = (event: IDBVersionChangeEvent) => {
+    const db = (event.target as IDBOpenDBRequest).result;
+    const oldVersion = event.oldVersion;
+    
+    console.log(`🔄 Upgrading database from version ${oldVersion} to ${DB_VERSION}`);
+    
+    // Создаём object store если его нет
+    if (!db.objectStoreNames.contains(STORE_NAME)) {
+      db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+      console.log('✅ Created object store:', STORE_NAME);
+    }
+    
+    // Здесь можно добавить дополнительную логику миграции для будущих версий
+  };
 
   /**
    * Получение мастер-ключа из пароля пользователя
