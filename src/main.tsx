@@ -7,11 +7,6 @@ import { bootstrapAuth } from '@/shared/auth/bootstrap';
 import ErrorBoundary from '@/shared/ui/utils/ErrorBoundary';
 import './index.css';
 
-// Подключаем утилиты для отладки шифрования (только в dev режиме)
-if (import.meta.env.DEV) {
-  import('@/shared/lib/resetEncryption');
-}
-
 bootstrapAuth().finally(() => {
   ReactDOM.createRoot(document.getElementById('root')!).render(
     <React.StrictMode>

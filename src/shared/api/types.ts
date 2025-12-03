@@ -84,6 +84,12 @@ export interface ChatMessage {
   replyToId?: number
   replyToMessage?: ChatMessage
   edited?: boolean
+  // 🔐 Версии ключей и HMAC для проверки целостности
+  messageKeyVersion?: number
+  imageKeyVersion?: number
+  messageHmac?: string
+  sequenceNumber?: number
+  signatureTimestamp?: number
 }
 
 export interface PrivateChat {
@@ -127,7 +133,11 @@ export interface CreateChatResponse {
 export interface UploadImageResponse {
   success: boolean
   imagePath: string
-  url: string
+  imageUrl: string
+  // 🔐 Метаданные шифрования
+  imageEncrypted?: boolean
+  imageEncryptionIv?: string
+  imageKeyVersion?: number
 }
 
 export interface MarkReadRequest {

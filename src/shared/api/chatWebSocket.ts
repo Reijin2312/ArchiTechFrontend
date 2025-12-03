@@ -14,6 +14,9 @@ export interface ChatWebSocketMessage {
     nonce: string;
     signature?: string;
   };
+  // 🔐 Версии ключей для message_edited события
+  messageKeyVersion?: number;
+  imageKeyVersion?: number;
   message?: {
     messageId: number;
     chatId: number;
@@ -43,6 +46,12 @@ export interface ChatWebSocketMessage {
       messageType: 'text' | 'image';
       createdAt: string;
     };
+    // 🔐 Версии ключей и HMAC для проверки целостности
+    messageKeyVersion?: number;
+    imageKeyVersion?: number;
+    messageHmac?: string;
+    sequenceNumber?: number;
+    signatureTimestamp?: number;
   };
   // Для заявок в друзья
   friendRequest?: {

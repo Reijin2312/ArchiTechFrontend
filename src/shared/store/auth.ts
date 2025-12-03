@@ -13,7 +13,8 @@ export const authStore = create<State & Actions>((set) => ({
   accessToken: null,
   setAuth: (u, a) => set({ user: u, accessToken: a }),
   clear: () => {
-    // Keep chat keys so cloud chats remain available after re-login.
+    // Clear all caches on logout for security
     set({ user: null, accessToken: null });
+    // Note: Chat key caches in SocialFloatingButton will be cleared on WebSocket disconnect
   },
 }));

@@ -42,9 +42,9 @@ export function SocialFloatingButton() {
   const [selectedChat, setSelectedChat] = useState<number | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [messageInput, setMessageInput] = useState('');
-  const [encryptionKeys, setEncryptionKeys] = useState<encryption.EncryptionKeys | null>(null);
-    
   const [chatKeys, setChatKeys] = useState<Map<number, CryptoKey>>(new Map());
+  const [chatKeyVersions, setChatKeyVersions] = useState<Map<string, CryptoKey>>(new Map());
+  const [activeChatKeyVersion, setActiveChatKeyVersion] = useState<Map<number, number>>(new Map());
   const [lastActivityTime, setLastActivityTime] = useState(Date.now());
   const [replyingTo, setReplyingTo] = useState<ChatMessage | null>(null);
   const [editingMessage, setEditingMessage] = useState<ChatMessage | null>(null);
@@ -56,17 +56,12 @@ export function SocialFloatingButton() {
   const isFirstLoadRef = useRef<boolean>(true);
   
   const selectedChatRef = useRef(selectedChat);
-  const encryptionKeysRef = useRef(encryptionKeys);
   const userRef = useRef(user);
   const isOpenRef = useRef(isOpen);
 
   useEffect(() => {
     selectedChatRef.current = selectedChat;
   }, [selectedChat]);
-  
-  useEffect(() => {
-    encryptionKeysRef.current = encryptionKeys;
-  }, [encryptionKeys]);
   
   useEffect(() => {
     userRef.current = user;
@@ -85,24 +80,13 @@ export function SocialFloatingButton() {
     return () => {
       logger.chat('рџ”Њ', 'Disconnecting WebSocket');
       chatWebSocket.disconnect();
-    };
-  }, [user]);
 
-  useEffect(() => {
-    if (!user) return;
-    
-    const initKeys = async () => {
-      if (encryptionKeys) return;
-      
-      logger.chat('🔑', 'Auto-initializing encryption keys...');
-      try {
-        await initEncryption();
-      } catch (err) {
-        console.error('Failed to auto-init encryption:', err);
-      }
+      // 🔐 Очищаем кеши ключей при отключении
+      setChatKeys(new Map());
+      setChatKeyVersions(new Map());
+      setActiveChatKeyVersion(new Map());
+      logger.chat('🗑️', 'Cleared chat key caches on disconnect');
     };
-    
-    initKeys();
   }, [user]);
 
   useEffect(() => {
@@ -110,27 +94,16 @@ export function SocialFloatingButton() {
 
     const handleVisibilityChange = async () => {
       if (document.visibilityState === 'visible') {
-        logger.chat('👁️', 'Tab became visible, checking encryption keys...');
+        logger.chat('👁️', 'Tab became visible');
         
-        try {
-          if (encryptionKeys) {
-            await crypto.subtle.exportKey('jwk', encryptionKeys.publicKey);
-            logger.chat('✅', 'Encryption keys are still valid, no action needed');
-          } else {
-            logger.chat('⚠️', 'No encryption keys found, reinitializing...');
-            await initEncryption();
-          }
-        } catch (err) {
-          logger.error('Keys are invalid after wake up, reinitializing...', err);
-          setEncryptionKeys(null);
-          setChatKeys(new Map());
-          await initEncryption();
-          
-          if (selectedChat && isOpen) {
-            logger.chat('🔄', 'Reloading current chat after key reinitialization...');
-            await loadMessages(selectedChat, false);
-          }
-        }
+        // 🔧 FIX: Очищаем только кеш ключей, НЕ перезагружаем сообщения
+        // Это предотвращает мерцание статуса "прочитано"
+        setChatKeys(new Map());
+        setChatKeyVersions(new Map());
+        setActiveChatKeyVersion(new Map());
+        
+        // Ключи будут автоматически подтянуты при следующем использовании
+        logger.chat('🔑', 'Chat key caches cleared, will reload on next use');
       }
     };
 
@@ -139,7 +112,7 @@ export function SocialFloatingButton() {
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [user, encryptionKeys, selectedChat, isOpen]);
+  }, [user, selectedChat, isOpen]);
 
   useEffect(() => {
     const updateActivity = () => setLastActivityTime(Date.now());
@@ -202,7 +175,6 @@ export function SocialFloatingButton() {
 
     const unsubscribe = chatWebSocket.subscribe(async (wsMessage) => {
       const currentUser = userRef.current;
-      const encKeys = encryptionKeysRef.current;
       const currentChatId = selectedChatRef.current;
 
       if (!currentUser) return;
@@ -259,10 +231,18 @@ export function SocialFloatingButton() {
           return;
         }
         
-        if (wsMessage.encryptionMetadata && encKeys) {
+        if (wsMessage.encryptionMetadata) {
           (async () => {
             try {
-              const chatKey = await ensureChatKey(wsMessage.chatId!);
+              const messageVersion = wsMessage.messageKeyVersion;
+              let chatKey: CryptoKey | null;
+              
+              if (messageVersion !== undefined) {
+                chatKey = await ensureChatKeyByVersion(wsMessage.chatId!, messageVersion);
+              } else {
+                chatKey = await ensureChatKey(wsMessage.chatId!);
+              }
+              
               if (!chatKey) {
                 console.warn('Chat key not available for edited message');
                 return;
@@ -272,7 +252,7 @@ export function SocialFloatingButton() {
                 ? JSON.parse(wsMessage.encryptionMetadata)
                 : wsMessage.encryptionMetadata;
 
-              const plain = await encryption.decryptMessageWithChatKey(
+              const plain = await encryption.decryptMessage(
                 {
                   encryptedContent: wsMessage.encryptedContent!,
                   encryptionMetadata: metadata,
@@ -318,10 +298,18 @@ export function SocialFloatingButton() {
         loadChats();
       }
 
-      if (msg.encryptionMetadata && encKeys && currentChatId === msg.chatId) {
+      if (msg.encryptionMetadata && currentChatId === msg.chatId) {
         (async () => {
           try {
-            const chatKey = await ensureChatKey(msg.chatId);
+            const messageVersion = msg.messageKeyVersion;
+            let chatKey: CryptoKey | null;
+            
+            if (messageVersion !== undefined) {
+              chatKey = await ensureChatKeyByVersion(msg.chatId, messageVersion);
+            } else {
+              chatKey = await ensureChatKey(msg.chatId);
+            }
+            
             if (!chatKey) {
               logger.warn('Chat key not available for message', msg.messageId);
               setMessages(prev => {
@@ -329,7 +317,7 @@ export function SocialFloatingButton() {
                 return [...prev, {
                   messageId: msg.messageId,
                   senderId: msg.senderId,
-                  encryptedContent: 'рџ”’ [РљР»СЋС‡ РЅРµРґРѕСЃС‚СѓРїРµРЅ]',
+                  encryptedContent: '🔐 [Ключ недоступен]',
                   messageType: msg.messageType,
                   imagePath: msg.imagePath,
                   createdAt: msg.createdAt,
@@ -342,13 +330,43 @@ export function SocialFloatingButton() {
               ? JSON.parse(msg.encryptionMetadata)
               : msg.encryptionMetadata;
 
-            const plain = await encryption.decryptMessageWithChatKey(
+            const plain = await encryption.decryptMessage(
               {
                 encryptedContent: msg.encryptedContent,
                 encryptionMetadata: metadata,
               },
               chatKey,
             );
+
+            // 🔐 Проверяем HMAC если он присутствует
+            if (msg.messageHmac) {
+              const isValid = await encryption.verifyMessageIntegrity({
+                encryptedContent: msg.encryptedContent,
+                encryptionMetadata: metadata,
+                messageHmac: msg.messageHmac,
+                sequenceNumber: msg.sequenceNumber,
+                signatureTimestamp: msg.signatureTimestamp,
+                messageKeyVersion: msg.messageKeyVersion
+              }, chatKey);
+              
+              if (!isValid) {
+                console.error(`❌ HMAC verification failed for message ${msg.messageId}`);
+                logger.warn('Message integrity check failed', msg.messageId);
+                // Показываем сообщение с предупреждением
+                setMessages(prev => {
+                  if (prev.some(m => m.messageId === msg.messageId)) return prev;
+                  return [...prev, {
+                    messageId: msg.messageId,
+                    senderId: msg.senderId,
+                    encryptedContent: '⚠️ [Сообщение не прошло проверку целостности - возможна подмена]',
+                    messageType: msg.messageType,
+                    imagePath: msg.imagePath,
+                    createdAt: msg.createdAt,
+                  }];
+                });
+                return;
+              }
+            }
 
             setMessages(prev => {
               if (prev.some(m => m.messageId === msg.messageId)) return prev;
@@ -388,26 +406,23 @@ export function SocialFloatingButton() {
             });
           }
         })();
-      } else if (currentChatId === msg.chatId) {
+      } else {
+        logger.warn('Message without encryptionMetadata blocked', msg.messageId);
         setMessages(prev => {
           if (prev.some(m => m.messageId === msg.messageId)) return prev;
           return [...prev, {
             messageId: msg.messageId,
             senderId: msg.senderId,
-            encryptedContent: msg.encryptedContent,
+            encryptedContent: '⚠️ [Сообщение заблокировано: отсутствует шифрование]',
             messageType: msg.messageType,
             imagePath: msg.imagePath,
             imageUrl: msg.imageUrl,
             createdAt: msg.createdAt,
-            isRead: msg.senderId === currentUser.id ? msg.isRead : false,
+            isRead: false,
             replyToId: msg.replyToId,
             replyToMessage: msg.replyToMessage,
           }];
         });
-
-        if (msg.senderId !== currentUser.id && isOpen && selectedChat === msg.chatId && document.visibilityState === 'visible') {
-          markChatRead(msg.chatId, msg.messageId).catch(() => {});
-        }
       }
 
     });
@@ -429,7 +444,6 @@ export function SocialFloatingButton() {
     if (!user || !isOpen) return;
     loadFriends();
     loadChats();
-    initEncryption();
     loadIncomingRequests();
     loadOutgoingRequests();
   }, [user, isOpen]);
@@ -588,12 +602,6 @@ export function SocialFloatingButton() {
     try {
       const { data } = await http.get<ChatListResponse>(endpoints.chatList);
       
-      const keys = encryptionKeys || await encryption.unlockKeys();
-      if (!keys) {
-        setChats(data.chats);
-        return;
-      }
-
       const chatsWithDecrypted = await Promise.all(
         data.chats.map(async (chat) => {
           if (!chat.lastMessage || !chat.lastMessage.encryptionMetadata) {
@@ -601,7 +609,15 @@ export function SocialFloatingButton() {
           }
 
           try {
-            const chatKey = await ensureChatKey(chat.chatId);
+            const messageVersion = chat.lastMessage.messageKeyVersion;
+            let chatKey: CryptoKey | null;
+            
+            if (messageVersion !== undefined) {
+              chatKey = await ensureChatKeyByVersion(chat.chatId, messageVersion);
+            } else {
+              chatKey = await ensureChatKey(chat.chatId);
+            }
+            
             if (!chatKey) {
               return chat;
             }
@@ -610,13 +626,12 @@ export function SocialFloatingButton() {
               ? JSON.parse(chat.lastMessage.encryptionMetadata)
               : chat.lastMessage.encryptionMetadata;
 
-            const decrypted = await encryption.decryptMessageWithChatKey(
+            const decrypted = await encryption.decryptMessage(
               {
                 encryptedContent: chat.lastMessage.encryptedContent,
                 encryptionMetadata: metadata,
               },
-              chatKey,
-              undefined,
+              chatKey
             );
 
             return {
@@ -643,31 +658,15 @@ export function SocialFloatingButton() {
     try {
       const { data } = await http.get<ChatMessagesResponse>(endpoints.chatMessages(chatId));
       
-      let currentKeys = encryptionKeys;
-      if (!currentKeys) {
-        console.log('рџ”ђ Encryption keys not loaded, attempting auto-unlock...');
-        currentKeys = await encryption.unlockKeys();
-        if (currentKeys) {
-          setEncryptionKeys(currentKeys);
-        } else {
-          console.error('Failed to unlock encryption keys for message decryption');
-          setMessages(data.messages.map(m => ({ 
-            ...m, 
-            encryptedContent: '[Ключ шифрования недоступен]' 
-          })));
-          return;
-        }
+      const chatKey = await ensureChatKey(chatId);
+      if (!chatKey) {
+        console.error('Failed to get chat key for chatId:', chatId);
+        setMessages(data.messages.map(m => ({
+          ...m,
+          encryptedContent: '[Ключ чата не найден]'
+        })));
+        return;
       }
-      
-        const chatKey = await ensureChatKey(chatId);
-        if (!chatKey) {
-          console.error('Failed to get chat key for chatId:', chatId);
-          setMessages(data.messages.map(m => ({ 
-            ...m, 
-            encryptedContent: '[Ключ чата не найден]' 
-          })));
-          return;
-        }
       
       const decrypted: ChatMessage[] = [];
       for (const m of data.messages) {
@@ -676,44 +675,74 @@ export function SocialFloatingButton() {
               ? JSON.parse(m.encryptionMetadata)
               : m.encryptionMetadata;
             
-            console.log(`рџ”“ Decrypting message ${m.messageId}...`);
-               
+            console.log(`🔓 Decrypting message ${m.messageId}...`);
+            
+            const messageVersion = m.messageKeyVersion;
+            let decryptKey: CryptoKey | null;
+            
+            if (messageVersion !== undefined) {
+              decryptKey = await ensureChatKeyByVersion(chatId, messageVersion);
+            } else {
+              decryptKey = chatKey;
+            }
+            
+            if (!decryptKey) {
+              console.warn(`Key version ${messageVersion} not available for message ${m.messageId}`);
+              decrypted.push({ ...m, encryptedContent: '🔐 [Ключ версии ' + messageVersion + ' недоступен]' });
+              continue;
+            }
               
           try {
-            const dec = await encryption.decryptMessageWithChatKey({
+            const dec = await encryption.decryptMessage({
               encryptedContent: m.encryptedContent,
               encryptionMetadata: metadata
-            }, chatKey);
+            }, decryptKey);
             console.log('🔑 Message decrypted successfully');
+            
+            // 🔐 Проверяем HMAC если он присутствует
+            if (m.messageHmac) {
+              const isValid = await encryption.verifyMessageIntegrity({
+                encryptedContent: m.encryptedContent,
+                encryptionMetadata: metadata,
+                messageHmac: m.messageHmac,
+                sequenceNumber: m.sequenceNumber,
+                signatureTimestamp: m.signatureTimestamp,
+                messageKeyVersion: m.messageKeyVersion
+              }, decryptKey);
+              
+              if (!isValid) {
+                console.error(`❌ HMAC verification failed for message ${m.messageId}`);
+                decrypted.push({ ...m, encryptedContent: '⚠️ [Сообщение не прошло проверку целостности]' });
+                continue;
+              }
+            }
             decrypted.push({ ...m, encryptedContent: dec });
           } catch (e) {
             console.error('Failed to decrypt message', m.messageId, ':', e);
-            const errorMsg = e instanceof Error ? e.message : "";
-
-            if (errorMsg.includes('wrong key') || errorMsg.includes('OperationError')) {
-              try {
-                const refreshedKey = await ensureChatKey(chatId, true);
-                if (refreshedKey) {
-                  const decRetry = await encryption.decryptMessageWithChatKey({
-                    encryptedContent: m.encryptedContent,
-                    encryptionMetadata: metadata
-                  }, refreshedKey);
-                  console.log('Message ' + m.messageId + ' decrypted successfully after key refresh');
-                  decrypted.push({ ...m, encryptedContent: decRetry });
-                }
-              } catch (retryErr) {
-                console.warn('Retry decrypt failed', retryErr);
-                decrypted.push({ ...m, encryptedContent: '🔒 [Сообщение зашифровано старым ключом и не может быть расшифровано. Удалите чат и начните заново.]' });
-              }
-            } else {
-              decrypted.push({ ...m, encryptedContent: '🔒 [Could not decrypt: ' + errorMsg + ']' });
-            }
+            decrypted.push({ ...m, encryptedContent: '🔒 [Ошибка дешифровки: ' + (e instanceof Error ? e.message : 'unknown') + ']' });
           }
         } else {
-          decrypted.push(m);
+          console.warn('Message without encryptionMetadata blocked', m.messageId);
+          decrypted.push({ ...m, encryptedContent: '⚠️ [Сообщение заблокировано: отсутствует шифрование]' });
         }
       }
-      setMessages(append ? prev => [...prev, ...decrypted] : decrypted);
+      
+      // 🔧 FIX: Мерджим со старыми сообщениями чтобы сохранить статус isRead
+      if (!append) {
+        setMessages(prev => {
+          const merged = decrypted.map(newMsg => {
+            const oldMsg = prev.find(m => m.messageId === newMsg.messageId);
+            // Если сообщение уже было помечено как прочитанное локально - сохраняем этот статус
+            if (oldMsg && oldMsg.isRead && !newMsg.isRead) {
+              return { ...newMsg, isRead: true };
+            }
+            return newMsg;
+          });
+          return merged;
+        });
+      } else {
+        setMessages(prev => [...prev, ...decrypted]);
+      }
     
       if (!append) {
         isFirstLoadRef.current = true;
@@ -738,6 +767,47 @@ export function SocialFloatingButton() {
       console.error('Failed to load messages:', err);
     }
   };
+  
+  const ensureChatKeyByVersion = async (chatId: number, version: number): Promise<CryptoKey | null> => {
+    const cacheKey = `${chatId}:${version}`;
+    
+    if (chatKeyVersions.has(cacheKey)) {
+      const cachedKey = chatKeyVersions.get(cacheKey)!;
+      try {
+        await crypto.subtle.exportKey('raw', cachedKey);
+        console.log(`✅ Using cached chat key for chatId:${chatId} version:${version}`);
+        return cachedKey;
+      } catch (err) {
+        console.warn(`⚠️ Cached key invalid for chatId:${chatId} version:${version}`);
+        setChatKeyVersions(prev => {
+          const copy = new Map(prev);
+          copy.delete(cacheKey);
+          return copy;
+        });
+      }
+    }
+
+    try {
+      console.log(`🔄 Fetching chat key version ${version} for chatId:${chatId}`);
+      const { data } = await http.get(endpoints.chatKeyGetVersion(chatId, version));
+      if (data?.chatKey) {
+        const chatKey = await encryption.importChatKey(data.chatKey);
+        setChatKeyVersions(prev => new Map(prev).set(cacheKey, chatKey));
+        console.log(`✅ Chat key version ${version} loaded and cached`);
+        return chatKey;
+      }
+    } catch (err: any) {
+      console.error(`❌ Failed to fetch key version ${version}:`, err?.response?.status || err?.message);
+      
+      if (err?.response?.status === 503) {
+        alert('Encryption service unavailable. Please contact administrator to configure KMS.');
+        return null;
+      }
+    }
+
+    return null;
+  };
+  
   const ensureChatKey = async (chatId: number, forceReload = false): Promise<CryptoKey | null> => {
     if (!forceReload && chatKeys.has(chatId)) {
       const cachedKey = chatKeys.get(chatId)!;
@@ -770,64 +840,33 @@ export function SocialFloatingButton() {
       if (data?.chatKey) {
         const chatKey = await encryption.importChatKey(data.chatKey);
         setChatKeys(prev => new Map(prev).set(chatId, chatKey));
-        console.log('✅ Chat key loaded and cached for chatId:', chatId);
+        
+        // Сохранить версию ключа
+        if (data.keyVersion !== undefined) {
+          setActiveChatKeyVersion(prev => new Map(prev).set(chatId, data.keyVersion));
+          console.log(`✅ Chat key loaded with version ${data.keyVersion} for chatId:`, chatId);
+        } else {
+          console.log('✅ Chat key loaded (no version) for chatId:', chatId);
+        }
+        
         return chatKey;
       }
-    } catch (err) {
-      console.warn('⚠️ Chat key not found on server, generating new one:', (err as any)?.response?.status || (err as any)?.message);
-    }
-
-    try {
-      const newKey = await encryption.generateChatKey();
-      const exported = await encryption.exportChatKey(newKey);
-      await http.post(endpoints.chatKeySave, { chatId, chatKey: exported });
-      setChatKeys(prev => new Map(prev).set(chatId, newKey));
-      console.log('✅ New chat key generated and saved for chatId:', chatId);
-      return newKey;
-    } catch (err) {
-      console.error('❌ Failed to generate/save chat key:', err);
+      // Ключ не найден на сервере
+      console.error('❌ Chat key not found on server for chatId:', chatId);
+      return null;
+    } catch (err: any) {
+      if (err?.response?.status === 503) {
+        console.error('❌ KMS service unavailable - chat disabled');
+        alert('Encryption service unavailable. Chat functionality is disabled. Please contact administrator to configure KMS.');
+        return null;
+      }
+      
+      // При других ошибках (404, ит.д.) - тоже не создаем новый ключ
+      console.error('❌ Failed to get chat key:', err?.response?.status || err?.message);
       return null;
     }
   };
-
-  const createChatKeyForNewChat = async (): Promise<{ chatKey: CryptoKey; exported: string } | null> => {
-    try {
-      console.log('🛠️ Generating new AES-256 chat key...');
-      const chatKey = await encryption.generateChatKey();
-      const exported = await encryption.exportChatKey(chatKey);
-      return { chatKey, exported };
-    } catch (err) {
-      console.error('❌ Failed to create chat key:', err);
-      return null;
-    }
-  };
-  
-  const initEncryption = async () => {
-    try {
-      let keys = await encryption.unlockKeys();
-
-      if (!keys) {
-        await encryption.initEncryption();
-        keys = await encryption.unlockKeys();
-      }
-
-      if (!keys) {
-        console.warn('Unlock still failing, attempting full reset and reinit...');
-        keys = await encryption.resetAndReinitializeKeys();
-      }
-
-      if (!keys) {
-        console.error('Failed to initialize chat encryption keys');
-        return;
-      }
-
-      setEncryptionKeys(keys);
-      console.log('✅ Encryption keys initialized successfully');
-    } catch (e) {
-      console.error('Failed to init chat encryption', e);
-    }
-  };
-
+   
   const openChatWith = async (participantId: string) => {
     try {
       const existingChat = chats.find(c => c.participantId === participantId);
@@ -838,38 +877,9 @@ export function SocialFloatingButton() {
         return;
       }
 
-      let currentKeys = encryptionKeys;
-      if (!currentKeys) {
-        console.log('🔑 Encryption keys not ready, initializing...');
-        await initEncryption();
- 
-        await new Promise(resolve => setTimeout(resolve, 300));
-        
-        currentKeys = await encryption.unlockKeys();
-        if (!currentKeys) {
-          console.warn('Unlock failed in openChatWith, attempting full reset...');
-          currentKeys = await encryption.resetAndReinitializeKeys();
-        }
-
-        if (!currentKeys) {
-          alert('Не удалось инициализировать ключи шифрования.\n\nПопробуйте:\n1. Перезагрузить страницу\n2. Очистить кеш браузера\n3. Попробовать в режиме инкогнито');
-          return;
-        }
-        setEncryptionKeys(currentKeys);
-      }
-      
-      const keyData = await createChatKeyForNewChat();
-      if (!keyData) {
-        alert('Не удалось создать ключ шифрования для чата');
-        return;
-      }
-
       const { data } = await http.post<CreateChatResponse>(endpoints.chatCreate, {
-        participantId,
-        chatKey: keyData.exported
+        participantId
       });
-
-      setChatKeys(prev => new Map(prev).set(data.chatId, keyData.chatKey));
 
       await loadChats();
       setActiveTab('chat');
@@ -880,30 +890,15 @@ export function SocialFloatingButton() {
       alert(e instanceof Error ? e.message : 'Unable to open chat');
     }
   };
-  const sendMessageToUser = async (recipientId: string, message: string, messageType: 'text' | 'image' = 'text', imagePath?: string) => {
-    if (!encryptionKeys) {
-      console.log('Encryption keys not loaded, attempting auto-unlock...');
-      const unlockedKeys = await encryption.unlockKeys();
-      if (unlockedKeys) {
-        setEncryptionKeys(unlockedKeys);
-      } else {
-        console.warn('Failed to unlock keys, attempting full reset...');
-        const resetKeys = await encryption.resetAndReinitializeKeys();
-        if (resetKeys) {
-          setEncryptionKeys(resetKeys);
-          console.log('вњ… Keys reset and initialized successfully');
-        } else {
-          alert('Could not initialize chat encryption storage. Please reload and try again.');
-          return;
-        }
-      }
-    }
-    
-    const currentKeys = encryptionKeys || await encryption.unlockKeys();
-    if (!currentKeys) {
-      alert('Ключ шифрования не инициализирован');
-      return;
-    }
+  const sendMessageToUser = async (
+    recipientId: string, 
+    message: string, 
+    messageType: 'text' | 'image' = 'text', 
+    imagePath?: string,
+    imageEncrypted?: boolean,
+    imageEncryptionIv?: string,
+    imageKeyVersion?: number
+  ) => {
     
     try {
       let chat = chats.find(c => c.participantId === recipientId);
@@ -911,19 +906,11 @@ export function SocialFloatingButton() {
       if (!chat) {
         console.log('✅ Creating new chat with user:', recipientId);
         
-        const keyData = await createChatKeyForNewChat();
-        if (!keyData) {
-          alert('Не удалось создать ключ шифрования для чата');
-          return;
-        }
-        
         const { data: createData } = await http.post<{ chatId: number }>(endpoints.chatCreate, {
-          participantId: recipientId,
-          chatKey: keyData.exported
+          participantId: recipientId
         });
         
-        setChatKeys(prev => new Map(prev).set(createData.chatId, keyData.chatKey));
-        console.log('✅ Chat created with chatKey, chatId:', createData.chatId);
+        console.log('✅ Chat created, chatId:', createData.chatId);
         
         chat = {
           chatId: createData.chatId,
@@ -943,7 +930,7 @@ export function SocialFloatingButton() {
       }
     
       console.log('✅ Encrypting message with chat key...');
-      const encrypted = await encryption.encryptMessageWithChatKey(
+      const encrypted = await encryption.encryptMessage(
         message, 
         chatKey
       );
@@ -958,7 +945,12 @@ export function SocialFloatingButton() {
         encryptionMetadata: encrypted.encryptionMetadata,
         messageType,
         imagePath,
-        replyToId: replyingTo?.messageId
+        replyToId: replyingTo?.messageId,
+        ...(imageEncrypted && {
+          imageEncrypted,
+          imageEncryptionIv,
+          imageKeyVersion
+        })
       });
       
       console.log('✅ Message sent, messageId:', data.messageId);
@@ -997,7 +989,7 @@ export function SocialFloatingButton() {
   };
   
   const sendChatMessage = async () => {
-    console.log('sendChatMessage called', { selectedChat, messageInput, hasKeys: !!encryptionKeys });
+    console.log('sendChatMessage called', { selectedChat, messageInput });
     if (!messageInput.trim()) {
       console.warn('Cannot send: empty message');
       return;
@@ -1019,7 +1011,7 @@ export function SocialFloatingButton() {
   };
 
   const editMessage = async (messageId: number, newContent: string) => {
-    if (!selectedChat || !encryptionKeys) return;
+    if (!selectedChat) return;
     
     try {
       const chat = chats.find(c => c.chatId === selectedChat);
@@ -1028,7 +1020,7 @@ export function SocialFloatingButton() {
       const chatKey = await ensureChatKey(selectedChat);
       if (!chatKey) throw new Error('Failed to get chat key');
 
-      const encrypted = await encryption.encryptMessageWithChatKey(newContent, chatKey);
+      const encrypted = await encryption.encryptMessage(newContent, chatKey);
 
       await http.put(endpoints.chatMessageEdit(messageId), {
         encryptedContent: encrypted.encryptedContent,
@@ -1080,15 +1072,28 @@ export function SocialFloatingButton() {
   };
 
   const uploadImage = async (file: File) => {
-    if (!selectedChat || !file || !encryptionKeys) return;
+    if (!selectedChat || !file) return;
     const chat = chats.find(c => c.chatId === selectedChat);
     if (!chat) return;
     
     try {
       const form = new FormData();
       form.append('file', file);
-      const { data } = await http.post<UploadImageResponse>(endpoints.chatUpload, form, { headers: { 'Content-Type': 'multipart/form-data' }});
-      await sendMessageToUser(chat.participantId, '', 'image', data.imagePath);
+      const { data } = await http.post<UploadImageResponse>(
+        `${endpoints.chatUpload}?chatId=${selectedChat}`, 
+        form, 
+        { headers: { 'Content-Type': 'multipart/form-data' }}
+      );
+      
+      await sendMessageToUser(
+        chat.participantId, 
+        '', 
+        'image', 
+        data.imagePath,
+        data.imageEncrypted,
+        data.imageEncryptionIv,
+        data.imageKeyVersion
+      );
     } catch (e) {
       console.error('Failed to upload image', e);
     }
