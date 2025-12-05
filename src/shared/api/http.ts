@@ -14,12 +14,17 @@ http.interceptors.response.use((res) => {
 });
 
 http.interceptors.request.use((cfg) => {
-  const at = authStore.getState().accessToken;
+  const state = authStore.getState();
+  const at = state.accessToken;
   if (at) cfg.headers.Authorization = `Bearer ${at}`;
   
-  // 🔐 CRITICAL: Add session/device headers for chat API
-  const sessionId = authStore.getState().sessionId;
-  const deviceId = authStore.getState().deviceId;
+  // CRITICAL: Add session/device headers for chat API (fallback to sessionStorage after reload)
+  const sessionId = state.sessionId 
+    || sessionStorage.getItem('__session_id__') 
+    || localStorage.getItem('__session_id__');
+  const deviceId = state.deviceId 
+    || sessionStorage.getItem('__server_device_id__') 
+    || localStorage.getItem('__server_device_id__');
   
   if (sessionId) {
     cfg.headers['X-Session-ID'] = sessionId;

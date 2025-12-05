@@ -131,22 +131,22 @@ class SecureChatWebSocketService {
   }
   
   /**
-   * Restore sessionId and deviceId from sessionStorage after page reload.
+   * Restore sessionId and deviceId from storage after page reload.
    * If credentials not found, user must login again.
    */
   private restoreSessionFromStorage() {
-    const storedSessionId = sessionStorage.getItem('__session_id__');
-    const storedDeviceId = sessionStorage.getItem('__server_device_id__');
+    const storedSessionId = sessionStorage.getItem('__session_id__') || localStorage.getItem('__session_id__');
+    const storedDeviceId = sessionStorage.getItem('__server_device_id__') || localStorage.getItem('__server_device_id__');
     
     if (storedSessionId && storedDeviceId) {
       this.sessionId = storedSessionId;
       this.deviceId = storedDeviceId;
-      console.log('✅ Restored server-issued credentials from sessionStorage');
+      console.log('✅ Restored server-issued credentials from sessionStorage/localStorage');
     } else {
-      console.log('⚠️ No server credentials in sessionStorage - user must login');
+      console.log('⚠️ No server credentials in storage - user must login');
     }
   }
-  
+
   /**
    * Connect to secure WebSocket.
    * Enforces WSS-only, no fallback to WS.
@@ -179,11 +179,14 @@ class SecureChatWebSocketService {
       // Store in sessionStorage for re-initialization after page reload
       sessionStorage.setItem('__session_id__', sessionId);
       sessionStorage.setItem('__server_device_id__', deviceId);
+      // Also persist in localStorage to survive browser restarts
+      localStorage.setItem('__session_id__', sessionId);
+      localStorage.setItem('__server_device_id__', deviceId);
       
       console.log('✅ Server credentials set: sessionId and deviceId from login response');
     }
   }
-  
+
   /**
    * Get or refresh device token.
    * Automatically fetches new token if expired or missing.

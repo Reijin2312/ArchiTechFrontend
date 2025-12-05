@@ -6,6 +6,7 @@ import { endpoints } from '@/shared/api/endpoints';
 import { authStore } from '@/shared/store/auth';
 import { secureChatClient } from '@/shared/api/secureChat';
 import { logger } from '@/shared/lib/logger';
+import { useSessionKeyStore } from '@/stores/sessionKeyStore';
 import type { 
   Friend, 
   FriendRequest, 
@@ -45,15 +46,23 @@ export function SocialFloatingButton() {
   const [replyingTo, setReplyingTo] = useState<ChatMessage | null>(null);
   const [editingMessage, setEditingMessage] = useState<ChatMessage | null>(null);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; message: ChatMessage } | null>(null);
+  const [pendingMessages, setPendingMessages] = useState<Set<string>>(new Set()); // Временные ID отправляемых сообщений
   
   const processedMessageIds = useRef<Set<number | string>>(new Set());
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const markReadTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isFirstLoadRef = useRef<boolean>(true);
+  const observerRef = useRef<IntersectionObserver | null>(null);
+  const observedMessagesRef = useRef<Set<string>>(new Set());
   
   const selectedChatRef = useRef(selectedChat);
   const userRef = useRef(user);
   const isOpenRef = useRef(isOpen);
+
+  // Функция для прокрутки к концу чата
+  const scrollToBottom = (smooth = true) => {
+    messagesEndRef.current?.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto' });
+  };
 
   useEffect(() => {
     selectedChatRef.current = selectedChat;
@@ -116,42 +125,57 @@ export function SocialFloatingButton() {
   useEffect(() => {
     if (!selectedChat || !user) return;
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const inactiveTime = Date.now() - lastActivityTime;
-        if (inactiveTime > 300000) {
-          console.log('⚠️ User inactive, observer paused');
-          return;
-        }
+    const inactiveTime = Date.now() - lastActivityTime;
+    if (inactiveTime > 300000) {
+      console.log('⚠️ User inactive, observer paused');
+      return;
+    }
 
-        entries.forEach((entry) => {
-          if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
-            const messageEl = entry.target as HTMLElement;
-            const messageId = messageEl.dataset.messageId;
-            const senderId = messageEl.dataset.senderId;
-            
-            if (messageId && senderId && senderId !== user.id && selectedChat) {
-              console.log('👀 Message', messageId, 'is visible, marking as read');
-              markChatRead(selectedChat, parseInt(messageId)).catch(() => {});
+    // ✅ Создаём observer ОДИН РАЗ
+    if (!observerRef.current) {
+      observerRef.current = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
+              const messageEl = entry.target as HTMLElement;
+              const messageId = messageEl.dataset.messageId;
+              const senderId = messageEl.dataset.senderId;
+              
+              if (messageId && senderId && senderId !== user.id && selectedChatRef.current) {
+                console.log('👀 Message', messageId, 'is visible, marking as read');
+                markChatRead(selectedChatRef.current, parseInt(messageId)).catch(() => {});
+              }
             }
-          }
-        });
-      },
-      {
-        root: null,
-        rootMargin: '0px',
-        threshold: 0.5
-      }
-    );
+          });
+        },
+        {
+          root: null,
+          rootMargin: '0px',
+          threshold: 0.5
+        }
+      );
+    }
 
+    // ✅ Добавляем ТОЛЬКО новые сообщения в observer
     const messageElements = document.querySelectorAll('.message-item');
-    console.log('🔍 Observing', messageElements.length, 'messages');
-    messageElements.forEach(el => observer.observe(el));
+    messageElements.forEach(el => {
+      const htmlEl = el as HTMLElement;
+      const messageId = htmlEl.dataset.messageId;
+      if (messageId && !observedMessagesRef.current.has(messageId)) {
+        observerRef.current?.observe(el);
+        observedMessagesRef.current.add(messageId);
+      }
+    });
 
     return () => {
-      observer.disconnect();
+      // Очищаем при размонтировании или при смене чата
+      if (selectedChatRef.current !== selectedChat) {
+        observerRef.current?.disconnect();
+        observerRef.current = null;
+        observedMessagesRef.current.clear();
+      }
     };
-  }, [messages, selectedChat, user, lastActivityTime]);
+  }, [selectedChat, user]); // ← Зависит ТОЛЬКО от выбранного чата и юзера
 
   useEffect(() => {
     logger.chat('рџ”Њ', 'Setting up WebSocket subscription (ONCE on mount)');
@@ -246,14 +270,81 @@ export function SocialFloatingButton() {
       }
       processedMessageIds.current.add(msg.messageId);
 
-      if (currentChatId !== msg.chatId) {
-        loadChats();
-      }
+      // Обновляем lastMessage в списке чатов локально (plaintext из WebSocket)
+      setChats(prev => prev.map(c => {
+        if (c.chatId !== msg.chatId) return c;
+
+        const existingContent = c.lastMessage?.messageId === msg.messageId
+          ? c.lastMessage?.content
+          : undefined;
+
+        return {
+          ...c,
+          lastMessage: {
+            messageId: msg.messageId,
+            senderId: msg.senderId,
+            content: (existingContent ?? msg.content) || '',  // ?? Plaintext from WebSocket
+            messageType: msg.messageType,
+            imagePath: msg.imagePath,
+            createdAt: msg.createdAt,
+            encryptionMetadata: '',
+            replyToId: msg.replyToId,
+            isRead: msg.isRead
+          },
+        };
+      }));
+
 
       // ☁️ CLOUD MODEL: Server sends plaintext 'content'
       if (currentChatId === msg.chatId) {
         setMessages((prev) => {
+          // Проверяем что сообщение не дублируется
           if (prev.some((m) => m.messageId === msg.messageId)) return prev;
+          
+          // Если сообщение от текущего пользователя, ищем и заменяем временное
+          if (msg.senderId === currentUser.id) {
+            // Use latest temp message even if WS content differs
+            let tempIndex = -1;
+            for (let i = prev.length - 1; i >= 0; i--) {
+              const candidate = prev[i];
+              if (
+                typeof candidate.messageId === 'string' &&
+                (candidate.messageId as string).startsWith('temp-') &&
+                candidate.messageType === msg.messageType
+              ) {
+                tempIndex = i;
+                break;
+              }
+            }
+            
+            if (tempIndex !== -1) {
+              const tempMsg = prev[tempIndex];
+              console.log('? Replacing temp message', tempMsg.messageId, 'with real', msg.messageId);
+              
+              // Удаляем из pending
+              setPendingMessages(p => {
+                const newSet = new Set(p);
+                if (typeof tempMsg.messageId === 'string') {
+                  newSet.delete(tempMsg.messageId);
+                }
+                return newSet;
+              });
+              
+              // Replace temp bubble with server payload but keep local plaintext when needed
+              const newMessages = [...prev];
+              newMessages[tempIndex] = {
+                ...tempMsg,
+                ...msg,
+                content: tempMsg.content || msg.content || '',
+                messageId: msg.messageId,
+                replyToMessage: msg.replyToMessage as ChatMessage | undefined,
+              } as ChatMessage;
+              
+              return newMessages;
+            }
+          }
+
+          // Если это новое сообщение (не от нас или нет временного), добавляем
           return [...prev, {
             messageId: msg.messageId,
             senderId: msg.senderId,
@@ -556,6 +647,9 @@ export function SocialFloatingButton() {
     imageEncryptionIv?: string,
     imageKeyVersion?: number
   ) => {
+    // Создаем временное сообщение для оптимистичного UI ДО try блока
+    const tempMessageId = `temp-${Date.now()}`;
+    const createdAt = new Date().toISOString();
     
     try {
       let chat = chats.find(c => c.participantId === recipientId);
@@ -588,22 +682,35 @@ export function SocialFloatingButton() {
       // }
     
       console.log('✅ Sending plaintext message with protocol integrity...');
+      
+      // Используем уже созданные переменные из начала функции
+      const tempMessage: ChatMessage = {
+        messageId: tempMessageId as any,
+        senderId: user?.id || '',
+        content: message,
+        messageType,
+        imagePath,
+        createdAt,
+        replyToId: replyingTo?.messageId,
+        replyToMessage: replyingTo || undefined,
+      };
+      
+      // Добавляем временное сообщение в UI
+      setMessages(prev => [...prev, tempMessage]);
+      setPendingMessages(p => new Set(p).add(tempMessageId));
+      
+      // Прокручиваем к концу чата
+      setTimeout(() => scrollToBottom(), 0);
+      
       // ☁️ CLOUD MODEL: Plaintext + HMAC over TLS
       // Build ProtocolMessage with integrity protection
-      
-      const sessionKey = useSessionKeyStore.getState().getCurrentSessionKey();
-      if (!sessionKey) {
-        alert('Ключ сессии недоступен');
-        return;
-      }
       
       const msgId = Date.now();
       const seqNo = Date.now(); // Client-side seq for REST (server validates)
       const timestamp = Date.now();
       
-      // HMAC computation: chatId + contentType + content + seq_no + timestamp
-      const hmacData = `${chat!.chatId}${messageType}${message}${seqNo}${timestamp}`;
-      const hmac = CryptoJS.HmacSHA256(hmacData, sessionKey).toString(CryptoJS.enc.Base64);
+      // ☁️ CLOUD MODEL: Client doesn't compute HMAC (doesn't have decrypted sessionKey)
+      // Server will compute HMAC itself for audit and storage
       
       const { data } = await http.post<SendMessageResponse>(endpoints.chatSend, {
         msg_id: msgId,
@@ -611,42 +718,73 @@ export function SocialFloatingButton() {
         timestamp: timestamp,
         chat_id: chat!.chatId,
         content_type: messageType,
-        content: message,  // ☁️ Plaintext
-        hmac: hmac,
+        content: message,  // ☁️ Plaintext over TLS
+        hmac: '',  // Empty - server computes it
         reply_to_id: replyingTo?.messageId,
       });
       
       console.log('✅ Message sent, messageId:', data.messageId);
 
-      const createdAt = new Date().toISOString();
-      setMessages(prev => [...prev, {
-        messageId: data.messageId,
-        senderId: user?.id || '',
-        content: message,  // ☁️ CLOUD MODEL: plaintext content
-        messageType,
-        imagePath,
-        createdAt,
-        replyToId: replyingTo?.messageId,
-        replyToMessage: replyingTo || undefined,
-      }]);
+      // Обновляем временное сообщение, сразу подставляя реальный ID
+      setMessages(prev => {
+        const tempIndex = prev.findIndex(m => 
+          typeof m.messageId === 'string' && m.messageId === tempMessageId
+        );
+        if (tempIndex === -1) return prev;
 
+        // Если реальное сообщение уже пришло по WebSocket, убираем временное
+        if (prev.some(m => typeof m.messageId === 'number' && m.messageId === data.messageId)) {
+          return prev.filter(m => !(typeof m.messageId === 'string' && m.messageId === tempMessageId));
+        }
+
+        const next = [...prev];
+        next[tempIndex] = {
+          ...prev[tempIndex],
+          messageId: data.messageId,
+          content: prev[tempIndex].content, // держим plaintext, не показываем base64 из WS
+        };
+        return next;
+      });
+
+      // Снимаем статус "отправляется"
+      setPendingMessages(p => {
+        const next = new Set(p);
+        next.delete(tempMessageId);
+        next.delete(String(data.messageId));
+        return next;
+      });
+
+      // Обновляем превью последнего сообщения в списке чатов
       setChats(prev => prev.map(c => c.chatId === chat!.chatId ? {
         ...c,
         lastMessage: {
           messageId: data.messageId,
           senderId: user?.id || '',
-          content: message,  // ☁️ CLOUD MODEL: plaintext content
+          content: message,
           messageType,
           imagePath,
           createdAt,
-          encryptionMetadata: '',
+          isRead: false,
           replyToId: replyingTo?.messageId,
-        },
+          replyToMessage: replyingTo || undefined,
+        } as ChatMessage
       } : c));
+
+      // Сообщение будет заменено на реальное через WebSocket broadcast
+      // Временное сообщение с tempMessageId уже отображается в UI
 
       setReplyingTo(null);
     } catch (e) {
       console.error('Failed to send message to user', e);
+      
+      // Удаляем временное сообщение при ошибке (используем переменную из начала функции)
+      setMessages(prev => prev.filter(m => !(typeof m.messageId === 'string' && m.messageId === tempMessageId)));
+      setPendingMessages(p => {
+        const newSet = new Set(p);
+        newSet.delete(tempMessageId);
+        return newSet;
+      });
+      
       alert(e instanceof Error ? e.message : 'Ошибка отправки сообщения');
     }
   };
@@ -670,6 +808,8 @@ export function SocialFloatingButton() {
       }
       await sendMessageToUser(chat.participantId, messageInput.trim());
       setMessageInput('');
+      // Прокручиваем к концу после отправки
+      setTimeout(() => scrollToBottom(), 100);
     }
   };
 
@@ -870,7 +1010,12 @@ export function SocialFloatingButton() {
                         </span>
                         {m.senderId === user!.id && (
                           <span className="text-[10px] -space-x-0.5 inline-flex">
-                            {m.isRead ? (
+                            {typeof m.messageId === 'string' && pendingMessages.has(m.messageId) ? (
+                              // Иконка часов для отправляемых изображений
+                              <svg className="w-3 h-3 text-white/70 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                            ) : m.isRead ? (
                               <>
                                 <span className="text-green-400">✓</span>
                                 <span className="text-green-400">✓</span>
@@ -894,7 +1039,12 @@ export function SocialFloatingButton() {
                       {new Date(m.createdAt).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
                       {m.senderId === user!.id && (
                         <span className="ml-1 -space-x-0.5 inline-flex">
-                          {m.isRead ? (
+                          {typeof m.messageId === 'string' && pendingMessages.has(m.messageId) ? (
+                            // Иконка часов для отправляемых сообщений
+                            <svg className="w-3 h-3 text-indigo-400/60 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                          ) : m.isRead ? (
                             <>
                               <span className="text-indigo-300">✓</span>
                               <span className="text-indigo-300">✓</span>

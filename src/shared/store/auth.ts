@@ -44,6 +44,23 @@ export const authStore = create<State & Actions>((set) => ({
       secureChatWebSocket.setSessionCredentials(sessionId, deviceId);
       console.log('✅ Server credentials passed to WebSocket: sessionId and deviceId');
     }
+    // Persist minimal credentials for post-reload usage (survive browser restart)
+    if (sessionId) {
+      sessionStorage.setItem('__session_id__', sessionId);
+      localStorage.setItem('__session_id__', sessionId);
+    }
+    if (deviceId) {
+      sessionStorage.setItem('__server_device_id__', deviceId);
+      localStorage.setItem('__server_device_id__', deviceId);
+    }
+    if (sessionKey) {
+      sessionStorage.setItem('__session_key__', sessionKey);
+      localStorage.setItem('__session_key__', sessionKey);
+    }
+    if (sessionKeyIv) {
+      sessionStorage.setItem('__session_key_iv__', sessionKeyIv);
+      localStorage.setItem('__session_key_iv__', sessionKeyIv);
+    }
   },
   
   clear: () => {
@@ -62,6 +79,12 @@ export const authStore = create<State & Actions>((set) => ({
     sessionStorage.removeItem('__server_device_id__');
     sessionStorage.removeItem('__device_token__');
     sessionStorage.removeItem('__device_token_expires__');
+    localStorage.removeItem('__session_id__');
+    localStorage.removeItem('__server_device_id__');
+    localStorage.removeItem('__device_token__');
+    localStorage.removeItem('__device_token_expires__');
+    localStorage.removeItem('__session_key__');
+    localStorage.removeItem('__session_key_iv__');
     
     console.log('🔐 All credentials cleared from memory and sessionStorage');
   },

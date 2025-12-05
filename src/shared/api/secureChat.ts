@@ -1,3 +1,5 @@
+import { authStore } from '@/shared/store/auth'
+
 /**
  * ☁️ CLOUD CHAT MODEL (Server-side encryption)
  * 
@@ -84,6 +86,7 @@ export class CloudChatClient {
   private messageHandlers: Set<(msg: WebSocketEvent) => void> = new Set()
   private errorHandlers: Set<(error: Error) => void> = new Set()
   private config: Required<WebSocketConfig>
+  private cachedDeviceToken: { token: string; expiresAt: number } | null = null
   
   constructor(config: WebSocketConfig = {}) {
     this.config = {
@@ -91,19 +94,38 @@ export class CloudChatClient {
       reconnectAttempts: config.reconnectAttempts || 5,
       heartbeatInterval: config.heartbeatInterval || 30000
     }
+    
+    // 🔐 Restore session credentials from storage on page reload
+    this.restoreCredentialsFromStorage()
+  }
+  
+  /**
+   * 🔐 Restore sessionId and deviceId from storage after page reload
+   */
+  private restoreCredentialsFromStorage(): void {
+    const storedSessionId = sessionStorage.getItem('__session_id__') || localStorage.getItem('__session_id__');
+    const storedDeviceId = sessionStorage.getItem('__server_device_id__') || localStorage.getItem('__server_device_id__');
+    
+    if (storedSessionId && storedDeviceId) {
+      // Update authStore with restored credentials (import at top of file)
+      authStore.getState().setSessionCredentials(storedSessionId, storedDeviceId);
+      console.log('✅ CloudChatClient: Session credentials restored from storage');
+    } else {
+      console.warn('⚠️ CloudChatClient: No stored session credentials found');
+    }
   }
   
   private getWebSocketUrl(): string {
-    const apiBase = (import.meta as any)?.env?.VITE_API_BASE as string
     const wsUrl = (import.meta as any)?.env?.VITE_CHAT_WS_URL as string
     
     if (wsUrl) return wsUrl
     
-    const url = new URL(apiBase || window.location.origin)
-    const protocol = url.protocol === 'https:' ? 'wss:' : 'ws:'
-    const port = (import.meta as any)?.env?.VITE_CHAT_WS_PORT || '51789'
+    // Default: same origin, Vite proxies /ws to backend ws port
+    const origin = window.location.origin
+    const url = new URL(origin)
+    url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:'
     
-    return `${protocol}//${url.hostname}:${port}/ws/chat`
+    return `${url.protocol}//${url.host}/ws/chat`
   }
   
   /**
@@ -111,7 +133,9 @@ export class CloudChatClient {
    */
   async connect(): Promise<void> {
     const ticket = await this.getTicket()
-    const url = `${this.config.wsUrl}?ticket=${encodeURIComponent(ticket)}`
+    const deviceToken = await this.getDeviceToken()
+    const url = `${this.config.wsUrl}?ticket=${encodeURIComponent(ticket)}&deviceToken=${encodeURIComponent(deviceToken)}`
+    console.log('🌐 Opening chat WebSocket', { url })
     
     return new Promise((resolve, reject) => {
       try {
@@ -134,8 +158,8 @@ export class CloudChatClient {
           reject(new Error('WebSocket connection failed'))
         }
         
-        this.ws.onclose = () => {
-          console.log('🔌 Cloud chat WebSocket disconnected')
+        this.ws.onclose = (event) => {
+          console.log('🔌 Cloud chat WebSocket disconnected', { code: event.code, reason: event.reason })
           this.ws = null
         }
         
@@ -152,11 +176,33 @@ export class CloudChatClient {
     const apiBase = (import.meta as any)?.env?.VITE_API_BASE as string || window.location.origin
     
     // ☁️ CLOUD MODEL: Headers managed server-side via session middleware
+    const state = authStore.getState()
+    const { accessToken, sessionId: storeSessionId, deviceId: storeDeviceId } = state
+    
+    // Try to get from authStore first, then from storage
+    const sessionId = storeSessionId 
+      || sessionStorage.getItem('__session_id__') 
+      || localStorage.getItem('__session_id__')
+    const deviceId = storeDeviceId 
+      || sessionStorage.getItem('__server_device_id__') 
+      || localStorage.getItem('__server_device_id__')
+
+    if (!accessToken || !sessionId || !deviceId) {
+      const missing = [];
+      if (!accessToken) missing.push('accessToken');
+      if (!sessionId) missing.push('sessionId');
+      if (!deviceId) missing.push('deviceId');
+      throw new Error(`Missing auth/session credentials for chat ticket (${missing.join(', ')}). Please re-login.`)
+    }
+
     const response = await fetch(`${apiBase}/api/v1/chat/ws-ticket`, {
       method: 'POST',
       credentials: 'include',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${accessToken}`,
+        'X-Session-ID': sessionId,
+        'X-Device-ID': deviceId
       }
     })
     
@@ -166,6 +212,55 @@ export class CloudChatClient {
     
     const data = await response.json()
     return data.ticket
+  }
+
+  /**
+   * Получить deviceToken (обязателен для WS, сервер проверяет device binding)
+   */
+  private async getDeviceToken(): Promise<string> {
+    const apiBase = (import.meta as any)?.env?.VITE_API_BASE as string || window.location.origin
+    const state = authStore.getState()
+    const { accessToken, sessionId: storeSessionId, deviceId: storeDeviceId } = state
+    
+    // Try to get from authStore first, then from storage
+    const sessionId = storeSessionId 
+      || sessionStorage.getItem('__session_id__') 
+      || localStorage.getItem('__session_id__')
+    const deviceId = storeDeviceId 
+      || sessionStorage.getItem('__server_device_id__') 
+      || localStorage.getItem('__server_device_id__')
+
+    if (!accessToken || !sessionId || !deviceId) {
+      throw new Error('Missing credentials for device token. Please re-login.')
+    }
+
+    const now = Date.now()
+    if (this.cachedDeviceToken && this.cachedDeviceToken.expiresAt - now > 60_000) {
+      return this.cachedDeviceToken.token
+    }
+
+    const response = await fetch(`${apiBase}/api/v1/chat/ws-ticket/device-token`, {
+      method: 'GET',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${accessToken}`,
+        'X-Session-ID': sessionId,
+        'X-Device-ID': deviceId
+      }
+    })
+
+    if (!response.ok) {
+      throw new Error(`Failed to get device token: ${response.status}`)
+    }
+
+    const { deviceToken, expiresIn } = await response.json()
+    if (!deviceToken) {
+      throw new Error('Device token missing')
+    }
+
+    this.cachedDeviceToken = { token: deviceToken, expiresAt: now + expiresIn * 1000 }
+    return deviceToken
   }
   
   /**
