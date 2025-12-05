@@ -5,7 +5,7 @@
  * This file maintains backward compatibility by wrapping secureChatClient
  */
 
-import { secureChatClient, type WebSocketEvent } from '@/shared/api/secureChat';
+import { secureChatClient, type WebSocketEvent } from '@/shared/auth/secureChat';
 
 export type ChatWebSocketMessage = WebSocketEvent;
 

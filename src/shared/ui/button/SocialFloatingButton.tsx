@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { http } from '@/shared/api/http';
 import { endpoints } from '@/shared/api/endpoints';
 import { authStore } from '@/shared/store/auth';
-import { secureChatClient } from '@/shared/api/secureChat';
+import { secureChatClient } from '@/shared/auth/secureChat';
 import { logger } from '@/shared/lib/logger';
 import { useSessionKeyStore } from '@/stores/sessionKeyStore';
 import type { 
@@ -175,7 +175,7 @@ export function SocialFloatingButton() {
         observedMessagesRef.current.clear();
       }
     };
-  }, [selectedChat, user]); // ← Зависит ТОЛЬКО от выбранного чата и юзера
+  }, [selectedChat, user, messages.length, lastActivityTime]); // ← Зависит от чата, юзера, новых сообщений и активности
 
   useEffect(() => {
     logger.chat('рџ”Њ', 'Setting up WebSocket subscription (ONCE on mount)');
@@ -220,6 +220,14 @@ export function SocialFloatingButton() {
 
       if (wsMessage.type === 'message_read' && wsMessage.chatId && wsMessage.lastReadMessageId) {
         console.log('✅ Received message_read event for chat', wsMessage.chatId, 'up to message', wsMessage.lastReadMessageId);
+        // ✅ Обновляем СВОИ отправленные сообщения (senderId === currentUser.id)
+        // потому что СОБЕСЕДНИК прочитал наши сообщения
+        setChats(prev => prev.map(c => {
+          if (c.chatId !== wsMessage.chatId || !c.lastMessage) return c;
+          if (c.lastMessage.senderId !== currentUser.id) return c;
+          if (c.lastMessage.messageId > wsMessage.lastReadMessageId!) return c;
+          return { ...c, lastMessage: { ...c.lastMessage, isRead: true } };
+        }));
         setMessages(prev => prev.map(m =>
           m.messageId <= wsMessage.lastReadMessageId! && m.senderId === currentUser.id
             ? { ...m, isRead: true }
@@ -283,12 +291,13 @@ export function SocialFloatingButton() {
           lastMessage: {
             messageId: msg.messageId,
             senderId: msg.senderId,
-            content: (existingContent ?? msg.content) || '',  // ?? Plaintext from WebSocket
+            content: (existingContent ?? msg.content) || '',  // ☁️ Plaintext from WebSocket
             messageType: msg.messageType,
             imagePath: msg.imagePath,
             createdAt: msg.createdAt,
             encryptionMetadata: '',
             replyToId: msg.replyToId,
+            replyToMessage: msg.replyToMessage,  // ☁️ Include reply structure from WebSocket
             isRead: msg.isRead
           },
         };
@@ -337,7 +346,7 @@ export function SocialFloatingButton() {
                 ...msg,
                 content: tempMsg.content || msg.content || '',
                 messageId: msg.messageId,
-                replyToMessage: msg.replyToMessage as ChatMessage | undefined,
+                replyToMessage: (msg.replyToMessage ?? tempMsg.replyToMessage) as ChatMessage | undefined,
               } as ChatMessage;
               
               return newMessages;
@@ -345,6 +354,12 @@ export function SocialFloatingButton() {
           }
 
           // Если это новое сообщение (не от нас или нет временного), добавляем
+          // ☁️ Пытаемся найти replyToMessage в загруженных сообщениях если сервер не прислал
+          let replyToMessage = msg.replyToMessage as ChatMessage | undefined;
+          if (!replyToMessage && msg.replyToId) {
+            replyToMessage = prev.find(m => m.messageId === msg.replyToId);
+          }
+          
           return [...prev, {
             messageId: msg.messageId,
             senderId: msg.senderId,
@@ -353,9 +368,9 @@ export function SocialFloatingButton() {
             imagePath: msg.imagePath,
             imageUrl: msg.imageUrl,
             createdAt: msg.createdAt,
-            isRead: msg.senderId === currentUser.id ? msg.isRead : false,
+            isRead: msg.isRead, // ☁️ Доверяем серверу - он знает правильный статус
             replyToId: msg.replyToId,
-            replyToMessage: msg.replyToMessage as ChatMessage | undefined,
+            replyToMessage,
           } as ChatMessage];
         });
        
@@ -567,23 +582,12 @@ export function SocialFloatingButton() {
     try {
       const { data } = await http.get<ChatMessagesResponse>(endpoints.chatMessages(chatId));
       
-      // ☁️ CLOUD MODEL: Server sends plaintext in 'content' field
-      // No transformation needed - use messages as-is
+      // ☁️ CLOUD MODEL: Server sends plaintext in 'content' field AND correct isRead status
+      // Просто используем данные с сервера - он знает лучше
       const messagesWithContent = data.messages;
       
-      // 🔧 FIX: Мерджим со старыми сообщениями чтобы сохранить статус isRead
       if (!append) {
-        setMessages(prev => {
-          const merged = messagesWithContent.map(newMsg => {
-            const oldMsg = prev.find(m => m.messageId === newMsg.messageId);
-            // Если сообщение уже было помечено как прочитанное локально - сохраняем этот статус
-            if (oldMsg && oldMsg.isRead && !newMsg.isRead) {
-              return { ...newMsg, isRead: true };
-            }
-            return newMsg;
-          });
-          return merged;
-        });
+        setMessages(messagesWithContent);
       } else {
         setMessages(prev => [...prev, ...messagesWithContent]);
       }
@@ -1832,6 +1836,7 @@ function ChatsList({
         const hasUnread = lastMsg && 
           lastMsg.senderId !== currentUserId && 
           !lastMsg.isRead;
+        const isOutgoing = lastMsg?.senderId === currentUserId;
 
         return (
           <motion.div
@@ -1859,8 +1864,19 @@ function ChatsList({
                   {displayName}
                 </div>
                 {lastMsg && (
-                  <div className="text-xs text-slate-500 shrink-0">
-                    {formatDate(lastMsg.createdAt)}
+                  <div className="flex flex-col items-end text-right leading-tight shrink-0">
+                    <div className="text-xs text-slate-500">
+                      {formatDate(lastMsg.createdAt)}
+                    </div>
+                    {isOutgoing && (
+                      <div className="flex items-center gap-1 text-[10px] text-slate-500">
+                        <svg className={`w-3.5 h-3.5 ${lastMsg.isRead ? 'text-indigo-400' : 'text-slate-500'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 13l4 4L23 7" />
+                        </svg>
+                        <span>{lastMsg.isRead ? 'прочитано' : 'отправлено'}</span>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
