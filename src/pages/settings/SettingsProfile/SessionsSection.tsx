@@ -21,10 +21,55 @@ interface SessionsSectionProps {
 function fmt(x?: string) {
   if (!x) return '—';
   try {
-    return new Date(x).toLocaleString();
+    return new Date(x).toLocaleString('ru-RU', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   } catch {
     return x;
   }
+}
+
+function parseDeviceName(ua?: string | null): string {
+  if (!ua) return 'Неизвестное устройство';
+  
+  // Operating Systems
+  if (ua.includes('Windows NT 10')) return 'Windows 10/11';
+  if (ua.includes('Windows')) return 'Windows';
+  if (ua.includes('Mac OS X')) return 'macOS';
+  if (ua.includes('Linux')) return 'Linux';
+  if (ua.includes('Android')) return 'Android';
+  if (ua.includes('iOS') || ua.includes('iPhone') || ua.includes('iPad')) return 'iOS';
+  
+  return 'Неизвестное устройство';
+}
+
+function parseBrowser(ua?: string | null): string {
+  if (!ua) return '';
+  
+  // Browsers (order matters - check Edge before Chrome)
+  if (ua.includes('Edg/')) return 'Edge';
+  if (ua.includes('Chrome/')) return 'Chrome';
+  if (ua.includes('Firefox/')) return 'Firefox';
+  if (ua.includes('Safari/') && !ua.includes('Chrome')) return 'Safari';
+  if (ua.includes('Opera') || ua.includes('OPR/')) return 'Opera';
+  
+  return '';
+}
+
+function getDeviceIcon(ua?: string | null): string {
+  if (!ua) return '🖥️';
+  
+  if (ua.includes('Windows')) return '🪟';
+  if (ua.includes('Mac')) return '🍎';
+  if (ua.includes('Linux')) return '🐧';
+  if (ua.includes('Android')) return '📱';
+  if (ua.includes('iPhone') || ua.includes('iPad')) return '📱';
+  
+  return '🖥️';
 }
 
 function badgeClass(status: Status | string) {
@@ -138,27 +183,75 @@ export function SessionsSection({
         ) : (
           visibleSessions.map((s) => {
             const status = sessionStatus(s);
+            const deviceName = parseDeviceName(s.ua);
+            const browser = parseBrowser(s.ua);
+            const deviceIcon = getDeviceIcon(s.ua);
+            
             return (
-              <div key={s.tokenId} className="rounded-xl border border-slate-800 bg-slate-900 p-3 text-xs">
-                <div className="flex items-center justify-between">
-                  <div className="font-mono text-slate-300 truncate">{s.ip || '—'}</div>
-                  <span className={badgeClass(status)}>{status}</span>
+              <div key={s.tokenId} className="rounded-xl border border-slate-800 bg-slate-900 p-4 text-xs hover:border-slate-700 transition-colors">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    {/* Device info */}
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-lg">{deviceIcon}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold text-slate-200 flex items-center gap-2">
+                          {deviceName}
+                          {browser && (
+                            <span className="text-slate-400 font-normal">· {browser}</span>
+                          )}
+                        </div>
+                        {s.deviceId && (
+                          <div className="text-slate-500 font-mono text-[10px] truncate mt-0.5">
+                            ID: {s.deviceId}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    
+                    {/* IP and location */}
+                    {s.ip && (
+                      <div className="flex items-center gap-1.5 text-slate-400 mb-1">
+                        <span>📍</span>
+                        <span className="font-mono">{s.ip}</span>
+                      </div>
+                    )}
+                    
+                    {/* Timestamps */}
+                    <div className="text-slate-500 space-y-0.5 mt-2">
+                      <div>🕐 Создана: {fmt(s.createdAt)}</div>
+                      <div>⏰ Истекает: {fmt(s.expiresAt)}</div>
+                      {s.revokedAt && <div>🚫 Отозвана: {fmt(s.revokedAt)}</div>}
+                      {s.replacedBy && <div>🔄 Заменена новой сессией</div>}
+                    </div>
+                  </div>
+                  
+                  {/* Status badge */}
+                  <div className="flex flex-col items-end gap-2">
+                    <span className={badgeClass(status)}>{status}</span>
+                    {status === 'active' && (
+                      <button
+                        disabled={busy === `sess:${s.tokenId}`}
+                        onClick={() => onRevoke(s.tokenId)}
+                        className="rounded-lg border border-red-800 px-3 py-1.5 text-[11px] text-red-300 hover:bg-red-900/20 disabled:opacity-50 transition-colors"
+                      >
+                        {busy === `sess:${s.tokenId}` ? 'Завершение...' : 'Завершить'}
+                      </button>
+                    )}
+                  </div>
                 </div>
-                <div className="mt-1 truncate text-slate-400">{s.ua || '—'}</div>
-                <div className="mt-1 text-slate-500">
-                  Создана: {fmt(s.createdAt)} · Истекает: {fmt(s.expiresAt)}
-                  {s.revokedAt ? ` · Отозвана: ${fmt(s.revokedAt)}` : ''}
-                  {s.replacedBy ? ` · Заменена` : ''}
-                </div>
-                <div className="mt-2 flex justify-end">
-                  <button
-                    disabled={busy === `sess:${s.tokenId}` || status !== 'active'}
-                    onClick={() => onRevoke(s.tokenId)}
-                    className="rounded-lg border border-red-800 px-2.5 py-1 text-[11px] text-red-300 hover:bg-red-900/20 disabled:opacity-50"
-                  >
-                    Завершить
-                  </button>
-                </div>
+                
+                {/* Full user agent (collapsed by default) */}
+                {s.ua && (
+                  <details className="mt-3 pt-3 border-t border-slate-800">
+                    <summary className="cursor-pointer text-slate-500 hover:text-slate-400 text-[10px]">
+                      User Agent
+                    </summary>
+                    <div className="mt-2 p-2 bg-slate-950 rounded text-[10px] font-mono text-slate-400 break-all">
+                      {s.ua}
+                    </div>
+                  </details>
+                )}
               </div>
             );
           })
@@ -168,7 +261,7 @@ export function SessionsSection({
             onClick={onRefresh}
             className="rounded-lg border border-slate-700 px-2.5 py-1 text-[11px] hover:border-slate-500"
           >
-            Обновить
+            🔄 Обновить
           </button>
         </div>
       </div>

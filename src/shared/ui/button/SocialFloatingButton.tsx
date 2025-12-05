@@ -4,9 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { http } from '@/shared/api/http';
 import { endpoints } from '@/shared/api/endpoints';
 import { authStore } from '@/shared/store/auth';
-import { chatWebSocket } from '@/shared/api/chatWebSocket';
+import { secureChatClient } from '@/shared/api/secureChat';
 import { logger } from '@/shared/lib/logger';
-import * as encryption from '@/shared/lib/encryption';
 import type { 
   Friend, 
   FriendRequest, 
@@ -42,9 +41,6 @@ export function SocialFloatingButton() {
   const [selectedChat, setSelectedChat] = useState<number | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [messageInput, setMessageInput] = useState('');
-  const [chatKeys, setChatKeys] = useState<Map<number, CryptoKey>>(new Map());
-  const [chatKeyVersions, setChatKeyVersions] = useState<Map<string, CryptoKey>>(new Map());
-  const [activeChatKeyVersion, setActiveChatKeyVersion] = useState<Map<number, number>>(new Map());
   const [lastActivityTime, setLastActivityTime] = useState(Date.now());
   const [replyingTo, setReplyingTo] = useState<ChatMessage | null>(null);
   const [editingMessage, setEditingMessage] = useState<ChatMessage | null>(null);
@@ -75,17 +71,12 @@ export function SocialFloatingButton() {
     if (!user) return;
     
     logger.chat('рџ”Њ', 'Connecting WebSocket for user:', user.id);
-    chatWebSocket.connect(user.id);
+    secureChatClient.connect().catch(err => console.error('Failed to connect:', err));
     
     return () => {
       logger.chat('рџ”Њ', 'Disconnecting WebSocket');
-      chatWebSocket.disconnect();
-
-      // 🔐 Очищаем кеши ключей при отключении
-      setChatKeys(new Map());
-      setChatKeyVersions(new Map());
-      setActiveChatKeyVersion(new Map());
-      logger.chat('🗑️', 'Cleared chat key caches on disconnect');
+      secureChatClient.disconnect();
+      logger.chat('🗑️', 'WebSocket disconnected');
     };
   }, [user]);
 
@@ -95,15 +86,7 @@ export function SocialFloatingButton() {
     const handleVisibilityChange = async () => {
       if (document.visibilityState === 'visible') {
         logger.chat('👁️', 'Tab became visible');
-        
-        // 🔧 FIX: Очищаем только кеш ключей, НЕ перезагружаем сообщения
-        // Это предотвращает мерцание статуса "прочитано"
-        setChatKeys(new Map());
-        setChatKeyVersions(new Map());
-        setActiveChatKeyVersion(new Map());
-        
-        // Ключи будут автоматически подтянуты при следующем использовании
-        logger.chat('🔑', 'Chat key caches cleared, will reload on next use');
+        logger.chat('✅', 'Ready to receive messages from server');
       }
     };
 
@@ -173,7 +156,7 @@ export function SocialFloatingButton() {
   useEffect(() => {
     logger.chat('рџ”Њ', 'Setting up WebSocket subscription (ONCE on mount)');
 
-    const unsubscribe = chatWebSocket.subscribe(async (wsMessage) => {
+    const unsubscribe = secureChatClient.onMessage(async (wsMessage) => {
       const currentUser = userRef.current;
       const currentChatId = selectedChatRef.current;
 
@@ -231,44 +214,13 @@ export function SocialFloatingButton() {
           return;
         }
         
-        if (wsMessage.encryptionMetadata) {
-          (async () => {
-            try {
-              const messageVersion = wsMessage.messageKeyVersion;
-              let chatKey: CryptoKey | null;
-              
-              if (messageVersion !== undefined) {
-                chatKey = await ensureChatKeyByVersion(wsMessage.chatId!, messageVersion);
-              } else {
-                chatKey = await ensureChatKey(wsMessage.chatId!);
-              }
-              
-              if (!chatKey) {
-                console.warn('Chat key not available for edited message');
-                return;
-              }
-              
-              const metadata = typeof wsMessage.encryptionMetadata === 'string'
-                ? JSON.parse(wsMessage.encryptionMetadata)
-                : wsMessage.encryptionMetadata;
-
-              const plain = await encryption.decryptMessage(
-                {
-                  encryptedContent: wsMessage.encryptedContent!,
-                  encryptionMetadata: metadata,
-                },
-                chatKey,
-              );
-
-              setMessages(prev => prev.map(m =>
-                m.messageId === wsMessage.messageId
-                  ? { ...m, encryptedContent: plain, edited: true }
-                  : m
-              ));
-            } catch (e) {
-              console.error('Failed to decrypt edited message', e);
-            }
-          })();
+        // ☁️ CLOUD MODEL: Server sends plaintext 'content' (already decrypted)
+        if (wsMessage.message?.content !== undefined) {
+          setMessages(prev => prev.map(m =>
+            m.messageId === wsMessage.messageId
+              ? { ...m, content: wsMessage.message!.content!, edited: true }
+              : m
+          ));
         }
         return;
       }
@@ -298,131 +250,27 @@ export function SocialFloatingButton() {
         loadChats();
       }
 
-      if (msg.encryptionMetadata && currentChatId === msg.chatId) {
-        (async () => {
-          try {
-            const messageVersion = msg.messageKeyVersion;
-            let chatKey: CryptoKey | null;
-            
-            if (messageVersion !== undefined) {
-              chatKey = await ensureChatKeyByVersion(msg.chatId, messageVersion);
-            } else {
-              chatKey = await ensureChatKey(msg.chatId);
-            }
-            
-            if (!chatKey) {
-              logger.warn('Chat key not available for message', msg.messageId);
-              setMessages(prev => {
-                if (prev.some(m => m.messageId === msg.messageId)) return prev;
-                return [...prev, {
-                  messageId: msg.messageId,
-                  senderId: msg.senderId,
-                  encryptedContent: '🔐 [Ключ недоступен]',
-                  messageType: msg.messageType,
-                  imagePath: msg.imagePath,
-                  createdAt: msg.createdAt,
-                }];
-              });
-              return;
-            }
-            
-            const metadata = typeof msg.encryptionMetadata === 'string'
-              ? JSON.parse(msg.encryptionMetadata)
-              : msg.encryptionMetadata;
-
-            const plain = await encryption.decryptMessage(
-              {
-                encryptedContent: msg.encryptedContent,
-                encryptionMetadata: metadata,
-              },
-              chatKey,
-            );
-
-            // 🔐 Проверяем HMAC если он присутствует
-            if (msg.messageHmac) {
-              const isValid = await encryption.verifyMessageIntegrity({
-                encryptedContent: msg.encryptedContent,
-                encryptionMetadata: metadata,
-                messageHmac: msg.messageHmac,
-                sequenceNumber: msg.sequenceNumber,
-                signatureTimestamp: msg.signatureTimestamp,
-                messageKeyVersion: msg.messageKeyVersion
-              }, chatKey);
-              
-              if (!isValid) {
-                console.error(`❌ HMAC verification failed for message ${msg.messageId}`);
-                logger.warn('Message integrity check failed', msg.messageId);
-                // Показываем сообщение с предупреждением
-                setMessages(prev => {
-                  if (prev.some(m => m.messageId === msg.messageId)) return prev;
-                  return [...prev, {
-                    messageId: msg.messageId,
-                    senderId: msg.senderId,
-                    encryptedContent: '⚠️ [Сообщение не прошло проверку целостности - возможна подмена]',
-                    messageType: msg.messageType,
-                    imagePath: msg.imagePath,
-                    createdAt: msg.createdAt,
-                  }];
-                });
-                return;
-              }
-            }
-
-            setMessages(prev => {
-              if (prev.some(m => m.messageId === msg.messageId)) return prev;
-              return [...prev, {
-                messageId: msg.messageId,
-                senderId: msg.senderId,
-                encryptedContent: plain,
-                messageType: msg.messageType,
-                imagePath: msg.imagePath,
-                imageUrl: msg.imageUrl,
-                createdAt: msg.createdAt,
-                isRead: msg.senderId === currentUser.id ? msg.isRead : false,
-                replyToId: msg.replyToId,
-                replyToMessage: msg.replyToMessage,
-              }];
-            });
-           
-            if (msg.senderId !== currentUser.id && isOpen && selectedChat === msg.chatId && document.visibilityState === 'visible') {
-              markChatRead(msg.chatId, msg.messageId).catch(() => {});
-            }
-          } catch (e) {
-            logger.warn('Failed to decrypt message via WebSocket', msg.messageId, e);
-            setMessages(prev => {
-              if (prev.some(m => m.messageId === msg.messageId)) return prev;
-              return [...prev, {
-                messageId: msg.messageId,
-                senderId: msg.senderId,
-                encryptedContent: '[Could not decrypt message]',
-                messageType: msg.messageType,
-                imagePath: msg.imagePath,
-                imageUrl: msg.imageUrl,
-                createdAt: msg.createdAt,
-                isRead: false,
-                replyToId: msg.replyToId,
-                replyToMessage: msg.replyToMessage,
-              }];
-            });
-          }
-        })();
-      } else {
-        logger.warn('Message without encryptionMetadata blocked', msg.messageId);
-        setMessages(prev => {
-          if (prev.some(m => m.messageId === msg.messageId)) return prev;
+      // ☁️ CLOUD MODEL: Server sends plaintext 'content'
+      if (currentChatId === msg.chatId) {
+        setMessages((prev) => {
+          if (prev.some((m) => m.messageId === msg.messageId)) return prev;
           return [...prev, {
             messageId: msg.messageId,
             senderId: msg.senderId,
-            encryptedContent: '⚠️ [Сообщение заблокировано: отсутствует шифрование]',
+            content: msg.content || '',  // ☁️ Plaintext from server
             messageType: msg.messageType,
             imagePath: msg.imagePath,
             imageUrl: msg.imageUrl,
             createdAt: msg.createdAt,
-            isRead: false,
+            isRead: msg.senderId === currentUser.id ? msg.isRead : false,
             replyToId: msg.replyToId,
-            replyToMessage: msg.replyToMessage,
-          }];
+            replyToMessage: msg.replyToMessage as ChatMessage | undefined,
+          } as ChatMessage];
         });
+       
+        if (msg.senderId !== currentUser.id && isOpen && selectedChat === msg.chatId && document.visibilityState === 'visible') {
+          markChatRead(msg.chatId, msg.messageId).catch(() => {});
+        }
       }
 
     });
@@ -604,47 +452,17 @@ export function SocialFloatingButton() {
       
       const chatsWithDecrypted = await Promise.all(
         data.chats.map(async (chat) => {
-          if (!chat.lastMessage || !chat.lastMessage.encryptionMetadata) {
-            return chat;
-          }
-
-          try {
-            const messageVersion = chat.lastMessage.messageKeyVersion;
-            let chatKey: CryptoKey | null;
-            
-            if (messageVersion !== undefined) {
-              chatKey = await ensureChatKeyByVersion(chat.chatId, messageVersion);
-            } else {
-              chatKey = await ensureChatKey(chat.chatId);
-            }
-            
-            if (!chatKey) {
-              return chat;
-            }
-
-            const metadata = typeof chat.lastMessage.encryptionMetadata === 'string'
-              ? JSON.parse(chat.lastMessage.encryptionMetadata)
-              : chat.lastMessage.encryptionMetadata;
-
-            const decrypted = await encryption.decryptMessage(
-              {
-                encryptedContent: chat.lastMessage.encryptedContent,
-                encryptionMetadata: metadata,
-              },
-              chatKey
-            );
-
+          // ☁️ CLOUD MODEL: Server already sends plaintext in 'content' field
+          if (chat.lastMessage && chat.lastMessage.content) {
             return {
               ...chat,
               lastMessage: {
                 ...chat.lastMessage,
-                encryptedContent: decrypted,
+                content: chat.lastMessage.content,  // Already plaintext from server
               },
             };
-          } catch (e) {
-            console.error('Failed to decrypt last message for chat', chat.chatId, e);
-            return chat;
           }
+          return chat;
         })
       );
 
@@ -658,79 +476,14 @@ export function SocialFloatingButton() {
     try {
       const { data } = await http.get<ChatMessagesResponse>(endpoints.chatMessages(chatId));
       
-      const chatKey = await ensureChatKey(chatId);
-      if (!chatKey) {
-        console.error('Failed to get chat key for chatId:', chatId);
-        setMessages(data.messages.map(m => ({
-          ...m,
-          encryptedContent: '[Ключ чата не найден]'
-        })));
-        return;
-      }
-      
-      const decrypted: ChatMessage[] = [];
-      for (const m of data.messages) {
-        if (m.encryptionMetadata) {
-            const metadata = typeof m.encryptionMetadata === 'string' 
-              ? JSON.parse(m.encryptionMetadata)
-              : m.encryptionMetadata;
-            
-            console.log(`🔓 Decrypting message ${m.messageId}...`);
-            
-            const messageVersion = m.messageKeyVersion;
-            let decryptKey: CryptoKey | null;
-            
-            if (messageVersion !== undefined) {
-              decryptKey = await ensureChatKeyByVersion(chatId, messageVersion);
-            } else {
-              decryptKey = chatKey;
-            }
-            
-            if (!decryptKey) {
-              console.warn(`Key version ${messageVersion} not available for message ${m.messageId}`);
-              decrypted.push({ ...m, encryptedContent: '🔐 [Ключ версии ' + messageVersion + ' недоступен]' });
-              continue;
-            }
-              
-          try {
-            const dec = await encryption.decryptMessage({
-              encryptedContent: m.encryptedContent,
-              encryptionMetadata: metadata
-            }, decryptKey);
-            console.log('🔑 Message decrypted successfully');
-            
-            // 🔐 Проверяем HMAC если он присутствует
-            if (m.messageHmac) {
-              const isValid = await encryption.verifyMessageIntegrity({
-                encryptedContent: m.encryptedContent,
-                encryptionMetadata: metadata,
-                messageHmac: m.messageHmac,
-                sequenceNumber: m.sequenceNumber,
-                signatureTimestamp: m.signatureTimestamp,
-                messageKeyVersion: m.messageKeyVersion
-              }, decryptKey);
-              
-              if (!isValid) {
-                console.error(`❌ HMAC verification failed for message ${m.messageId}`);
-                decrypted.push({ ...m, encryptedContent: '⚠️ [Сообщение не прошло проверку целостности]' });
-                continue;
-              }
-            }
-            decrypted.push({ ...m, encryptedContent: dec });
-          } catch (e) {
-            console.error('Failed to decrypt message', m.messageId, ':', e);
-            decrypted.push({ ...m, encryptedContent: '🔒 [Ошибка дешифровки: ' + (e instanceof Error ? e.message : 'unknown') + ']' });
-          }
-        } else {
-          console.warn('Message without encryptionMetadata blocked', m.messageId);
-          decrypted.push({ ...m, encryptedContent: '⚠️ [Сообщение заблокировано: отсутствует шифрование]' });
-        }
-      }
+      // ☁️ CLOUD MODEL: Server sends plaintext in 'content' field
+      // No transformation needed - use messages as-is
+      const messagesWithContent = data.messages;
       
       // 🔧 FIX: Мерджим со старыми сообщениями чтобы сохранить статус isRead
       if (!append) {
         setMessages(prev => {
-          const merged = decrypted.map(newMsg => {
+          const merged = messagesWithContent.map(newMsg => {
             const oldMsg = prev.find(m => m.messageId === newMsg.messageId);
             // Если сообщение уже было помечено как прочитанное локально - сохраняем этот статус
             if (oldMsg && oldMsg.isRead && !newMsg.isRead) {
@@ -741,7 +494,7 @@ export function SocialFloatingButton() {
           return merged;
         });
       } else {
-        setMessages(prev => [...prev, ...decrypted]);
+        setMessages(prev => [...prev, ...messagesWithContent]);
       }
     
       if (!append) {
@@ -768,104 +521,8 @@ export function SocialFloatingButton() {
     }
   };
   
-  const ensureChatKeyByVersion = async (chatId: number, version: number): Promise<CryptoKey | null> => {
-    const cacheKey = `${chatId}:${version}`;
-    
-    if (chatKeyVersions.has(cacheKey)) {
-      const cachedKey = chatKeyVersions.get(cacheKey)!;
-      try {
-        await crypto.subtle.exportKey('raw', cachedKey);
-        console.log(`✅ Using cached chat key for chatId:${chatId} version:${version}`);
-        return cachedKey;
-      } catch (err) {
-        console.warn(`⚠️ Cached key invalid for chatId:${chatId} version:${version}`);
-        setChatKeyVersions(prev => {
-          const copy = new Map(prev);
-          copy.delete(cacheKey);
-          return copy;
-        });
-      }
-    }
-
-    try {
-      console.log(`🔄 Fetching chat key version ${version} for chatId:${chatId}`);
-      const { data } = await http.get(endpoints.chatKeyGetVersion(chatId, version));
-      if (data?.chatKey) {
-        const chatKey = await encryption.importChatKey(data.chatKey);
-        setChatKeyVersions(prev => new Map(prev).set(cacheKey, chatKey));
-        console.log(`✅ Chat key version ${version} loaded and cached`);
-        return chatKey;
-      }
-    } catch (err: any) {
-      console.error(`❌ Failed to fetch key version ${version}:`, err?.response?.status || err?.message);
-      
-      if (err?.response?.status === 503) {
-        alert('Encryption service unavailable. Please contact administrator to configure KMS.');
-        return null;
-      }
-    }
-
-    return null;
-  };
-  
-  const ensureChatKey = async (chatId: number, forceReload = false): Promise<CryptoKey | null> => {
-    if (!forceReload && chatKeys.has(chatId)) {
-      const cachedKey = chatKeys.get(chatId)!;
-      
-      try {
-        await crypto.subtle.exportKey('raw', cachedKey);
-        console.log('✅ Using valid cached chat key for chatId:', chatId);
-        return cachedKey;
-      } catch (err) {
-        console.warn('⚠️ Cached chat key is invalid, reloading for chatId:', chatId);
-        setChatKeys(prev => {
-          const copy = new Map(prev);
-          copy.delete(chatId);
-          return copy;
-        });
-      }
-    }
-
-    if (forceReload && chatKeys.has(chatId)) {
-      setChatKeys(prev => {
-        const copy = new Map(prev);
-        copy.delete(chatId);
-        return copy;
-      });
-    }
-
-    try {
-      console.log('🔄 Fetching chat key from server for chatId:', chatId);
-      const { data } = await http.get(endpoints.chatKeyGet(chatId));
-      if (data?.chatKey) {
-        const chatKey = await encryption.importChatKey(data.chatKey);
-        setChatKeys(prev => new Map(prev).set(chatId, chatKey));
-        
-        // Сохранить версию ключа
-        if (data.keyVersion !== undefined) {
-          setActiveChatKeyVersion(prev => new Map(prev).set(chatId, data.keyVersion));
-          console.log(`✅ Chat key loaded with version ${data.keyVersion} for chatId:`, chatId);
-        } else {
-          console.log('✅ Chat key loaded (no version) for chatId:', chatId);
-        }
-        
-        return chatKey;
-      }
-      // Ключ не найден на сервере
-      console.error('❌ Chat key not found on server for chatId:', chatId);
-      return null;
-    } catch (err: any) {
-      if (err?.response?.status === 503) {
-        console.error('❌ KMS service unavailable - chat disabled');
-        alert('Encryption service unavailable. Chat functionality is disabled. Please contact administrator to configure KMS.');
-        return null;
-      }
-      
-      // При других ошибках (404, ит.д.) - тоже не создаем новый ключ
-      console.error('❌ Failed to get chat key:', err?.response?.status || err?.message);
-      return null;
-    }
-  };
+  // ☁️ CLOUD MODEL: No client-side chat key management needed
+  // Server handles all encryption/decryption, clients work with plaintext
    
   const openChatWith = async (participantId: string) => {
     try {
@@ -923,34 +580,40 @@ export function SocialFloatingButton() {
       }
       
       console.log('✅ Getting chat key for chatId:', chat.chatId);
-      const chatKey = await ensureChatKey(chat.chatId);
-      if (!chatKey) {
-        alert('Ключ шифрования не получен');
+      // ☁️ CLOUD MODEL: No client-side encryption needed
+      // const chatKey = await ensureChatKey(chat.chatId);
+      // if (!chatKey) {
+      //   alert('Ключ шифрования не получен');
+      //   return;
+      // }
+    
+      console.log('✅ Sending plaintext message with protocol integrity...');
+      // ☁️ CLOUD MODEL: Plaintext + HMAC over TLS
+      // Build ProtocolMessage with integrity protection
+      
+      const sessionKey = useSessionKeyStore.getState().getCurrentSessionKey();
+      if (!sessionKey) {
+        alert('Ключ сессии недоступен');
         return;
       }
-    
-      console.log('✅ Encrypting message with chat key...');
-      const encrypted = await encryption.encryptMessage(
-        message, 
-        chatKey
-      );
       
-      console.log('✅ Message encrypted with chat key');
+      const msgId = Date.now();
+      const seqNo = Date.now(); // Client-side seq for REST (server validates)
+      const timestamp = Date.now();
       
-      console.log('Sending to server...');
+      // HMAC computation: chatId + contentType + content + seq_no + timestamp
+      const hmacData = `${chat!.chatId}${messageType}${message}${seqNo}${timestamp}`;
+      const hmac = CryptoJS.HmacSHA256(hmacData, sessionKey).toString(CryptoJS.enc.Base64);
       
       const { data } = await http.post<SendMessageResponse>(endpoints.chatSend, {
-        chatId: chat!.chatId,
-        encryptedContent: encrypted.encryptedContent,
-        encryptionMetadata: encrypted.encryptionMetadata,
-        messageType,
-        imagePath,
-        replyToId: replyingTo?.messageId,
-        ...(imageEncrypted && {
-          imageEncrypted,
-          imageEncryptionIv,
-          imageKeyVersion
-        })
+        msg_id: msgId,
+        seq_no: seqNo,
+        timestamp: timestamp,
+        chat_id: chat!.chatId,
+        content_type: messageType,
+        content: message,  // ☁️ Plaintext
+        hmac: hmac,
+        reply_to_id: replyingTo?.messageId,
       });
       
       console.log('✅ Message sent, messageId:', data.messageId);
@@ -959,7 +622,7 @@ export function SocialFloatingButton() {
       setMessages(prev => [...prev, {
         messageId: data.messageId,
         senderId: user?.id || '',
-        encryptedContent: message,
+        content: message,  // ☁️ CLOUD MODEL: plaintext content
         messageType,
         imagePath,
         createdAt,
@@ -972,7 +635,7 @@ export function SocialFloatingButton() {
         lastMessage: {
           messageId: data.messageId,
           senderId: user?.id || '',
-          encryptedContent: message,
+          content: message,  // ☁️ CLOUD MODEL: plaintext content
           messageType,
           imagePath,
           createdAt,
@@ -1017,19 +680,14 @@ export function SocialFloatingButton() {
       const chat = chats.find(c => c.chatId === selectedChat);
       if (!chat) return;
 
-      const chatKey = await ensureChatKey(selectedChat);
-      if (!chatKey) throw new Error('Failed to get chat key');
-
-      const encrypted = await encryption.encryptMessage(newContent, chatKey);
-
+      // ☁️ CLOUD MODEL: Send plaintext, server encrypts
       await http.put(endpoints.chatMessageEdit(messageId), {
-        encryptedContent: encrypted.encryptedContent,
-        encryptionMetadata: encrypted.encryptionMetadata,
+        content: newContent,  // ☁️ Plaintext
       });
 
       setMessages(prev => prev.map(m => 
         m.messageId === messageId 
-          ? { ...m, encryptedContent: newContent, edited: true }
+          ? { ...m, content: newContent, edited: true }
           : m
       ));
     } catch (e) {
@@ -1194,7 +852,7 @@ export function SocialFloatingButton() {
                         {m.replyToMessage.senderId === user!.id ? 'Вы' : friends.find(f => f.userId === m.replyToMessage!.senderId)?.username || 'Пользователь'}
                       </div>
                       <div className={`text-xs opacity-80 ${m.replyToMessage.messageType === 'image' ? 'italic' : 'line-clamp-2'}`}>
-                        {m.replyToMessage.messageType === 'image' ? '🖼️ Изображение' : m.replyToMessage.encryptedContent}
+                        {m.replyToMessage.messageType === 'image' ? '🖼️ Изображение' : m.replyToMessage.content}
                       </div>
                     </div>
                   )}
@@ -1225,8 +883,8 @@ export function SocialFloatingButton() {
                       </div>
                     </div>
                   ) : null}
-                  {m.encryptedContent && m.encryptedContent.trim() && (
-                    <div className="leading-relaxed">{m.encryptedContent}</div>
+                  {m.content && m.content.trim() && (
+                    <div className="leading-relaxed">{m.content}</div>
                   )}
                   {m.messageType !== 'image' && (
                     <div className={`mt-1.5 text-[10px] text-right opacity-70 flex items-center justify-end gap-1 ${
@@ -1262,7 +920,7 @@ export function SocialFloatingButton() {
                   Редактирование сообщения:
                 </div>
                 <div className="text-xs text-slate-300 truncate">
-                  {editingMessage.encryptedContent}
+                  {editingMessage.content}
                 </div>
               </div>
               <button
@@ -1286,7 +944,7 @@ export function SocialFloatingButton() {
                   Ответ на сообщение {replyingTo.senderId === user!.id ? 'себе' : friends.find(f => f.userId === replyingTo.senderId)?.username || 'пользователю'}:
                 </div>
                 <div className="text-xs text-slate-300 truncate">
-                  {replyingTo.messageType === 'image' ? '🖼️ Изображение' : replyingTo.encryptedContent}
+                  {replyingTo.messageType === 'image' ? '🖼️ Изображение' : replyingTo.content}
                 </div>
               </div>
               <button
@@ -1544,7 +1202,7 @@ export function SocialFloatingButton() {
         >
           <button
             onClick={() => {
-              copyMessageText(contextMenu.message.encryptedContent);
+              copyMessageText(contextMenu.message.content || '');
               setContextMenu(null);
             }}
             className="w-full px-4 py-2 text-left text-sm hover:bg-slate-700 transition-colors flex items-center gap-2"
@@ -1572,7 +1230,7 @@ export function SocialFloatingButton() {
             <button
               onClick={() => {
                 setEditingMessage(contextMenu.message);
-                setMessageInput(contextMenu.message.encryptedContent);
+                setMessageInput(contextMenu.message.content || '');
                 setContextMenu(null);
               }}
               className="w-full px-4 py-2 text-left text-sm hover:bg-slate-700 transition-colors flex items-center gap-2"
@@ -2060,7 +1718,7 @@ function ChatsList({
               {lastMsg ? (
                 <div className="flex items-center gap-2">
                   <div className={`text-xs truncate flex-1 ${hasUnread ? 'text-slate-300 font-medium' : 'text-slate-400'}`}>
-                    {lastMsg.messageType === 'image' ? '🖼️ Изображение' : lastMsg.encryptedContent}
+                    {lastMsg.messageType === 'image' ? '🖼️ Изображение' : lastMsg.content}
                   </div>
                   {hasUnread && (
                     <div className="w-2 h-2 rounded-full bg-indigo-500 shrink-0 animate-pulse"></div>

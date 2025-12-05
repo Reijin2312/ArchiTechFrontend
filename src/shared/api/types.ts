@@ -2,7 +2,14 @@ export type Tokens = { accessToken : string; refreshToken: string }
 export type User = { id : string; username: string; email: string }
 
 export type LoginReq = { email: string; password: string }
-export type LoginRes = Tokens & { user: User }
+// 🔐 PHASE 2 ACTIVE: Backend now returns sessionId, sessionKey, sessionKeyIv
+export type LoginRes = Tokens & { 
+  user: User;
+  deviceId?: string;          // Device identifier for WS authentication
+  sessionId?: string;          // Session ID for protocol validation (Phase 2)
+  sessionKey?: string;         // Encrypted session key (safe to send)
+  sessionKeyIv?: string;       // IV for session key decryption
+}
 
 export type RegisterReq = { email: string; username: string; password: string }
 export type RegisterRes =
@@ -74,19 +81,19 @@ export interface FriendStatusResponse {
 export interface ChatMessage {
   messageId: number
   senderId: string
-  encryptedContent: string
+  content: string  // ☁️ CLOUD MODEL: Plaintext content from server
   messageType: 'text' | 'image'
   imagePath?: string
   imageUrl?: string
-  encryptionMetadata?: string
   createdAt: string
   isRead?: boolean
   replyToId?: number
   replyToMessage?: ChatMessage
   edited?: boolean
-  // 🔐 Версии ключей и HMAC для проверки целостности
+  // 🔐 Key versions for tracking encrypted/decrypted state
   messageKeyVersion?: number
   imageKeyVersion?: number
+  // 🔐 Protocol security metadata
   messageHmac?: string
   sequenceNumber?: number
   signatureTimestamp?: number
@@ -109,10 +116,9 @@ export interface ChatMessagesResponse {
 
 export interface SendMessageRequest {
   chatId: number
-  encryptedContent: string
+  content: string  // ☁️ Plaintext content (server encrypts before storage)
   messageType?: 'text' | 'image'
   imagePath?: string
-  encryptionMetadata?: Record<string, any>
   replyToId?: number
 }
 

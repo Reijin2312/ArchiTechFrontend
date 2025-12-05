@@ -15,6 +15,7 @@ import { finalizeAuth } from '@/shared/auth/finalizeAuth';
 import { endpoints } from '@/shared/api/endpoints';
 import { useWallpaper } from '@/shared/ui/wallpaper/useWallpaper';
 import { Seo } from '@/shared/seo/seo';
+import { useSessionKeyStore } from '@/stores/sessionKeyStore';
 
 const schema = z.object({
   email: z.string().email({ message: 'Некорректная почта' }),
@@ -109,6 +110,20 @@ export default function LoginPage() {
     try {
       const { data } = await http.post<LoginRes>(endpoints.login, v);
       const me = await finalizeAuth(data.accessToken);
+      
+      // ☁️ CLOUD MODEL: Store only session credentials for authentication
+      if (data.sessionId && data.deviceId) {
+        authStore.getState().setSessionCredentials(data.sessionId, data.deviceId, data.sessionKey, data.sessionKeyIv);
+        
+        // Initialize session store (only for authentication, not encryption)
+        const sessionKeyStore = useSessionKeyStore.getState();
+        if (data.sessionKey && me?.id) {
+          sessionKeyStore.initializeSession(me.id, data.sessionKey, 1, v.password);
+        }
+      }
+      
+      // NOTE: WebSocket connection handled by SocialFloatingButton component
+      // No need to connect here to avoid duplicate connections
 
       if (redirectUri && data.refreshToken) {
         await notifyLauncher({

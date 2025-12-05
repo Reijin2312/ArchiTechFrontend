@@ -16,6 +16,18 @@ http.interceptors.response.use((res) => {
 http.interceptors.request.use((cfg) => {
   const at = authStore.getState().accessToken;
   if (at) cfg.headers.Authorization = `Bearer ${at}`;
+  
+  // 🔐 CRITICAL: Add session/device headers for chat API
+  const sessionId = authStore.getState().sessionId;
+  const deviceId = authStore.getState().deviceId;
+  
+  if (sessionId) {
+    cfg.headers['X-Session-ID'] = sessionId;
+  }
+  if (deviceId) {
+    cfg.headers['X-Device-ID'] = deviceId;
+  }
+  
   return cfg;
 });
 
