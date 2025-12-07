@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { DragDropZone } from './form/DragDropZone'
+import { ImageWithLoader } from '@/shared/ui/image'
 
 type ProfileBannerProps = {
   bannerUrl?: string
@@ -33,12 +34,11 @@ export function ProfileBanner({ bannerUrl, editable = false, onUpload, loading =
     >
       <div className="relative h-48 w-full overflow-hidden rounded-2xl border border-slate-800 bg-linear-to-br from-indigo-950/50 via-slate-900/50 to-slate-950/50">
         {displayUrl ? (
-          <img
+          <ImageWithLoader
             src={displayUrl}
             alt="Баннер профиля"
             className="h-full w-full object-cover pointer-events-none"
-            loading="lazy"
-            decoding="async"
+            placeholderClassName="h-48 w-full"
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center pointer-events-none">

@@ -1,5 +1,6 @@
 import { useRef } from 'react';
 import { DragDropZone } from '@/shared/ui/form/DragDropZone';
+import { ImageWithLoader } from '@/shared/ui/image';
 
 export function BannerPicker(props: {
   value: string;
@@ -28,13 +29,11 @@ export function BannerPicker(props: {
           {props.value ? (
             <div className="flex w-full flex-col items-center gap-3">
               <div className="h-32 w-full overflow-hidden rounded-xl border border-slate-800 bg-slate-950">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
+                <ImageWithLoader
                   src={props.value}
                   alt="Баннер профиля"
                   className="h-full w-full object-cover"
-                  loading="lazy"
-                  decoding="async"
+                  placeholderClassName="h-32 w-full"
                 />
               </div>
               <div className="text-xs text-slate-300">

@@ -100,19 +100,13 @@ export class CloudChatClient {
   }
   
   /**
-   * 🔐 Restore sessionId and deviceId from storage after page reload
+   * 🔐 Session credentials now restored from refresh endpoint, not storage.
+   * This prevents XSS attacks from stealing credentials.
    */
   private restoreCredentialsFromStorage(): void {
-    const storedSessionId = sessionStorage.getItem('__session_id__') || localStorage.getItem('__session_id__');
-    const storedDeviceId = sessionStorage.getItem('__server_device_id__') || localStorage.getItem('__server_device_id__');
-    
-    if (storedSessionId && storedDeviceId) {
-      // Update authStore with restored credentials (import at top of file)
-      authStore.getState().setSessionCredentials(storedSessionId, storedDeviceId);
-      console.log('✅ CloudChatClient: Session credentials restored from storage');
-    } else {
-      console.warn('⚠️ CloudChatClient: No stored session credentials found');
-    }
+    // 🔐 DEPRECATED: Credentials now come from refresh endpoint on bootstrap
+    // authStore will be populated by bootstrap.ts
+    console.log('✅ Session credentials will be restored from refresh endpoint');
   }
   
   private getWebSocketUrl(): string {
@@ -194,6 +188,13 @@ export class CloudChatClient {
       if (!deviceId) missing.push('deviceId');
       throw new Error(`Missing auth/session credentials for chat ticket (${missing.join(', ')}). Please re-login.`)
     }
+
+    // Debug log to trace headers sent for ticket request (no secrets)
+    console.log('[ChatTicket] sending ticket request', {
+      sessionId: sessionId.slice(0, 8),
+      deviceId: deviceId.slice(0, 8),
+      accessTokenPresent: !!accessToken
+    });
 
     const response = await fetch(`${apiBase}/api/v1/chat/ws-ticket`, {
       method: 'POST',

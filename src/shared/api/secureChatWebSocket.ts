@@ -131,20 +131,14 @@ class SecureChatWebSocketService {
   }
   
   /**
-   * Restore sessionId and deviceId from storage after page reload.
-   * If credentials not found, user must login again.
+   * Session credentials are now stored in HttpOnly cookies (secure from XSS).
+   * After page reload, they will be restored from refresh endpoint response.
+   * No need to restore from localStorage/sessionStorage.
    */
   private restoreSessionFromStorage() {
-    const storedSessionId = sessionStorage.getItem('__session_id__') || localStorage.getItem('__session_id__');
-    const storedDeviceId = sessionStorage.getItem('__server_device_id__') || localStorage.getItem('__server_device_id__');
-    
-    if (storedSessionId && storedDeviceId) {
-      this.sessionId = storedSessionId;
-      this.deviceId = storedDeviceId;
-      console.log('✅ Restored server-issued credentials from sessionStorage/localStorage');
-    } else {
-      console.log('⚠️ No server credentials in storage - user must login');
-    }
+    // 🔐 DEPRECATED: Session/device IDs now come from refresh endpoint
+    // Cookies are sent automatically with credentials: 'include'
+    console.log('✅ Session credentials will be restored from refresh endpoint on bootstrap');
   }
 
   /**
@@ -176,14 +170,11 @@ class SecureChatWebSocketService {
       this.sessionId = sessionId;
       this.deviceId = deviceId;
       
-      // Store in sessionStorage for re-initialization after page reload
-      sessionStorage.setItem('__session_id__', sessionId);
-      sessionStorage.setItem('__server_device_id__', deviceId);
-      // Also persist in localStorage to survive browser restarts
-      localStorage.setItem('__session_id__', sessionId);
-      localStorage.setItem('__server_device_id__', deviceId);
+      // 🔐 SECURITY: Do NOT store in localStorage/sessionStorage - XSS risk!
+      // These are now in HttpOnly cookies on backend, safe from JavaScript access
+      // We keep them in memory (class properties) for WebSocket headers only
       
-      console.log('✅ Server credentials set: sessionId and deviceId from login response');
+      console.log('✅ Server credentials set in memory: sessionId and deviceId from login response');
     }
   }
 

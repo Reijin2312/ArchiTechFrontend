@@ -125,6 +125,7 @@ export interface SendMessageRequest {
 export interface SendMessageResponse {
   success: boolean
   messageId: number
+  imageUrl?: string // 🔐 URL изображения с токеном (для типа 'image')
 }
 
 export interface CreateChatRequest {

@@ -18,13 +18,10 @@ http.interceptors.request.use((cfg) => {
   const at = state.accessToken;
   if (at) cfg.headers.Authorization = `Bearer ${at}`;
   
-  // CRITICAL: Add session/device headers for chat API (fallback to sessionStorage after reload)
-  const sessionId = state.sessionId 
-    || sessionStorage.getItem('__session_id__') 
-    || localStorage.getItem('__session_id__');
-  const deviceId = state.deviceId 
-    || sessionStorage.getItem('__server_device_id__') 
-    || localStorage.getItem('__server_device_id__');
+  // 🔐 CRITICAL: sessionId/deviceId now in HttpOnly cookies (sent automatically)
+  // Get from authStore for X-headers (cookies handle authentication, headers for validation)
+  const sessionId = state.sessionId;
+  const deviceId = state.deviceId;
   
   if (sessionId) {
     cfg.headers['X-Session-ID'] = sessionId;
@@ -45,10 +42,25 @@ http.interceptors.response.use(undefined, async (err) => {
   if (!refreshing) {
     refreshing = (async () => {
       try {
-        const r = await fetch(endpoints.refresh, { method: 'POST', credentials: 'include' });
+        const store = authStore.getState();
+        const storedSessionId = store.sessionId || sessionStorage.getItem('__session_id__');
+        const storedDeviceId = store.deviceId || sessionStorage.getItem('__server_device_id__');
+        
+        const headers: Record<string, string> = {};
+        if (storedSessionId) headers['X-Session-ID'] = storedSessionId;
+        if (storedDeviceId) headers['X-Device-ID'] = storedDeviceId;
+
+        const r = await fetch(endpoints.refresh, { method: 'POST', credentials: 'include', headers });
         if (!r.ok) throw 0;
-        const { accessToken } = await r.json();
-        authStore.getState().setAuth(authStore.getState().user, accessToken);
+        const { accessToken, sessionId, deviceId } = await r.json();
+        authStore.getState().setAuth(store.user, accessToken);
+        
+        // 🔐 Restore session credentials from refresh response (now stored in HttpOnly cookies)
+        if (sessionId && deviceId) {
+          authStore.getState().setSessionCredentials(sessionId, deviceId);
+        } else if (storedSessionId && storedDeviceId) {
+          authStore.getState().setSessionCredentials(storedSessionId, storedDeviceId);
+        }
       } catch {
         authStore.getState().clear();
       } finally { refreshing = null; }

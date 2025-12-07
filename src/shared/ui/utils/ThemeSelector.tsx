@@ -173,22 +173,61 @@ export function ThemeSelector({ value = 'default', customColor1, customColor2, o
 /**
  * Helper function to get CSS gradient string for inline styles
  */
+const GRADIENT_ALPHA = 0.65
+
+function toRgbaWithAlpha(color: string, alpha: number) {
+  const trimmed = color.trim()
+
+  if (trimmed.startsWith('#')) {
+    const hex = trimmed.slice(1)
+    if (hex.length !== 3 && hex.length !== 6) return trimmed
+
+    const normalized = hex.length === 3 ? hex.split('').map((c) => c + c).join('') : hex
+    const r = parseInt(normalized.slice(0, 2), 16)
+    const g = parseInt(normalized.slice(2, 4), 16)
+    const b = parseInt(normalized.slice(4, 6), 16)
+
+    if ([r, g, b].some((v) => Number.isNaN(v))) return trimmed
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`
+  }
+
+  const rgbMatch = trimmed.match(/^rgba?\(([^)]+)\)$/)
+  if (rgbMatch) {
+    const parts = rgbMatch[1]
+      .split(/[\s,\/]+/)
+      .filter(Boolean)
+      .slice(0, 3)
+      .map((part) => parseInt(part, 10))
+
+    if (parts.length === 3 && parts.every((v) => !Number.isNaN(v))) {
+      const [r, g, b] = parts
+      return `rgba(${r}, ${g}, ${b}, ${alpha})`
+    }
+  }
+
+  return trimmed
+}
+
+function buildGradient(colorA: string, colorB: string, alpha = GRADIENT_ALPHA) {
+  return `linear-gradient(to bottom right, ${toRgbaWithAlpha(colorA, alpha)}, ${toRgbaWithAlpha(colorB, alpha)})`
+}
+
 export function getThemeGradient(themeId?: string, color1?: string, color2?: string): string {
   if (!themeId) return ''
   
   // Custom theme
   if (themeId === 'custom' && color1 && color2) {
-    return `linear-gradient(to bottom right, ${color1}, ${color2})`
+    return buildGradient(color1, color2)
   }
   
   // Convert TailwindCSS gradient to inline CSS style
   const gradientMap: Record<string, string> = {
-    'default': 'linear-gradient(to bottom right, rgb(15 23 42), rgb(2 6 23))',
-    'ocean': 'linear-gradient(to bottom right, rgb(22 78 99), rgb(23 37 84))',
-    'sunset': 'linear-gradient(to bottom right, rgb(124 45 18), rgb(76 5 25))',
-    'forest': 'linear-gradient(to bottom right, rgb(6 78 59), rgb(5 46 22))',
-    'purple': 'linear-gradient(to bottom right, rgb(88 28 135), rgb(49 46 129))',
-    'fire': 'linear-gradient(to bottom right, rgb(127 29 29), rgb(67 20 7))',
+    'default': buildGradient('rgb(15 23 42)', 'rgb(2 6 23)'),
+    'ocean': buildGradient('rgb(22 78 99)', 'rgb(23 37 84)'),
+    'sunset': buildGradient('rgb(124 45 18)', 'rgb(76 5 25)'),
+    'forest': buildGradient('rgb(6 78 59)', 'rgb(5 46 22)'),
+    'purple': buildGradient('rgb(88 28 135)', 'rgb(49 46 129)'),
+    'fire': buildGradient('rgb(127 29 29)', 'rgb(67 20 7)'),
   }
   
   return gradientMap[themeId] || ''

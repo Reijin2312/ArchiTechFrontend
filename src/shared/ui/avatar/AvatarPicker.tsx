@@ -1,5 +1,6 @@
 import { useRef } from 'react';
 import { DragDropZone } from '@/shared/ui/form/DragDropZone';
+import { ImageWithLoader } from '@/shared/ui/image';
 
 export function AvatarPicker(props: {
   value: string;
@@ -31,12 +32,11 @@ export function AvatarPicker(props: {
                 {props.loading ? (
                   <div className="h-full w-full animate-pulse bg-slate-800" />
                 ) : (
-                  <img
+                  <ImageWithLoader
                     src={props.value}
                     alt="Аватар"
                     className="h-full w-full object-cover"
-                    loading="lazy"
-                    decoding="async"
+                    placeholderClassName="h-32 w-32"
                   />
                 )}
               </div>

@@ -4,6 +4,7 @@
 
 import { create } from 'zustand'
 import CryptoJS from 'crypto-js'
+import { authStore } from '@/shared/store/auth'
 
 interface SessionData {
   deviceId: string
@@ -56,10 +57,12 @@ export const useSessionKeyStore = create<SessionKeyStore>((set, get) => ({
     try {
       const now = Date.now()
       
-      // 🔐 CRITICAL: Get server-issued sessionId and deviceId from sessionStorage
-      // These are set by secureChatWebSocket after successful authentication
-      const sessionId = sessionStorage.getItem('__session_id__')
-      const deviceId = sessionStorage.getItem('__server_device_id__')
+      // 🔐 CRITICAL: Get sessionId and deviceId from authStore ONLY
+      // They are now in HttpOnly cookies on backend (secure from XSS)
+      // After page reload, they come from refresh endpoint response
+      const state = authStore.getState();
+      const sessionId = state.sessionId;
+      const deviceId = state.deviceId;
       
       if (!sessionId || !deviceId) {
         console.warn('[SessionStore] Missing server sessionId/deviceId, using local fallback')

@@ -22,7 +22,12 @@ export function ProfileThemeProvider({ themeId, customColor1, customColor2, chil
     if (!themeId || themeId === 'default') return {}
     
     const gradient = getThemeGradient(themeId, customColor1, customColor2)
-    return gradient ? { backgroundImage: gradient } : {}
+    if (!gradient) return {}
+
+    return {
+      backgroundImage: gradient,
+      backgroundColor: 'rgba(15, 23, 42, 0.35)'
+    }
   }
 
   return (

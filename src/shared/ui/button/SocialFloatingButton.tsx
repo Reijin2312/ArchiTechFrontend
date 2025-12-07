@@ -7,6 +7,7 @@ import { authStore } from '@/shared/store/auth';
 import { secureChatClient } from '@/shared/auth/secureChat';
 import { logger } from '@/shared/lib/logger';
 import { useSessionKeyStore } from '@/stores/sessionKeyStore';
+import { ImageWithLoader, UploadProgress } from '@/shared/ui/image';
 import type { 
   Friend, 
   FriendRequest, 
@@ -47,6 +48,7 @@ export function SocialFloatingButton() {
   const [editingMessage, setEditingMessage] = useState<ChatMessage | null>(null);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; message: ChatMessage } | null>(null);
   const [pendingMessages, setPendingMessages] = useState<Set<string>>(new Set()); // Временные ID отправляемых сообщений
+  const [uploadingImages, setUploadingImages] = useState<Map<string, { progress: number; file: File }>>(new Map());
   
   const processedMessageIds = useRef<Set<number | string>>(new Set());
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -271,6 +273,37 @@ export function SocialFloatingButton() {
       const msg = wsMessage.message!;
 
       logger.chat('📨', 'WebSocket message received:', wsMessage);
+      console.log('📨 Received WebSocket new_message:', {
+        messageId: msg.messageId,
+        messageType: msg.messageType,
+        hasImagePath: !!msg.imagePath,
+        hasImageUrl: !!msg.imageUrl,
+        imagePath: msg.imagePath,
+        imageUrl: msg.imageUrl?.substring(0, 100)
+      });
+
+      // 🔄 CRITICAL: Если это image с imageUrl, обновляем существующее сообщение ДО проверки processedMessageIds
+      if (msg.messageType === 'image' && msg.imageUrl && processedMessageIds.current.has(msg.messageId)) {
+        console.log('🔄 Updating existing image message with imageUrl:', msg.messageId);
+        
+        // Обновляем в списке чатов
+        setChats(prev => prev.map(c => {
+          if (c.chatId !== msg.chatId || !c.lastMessage || c.lastMessage.messageId !== msg.messageId) return c;
+          return {
+            ...c,
+            lastMessage: { ...c.lastMessage, imageUrl: msg.imageUrl }
+          };
+        }));
+        
+        // Обновляем в списке сообщений
+        if (currentChatId === msg.chatId) {
+          setMessages(prev => prev.map(m => 
+            m.messageId === msg.messageId ? { ...m, imageUrl: msg.imageUrl } : m
+          ));
+        }
+        
+        return; // Не добавляем в processedMessageIds повторно
+      }
 
       if (processedMessageIds.current.has(msg.messageId)) {
         logger.chat('⚠️', 'Message already processed, skipping:', msg.messageId);
@@ -307,8 +340,19 @@ export function SocialFloatingButton() {
       // ☁️ CLOUD MODEL: Server sends plaintext 'content'
       if (currentChatId === msg.chatId) {
         setMessages((prev) => {
-          // Проверяем что сообщение не дублируется
-          if (prev.some((m) => m.messageId === msg.messageId)) return prev;
+          // Проверяем что сообщение не дублируется, НО если это image с imageUrl - обновляем
+          const existingIndex = prev.findIndex(m => m.messageId === msg.messageId);
+          if (existingIndex !== -1) {
+            // Сообщение уже есть - проверяем, нужно ли обновить imageUrl
+            const existing = prev[existingIndex];
+            if (msg.messageType === 'image' && msg.imageUrl && !existing.imageUrl) {
+              console.log('🔄 Updating existing message with imageUrl:', msg.messageId);
+              const updated = [...prev];
+              updated[existingIndex] = { ...existing, imageUrl: msg.imageUrl };
+              return updated;
+            }
+            return prev; // Дубликат, ничего не делаем
+          }
           
           // Если сообщение от текущего пользователя, ищем и заменяем временное
           if (msg.senderId === currentUser.id) {
@@ -725,9 +769,14 @@ export function SocialFloatingButton() {
         content: message,  // ☁️ Plaintext over TLS
         hmac: '',  // Empty - server computes it
         reply_to_id: replyingTo?.messageId,
+        // 🔐 Добавляем метаданные изображения для типа 'image'
+        image_path: imagePath,
+        image_encrypted: imageEncrypted,
+        image_encryption_iv: imageEncryptionIv,
+        image_key_version: imageKeyVersion,
       });
       
-      console.log('✅ Message sent, messageId:', data.messageId);
+      console.log('✅ Message sent, messageId:', data.messageId, 'response:', data);
 
       // Обновляем временное сообщение, сразу подставляя реальный ID
       setMessages(prev => {
@@ -746,6 +795,7 @@ export function SocialFloatingButton() {
           ...prev[tempIndex],
           messageId: data.messageId,
           content: prev[tempIndex].content, // держим plaintext, не показываем base64 из WS
+          imageUrl: data.imageUrl, // 🔐 Сохраняем imageUrl с токеном из ответа
         };
         return next;
       });
@@ -767,6 +817,7 @@ export function SocialFloatingButton() {
           content: message,
           messageType,
           imagePath,
+          imageUrl: data.imageUrl, // 🔐 Сохраняем imageUrl с токеном
           createdAt,
           isRead: false,
           replyToId: replyingTo?.messageId,
@@ -878,15 +929,78 @@ export function SocialFloatingButton() {
     const chat = chats.find(c => c.chatId === selectedChat);
     if (!chat) return;
     
+    const uploadId = `upload-${Date.now()}`;
+    const tempMessageId = `temp-img-${Date.now()}`;
+    
     try {
+      // Создаем временное сообщение с индикатором загрузки
+      const tempMessage: ChatMessage = {
+        messageId: tempMessageId as any,
+        senderId: user?.id || '',
+        content: '',
+        messageType: 'image',
+        createdAt: new Date().toISOString(),
+      };
+      
+      setMessages(prev => [...prev, tempMessage]);
+      setUploadingImages(prev => new Map(prev).set(tempMessageId, { progress: 0, file }));
+      setPendingMessages(p => new Set(p).add(tempMessageId));
+      
+      setTimeout(() => scrollToBottom(), 0);
+      
       const form = new FormData();
       form.append('file', file);
+      
+      console.log('📤 Uploading image:', {
+        chatId: selectedChat,
+        fileName: file.name,
+        fileSize: file.size,
+        fileType: file.type,
+        url: `${endpoints.chatUpload}?chatId=${selectedChat}`
+      });
+      
+      // Симулируем прогресс загрузки (в идеале использовать onUploadProgress из axios)
+      const progressInterval = setInterval(() => {
+        setUploadingImages(prev => {
+          const current = prev.get(tempMessageId);
+          if (current && current.progress < 90) {
+            const next = new Map(prev);
+            next.set(tempMessageId, { ...current, progress: current.progress + 10 });
+            return next;
+          }
+          return prev;
+        });
+      }, 100);
+      
+      // Не указываем Content-Type вручную - браузер автоматически установит multipart/form-data с boundary
       const { data } = await http.post<UploadImageResponse>(
         `${endpoints.chatUpload}?chatId=${selectedChat}`, 
-        form, 
-        { headers: { 'Content-Type': 'multipart/form-data' }}
+        form
       );
       
+      console.log('✅ Image uploaded successfully:', data);
+      
+      clearInterval(progressInterval);
+      setUploadingImages(prev => {
+        const next = new Map(prev);
+        next.set(tempMessageId, { file, progress: 100 });
+        return next;
+      });
+      
+      // Удаляем временное сообщение
+      setMessages(prev => prev.filter(m => String(m.messageId) !== tempMessageId));
+      setUploadingImages(prev => {
+        const next = new Map(prev);
+        next.delete(tempMessageId);
+        return next;
+      });
+      setPendingMessages(p => {
+        const next = new Set(p);
+        next.delete(tempMessageId);
+        return next;
+      });
+      
+      // Отправляем реальное сообщение с изображением
       await sendMessageToUser(
         chat.participantId, 
         '', 
@@ -897,7 +1011,26 @@ export function SocialFloatingButton() {
         data.imageKeyVersion
       );
     } catch (e) {
-      console.error('Failed to upload image', e);
+      console.error('❌ Failed to upload image:', {
+        error: e,
+        response: (e as any).response?.data,
+        status: (e as any).response?.status,
+        chatId: selectedChat,
+        file: file.name
+      });
+      // Удаляем временное сообщение при ошибке
+      setMessages(prev => prev.filter(m => String(m.messageId) !== tempMessageId));
+      setUploadingImages(prev => {
+        const next = new Map(prev);
+        next.delete(tempMessageId);
+        return next;
+      });
+      setPendingMessages(p => {
+        const next = new Set(p);
+        next.delete(tempMessageId);
+        return next;
+      });
+      alert('Не удалось загрузить изображение');
     }
   };
 
@@ -1002,12 +1135,26 @@ export function SocialFloatingButton() {
                   )}
                   {m.messageType === 'image' && (m.imageUrl || m.imagePath) ? (
                     <div className="relative">
-                      <img
-                        src={m.imageUrl || `/media/${m.imagePath}`}
-                        alt="img"
-                        className="rounded-2xl max-h-96 w-full object-cover cursor-pointer hover:opacity-95 transition-opacity"
-                        onClick={() => window.open(m.imageUrl || `/media/${m.imagePath}`, '_blank')}
-                      />
+                      {uploadingImages.has(String(m.messageId)) ? (
+                        // Показываем индикатор загрузки
+                        <div className="rounded-2xl bg-slate-800/50 border-2 border-dashed border-slate-600 flex items-center justify-center" style={{ minHeight: '200px', minWidth: '250px' }}>
+                          <div className="flex flex-col items-center gap-3">
+                            <UploadProgress 
+                              progress={uploadingImages.get(String(m.messageId))?.progress || 0}
+                              size="lg"
+                            />
+                            <span className="text-xs text-slate-400">Загрузка изображения...</span>
+                          </div>
+                        </div>
+                      ) : (
+                        <ImageWithLoader
+                          src={m.imageUrl || `/media/${m.imagePath}`}
+                          alt="img"
+                          className="rounded-2xl max-h-96 w-full object-cover cursor-pointer hover:opacity-95 transition-opacity"
+                          placeholderClassName="rounded-2xl min-h-[200px] min-w-[250px]"
+                          onClick={() => window.open(m.imageUrl || `/media/${m.imagePath}`, '_blank')}
+                        />
+                      )}
                       <div className="absolute bottom-2 right-2 px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-md flex items-center gap-1.5 shadow-lg">
                         <span className="text-[10px] text-white font-medium">
                           {new Date(m.createdAt).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
