@@ -43,7 +43,15 @@ export interface ReceivedMessage {
 }
 
 export interface WebSocketEvent {
-  type: 'new_message' | 'friend_request' | 'friend_accept' | 'friend_reject' | 'message_read' | 'message_edited' | 'message_deleted'
+  type:
+    | 'new_message'
+    | 'friend_request'
+    | 'friend_accept'
+    | 'friend_reject'
+    | 'friend_removed'
+    | 'message_read'
+    | 'message_edited'
+    | 'message_deleted'
   message?: ReceivedMessage
   chatId?: number
   messageId?: number
@@ -313,26 +321,53 @@ export class CloudChatClient {
           chatId: parsed.message.chatId
         })
       } else if (parsed.type === 'friend_request') {
-        this.notifyHandlers({
-          type: 'friend_request',
+        const payload = {
+          type: 'friend_request' as const,
           userId: parsed.userId,
           displayName: parsed.displayName,
           username: parsed.username,
-          requestId: parsed.requestId
-        })
+          requestId: parsed.requestId,
+          friendRequest: {
+            userId: parsed.userId,
+            displayName: parsed.displayName,
+            username: parsed.username,
+            requestId: parsed.requestId
+          }
+        }
+        this.notifyHandlers(payload)
+      } else if (parsed.type === 'friend_removed') {
+        const payload = {
+          type: 'friend_removed' as const,
+          userId: parsed.userId,
+          friendRequest: parsed.friendRequest
+        }
+        this.notifyHandlers(payload)
       } else if (parsed.type === 'friend_accept') {
-        this.notifyHandlers({
-          type: 'friend_accept',
+        const payload = {
+          type: 'friend_accept' as const,
           userId: parsed.userId,
           displayName: parsed.displayName,
-          username: parsed.username
-        })
+          username: parsed.username,
+          requestId: parsed.requestId,
+          friendRequest: {
+            userId: parsed.userId,
+            displayName: parsed.displayName,
+            username: parsed.username,
+            requestId: parsed.requestId
+          }
+        }
+        this.notifyHandlers(payload)
       } else if (parsed.type === 'friend_reject') {
-        this.notifyHandlers({
-          type: 'friend_reject',
+        const payload = {
+          type: 'friend_reject' as const,
           userId: parsed.userId,
-          requestId: parsed.requestId
-        })
+          requestId: parsed.requestId,
+          friendRequest: {
+            userId: parsed.userId,
+            requestId: parsed.requestId
+          }
+        }
+        this.notifyHandlers(payload)
       } else if (parsed.type === 'message_read') {
         this.notifyHandlers({
           type: 'message_read',

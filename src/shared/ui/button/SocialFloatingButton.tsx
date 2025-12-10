@@ -247,35 +247,77 @@ export function SocialFloatingButton() {
 
       if (!currentUser) return;
 
-      if (wsMessage.type === 'friend_request' && wsMessage.friendRequest) {
-        logger.chat('рџ“Ё', 'New friend request received:', wsMessage.friendRequest);
+      if (wsMessage.type === 'friend_request') {
+        const req = wsMessage.friendRequest ?? {
+          userId: wsMessage.userId,
+          displayName: wsMessage.displayName,
+          username: wsMessage.username,
+          requestId: wsMessage.requestId,
+        };
+        logger.chat('[friend_request]', 'New friend request received:', req);
         setIncomingRequests(prev => {
-          if (prev.some(r => r.requestId === wsMessage.friendRequest!.requestId)) {
-            return prev;
-          }
-          return [wsMessage.friendRequest!, ...prev];
+          if (req.requestId && prev.some(r => r.requestId === req.requestId)) return prev;
+          if (prev.some(r => r.userId === req.userId)) return prev;
+          return [req as any, ...prev];
         });
+        // Подтягиваем свежие данные (аватар, username, id)
+        loadIncomingRequests();
+        loadOutgoingRequests();
         return;
       }
 
-      if (wsMessage.type === 'friend_accept' && wsMessage.friendRequest) {
-        logger.chat('вњ…', 'Friend request accepted:', wsMessage.friendRequest);
-        setIncomingRequests(prev => prev.filter(r => r.userId !== wsMessage.friendRequest!.userId));
-        setOutgoingRequests(prev => prev.filter(r => r.userId !== wsMessage.friendRequest!.userId));
+      if (wsMessage.type === 'friend_accept') {
+        const reqUserId = wsMessage.friendRequest?.userId || wsMessage.userId;
+        logger.chat('[friend_accept]', 'Friend request accepted:', wsMessage.friendRequest || wsMessage);
+        if (reqUserId) {
+          setIncomingRequests(prev => prev.filter(r => r.userId !== reqUserId));
+          setOutgoingRequests(prev => prev.filter(r => r.userId !== reqUserId));
+        }
         try {
           const { data } = await http.get<FriendsListResponse>(endpoints.friendsList);
           setFriends(data.friends);
-          logger.chat('вњ…', 'Friends list updated after accept');
+          logger.chat('[friend_accept]', 'Friends list updated after accept');
         } catch (err) {
           logger.error('Failed to reload friends:', err);
         }
+        loadOutgoingRequests();
+        loadIncomingRequests();
+        refreshSearchIfNeeded();
         return;
       }
 
-      if (wsMessage.type === 'friend_reject' && wsMessage.friendRequest) {
-        logger.chat('вќЊ', 'Friend request rejected:', wsMessage.friendRequest);
-        setIncomingRequests(prev => prev.filter(r => r.userId !== wsMessage.friendRequest!.userId));
-        setOutgoingRequests(prev => prev.filter(r => r.userId !== wsMessage.friendRequest!.userId));
+      if (wsMessage.type === 'friend_reject') {
+        const reqUserId = wsMessage.friendRequest?.userId || wsMessage.userId;
+        logger.chat('[friend_reject]', 'Friend request rejected:', wsMessage.friendRequest || wsMessage);
+        if (reqUserId) {
+          setIncomingRequests(prev => prev.filter(r => r.userId !== reqUserId));
+          setOutgoingRequests(prev => prev.filter(r => r.userId !== reqUserId));
+        }
+        loadIncomingRequests();
+        loadOutgoingRequests();
+        refreshSearchIfNeeded();
+        return;
+      }
+
+      if (wsMessage.type === 'friend_removed') {
+        const removerId = wsMessage.friendRequest?.userId || wsMessage.userId;
+        logger.chat('[friend_removed]', 'Friend removed you:', wsMessage.friendRequest || wsMessage);
+        if (removerId) {
+          setFriends(prev => prev.filter(f => f.userId !== removerId));
+          setOutgoingRequests(prev => prev.filter(r => r.userId !== removerId));
+          setIncomingRequests(prev => prev.filter(r => r.userId !== removerId));
+          setChats(prev => prev.filter(c => c.participantId !== removerId));
+        }
+        try {
+          const { data } = await http.get<FriendsListResponse>(endpoints.friendsList);
+          setFriends(data.friends);
+        } catch (err) {
+          logger.error('Failed to reload friends after removal:', err);
+        }
+        loadChats();
+        loadIncomingRequests();
+        loadOutgoingRequests();
+        refreshSearchIfNeeded();
         return;
       }
 
@@ -576,7 +618,7 @@ export function SocialFloatingButton() {
 
   const searchUsers = async () => {
     if (searchQuery.length < 2) return;
-    
+
     setLoading(true);
     try {
       const { data } = await http.get<UserSearchResponse>(endpoints.friendsSearch(searchQuery));
@@ -585,6 +627,12 @@ export function SocialFloatingButton() {
       logger.error('Search failed:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const refreshSearchIfNeeded = () => {
+    if (searchQuery.length >= 2) {
+      searchUsers();
     }
   };
 
@@ -603,6 +651,8 @@ export function SocialFloatingButton() {
       await http.post(endpoints.friendsRequestsAccept, { userId });
       await loadFriends();
       await loadIncomingRequests();
+      await loadOutgoingRequests();
+      refreshSearchIfNeeded();
     } catch (err) {
       logger.error('Failed to accept request:', err);
     }
@@ -612,6 +662,8 @@ export function SocialFloatingButton() {
     try {
       await http.post(endpoints.friendsRequestsReject, { userId });
       await loadIncomingRequests();
+      await loadOutgoingRequests();
+      refreshSearchIfNeeded();
     } catch (err) {
       console.error('Failed to reject request:', err);
     }
@@ -619,10 +671,12 @@ export function SocialFloatingButton() {
 
   const removeFriend = async (userId: string) => {
     if (!confirm('Удалить из друзей?')) return;
-    
+
     try {
       await http.post(endpoints.friendsRemove, { userId });
       await loadFriends();
+      await loadChats();
+      refreshSearchIfNeeded();
     } catch (err) {
       console.error('Failed to remove friend:', err);
     }
@@ -1504,7 +1558,11 @@ export function SocialFloatingButton() {
                         /* Одно изображение */
                         (() => {
                           const hasTempId = typeof m.messageId === 'string' && m.messageId.startsWith('temp-img-');
-                          const displayUrl = m.imageUrl || (m.imagePath ? `/media/${m.imagePath}` : '');
+                          const firstImg = m.images && m.images.length ? m.images[0] : undefined;
+                          const displayUrl =
+                            m.imageUrl ||
+                            (firstImg?.imageUrl) ||
+                            (firstImg?.imagePath ? `/media/${firstImg.imagePath}` : m.imagePath ? `/media/${m.imagePath}` : '');
                           const isLoading = (!displayUrl && !hasTempId);
                           const uploadKey = hasTempId ? `${m.messageId}-0` : '';
                           const progress = uploadKey ? uploadingImages.get(uploadKey)?.progress || 0 : 0;
@@ -1908,9 +1966,12 @@ export function SocialFloatingButton() {
                     >
                       {!selectedChat ? (
                         <div className="h-full overflow-y-auto p-3 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
-                          <ChatsList 
-                            chats={chats} 
+                          <ChatsList
+                            chats={chats}
                             friends={friends}
+                            incomingRequests={incomingRequests}
+                            outgoingRequests={outgoingRequests}
+                            searchResults={searchResults}
                             currentUserId={user!.id}
                             onSelectChat={(chatId) => { setSelectedChat(chatId); loadMessages(chatId); }}
                           />
@@ -2262,12 +2323,12 @@ function IncomingRequests({
     <div className="space-y-2">
       {requests.map((req) => (
         <motion.div
-          key={req.requestId}
+          key={req.requestId || req.userId}
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           className="flex items-center gap-2 p-2 rounded-lg border border-slate-800 bg-slate-900/40"
         >
-          <Link to={`/u/${req.username}`} className="flex items-center gap-2 flex-1 min-w-0">
+          <Link to={req.username ? `/u/${req.username}` : '#'} className="flex items-center gap-2 flex-1 min-w-0">
             {req.avatarUrl ? (
               <img
                 src={req.avatarUrl}
@@ -2276,11 +2337,11 @@ function IncomingRequests({
               />
             ) : (
               <div className="w-10 h-10 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-400 text-sm">
-                {req.username[0]?.toUpperCase()}
+                {req.username?.[0]?.toUpperCase() || '?'}
               </div>
             )}
             <div className="flex-1 min-w-0">
-              <div className="text-sm font-medium truncate">{req.username}</div>
+              <div className="text-sm font-medium truncate">{req.username || 'Пользователь'}</div>
               {req.displayName && (
                 <div className="text-xs text-slate-400 truncate">{req.displayName}</div>
               )}
@@ -2384,14 +2445,20 @@ function OutgoingRequests({
   );
 }
 
-function ChatsList({ 
-  chats, 
+function ChatsList({
+  chats,
   friends,
+  incomingRequests,
+  outgoingRequests,
+  searchResults,
   currentUserId,
-  onSelectChat 
-}: { 
+  onSelectChat
+}: {
   chats: PrivateChat[]
   friends: Friend[]
+  incomingRequests: FriendRequest[]
+  outgoingRequests: FriendRequest[]
+  searchResults: UserSearchResult[]
   currentUserId: string
   onSelectChat: (chatId: number) => void
 }) {
@@ -2432,7 +2499,17 @@ function ChatsList({
     <div className="space-y-2">
       {chats.map((chat) => {
         const friend = friends.find(f => f.userId === chat.participantId);
-        const displayName = friend?.displayName || friend?.username || chat.participantId.slice(0, 8);
+        const fallbackReq = incomingRequests.find(r => r.userId === chat.participantId) || outgoingRequests.find(r => r.userId === chat.participantId);
+        const searchHit = searchResults.find(r => r.userId === chat.participantId);
+        const displayName =
+          friend?.displayName ||
+          friend?.username ||
+          fallbackReq?.displayName ||
+          fallbackReq?.username ||
+          searchHit?.displayName ||
+          searchHit?.username ||
+          chat.participantId.slice(0, 8);
+        const avatarUrl = friend?.avatarUrl || fallbackReq?.avatarUrl || searchHit?.avatarUrl;
         const lastMsg = chat.lastMessage;
         const hasUnread = lastMsg && 
           lastMsg.senderId !== currentUserId && 
@@ -2447,9 +2524,9 @@ function ChatsList({
             onClick={() => onSelectChat(chat.chatId)}
             className="group cursor-pointer flex items-center gap-3 p-3 rounded-xl border border-slate-800 bg-slate-900/40 hover:bg-slate-900/70 hover:border-slate-700 transition-all"
           >
-            {friend?.avatarUrl ? (
+            {avatarUrl ? (
               <img
-                src={friend.avatarUrl}
+                src={avatarUrl}
                 alt={displayName}
                 className="w-12 h-12 rounded-full object-cover border-2 border-slate-700/50"
               />
