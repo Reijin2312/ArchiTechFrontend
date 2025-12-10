@@ -1,6 +1,3 @@
-// stores/securityStore.ts
-// Security event logging and tracking with Zustand
-
 import { create } from 'zustand'
 
 interface SecurityEvent {
@@ -11,12 +8,10 @@ interface SecurityEvent {
 }
 
 interface SecurityStore {
-  // State
   events: SecurityEvent[]
   invalidMessageAttempts: Map<string, number>
   maxEvents: number
 
-  // Methods
   logSecurityEvent: (
     type: string,
     details?: any,

@@ -3,6 +3,7 @@ import RulesPage from '../pages/public/RulesPage'
 import ShopPage from '../pages/public/ShopPage'
 import WikiPage from '../pages/public/WikiPage'
 import AboutServerPage from '../pages/public/AboutServerPage'
+import ContactsPage from '../pages/public/ContactsPage'
 import UserAgreementPage from '../pages/legal/UserAgreementPage'
 import PrivacyPolicyPage from '../pages/legal/PrivacyPolicyPage'
 import SiteHeader from '../shared/ui/layout/SiteHeader'
@@ -14,6 +15,7 @@ export const pages = {
   '/shop': () => (<><SiteHeader/><main><ShopPage/></main><SiteFooter/></>),
   '/wiki': () => (<><SiteHeader/><main><WikiPage/></main><SiteFooter/></>),
   '/about': () => (<><SiteHeader/><main><AboutServerPage/></main><SiteFooter/></>),
+  '/contacts': () => (<><SiteHeader/><main><ContactsPage/></main><SiteFooter/></>),
   '/terms': () => (<><SiteHeader/><main><UserAgreementPage/></main><SiteFooter/></>),
   '/privacy': () => (<><SiteHeader/><main><PrivacyPolicyPage/></main><SiteFooter/></>),
 };

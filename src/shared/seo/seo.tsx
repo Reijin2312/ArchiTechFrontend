@@ -4,6 +4,7 @@ type JsonLd = Record<string, unknown>;
 type SeoProps = {
   title: string;
   description?: string;
+  keywords?: string | string[];
   canonical?: string;
   robots?: string;
   og?: { url?: string; image?: string; type?: string };
@@ -27,6 +28,11 @@ export function Seo(props: SeoProps) {
 
     if (props.description) {
       upsert('meta', 'meta[name="description"]', { name: 'description', content: props.description });
+    }
+
+    if (props.keywords && (Array.isArray(props.keywords) ? props.keywords.length : true)) {
+      const keywords = Array.isArray(props.keywords) ? props.keywords.join(', ') : props.keywords;
+      upsert('meta', 'meta[name="keywords"]', { name: 'keywords', content: keywords });
     }
 
     if (props.canonical) {
@@ -58,7 +64,7 @@ export function Seo(props: SeoProps) {
     return () => {
       
     };
-  }, [props.title, props.description, props.canonical, props.robots, JSON.stringify(props.og), props.twitterCard, JSON.stringify(props.jsonLd)]);
+  }, [props.title, props.description, props.keywords, props.canonical, props.robots, JSON.stringify(props.og), props.twitterCard, JSON.stringify(props.jsonLd)]);
 
   return null;
 }

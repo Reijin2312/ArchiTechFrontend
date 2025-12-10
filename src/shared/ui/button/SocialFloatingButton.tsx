@@ -26,6 +26,11 @@ import type {
 
 type Tab = 'friends' | 'search' | 'requests' | 'chat';
 type RequestsSubTab = 'incoming' | 'outgoing';
+type ImageGridLayout = {
+  columns: number;
+  rows: number;
+  spans: { colSpan: number; rowSpan: number }[];
+};
 
 export function SocialFloatingButton() {
   const user = authStore(s => s.user);
@@ -47,21 +52,78 @@ export function SocialFloatingButton() {
   const [replyingTo, setReplyingTo] = useState<ChatMessage | null>(null);
   const [editingMessage, setEditingMessage] = useState<ChatMessage | null>(null);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; message: ChatMessage } | null>(null);
-  const [pendingMessages, setPendingMessages] = useState<Set<string>>(new Set()); // Временные ID отправляемых сообщений
   const [uploadingImages, setUploadingImages] = useState<Map<string, { progress: number; file: File }>>(new Map());
+
+  const [attachedImages, setAttachedImages] = useState<Array<{
+    id: string;
+    file: File;
+    preview?: string;
+    uploadedData?: UploadImageResponse;
+    uploading?: boolean;
+  }>>([]);
   
-  const processedMessageIds = useRef<Set<number | string>>(new Set());
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const markReadTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isFirstLoadRef = useRef<boolean>(true);
   const observerRef = useRef<IntersectionObserver | null>(null);
   const observedMessagesRef = useRef<Set<string>>(new Set());
+  const processedMessageIds = useRef<Set<number | string>>(new Set());
   
   const selectedChatRef = useRef(selectedChat);
   const userRef = useRef(user);
   const isOpenRef = useRef(isOpen);
 
-  // Функция для прокрутки к концу чата
+  // Подбираем сетку для мультиизображений: фиксированный контейнер, предсказуемые ряды
+  const getImageGridLayout = (count: number): ImageGridLayout => {
+    if (count === 3) {
+      return {
+        columns: 2,
+        rows: 2,
+        spans: [
+          { colSpan: 2, rowSpan: 1 }, // одно сверху
+          { colSpan: 1, rowSpan: 1 },
+          { colSpan: 1, rowSpan: 1 },
+        ],
+      };
+    }
+
+    if (count === 5) {
+      return {
+        columns: 6,
+        rows: 2,
+        spans: [
+          { colSpan: 3, rowSpan: 1 },
+          { colSpan: 3, rowSpan: 1 },
+          { colSpan: 2, rowSpan: 1 },
+          { colSpan: 2, rowSpan: 1 },
+          { colSpan: 2, rowSpan: 1 },
+        ],
+      };
+    }
+
+    if (count === 7) {
+      return {
+        columns: 12,
+        rows: 2,
+        spans: [
+          { colSpan: 4, rowSpan: 1 },
+          { colSpan: 4, rowSpan: 1 },
+          { colSpan: 4, rowSpan: 1 },
+          { colSpan: 3, rowSpan: 1 },
+          { colSpan: 3, rowSpan: 1 },
+          { colSpan: 3, rowSpan: 1 },
+          { colSpan: 3, rowSpan: 1 },
+        ],
+      };
+    }
+
+    const columns = (count === 2 || count === 4) ? 2 : 3;
+    const rows = Math.max(1, Math.ceil(count / columns));
+    const spans = Array.from({ length: count }, () => ({ colSpan: 1, rowSpan: 1 }));
+
+    return { columns, rows, spans };
+  };
+
   const scrollToBottom = (smooth = true) => {
     messagesEndRef.current?.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto' });
   };
@@ -133,7 +195,6 @@ export function SocialFloatingButton() {
       return;
     }
 
-    // ✅ Создаём observer ОДИН РАЗ
     if (!observerRef.current) {
       observerRef.current = new IntersectionObserver(
         (entries) => {
@@ -158,7 +219,6 @@ export function SocialFloatingButton() {
       );
     }
 
-    // ✅ Добавляем ТОЛЬКО новые сообщения в observer
     const messageElements = document.querySelectorAll('.message-item');
     messageElements.forEach(el => {
       const htmlEl = el as HTMLElement;
@@ -170,7 +230,6 @@ export function SocialFloatingButton() {
     });
 
     return () => {
-      // Очищаем при размонтировании или при смене чата
       if (selectedChatRef.current !== selectedChat) {
         observerRef.current?.disconnect();
         observerRef.current = null;
@@ -222,16 +281,15 @@ export function SocialFloatingButton() {
 
       if (wsMessage.type === 'message_read' && wsMessage.chatId && wsMessage.lastReadMessageId) {
         console.log('✅ Received message_read event for chat', wsMessage.chatId, 'up to message', wsMessage.lastReadMessageId);
-        // ✅ Обновляем СВОИ отправленные сообщения (senderId === currentUser.id)
-        // потому что СОБЕСЕДНИК прочитал наши сообщения
         setChats(prev => prev.map(c => {
           if (c.chatId !== wsMessage.chatId || !c.lastMessage) return c;
           if (c.lastMessage.senderId !== currentUser.id) return c;
+          if (typeof c.lastMessage.messageId === 'string') return c;
           if (c.lastMessage.messageId > wsMessage.lastReadMessageId!) return c;
           return { ...c, lastMessage: { ...c.lastMessage, isRead: true } };
         }));
         setMessages(prev => prev.map(m =>
-          m.messageId <= wsMessage.lastReadMessageId! && m.senderId === currentUser.id
+          typeof m.messageId === 'number' && m.messageId <= wsMessage.lastReadMessageId! && m.senderId === currentUser.id
             ? { ...m, isRead: true }
             : m
         ));
@@ -270,7 +328,7 @@ export function SocialFloatingButton() {
 
       if (wsMessage.type !== 'new_message') return;
 
-      const msg = wsMessage.message!;
+      const msg = wsMessage.message! as any;
 
       logger.chat('📨', 'WebSocket message received:', wsMessage);
       console.log('📨 Received WebSocket new_message:', {
@@ -278,12 +336,12 @@ export function SocialFloatingButton() {
         messageType: msg.messageType,
         hasImagePath: !!msg.imagePath,
         hasImageUrl: !!msg.imageUrl,
+        hasImages: !!(msg.images && msg.images.length),
         imagePath: msg.imagePath,
         imageUrl: msg.imageUrl?.substring(0, 100)
       });
 
-      // 🔄 CRITICAL: Если это image с imageUrl, обновляем существующее сообщение ДО проверки processedMessageIds
-      if (msg.messageType === 'image' && msg.imageUrl && processedMessageIds.current.has(msg.messageId)) {
+      if ((msg.messageType === 'image' || msg.messageType === 'images') && msg.imageUrl && processedMessageIds.current.has(msg.messageId)) {
         console.log('🔄 Updating existing image message with imageUrl:', msg.messageId);
         
         // Обновляем в списке чатов
@@ -291,14 +349,24 @@ export function SocialFloatingButton() {
           if (c.chatId !== msg.chatId || !c.lastMessage || c.lastMessage.messageId !== msg.messageId) return c;
           return {
             ...c,
-            lastMessage: { ...c.lastMessage, imageUrl: msg.imageUrl }
+            lastMessage: { 
+              ...c.lastMessage, 
+              imageUrl: msg.imageUrl || c.lastMessage.imageUrl, 
+              images: (msg.images && msg.images.length ? msg.images : c.lastMessage.images) 
+            }
           };
         }));
         
         // Обновляем в списке сообщений
         if (currentChatId === msg.chatId) {
           setMessages(prev => prev.map(m => 
-            m.messageId === msg.messageId ? { ...m, imageUrl: msg.imageUrl } : m
+            m.messageId === msg.messageId 
+              ? { 
+                  ...m, 
+                  imageUrl: msg.imageUrl || m.imageUrl, 
+                  images: (msg.images && msg.images.length ? msg.images : m.images) 
+                } 
+              : m
           ));
         }
         
@@ -324,46 +392,51 @@ export function SocialFloatingButton() {
           lastMessage: {
             messageId: msg.messageId,
             senderId: msg.senderId,
-            content: (existingContent ?? msg.content) || '',  // ☁️ Plaintext from WebSocket
+            content: (existingContent ?? msg.content) || '',
             messageType: msg.messageType,
             imagePath: msg.imagePath,
             createdAt: msg.createdAt,
             encryptionMetadata: '',
             replyToId: msg.replyToId,
-            replyToMessage: msg.replyToMessage,  // ☁️ Include reply structure from WebSocket
+            replyToMessage: msg.replyToMessage,
             isRead: msg.isRead
           },
         };
       }));
 
-
-      // ☁️ CLOUD MODEL: Server sends plaintext 'content'
       if (currentChatId === msg.chatId) {
         setMessages((prev) => {
           // Проверяем что сообщение не дублируется, НО если это image с imageUrl - обновляем
           const existingIndex = prev.findIndex(m => m.messageId === msg.messageId);
           if (existingIndex !== -1) {
-            // Сообщение уже есть - проверяем, нужно ли обновить imageUrl
+            // Сообщение уже есть — обновляем медиаданные, если пришли реальные URL/токены
             const existing = prev[existingIndex];
-            if (msg.messageType === 'image' && msg.imageUrl && !existing.imageUrl) {
-              console.log('🔄 Updating existing message with imageUrl:', msg.messageId);
+            if (msg.messageType === 'image' || msg.messageType === 'images') {
               const updated = [...prev];
-              updated[existingIndex] = { ...existing, imageUrl: msg.imageUrl };
+              updated[existingIndex] = {
+                ...existing,
+                // предпочитаем серверные url с токеном
+                imageUrl: msg.imageUrl || existing.imageUrl,
+                imagePath: msg.imagePath || existing.imagePath,
+                images: msg.images?.length ? msg.images : existing.images,
+              } as ChatMessage;
               return updated;
             }
-            return prev; // Дубликат, ничего не делаем
+            return prev;
           }
           
-          // Если сообщение от текущего пользователя, ищем и заменяем временное
           if (msg.senderId === currentUser.id) {
-            // Use latest temp message even if WS content differs
+            // Ищем последнее локальное отправляемое сообщение (pending) текущего типа
             let tempIndex = -1;
             for (let i = prev.length - 1; i >= 0; i--) {
               const candidate = prev[i];
+              const localIdMatch =
+                candidate.localId === msg.localId ||
+                (typeof candidate.messageId === 'string' && candidate.messageId.toString().startsWith('local-'));
               if (
-                typeof candidate.messageId === 'string' &&
-                (candidate.messageId as string).startsWith('temp-') &&
-                candidate.messageType === msg.messageType
+                candidate.messageType === msg.messageType &&
+                candidate.status === 'pending' &&
+                localIdMatch
               ) {
                 tempIndex = i;
                 break;
@@ -372,24 +445,19 @@ export function SocialFloatingButton() {
             
             if (tempIndex !== -1) {
               const tempMsg = prev[tempIndex];
-              console.log('? Replacing temp message', tempMsg.messageId, 'with real', msg.messageId);
+              console.log('? Replacing local pending message', tempMsg.messageId, 'with real', msg.messageId);
               
-              // Удаляем из pending
-              setPendingMessages(p => {
-                const newSet = new Set(p);
-                if (typeof tempMsg.messageId === 'string') {
-                  newSet.delete(tempMsg.messageId);
-                }
-                return newSet;
-              });
-              
-              // Replace temp bubble with server payload but keep local plaintext when needed
               const newMessages = [...prev];
               newMessages[tempIndex] = {
                 ...tempMsg,
                 ...msg,
-                content: tempMsg.content || msg.content || '',
+                localId: tempMsg.localId ?? tempMsg.messageId,
                 messageId: msg.messageId,
+                status: msg.isRead ? 'read' : 'sent',
+                content: tempMsg.content || msg.content || '',
+                images: (msg.images && msg.images.length ? msg.images : tempMsg.images),
+                imageUrl: msg.imageUrl ?? tempMsg.imageUrl,
+                imagePath: msg.imagePath ?? tempMsg.imagePath,
                 replyToMessage: (msg.replyToMessage ?? tempMsg.replyToMessage) as ChatMessage | undefined,
               } as ChatMessage;
               
@@ -411,6 +479,7 @@ export function SocialFloatingButton() {
             messageType: msg.messageType,
             imagePath: msg.imagePath,
             imageUrl: msg.imageUrl,
+            images: msg.images,  // 🖼️ Multiple images array
             createdAt: msg.createdAt,
             isRead: msg.isRead, // ☁️ Доверяем серверу - он знает правильный статус
             replyToId: msg.replyToId,
@@ -549,7 +618,7 @@ export function SocialFloatingButton() {
   };
 
   const removeFriend = async (userId: string) => {
-    if (!confirm('РЈРґР°Р»РёС‚СЊ РёР· РґСЂСѓР·РµР№?')) return;
+    if (!confirm('Удалить из друзей?')) return;
     
     try {
       await http.post(endpoints.friendsRemove, { userId });
@@ -586,7 +655,7 @@ export function SocialFloatingButton() {
         await http.post(endpoints.chatRead, { chatId, lastReadMessageId: lastId });
         
         setMessages(prev => prev.map(m => 
-          m.messageId <= lastId && m.senderId !== user?.id
+          typeof m.messageId === 'number' && m.messageId <= lastId && m.senderId !== user?.id
             ? { ...m, isRead: true }
             : m
         ));
@@ -602,13 +671,12 @@ export function SocialFloatingButton() {
       
       const chatsWithDecrypted = await Promise.all(
         data.chats.map(async (chat) => {
-          // ☁️ CLOUD MODEL: Server already sends plaintext in 'content' field
           if (chat.lastMessage && chat.lastMessage.content) {
             return {
               ...chat,
               lastMessage: {
                 ...chat.lastMessage,
-                content: chat.lastMessage.content,  // Already plaintext from server
+                content: chat.lastMessage.content,
               },
             };
           }
@@ -626,8 +694,6 @@ export function SocialFloatingButton() {
     try {
       const { data } = await http.get<ChatMessagesResponse>(endpoints.chatMessages(chatId));
       
-      // ☁️ CLOUD MODEL: Server sends plaintext in 'content' field AND correct isRead status
-      // Просто используем данные с сервера - он знает лучше
       const messagesWithContent = data.messages;
       
       if (!append) {
@@ -659,10 +725,7 @@ export function SocialFloatingButton() {
       console.error('Failed to load messages:', err);
     }
   };
-  
-  // ☁️ CLOUD MODEL: No client-side chat key management needed
-  // Server handles all encryption/decryption, clients work with plaintext
-   
+    
   const openChatWith = async (participantId: string) => {
     try {
       const existingChat = chats.find(c => c.participantId === participantId);
@@ -686,6 +749,7 @@ export function SocialFloatingButton() {
       alert(e instanceof Error ? e.message : 'Unable to open chat');
     }
   };
+
   const sendMessageToUser = async (
     recipientId: string, 
     message: string, 
@@ -695,8 +759,7 @@ export function SocialFloatingButton() {
     imageEncryptionIv?: string,
     imageKeyVersion?: number
   ) => {
-    // Создаем временное сообщение для оптимистичного UI ДО try блока
-    const tempMessageId = `temp-${Date.now()}`;
+    const localId = `local-${Date.now()}-${Math.random().toString(16).slice(2)}`;
     const createdAt = new Date().toISOString();
     
     try {
@@ -722,18 +785,12 @@ export function SocialFloatingButton() {
       }
       
       console.log('✅ Getting chat key for chatId:', chat.chatId);
-      // ☁️ CLOUD MODEL: No client-side encryption needed
-      // const chatKey = await ensureChatKey(chat.chatId);
-      // if (!chatKey) {
-      //   alert('Ключ шифрования не получен');
-      //   return;
-      // }
-    
       console.log('✅ Sending plaintext message with protocol integrity...');
       
-      // Используем уже созданные переменные из начала функции
       const tempMessage: ChatMessage = {
-        messageId: tempMessageId as any,
+        localId,
+        messageId: localId,
+        status: 'pending',
         senderId: user?.id || '',
         content: message,
         messageType,
@@ -743,33 +800,24 @@ export function SocialFloatingButton() {
         replyToMessage: replyingTo || undefined,
       };
       
-      // Добавляем временное сообщение в UI
       setMessages(prev => [...prev, tempMessage]);
-      setPendingMessages(p => new Set(p).add(tempMessageId));
       
       // Прокручиваем к концу чата
       setTimeout(() => scrollToBottom(), 0);
-      
-      // ☁️ CLOUD MODEL: Plaintext + HMAC over TLS
-      // Build ProtocolMessage with integrity protection
-      
+       
       const msgId = Date.now();
-      const seqNo = Date.now(); // Client-side seq for REST (server validates)
+      const seqNo = Date.now();
       const timestamp = Date.now();
-      
-      // ☁️ CLOUD MODEL: Client doesn't compute HMAC (doesn't have decrypted sessionKey)
-      // Server will compute HMAC itself for audit and storage
-      
+       
       const { data } = await http.post<SendMessageResponse>(endpoints.chatSend, {
         msg_id: msgId,
         seq_no: seqNo,
         timestamp: timestamp,
         chat_id: chat!.chatId,
         content_type: messageType,
-        content: message,  // ☁️ Plaintext over TLS
-        hmac: '',  // Empty - server computes it
+        content: message,
+        hmac: '',
         reply_to_id: replyingTo?.messageId,
-        // 🔐 Добавляем метаданные изображения для типа 'image'
         image_path: imagePath,
         image_encrypted: imageEncrypted,
         image_encryption_iv: imageEncryptionIv,
@@ -778,35 +826,21 @@ export function SocialFloatingButton() {
       
       console.log('✅ Message sent, messageId:', data.messageId, 'response:', data);
 
-      // Обновляем временное сообщение, сразу подставляя реальный ID
-      setMessages(prev => {
-        const tempIndex = prev.findIndex(m => 
-          typeof m.messageId === 'string' && m.messageId === tempMessageId
-        );
-        if (tempIndex === -1) return prev;
-
-        // Если реальное сообщение уже пришло по WebSocket, убираем временное
-        if (prev.some(m => typeof m.messageId === 'number' && m.messageId === data.messageId)) {
-          return prev.filter(m => !(typeof m.messageId === 'string' && m.messageId === tempMessageId));
+      setMessages(prev => prev.map(m => {
+        if (m.localId === localId || m.messageId === localId) {
+          return {
+            ...m,
+            messageId: data.messageId,
+            status: m.isRead ? 'read' : 'sent',
+            content: m.content || message,
+            imageUrl: data.imageUrl ?? m.imageUrl,
+            imagePath: imagePath ?? m.imagePath,
+            isRead: false,
+          };
         }
-
-        const next = [...prev];
-        next[tempIndex] = {
-          ...prev[tempIndex],
-          messageId: data.messageId,
-          content: prev[tempIndex].content, // держим plaintext, не показываем base64 из WS
-          imageUrl: data.imageUrl, // 🔐 Сохраняем imageUrl с токеном из ответа
-        };
-        return next;
-      });
-
-      // Снимаем статус "отправляется"
-      setPendingMessages(p => {
-        const next = new Set(p);
-        next.delete(tempMessageId);
-        next.delete(String(data.messageId));
-        return next;
-      });
+        return m;
+      }));
+      
 
       // Обновляем превью последнего сообщения в списке чатов
       setChats(prev => prev.map(c => c.chatId === chat!.chatId ? {
@@ -825,29 +859,25 @@ export function SocialFloatingButton() {
         } as ChatMessage
       } : c));
 
-      // Сообщение будет заменено на реальное через WebSocket broadcast
-      // Временное сообщение с tempMessageId уже отображается в UI
+      // WebSocket позже может дополнить статус/прочтение тем же messageId
 
       setReplyingTo(null);
     } catch (e) {
       console.error('Failed to send message to user', e);
       
-      // Удаляем временное сообщение при ошибке (используем переменную из начала функции)
-      setMessages(prev => prev.filter(m => !(typeof m.messageId === 'string' && m.messageId === tempMessageId)));
-      setPendingMessages(p => {
-        const newSet = new Set(p);
-        newSet.delete(tempMessageId);
-        return newSet;
-      });
+      // Удаляем временное сообщение при ошибке
+      setMessages(prev => prev.filter(m => m.localId !== localId && m.messageId !== localId));
       
       alert(e instanceof Error ? e.message : 'Ошибка отправки сообщения');
     }
   };
   
   const sendChatMessage = async () => {
-    console.log('sendChatMessage called', { selectedChat, messageInput });
-    if (!messageInput.trim()) {
-      console.warn('Cannot send: empty message');
+    console.log('sendChatMessage called', { selectedChat, messageInput, attachedImagesCount: attachedImages.length });
+    
+    // Проверяем: либо текст, либо хотя бы одно изображение
+    if (!messageInput.trim() && attachedImages.length === 0) {
+      console.warn('Cannot send: empty message and no images');
       return;
     }
     
@@ -855,21 +885,263 @@ export function SocialFloatingButton() {
       await editMessage(editingMessage.messageId, messageInput.trim());
       setMessageInput('');
       setEditingMessage(null);
+      setAttachedImages([]);
     } else if (selectedChat) {
       const chat = chats.find(c => c.chatId === selectedChat);
       if (!chat) {
         console.warn('Chat not found');
         return;
       }
-      await sendMessageToUser(chat.participantId, messageInput.trim());
+      
+      // Если есть прикрепленные изображения - отправляем их
+      if (attachedImages.length > 0) {
+        await sendMessagesWithImages(chat.participantId, messageInput.trim());
+      } else {
+        // Иначе отправляем обычное текстовое сообщение
+        await sendMessageToUser(chat.participantId, messageInput.trim());
+      }
+      
       setMessageInput('');
+      setAttachedImages([]);
       // Прокручиваем к концу после отправки
       setTimeout(() => scrollToBottom(), 100);
     }
   };
 
-  const editMessage = async (messageId: number, newContent: string) => {
+  // 🖼️ Отправка сообщений с прикрепленными изображениями
+  const sendMessagesWithImages = async (recipientId: string, textContent: string) => {
+    const MAX_IMAGES = 9;
+    const imagesToSend = attachedImages.slice(0, MAX_IMAGES);
+    
+    if (imagesToSend.length === 0) return;
+    
+    // Создаём временное сообщение-сетка с индикаторами загрузки
+    const localId = `local-img-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    const tempMessage: ChatMessage = {
+      localId,
+      messageId: localId,
+      status: 'pending',
+      senderId: user?.id || '',
+      content: textContent,
+      messageType: imagesToSend.length === 1 ? 'image' : 'images',
+      imagePath: '',
+      images: imagesToSend.map((img, idx) => ({
+        imagePath: '',
+        imageUrl: img.preview // временно используем preview
+      })),
+      createdAt: new Date().toISOString(),
+    };
+    
+    // Добавляем временное сообщение в UI
+    setMessages(prev => [...prev, tempMessage]);
+    
+    // Очищаем preview
+    setAttachedImages([]);
+    setMessageInput('');
+    
+    setTimeout(() => scrollToBottom(), 0);
+    
+    try {
+      let chat = chats.find(c => c.participantId === recipientId);
+      
+      if (!chat) {
+        const { data: createData } = await http.post<{ chatId: number }>(endpoints.chatCreate, {
+          participantId: recipientId
+        });
+        
+        chat = {
+          chatId: createData.chatId,
+          participantId: recipientId,
+          lastMessage: undefined,
+          createdAt: new Date().toISOString()
+        };
+        setChats(prev => [chat!, ...prev]);
+        setSelectedChat(createData.chatId);
+      }
+      
+      // Загружаем все изображения ПАРАЛЛЕЛЬНО
+      const finalChatId = chat.chatId; // Используем финальный chatId
+      const uploadPromises = imagesToSend.map((img, idx) => {
+        return (async () => {
+          try {
+            const form = new FormData();
+            form.append('file', img.file);
+            
+            const { data } = await http.post<UploadImageResponse>(
+              `${endpoints.chatUpload}?chatId=${finalChatId}`,
+              form,
+              {
+                onUploadProgress: (e: any) => {
+                  const progress = Math.round((e.loaded / e.total) * 100);
+                  setUploadingImages(prev => {
+                    const next = new Map(prev);
+                    next.set(`${localId}-${idx}`, { file: img.file, progress });
+                    return next;
+                  });
+                }
+              }
+            );
+            
+            // Обновляем временное сообщение с загруженным изображением
+            setMessages(prev => prev.map(m => 
+              (m.localId === localId || m.messageId === localId)
+                ? {
+                    ...m,
+                    images: m.images?.map((img, i) =>
+                      i === idx
+                        ? { 
+                            imagePath: data.imagePath,
+                            imageUrl: data.imageUrl,
+                            imageKeyVersion: data.imageKeyVersion
+                          }
+                        : img
+                    ) || []
+                  }
+                : m
+            ));
+            
+            return {
+              image_path: data.imagePath,
+              image_encrypted: data.imageEncrypted,
+              image_encryption_iv: data.imageEncryptionIv,
+              image_key_version: data.imageKeyVersion
+            };
+          } catch (e) {
+            console.error(`Failed to upload image ${idx + 1}:`, e);
+            throw e;
+          }
+        })();
+      });
+      
+      // Ждём загрузки всех изображений
+      const uploadedImages = await Promise.all(uploadPromises);
+      
+      // Очищаем индикаторы загрузки только для текущего сообщения
+      setUploadingImages(prev => {
+        const next = new Map(prev);
+        Array.from(next.keys()).forEach(k => {
+          if (k === localId || k.startsWith(`${localId}-`)) next.delete(k);
+        });
+        return next;
+      });
+      
+      // Отправляем одно сообщение со всеми изображениями
+      const messageType = uploadedImages.length === 1 ? 'image' : 'images';
+      
+      const msgId = Date.now();
+      const seqNo = Date.now();
+      const timestamp = Date.now();
+      
+      const messageData: any = {
+        msg_id: msgId,
+        seq_no: seqNo,
+        timestamp: timestamp,
+        chat_id: chat!.chatId,
+        content_type: messageType,
+        content: textContent,
+        hmac: '',
+        reply_to_id: replyingTo?.messageId,
+        image_path: uploadedImages[0].image_path,
+        image_encrypted: uploadedImages[0].image_encrypted,
+        image_encryption_iv: uploadedImages[0].image_encryption_iv,
+        image_key_version: uploadedImages[0].image_key_version,
+      };
+      
+      if (uploadedImages.length > 1) {
+        messageData.images = uploadedImages;
+      }
+      
+      const { data } = await http.post<SendMessageResponse>(endpoints.chatSend, messageData);
+      
+      console.log('✅ Multi-image message sent:', data);
+      
+      // Заменяем временное сообщение на реальное, сохраняя localId
+      setMessages(prev => prev.map(m => 
+        (m.localId === localId || m.messageId === localId)
+          ? {
+              ...m,
+              messageId: data.messageId,
+              status: 'sent',
+              senderId: user?.id || '',
+              content: textContent,
+              messageType,
+              imagePath: uploadedImages[0].image_path,
+              imageUrl: data.imageUrl ?? m.imageUrl,
+              images: data.imageUrls?.map(img => ({
+                imagePath: img.imagePath,
+                imageUrl: img.imageUrl
+              })) || uploadedImages.map(img => ({
+                imagePath: img.image_path,
+                imageUrl: `/media/${img.image_path}`
+              })),
+              createdAt: new Date().toISOString(),
+              isRead: false,
+            }
+          : m
+      ));
+
+      // Обновляем lastMessage в чате
+      setChats(prev => prev.map(c => 
+        c.chatId === chat!.chatId 
+          ? { ...c, lastMessage: {
+              localId,
+              messageId: data.messageId,
+              senderId: user?.id || '',
+              content: textContent,
+              messageType,
+              imagePath: uploadedImages[0].image_path,
+              createdAt: new Date().toISOString(),
+              status: 'sent',
+            } as ChatMessage }
+          : c
+      ));
+
+      setReplyingTo(null);
+    } catch (e) {
+      console.error('Failed to send multi-image message:', e);
+      
+      // Удаляем временное сообщение при ошибке
+      setMessages(prev => prev.filter(m => m.localId !== localId && m.messageId !== localId));
+      setUploadingImages(prev => {
+        const next = new Map(prev);
+        Array.from(next.keys()).forEach(k => {
+          if (k === localId || k.startsWith(`${localId}-`)) next.delete(k);
+        });
+        return next;
+      });
+      
+      alert(e instanceof Error ? e.message : 'Ошибка отправки сообщения');
+    }
+  };
+
+  // 🖼️ Добавление изображения к отправке
+  const attachImage = async (file: File) => {
     if (!selectedChat) return;
+    
+    const id = `attached-${Date.now()}-${Math.random()}`;
+    
+    // Создаем preview
+    const preview = await new Promise<string>(resolve => {
+      const reader = new FileReader();
+      reader.onload = (e) => resolve(e.target?.result as string);
+      reader.readAsDataURL(file);
+    });
+    
+    setAttachedImages(prev => [...prev, {
+      id,
+      file,
+      preview,
+      uploading: false
+    }]);
+  };
+
+  // 🖼️ Удаление прикрепленного изображения
+  const removeAttachedImage = (id: string) => {
+    setAttachedImages(prev => prev.filter(img => img.id !== id));
+  };
+
+  const editMessage = async (messageId: number | string, newContent: string) => {
+    if (!selectedChat || typeof messageId === 'string') return; // Can't edit temporary messages
     
     try {
       const chat = chats.find(c => c.chatId === selectedChat);
@@ -891,8 +1163,8 @@ export function SocialFloatingButton() {
     }
   };
 
-  const deleteMessage = async (messageId: number) => {
-    if (!selectedChat) return;
+  const deleteMessage = async (messageId: number | string) => {
+    if (!selectedChat || typeof messageId === 'string') return; // Can't delete temporary messages
     
     if (!confirm('Удалить сообщение?')) return;
     
@@ -929,22 +1201,23 @@ export function SocialFloatingButton() {
     const chat = chats.find(c => c.chatId === selectedChat);
     if (!chat) return;
     
-    const uploadId = `upload-${Date.now()}`;
-    const tempMessageId = `temp-img-${Date.now()}`;
+    const localId = `local-upload-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    const createdAt = new Date().toISOString();
     
     try {
       // Создаем временное сообщение с индикатором загрузки
       const tempMessage: ChatMessage = {
-        messageId: tempMessageId as any,
+        localId,
+        messageId: localId,
+        status: 'pending',
         senderId: user?.id || '',
         content: '',
         messageType: 'image',
-        createdAt: new Date().toISOString(),
+        createdAt,
       };
       
       setMessages(prev => [...prev, tempMessage]);
-      setUploadingImages(prev => new Map(prev).set(tempMessageId, { progress: 0, file }));
-      setPendingMessages(p => new Set(p).add(tempMessageId));
+      setUploadingImages(prev => new Map(prev).set(localId, { progress: 0, file }));
       
       setTimeout(() => scrollToBottom(), 0);
       
@@ -959,57 +1232,83 @@ export function SocialFloatingButton() {
         url: `${endpoints.chatUpload}?chatId=${selectedChat}`
       });
       
-      // Симулируем прогресс загрузки (в идеале использовать onUploadProgress из axios)
-      const progressInterval = setInterval(() => {
-        setUploadingImages(prev => {
-          const current = prev.get(tempMessageId);
-          if (current && current.progress < 90) {
-            const next = new Map(prev);
-            next.set(tempMessageId, { ...current, progress: current.progress + 10 });
-            return next;
-          }
-          return prev;
-        });
-      }, 100);
-      
       // Не указываем Content-Type вручную - браузер автоматически установит multipart/form-data с boundary
       const { data } = await http.post<UploadImageResponse>(
         `${endpoints.chatUpload}?chatId=${selectedChat}`, 
-        form
+        form,
+        {
+          onUploadProgress: (e: any) => {
+            const progress = Math.round((e.loaded / e.total) * 100);
+            setUploadingImages(prev => {
+              const next = new Map(prev);
+              next.set(localId, { file, progress });
+              return next;
+            });
+          }
+        }
       );
       
       console.log('✅ Image uploaded successfully:', data);
-      
-      clearInterval(progressInterval);
       setUploadingImages(prev => {
         const next = new Map(prev);
-        next.set(tempMessageId, { file, progress: 100 });
+        next.set(localId, { file, progress: 100 });
         return next;
       });
       
-      // Удаляем временное сообщение
-      setMessages(prev => prev.filter(m => String(m.messageId) !== tempMessageId));
+      // Отправляем реальное сообщение с изображением, остаемся на том же объекте
+      const msgId = Date.now();
+      const seqNo = Date.now();
+      const timestamp = Date.now();
+      
+      const { data: sendRes } = await http.post<SendMessageResponse>(endpoints.chatSend, {
+        msg_id: msgId,
+        seq_no: seqNo,
+        timestamp,
+        chat_id: chat!.chatId,
+        content_type: 'image',
+        content: '',
+        hmac: '',
+        reply_to_id: replyingTo?.messageId,
+        image_path: data.imagePath,
+        image_encrypted: data.imageEncrypted,
+        image_encryption_iv: data.imageEncryptionIv,
+        image_key_version: data.imageKeyVersion,
+      });
+      
+      setMessages(prev => prev.map(m => 
+        (m.localId === localId || m.messageId === localId)
+          ? {
+              ...m,
+              messageId: sendRes.messageId,
+              status: 'sent',
+              imagePath: data.imagePath,
+              imageUrl: sendRes.imageUrl ?? data.imageUrl,
+              createdAt: new Date().toISOString(),
+              isRead: false,
+            }
+          : m
+      ));
+      
       setUploadingImages(prev => {
         const next = new Map(prev);
-        next.delete(tempMessageId);
-        return next;
-      });
-      setPendingMessages(p => {
-        const next = new Set(p);
-        next.delete(tempMessageId);
+        next.delete(localId);
         return next;
       });
       
-      // Отправляем реальное сообщение с изображением
-      await sendMessageToUser(
-        chat.participantId, 
-        '', 
-        'image', 
-        data.imagePath,
-        data.imageEncrypted,
-        data.imageEncryptionIv,
-        data.imageKeyVersion
-      );
+      setChats(prev => prev.map(c => 
+        c.chatId === chat!.chatId 
+          ? { ...c, lastMessage: {
+              localId,
+              messageId: sendRes.messageId,
+              senderId: user?.id || '',
+              content: '',
+              messageType: 'image',
+              imagePath: data.imagePath,
+              createdAt: new Date().toISOString(),
+              status: 'sent',
+            } as ChatMessage }
+          : c
+      ));
     } catch (e) {
       console.error('❌ Failed to upload image:', {
         error: e,
@@ -1019,15 +1318,10 @@ export function SocialFloatingButton() {
         file: file.name
       });
       // Удаляем временное сообщение при ошибке
-      setMessages(prev => prev.filter(m => String(m.messageId) !== tempMessageId));
+      setMessages(prev => prev.filter(m => m.localId !== localId && m.messageId !== localId));
       setUploadingImages(prev => {
         const next = new Map(prev);
-        next.delete(tempMessageId);
-        return next;
-      });
-      setPendingMessages(p => {
-        const next = new Set(p);
-        next.delete(tempMessageId);
+        next.delete(localId);
         return next;
       });
       alert('Не удалось загрузить изображение');
@@ -1099,26 +1393,29 @@ export function SocialFloatingButton() {
               </div>
             </div>
           ) : (
-            messages.map(m => (
-              <div 
-                key={m.messageId}
-                data-message-id={m.messageId}
-                data-sender-id={m.senderId}
-                className={`message-item flex ${m.senderId === user!.id ? 'justify-end' : 'justify-start'} group`}
-                onContextMenu={(e) => {
-                  e.preventDefault();
-                  setContextMenu({ x: e.clientX, y: e.clientY, message: m });
-                }}
-              >
-                <div className={`max-w-[75%] rounded-2xl text-sm whitespace-pre-wrap wrap-break-word shadow-lg relative ${
-                  m.messageType === 'image' ? 'p-0' : 'px-3 py-1.5'
+            messages.map(m => {
+              const hasCaption = Boolean(m.content && m.content.trim());
+
+              return (
+                <div 
+                  key={m.localId ?? m.messageId}
+                  data-message-id={m.messageId}
+                  data-sender-id={m.senderId}
+                  className={`message-item flex ${m.senderId === user!.id ? 'justify-end' : 'justify-start'} group`}
+                  onContextMenu={(e) => {
+                    e.preventDefault();
+                    setContextMenu({ x: e.clientX, y: e.clientY, message: m });
+                  }}
+                >
+                <div className={`max-w-[75%] rounded-2xl overflow-hidden text-sm whitespace-pre-wrap wrap-break-word shadow-lg relative ${
+                  m.messageType === 'image' || m.messageType === 'images' ? 'p-0' : 'px-2 py-1'
                 } ${
                   m.senderId === user!.id
                     ? 'bg-linear-to-br from-indigo-600 to-indigo-700 text-white shadow-indigo-500/30'
                     : 'bg-slate-800/90 text-slate-100 shadow-slate-900/50 border border-slate-700/50'
                 }`}>
                   {m.replyToMessage && (
-                    <div className={`p-2 rounded-lg border-l-2 ${m.messageType === 'image' ? 'mx-3 mt-3 mb-2' : 'mb-2'} ${
+                    <div className={`p-2 rounded-lg border-l-2 ${m.messageType === 'image' || m.messageType === 'images' ? 'mx-3 mt-3 mb-2' : 'mb-2'} ${
                       m.senderId === user!.id
                         ? 'bg-indigo-800/40 border-indigo-400'
                         : 'bg-slate-700/40 border-slate-500'
@@ -1133,65 +1430,147 @@ export function SocialFloatingButton() {
                       </div>
                     </div>
                   )}
-                  {m.messageType === 'image' && (m.imageUrl || m.imagePath) ? (
+                  {(m.messageType === 'image' || m.messageType === 'images') && (m.imageUrl || m.imagePath || m.images) ? (
                     <div className="relative">
-                      {uploadingImages.has(String(m.messageId)) ? (
-                        // Показываем индикатор загрузки
-                        <div className="rounded-2xl bg-slate-800/50 border-2 border-dashed border-slate-600 flex items-center justify-center" style={{ minHeight: '200px', minWidth: '250px' }}>
-                          <div className="flex flex-col items-center gap-3">
-                            <UploadProgress 
-                              progress={uploadingImages.get(String(m.messageId))?.progress || 0}
-                              size="lg"
-                            />
-                            <span className="text-xs text-slate-400">Загрузка изображения...</span>
-                          </div>
-                        </div>
+                      {/* Сетка изображений */}
+                      {(m.messageType === 'images' || (m.messageType === 'image' && m.images?.length)) && m.images && m.images.length > 1 ? (
+                        (() => {
+                          const gridLayout = getImageGridLayout(m.images.length);
+
+                          return (
+                            <div
+                              className={`grid gap-1 ${hasCaption ? 'p-2' : 'p-0'} w-96 max-w-full aspect-square overflow-hidden`}
+                              style={{
+                                gridTemplateColumns: `repeat(${gridLayout.columns}, minmax(0, 1fr))`,
+                                gridTemplateRows: `repeat(${gridLayout.rows}, minmax(0, 1fr))`,
+                              }}
+                            >
+                              {m.images.map((img, idx) => {
+                                const displayUrl = img.imageUrl || (img.imagePath ? `/media/${img.imagePath}` : '');
+                                const isLoading = !displayUrl;
+                                const uploadKey = `${m.messageId}-${idx}`;
+                                const progress = uploadingImages.get(uploadKey)?.progress || 0;
+                                const span = gridLayout.spans[idx] || { colSpan: 1, rowSpan: 1 };
+                                
+                                return (
+                                  <div
+                                    key={idx}
+                                    className="relative overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
+                                    style={{
+                                      gridColumn: `span ${span.colSpan} / span ${span.colSpan}`,
+                                      gridRow: `span ${span.rowSpan} / span ${span.rowSpan}`,
+                                    }}
+                                  >
+                                    {isLoading ? (
+                                      <div className="w-full h-full bg-slate-700/50 border border-slate-600 flex items-center justify-center">
+                                        <div className="flex flex-col items-center gap-2">
+                                          <div className="relative w-12 h-12">
+                                            <svg className="w-full h-full" viewBox="0 0 100 100">
+                                              <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" strokeWidth="2" className="text-slate-600" />
+                                              <circle 
+                                                cx="50" 
+                                                cy="50" 
+                                                r="45" 
+                                                fill="none" 
+                                                stroke="currentColor" 
+                                                strokeWidth="2" 
+                                                strokeDasharray={`${2.827 * progress} ${282.7}`}
+                                                className="text-blue-400 transition-all"
+                                                style={{ transform: 'rotate(-90deg)', transformOrigin: '50% 50%' }}
+                                              />
+                                            </svg>
+                                            <span className="absolute inset-0 flex items-center justify-center text-xs font-bold text-white">
+                                              {progress}%
+                                            </span>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <ImageWithLoader
+                                        src={displayUrl}
+                                        alt={`img-${idx}`}
+                                        className="w-full h-full object-cover"
+                                        placeholderClassName="w-full h-full bg-slate-700"
+                                        onClick={() => displayUrl && window.open(displayUrl, '_blank')}
+                                      />
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          );
+                        })()
                       ) : (
-                        <ImageWithLoader
-                          src={m.imageUrl || `/media/${m.imagePath}`}
-                          alt="img"
-                          className="rounded-2xl max-h-96 w-full object-cover cursor-pointer hover:opacity-95 transition-opacity"
-                          placeholderClassName="rounded-2xl min-h-[200px] min-w-[250px]"
-                          onClick={() => window.open(m.imageUrl || `/media/${m.imagePath}`, '_blank')}
-                        />
+                        /* Одно изображение */
+                        (() => {
+                          const hasTempId = typeof m.messageId === 'string' && m.messageId.startsWith('temp-img-');
+                          const displayUrl = m.imageUrl || (m.imagePath ? `/media/${m.imagePath}` : '');
+                          const isLoading = (!displayUrl && !hasTempId);
+                          const uploadKey = hasTempId ? `${m.messageId}-0` : '';
+                          const progress = uploadKey ? uploadingImages.get(uploadKey)?.progress || 0 : 0;
+                          
+                            return isLoading ? (
+                            <div className="bg-slate-800/50 border-2 border-dashed border-slate-600 flex items-center justify-center" style={{ minHeight: '200px', minWidth: '250px' }}>
+                              <div className="flex flex-col items-center gap-3">
+                                <UploadProgress 
+                                    progress={progress}
+                                    size="lg"
+                                />
+                                <span className="text-xs text-slate-400">Загрузка изображения...</span>
+                              </div>
+                            </div>
+                          ) : (
+                            <ImageWithLoader
+                              src={displayUrl}
+                              alt="img"
+                              className="max-h-96 w-full object-cover cursor-pointer hover:opacity-95 transition-opacity"
+                              placeholderClassName="min-h-[200px] min-w-[250px]"
+                              onClick={() => displayUrl && window.open(displayUrl, '_blank')}
+                            />
+                          );
+                        })()
                       )}
-                      <div className="absolute bottom-2 right-2 px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-md flex items-center gap-1.5 shadow-lg">
-                        <span className="text-[10px] text-white font-medium">
-                          {new Date(m.createdAt).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                        {m.senderId === user!.id && (
-                          <span className="text-[10px] -space-x-0.5 inline-flex">
-                            {typeof m.messageId === 'string' && pendingMessages.has(m.messageId) ? (
-                              // Иконка часов для отправляемых изображений
-                              <svg className="w-3 h-3 text-white/70 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                              </svg>
-                            ) : m.isRead ? (
-                              <>
-                                <span className="text-green-400">✓</span>
-                                <span className="text-green-400">✓</span>
-                              </>
-                            ) : (
-                              <span className="text-white/70">✓</span>
-                            )}
+                      {/* Время только на изображении если НЕТ текста */}
+                      {!hasCaption && (
+                        <div className="absolute bottom-2 right-1 px-2 py-1 rounded-full bg-black/60 backdrop-blur-md flex items-center gap-1.5 shadow-lg">
+                          <span className="text-[10px] text-white font-medium">
+                            {new Date(m.createdAt).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
                           </span>
-                        )}
-                      </div>
+                          {m.senderId === user!.id && (
+                            <span className="text-[10px] -space-x-0.5 inline-flex">
+                              {m.status === 'pending' ? (
+                                <svg className="w-3 h-3 text-white/70 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                              ) : m.isRead ? (
+                                <>
+                                  <span className="text-green-400">✓</span>
+                                  <span className="text-green-400">✓</span>
+                                </>
+                              ) : (
+                                <span className="text-white/70">✓</span>
+                              )}
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
                   ) : null}
-                  {m.content && m.content.trim() && (
-                    <div className="leading-relaxed">{m.content}</div>
+                  {hasCaption && (
+                    <div className={`leading-relaxed ${(m.messageType === 'image' || m.messageType === 'images') ? 'px-3 pt-2' : ''}`}>
+                      {m.content}
+                    </div>
                   )}
-                  {m.messageType !== 'image' && (
-                    <div className={`mt-1.5 text-[10px] text-right opacity-70 flex items-center justify-end gap-1 ${
+                  {/* Показываем время в нижней части, если есть текст */}
+                  {hasCaption ? (
+                    <div className={`pl-2 pr-1 pb-1 text-[10px] text-right opacity-70 flex items-center justify-end gap-1 ${
                       m.senderId === user!.id ? 'text-indigo-200' : 'text-slate-400'
                     }`}>
                       {m.edited && <span className="opacity-60">ред.</span>}
                       {new Date(m.createdAt).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
                       {m.senderId === user!.id && (
-                        <span className="ml-1 -space-x-0.5 inline-flex">
-                          {typeof m.messageId === 'string' && pendingMessages.has(m.messageId) ? (
-                            // Иконка часов для отправляемых сообщений
+                        <span className="ml-0.5 -space-x-0.5 inline-flex">
+                          {m.status === 'pending' ? (
                             <svg className="w-3 h-3 text-indigo-400/60 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
@@ -1206,10 +1585,34 @@ export function SocialFloatingButton() {
                         </span>
                       )}
                     </div>
-                  )}
+                  ) : (m.messageType !== 'image' && m.messageType !== 'images') ? (
+                    <div className={`mt-1 text-[10px] text-right opacity-70 flex items-center justify-end gap-1 pr-1 ${
+                      m.senderId === user!.id ? 'text-indigo-200' : 'text-slate-400'
+                    }`}>
+                      {m.edited && <span className="opacity-60">ред.</span>}
+                      {new Date(m.createdAt).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
+                      {m.senderId === user!.id && (
+                        <span className="ml-0.5 -space-x-0.5 inline-flex">
+                          {m.status === 'pending' ? (
+                            <svg className="w-3 h-3 text-indigo-400/60 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                          ) : m.isRead ? (
+                            <>
+                              <span className="text-indigo-300">✓</span>
+                              <span className="text-indigo-300">✓</span>
+                            </>
+                          ) : (
+                            <span className="text-indigo-400/60">✓</span>
+                          )}
+                        </span>
+                      )}
+                    </div>
+                  ) : null}
                 </div>
               </div>
-            ))
+            );
+            })
           )}
           <div ref={messagesEndRef} />
         </div>
@@ -1267,6 +1670,27 @@ export function SocialFloatingButton() {
               className="flex-1 bg-slate-800/80 border border-slate-700/50 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all placeholder:text-slate-500"
               placeholder="Введите сообщение..."
             />
+            <label className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-slate-800/80 border border-slate-700/50 hover:bg-slate-700/80 cursor-pointer transition-colors group">
+              <input 
+                type="file" 
+                className="hidden" 
+                accept="image/*"
+                multiple
+                onChange={e => { 
+                  const files = e.target.files;
+                  if (files) {
+                    for (let i = 0; i < files.length; i++) {
+                      attachImage(files[i]);
+                    }
+                  }
+                  // Очищаем input для возможности повторной загрузки того же файла
+                  e.target.value = '';
+                }} 
+              />
+              <svg className="w-5 h-5 text-slate-400 group-hover:text-indigo-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+            </label>
             <button
               onClick={sendChatMessage}
               className="px-5 py-2.5 rounded-xl bg-linear-to-br from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-sm font-medium transition-all shadow-lg shadow-indigo-500/30 hover:shadow-indigo-500/50"
@@ -1277,21 +1701,51 @@ export function SocialFloatingButton() {
             </button>
           </div>
 
-          <label className="inline-flex items-center gap-2 cursor-pointer group">
-            <input type="file" className="hidden" accept="image/*" onChange={e => { const f = e.target.files?.[0]; if (f) uploadImage(f); }} />
-            <span className="text-xs text-slate-400 group-hover:text-indigo-400 transition-colors flex items-center gap-1.5">
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-              Прикрепить изображение
-            </span>
-          </label>
+          {/* 🖼️ Прикрепленные изображения */}
+          {attachedImages.length > 0 && (
+            <div className="mb-3 p-3 bg-slate-800/40 border border-slate-700/30 rounded-xl">
+              <div className="text-xs text-slate-400 mb-2 font-medium">Прикрепленные изображения ({attachedImages.length}):</div>
+              <div className="flex gap-2 flex-wrap">
+                {attachedImages.map(img => (
+                  <div 
+                    key={img.id} 
+                    className="relative group"
+                  >
+                    <div className="w-20 h-20 rounded-lg overflow-hidden border border-slate-600/50 bg-slate-900/50">
+                      {img.preview ? (
+                        <img src={img.preview} alt={img.file.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <svg className="w-8 h-8 text-slate-500 animate-spin" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                        </div>
+                      )}
+                      {img.uploading && (
+                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                          <div className="text-xs text-white">Загрузка...</div>
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => removeAttachedImage(img.id)}
+                      className="absolute -top-1 -right-1 w-5 h-5 bg-red-500/80 hover:bg-red-600 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                      title="Удалить"
+                    >
+                      <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );
   };
-
-  if (!user) return null;
 
   const incomingCount = incomingRequests.length;
   const outgoingCount = outgoingRequests.length;

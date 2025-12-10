@@ -57,9 +57,6 @@ export const useSessionKeyStore = create<SessionKeyStore>((set, get) => ({
     try {
       const now = Date.now()
       
-      // 🔐 CRITICAL: Get sessionId and deviceId from authStore ONLY
-      // They are now in HttpOnly cookies on backend (secure from XSS)
-      // After page reload, they come from refresh endpoint response
       const state = authStore.getState();
       const sessionId = state.sessionId;
       const deviceId = state.deviceId;
@@ -68,7 +65,6 @@ export const useSessionKeyStore = create<SessionKeyStore>((set, get) => ({
         console.warn('[SessionStore] Missing server sessionId/deviceId, using local fallback')
       }
       
-      // Fallback: generate local IDs if server IDs not available yet
       const finalSessionId = sessionId || `sess_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
       const finalDeviceId = deviceId || (() => {
         let id = localStorage.getItem(DEVICE_STORAGE_KEY)
@@ -96,10 +92,7 @@ export const useSessionKeyStore = create<SessionKeyStore>((set, get) => ({
         expiresAt: now + SESSION_TTL_MS,
         devicePassword, // 🔐 Phase 4: Device key password (memory only)
       }
-
-      // 🔐 SECURITY FIX: DO NOT save to sessionStorage
-      // Keys remain in memory only
-
+      
       set({
         sessionData: data,
         isSessionValid: true,

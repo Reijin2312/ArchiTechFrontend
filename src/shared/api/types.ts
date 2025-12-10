@@ -79,15 +79,22 @@ export interface FriendStatusResponse {
 }
 
 export interface ChatMessage {
-  messageId: number
+  messageId: number | string  // 🔄 Can be string for temporary messages while uploading
+  localId?: string            // Stable client id to keep React keys while status changes
+  status?: 'pending' | 'sent' | 'delivered' | 'read'
   senderId: string
   content: string  // ☁️ CLOUD MODEL: Plaintext content from server
-  messageType: 'text' | 'image'
+  messageType: 'text' | 'image' | 'images'
   imagePath?: string
   imageUrl?: string
+  images?: Array<{  // 🖼️ Multiple images in one message
+    imagePath: string
+    imageUrl?: string
+    imageKeyVersion?: number
+  }>
   createdAt: string
   isRead?: boolean
-  replyToId?: number
+  replyToId?: number | string  // 🔄 Can be string for temporary messages
   replyToMessage?: ChatMessage
   edited?: boolean
   // 🔐 Key versions for tracking encrypted/decrypted state
@@ -126,6 +133,10 @@ export interface SendMessageResponse {
   success: boolean
   messageId: number
   imageUrl?: string // 🔐 URL изображения с токеном (для типа 'image')
+  imageUrls?: Array<{
+    imagePath: string
+    imageUrl: string
+  }> // 🖼️ URLs для multiple images (для типа 'images')
 }
 
 export interface CreateChatRequest {

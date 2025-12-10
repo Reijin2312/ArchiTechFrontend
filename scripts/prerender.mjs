@@ -42,12 +42,14 @@ async function writeRoute(pathname) {
   )
 
   const meta = routesMeta[pathname] || {}
+  const keywords = Array.isArray(meta.keywords) ? meta.keywords.join(', ') : meta.keywords
 
   const ogImage = (meta.og && meta.og.image) || meta.twitterImage;
 
   const head = [
     `<title>${meta.title || 'ArchiTech'}</title>`,
     meta.description ? `<meta name="description" content="${meta.description}">` : '',
+    keywords ? `<meta name="keywords" content="${keywords}">` : '',
     meta.canonical ? `<link rel="canonical" href="${meta.canonical}">` : '',
     meta.robots ? `<meta name="robots" content="${meta.robots}">` : '',
     `<meta property="og:title" content="${meta.title || 'ArchiTech'}">`,

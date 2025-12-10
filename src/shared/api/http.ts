@@ -18,13 +18,14 @@ http.interceptors.request.use((cfg) => {
   const at = state.accessToken;
   if (at) cfg.headers.Authorization = `Bearer ${at}`;
   
-  // 🔐 CRITICAL: sessionId/deviceId now in HttpOnly cookies (sent automatically)
-  // Get from authStore for X-headers (cookies handle authentication, headers for validation)
-  const sessionId = state.sessionId;
-  const deviceId = state.deviceId;
+  // CRITICAL: sessionId/deviceId now in HttpOnly cookies (sent automatically)
+  // Try memory first, then fall back to sessionStorage (after tab refresh)
+  let sessionId = state.sessionId || sessionStorage.getItem('__session_id__');
+  let deviceId = state.deviceId || sessionStorage.getItem('__server_device_id__');
   
   if (sessionId) {
     cfg.headers['X-Session-ID'] = sessionId;
+    if (!state.sessionId) authStore.getState().setSessionCredentials(sessionId, deviceId || undefined);
   }
   if (deviceId) {
     cfg.headers['X-Device-ID'] = deviceId;
