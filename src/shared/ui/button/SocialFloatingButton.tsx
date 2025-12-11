@@ -34,6 +34,7 @@ type ImageGridLayout = {
 
 export function SocialFloatingButton() {
   const user = authStore(s => s.user);
+  const userId = user?.id || '';
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>('friends');
   const [requestsSubTab, setRequestsSubTab] = useState<RequestsSubTab>('incoming');
@@ -143,7 +144,7 @@ export function SocialFloatingButton() {
   useEffect(() => {
     if (!user) return;
     
-    logger.chat('рџ”Њ', 'Connecting WebSocket for user:', user.id);
+    logger.chat('рџ”Њ', 'Connecting WebSocket for user:', userId);
     secureChatClient.connect().catch(err => console.error('Failed to connect:', err));
     
     return () => {
@@ -204,7 +205,7 @@ export function SocialFloatingButton() {
               const messageId = messageEl.dataset.messageId;
               const senderId = messageEl.dataset.senderId;
               
-              if (messageId && senderId && senderId !== user.id && selectedChatRef.current) {
+              if (messageId && senderId && senderId !== userId && selectedChatRef.current) {
                 console.log('👀 Message', messageId, 'is visible, marking as read');
                 markChatRead(selectedChatRef.current, parseInt(messageId)).catch(() => {});
               }
@@ -1455,7 +1456,7 @@ export function SocialFloatingButton() {
                   key={m.localId ?? m.messageId}
                   data-message-id={m.messageId}
                   data-sender-id={m.senderId}
-                  className={`message-item flex ${m.senderId === user!.id ? 'justify-end' : 'justify-start'} group`}
+                  className={`message-item flex ${m.senderId === userId ? 'justify-end' : 'justify-start'} group`}
                   onContextMenu={(e) => {
                     e.preventDefault();
                     setContextMenu({ x: e.clientX, y: e.clientY, message: m });
@@ -1464,20 +1465,20 @@ export function SocialFloatingButton() {
                 <div className={`max-w-[75%] rounded-2xl overflow-hidden text-sm whitespace-pre-wrap wrap-break-word shadow-lg relative ${
                   m.messageType === 'image' || m.messageType === 'images' ? 'p-0' : 'px-2 py-1'
                 } ${
-                  m.senderId === user!.id
+                  m.senderId === userId
                     ? 'bg-linear-to-br from-indigo-600 to-indigo-700 text-white shadow-indigo-500/30'
                     : 'bg-slate-800/90 text-slate-100 shadow-slate-900/50 border border-slate-700/50'
                 }`}>
                   {m.replyToMessage && (
                     <div className={`rounded-lg border-l-2 ${m.messageType === 'image' || m.messageType === 'images' ? 'px-2 py-1 mx-3 mt-3 mb-2' : 'px-2 py-1 mb-2'} ${
-                      m.senderId === user!.id
+                      m.senderId === userId
                         ? 'bg-indigo-800/40 border-indigo-400'
                         : 'bg-slate-700/40 border-slate-500'
                     }`}>
                       <div className={`text-[10px] font-medium mb-1 ${
-                        m.senderId === user!.id ? 'text-indigo-300' : 'text-slate-400'
+                        m.senderId === userId ? 'text-indigo-300' : 'text-slate-400'
                       }`}>
-                        {m.replyToMessage.senderId === user!.id ? 'Вы' : friends.find(f => f.userId === m.replyToMessage!.senderId)?.username || 'Пользователь'}
+                        {m.replyToMessage.senderId === userId ? 'Вы' : friends.find(f => f.userId === m.replyToMessage!.senderId)?.username || 'Пользователь'}
                       </div>
                       <div className={`text-xs opacity-80 ${m.replyToMessage.messageType === 'image' ? 'italic' : 'line-clamp-2'}`}>
                         {m.replyToMessage.messageType === 'image' ? '🖼️ Изображение' : m.replyToMessage.content}
@@ -1594,7 +1595,7 @@ export function SocialFloatingButton() {
                           <span className="text-[10px] text-white font-medium">
                             {new Date(m.createdAt).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
                           </span>
-                          {m.senderId === user!.id && (
+                          {m.senderId === userId && (
                             <span className="text-[10px] -space-x-0.5 inline-flex">
                               {m.status === 'pending' ? (
                                 <svg className="w-3 h-3 text-white/70 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1622,11 +1623,11 @@ export function SocialFloatingButton() {
                   {/* Показываем время в нижней части, если есть текст */}
                   {hasCaption ? (
                     <div className={`pl-2 pr-1 pb-1 text-[10px] text-right opacity-70 flex items-center justify-end gap-1 ${
-                      m.senderId === user!.id ? 'text-indigo-200' : 'text-slate-400'
+                      m.senderId === userId ? 'text-indigo-200' : 'text-slate-400'
                     }`}>
                       {m.edited && <span className="opacity-60">ред.</span>}
                       {new Date(m.createdAt).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
-                      {m.senderId === user!.id && (
+                      {m.senderId === userId && (
                         <span className="ml-0.5 -space-x-0.5 inline-flex">
                           {m.status === 'pending' ? (
                             <svg className="w-3 h-3 text-indigo-400/60 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1645,11 +1646,11 @@ export function SocialFloatingButton() {
                     </div>
                   ) : (m.messageType !== 'image' && m.messageType !== 'images') ? (
                     <div className={`mt-1 text-[10px] text-right opacity-70 flex items-center justify-end gap-1 pr-1 ${
-                      m.senderId === user!.id ? 'text-indigo-200' : 'text-slate-400'
+                      m.senderId === userId ? 'text-indigo-200' : 'text-slate-400'
                     }`}>
                       {m.edited && <span className="opacity-60">ред.</span>}
                       {new Date(m.createdAt).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
-                      {m.senderId === user!.id && (
+                      {m.senderId === userId && (
                         <span className="ml-0.5 -space-x-0.5 inline-flex">
                           {m.status === 'pending' ? (
                             <svg className="w-3 h-3 text-indigo-400/60 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1703,7 +1704,7 @@ export function SocialFloatingButton() {
             <div className="mb-2 px-3 py-2 rounded-lg bg-slate-800/60 border border-slate-700/50 flex items-start gap-2">
               <div className="flex-1 min-w-0">
                 <div className="text-xs text-indigo-400 font-medium mb-1">
-                  Ответ на сообщение {replyingTo.senderId === user!.id ? 'себе' : friends.find(f => f.userId === replyingTo.senderId)?.username || 'пользователю'}:
+                  Ответ на сообщение {replyingTo.senderId === userId ? 'себе' : friends.find(f => f.userId === replyingTo.senderId)?.username || 'пользователю'}:
                 </div>
                 <div className="text-xs text-slate-300 truncate">
                   {replyingTo.messageType === 'image' ? '🖼️ Изображение' : replyingTo.content}
@@ -1972,7 +1973,7 @@ export function SocialFloatingButton() {
                             incomingRequests={incomingRequests}
                             outgoingRequests={outgoingRequests}
                             searchResults={searchResults}
-                            currentUserId={user!.id}
+                            currentUserId={userId}
                             onSelectChat={(chatId) => { setSelectedChat(chatId); loadMessages(chatId); }}
                           />
                         </div>
