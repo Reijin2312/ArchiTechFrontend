@@ -179,15 +179,7 @@ export class CloudChatClient {
     
     // ☁️ CLOUD MODEL: Headers managed server-side via session middleware
     const state = authStore.getState()
-    const { accessToken, sessionId: storeSessionId, deviceId: storeDeviceId } = state
-    
-    // Try to get from authStore first, then from storage
-    const sessionId = storeSessionId 
-      || sessionStorage.getItem('__session_id__') 
-      || localStorage.getItem('__session_id__')
-    const deviceId = storeDeviceId 
-      || sessionStorage.getItem('__server_device_id__') 
-      || localStorage.getItem('__server_device_id__')
+    const { accessToken, sessionId, deviceId } = state
 
     if (!accessToken || !sessionId || !deviceId) {
       const missing = [];
@@ -229,15 +221,7 @@ export class CloudChatClient {
   private async getDeviceToken(): Promise<string> {
     const apiBase = (import.meta as any)?.env?.VITE_API_BASE as string || window.location.origin
     const state = authStore.getState()
-    const { accessToken, sessionId: storeSessionId, deviceId: storeDeviceId } = state
-    
-    // Try to get from authStore first, then from storage
-    const sessionId = storeSessionId 
-      || sessionStorage.getItem('__session_id__') 
-      || localStorage.getItem('__session_id__')
-    const deviceId = storeDeviceId 
-      || sessionStorage.getItem('__server_device_id__') 
-      || localStorage.getItem('__server_device_id__')
+    const { accessToken, sessionId, deviceId } = state
 
     if (!accessToken || !sessionId || !deviceId) {
       throw new Error('Missing credentials for device token. Please re-login.')

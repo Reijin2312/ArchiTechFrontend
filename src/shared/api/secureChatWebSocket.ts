@@ -125,6 +125,7 @@ class SecureChatWebSocketService {
   private deviceId: string | null = null;
   private sessionKey: string | null = null;
   private protocolValidator = new ClientProtocolValidator();
+  private cachedDeviceToken: { token: string; expiresAt: number } | null = null;
   
   constructor() {
     this.restoreSessionFromStorage();
@@ -147,7 +148,7 @@ class SecureChatWebSocketService {
    */
   connect(userId: string) {
     if (this.ws?.readyState === WebSocket.OPEN || this.isConnecting) {
-      console.log('🔒 WebSocket already connected or connecting');
+      console.log('[SecureWS] WebSocket already connected or connecting');
       return;
     }
     
@@ -169,6 +170,7 @@ class SecureChatWebSocketService {
     if (sessionId && deviceId) {
       this.sessionId = sessionId;
       this.deviceId = deviceId;
+      this.cachedDeviceToken = null;
       
       // 🔐 SECURITY: Do NOT store in localStorage/sessionStorage - XSS risk!
       // These are now in HttpOnly cookies on backend, safe from JavaScript access
@@ -183,26 +185,22 @@ class SecureChatWebSocketService {
    * Automatically fetches new token if expired or missing.
    */
   private async getDeviceToken(): Promise<{ deviceToken: string; expiresIn: number }> {
-    // Check if we have valid cached token
-    const cachedToken = sessionStorage.getItem('__device_token__');
-    const expiresAtStr = sessionStorage.getItem('__device_token_expires__');
-    
-    if (cachedToken && expiresAtStr) {
-      const expiresAt = parseInt(expiresAtStr);
-      const timeLeft = expiresAt - Date.now();
-      
-      // If token expires in more than 60 seconds, reuse it
+    const now = Date.now()
+    if (this.cachedDeviceToken) {
+      const timeLeft = this.cachedDeviceToken.expiresAt - now
       if (timeLeft > 60000) {
-        console.log(`✅ Reusing cached device token (expires in ${Math.floor(timeLeft / 1000)}s)`);
-        return { deviceToken: cachedToken, expiresIn: Math.floor(timeLeft / 1000) };
+        console.log(
+          `[SecureWS] Reusing cached device token (expires in ${Math.floor(timeLeft / 1000)}s)`
+        )
+        return {
+          deviceToken: this.cachedDeviceToken.token,
+          expiresIn: Math.floor(timeLeft / 1000)
+        }
       }
-      
-      console.log('⚠️ Device token expired or expiring soon - fetching new one');
     }
-    
-    // Fetch new token from server
-    const apiBase = (import.meta as any)?.env?.VITE_API_BASE as string || window.location.origin;
-    
+
+    const apiBase = (import.meta as any)?.env?.VITE_API_BASE as string || window.location.origin
+
     const response = await fetch(`${apiBase}/api/v1/chat/ws-ticket/device-token`, {
       method: 'GET',
       headers: { 
@@ -216,11 +214,7 @@ class SecureChatWebSocketService {
     if (!response.ok) {
       const error = `Failed to get device token: ${response.status}`;
       console.error(error);
-      
-      // Clear invalid cached token
-      sessionStorage.removeItem('__device_token__');
-      sessionStorage.removeItem('__device_token_expires__');
-      
+      this.cachedDeviceToken = null
       throw new Error(error);
     }
     
@@ -228,12 +222,11 @@ class SecureChatWebSocketService {
     if (!deviceToken) {
       throw new Error('Server did not issue device token');
     }
+
+    const fetchedAt = Date.now()
+    this.cachedDeviceToken = { token: deviceToken, expiresAt: fetchedAt + (expiresIn * 1000) };
     
-    // Cache the new token
-    sessionStorage.setItem('__device_token__', deviceToken);
-    sessionStorage.setItem('__device_token_expires__', String(Date.now() + (expiresIn * 1000)));
-    
-    console.log(`✅ Device token fetched with TTL: ${expiresIn}s`);
+    console.log(`[SecureWS] Device token fetched with TTL: ${expiresIn}s`);
     
     return { deviceToken, expiresIn };
   }
@@ -350,8 +343,7 @@ class SecureChatWebSocketService {
             console.error('🚨 Device token rejected:', event.reason);
             
             // Clear cached token to force refresh on next connect
-            sessionStorage.removeItem('__device_token__');
-            sessionStorage.removeItem('__device_token_expires__');
+            this.cachedDeviceToken = null;
             
             if (event.reason === 'rate_limited') {
               console.error('🚨 Rate limited - too many failed attempts. Wait before reconnecting.');
@@ -397,11 +389,10 @@ class SecureChatWebSocketService {
   private handleSessionKeyRotation(newKey: SessionKeyInfo) {
     console.log('🔄 Session key rotation received');
     this.sessionId = newKey.sessionId;
+    this.deviceId = newKey.deviceId;
     
-    // Store session info (but NOT the key itself in plain text)
-    // ⚠️ CRITICAL: Use __server_device_id__ consistently with restore logic
-    sessionStorage.setItem('__session_id__', newKey.sessionId);
-    sessionStorage.setItem('__server_device_id__', newKey.deviceId);
+    // Clear cached device token so next fetch is bound to the rotated session/device
+    this.cachedDeviceToken = null;
   }
   
   private emitProtocolError(code: string, message: string) {
@@ -435,6 +426,7 @@ class SecureChatWebSocketService {
     
     this.userId = null;
     this.sessionId = null;
+    this.cachedDeviceToken = null;
     this.reconnectAttempts = 0;
     this.isConnecting = false;
     this.protocolValidator.reset();

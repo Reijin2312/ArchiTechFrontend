@@ -1,7 +1,3 @@
-// stores/sessionKeyStore.ts
-// 🔐 SECURITY FIX: Device fingerprinting and session key management IN MEMORY ONLY
-// Keys are never stored in localStorage/sessionStorage to prevent XSS attacks
-
 import { create } from 'zustand'
 import CryptoJS from 'crypto-js'
 import { authStore } from '@/shared/store/auth'
@@ -16,24 +12,26 @@ interface SessionData {
   fingerprint: string
   createdAt: number
   expiresAt: number
-  // 🔐 Phase 4: Device key password (stored in memory only)
+  // Phase 4: Device key password (stored in memory only)
   devicePassword?: string
 }
 
 interface SessionKeyStore {
-  // State - IN MEMORY ONLY
   sessionData: SessionData | null
   isSessionValid: boolean
   sessionError: string | null
 
-  // Methods
-  initializeSession: (userId: string, sessionKey: string, keyVersion?: number, devicePassword?: string) => void
+  initializeSession: (
+    userId: string,
+    sessionKey: string,
+    keyVersion?: number,
+    devicePassword?: string
+  ) => void
   updateSessionKey: (newKey: string, newKeyVersion: number) => void
   extendSession: () => void
   clearSession: () => void
   revokeDevice: () => void
 
-  // Getters
   getCurrentSessionKey: () => string | null
   getDeviceId: () => string
   getSessionId: () => string
@@ -43,10 +41,8 @@ interface SessionKeyStore {
   isDeviceRevoked: () => boolean
 }
 
-const SESSION_TTL_MS = (import.meta.env.VITE_SESSION_KEY_TTL_MS as number) || 24 * 60 * 60 * 1000
-
-// 🔐 SECURITY: Device ID stored separately (not sensitive like session keys)
-const DEVICE_STORAGE_KEY = 'architech_device'
+const SESSION_TTL_MS =
+  Number(import.meta.env.VITE_SESSION_KEY_TTL_MS) || 24 * 60 * 60 * 1000
 
 export const useSessionKeyStore = create<SessionKeyStore>((set, get) => ({
   sessionData: null,
@@ -56,57 +52,46 @@ export const useSessionKeyStore = create<SessionKeyStore>((set, get) => ({
   initializeSession: (userId, sessionKey, keyVersion = 1, devicePassword) => {
     try {
       const now = Date.now()
-      
-      const state = authStore.getState();
-      const sessionId = state.sessionId;
-      const deviceId = state.deviceId;
-      
+
+      const { sessionId, deviceId } = authStore.getState()
       if (!sessionId || !deviceId) {
-        console.warn('[SessionStore] Missing server sessionId/deviceId, using local fallback')
+        const message = 'Missing server sessionId/deviceId for session initialization'
+        console.warn('[SessionStore] ' + message)
+        set({ sessionError: message, isSessionValid: false })
+        return
       }
-      
-      const finalSessionId = sessionId || `sess_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
-      const finalDeviceId = deviceId || (() => {
-        let id = localStorage.getItem(DEVICE_STORAGE_KEY)
-        if (!id) {
-          id = `device_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
-          localStorage.setItem(DEVICE_STORAGE_KEY, id)
-        }
-        return id
-      })()
 
       const userAgent = navigator.userAgent
       const fingerprint = CryptoJS.SHA256(
-        userAgent + '|' + window.innerWidth + 'x' + window.innerHeight
+        `${userAgent}|${window.innerWidth}x${window.innerHeight}`
       ).toString()
 
       const data: SessionData = {
-        deviceId: finalDeviceId,
-        sessionId: finalSessionId,
+        deviceId,
+        sessionId,
         userId,
-        sessionKey, // 🔐 DECRYPTED HMAC key - stays in memory only
+        sessionKey,
         keyVersion,
         userAgent,
         fingerprint,
         createdAt: now,
         expiresAt: now + SESSION_TTL_MS,
-        devicePassword, // 🔐 Phase 4: Device key password (memory only)
+        devicePassword
       }
-      
+
       set({
         sessionData: data,
         isSessionValid: true,
         sessionError: null
       })
 
-      console.log('[SessionStore] 🔐 Session initialized IN MEMORY:', {
+      console.log('[SessionStore] Session initialized in memory', {
         sessionId,
         deviceId,
         userId,
         expiresAt: new Date(data.expiresAt).toISOString()
       })
-      
-      // Set up automatic cleanup on timeout
+
       const timeoutMs = data.expiresAt - now
       if (timeoutMs > 0) {
         setTimeout(() => {
@@ -122,20 +107,18 @@ export const useSessionKeyStore = create<SessionKeyStore>((set, get) => ({
     }
   },
 
-  // 🔐 SECURITY FIX: Removed restoreSession - sessions are memory-only, not persisted
-
   updateSessionKey: (newKey, newKeyVersion) => {
     set((state) => {
       if (!state.sessionData) throw new Error('No active session')
 
       const updated = {
         ...state.sessionData,
-        sessionKey: newKey, // 🔐 Updated in memory only
+        sessionKey: newKey,
         keyVersion: newKeyVersion,
         expiresAt: Date.now() + SESSION_TTL_MS
       }
 
-      console.log('[SessionStore] 🔐 Session key updated in memory to version:', newKeyVersion)
+      console.log('[SessionStore] Session key updated in memory to version:', newKeyVersion)
       return { sessionData: updated }
     })
   },
@@ -168,17 +151,11 @@ export const useSessionKeyStore = create<SessionKeyStore>((set, get) => ({
 
   getDeviceId: () => {
     const state = get()
-    if (state.sessionData) return state.sessionData.deviceId
-
-    let deviceId = localStorage.getItem(DEVICE_STORAGE_KEY)
-    if (!deviceId) {
-      deviceId = `device_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
-      localStorage.setItem(DEVICE_STORAGE_KEY, deviceId)
-    }
-    return deviceId
+    const authState = authStore.getState()
+    return state.sessionData?.deviceId || authState.deviceId || ''
   },
 
-  getSessionId: () => get().sessionData?.sessionId || '',
+  getSessionId: () => get().sessionData?.sessionId || authStore.getState().sessionId || '',
   getUserId: () => get().sessionData?.userId || '',
   getKeyVersion: () => get().sessionData?.keyVersion || 1,
   getDevicePassword: () => get().sessionData?.devicePassword || null,
@@ -186,20 +163,18 @@ export const useSessionKeyStore = create<SessionKeyStore>((set, get) => ({
   isDeviceRevoked: () => false, // TODO: Check with backend
 
   clearSession: () => {
-    // 🔐 SECURITY FIX: Clear from memory only (nothing to remove from storage)
     set({
       sessionData: null,
       isSessionValid: false,
       sessionError: null
     })
-    console.log('[SessionStore] 🔐 Session cleared from memory')
+    console.log('[SessionStore] Session cleared from memory')
   },
 
   revokeDevice: () => {
     try {
-      localStorage.removeItem(DEVICE_STORAGE_KEY)
       get().clearSession()
-      console.log('[SessionStore] Device revoked')
+      console.log('[SessionStore] Device revoked (client state only)')
     } catch (e) {
       console.error('[SessionStore] Revocation failed:', e)
     }
