@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { DragDropZone } from './form/DragDropZone'
+import { DragDropZone } from '@/shared/ui/form/DragDropZone'
 import { ImageWithLoader } from '@/shared/ui/image'
 
 type ProfileBannerProps = {

@@ -12,8 +12,8 @@ export type ChatWebSocketMessage = WebSocketEvent;
 class ChatWebSocketServiceAdapter {
   private unsubscribe: (() => void) | null = null;
 
-  connect(userId: string) {
-    secureChatClient.connect(userId).catch(err => {
+  connect(_userId?: string) {
+    secureChatClient.connect().catch(err => {
       console.error('Failed to connect secure chat client:', err);
     });
   }
