@@ -374,12 +374,18 @@ export class CloudChatClient {
           chatId: parsed.chatId,
           lastReadMessageId: parsed.lastReadMessageId
         })
-      } else if (parsed.type === 'message_edited' && parsed.message) {
+      } else if (parsed.type === 'message_edited') {
+        const editedPayload: any = parsed.message || {
+          chatId: parsed.chatId,
+          messageId: parsed.messageId,
+          content: parsed.content
+        }
+
         this.notifyHandlers({
           type: 'message_edited',
-          message: { ...parsed.message, edited: true },
-          chatId: parsed.message.chatId,
-          messageId: parsed.message.messageId
+          message: editedPayload ? { ...editedPayload, edited: true } : undefined,
+          chatId: editedPayload?.chatId ?? parsed.chatId,
+          messageId: editedPayload?.messageId ?? parsed.messageId
         })
       } else if (parsed.type === 'message_deleted') {
         this.notifyHandlers({

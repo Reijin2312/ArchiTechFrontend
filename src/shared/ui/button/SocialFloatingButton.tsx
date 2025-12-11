@@ -1469,7 +1469,7 @@ export function SocialFloatingButton() {
                     : 'bg-slate-800/90 text-slate-100 shadow-slate-900/50 border border-slate-700/50'
                 }`}>
                   {m.replyToMessage && (
-                    <div className={`p-2 rounded-lg border-l-2 ${m.messageType === 'image' || m.messageType === 'images' ? 'mx-3 mt-3 mb-2' : 'mb-2'} ${
+                    <div className={`rounded-lg border-l-2 ${m.messageType === 'image' || m.messageType === 'images' ? 'px-2 py-1 mx-3 mt-3 mb-2' : 'px-2 py-1 mb-2'} ${
                       m.senderId === user!.id
                         ? 'bg-indigo-800/40 border-indigo-400'
                         : 'bg-slate-700/40 border-slate-500'
