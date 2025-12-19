@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 type TelegramWebApp = {
   ready?: () => void;
@@ -7,15 +7,44 @@ type TelegramWebApp = {
   close?: () => void;
 };
 
-function useTelegramWebApp(): TelegramWebApp | null {
-  return useMemo(() => {
-    if (typeof window === 'undefined') return null;
-    return (window as any)?.Telegram?.WebApp ?? null;
+function useTelegramWebApp(): { tg: TelegramWebApp | null; loading: boolean } {
+  const [tg, setTg] = useState<TelegramWebApp | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      setLoading(false);
+      return;
+    }
+
+    const current = (window as any)?.Telegram?.WebApp;
+    if (current) {
+      setTg(current);
+      setLoading(false);
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.src = 'https://telegram.org/js/telegram-web-app.js';
+    script.async = true;
+    script.onload = () => {
+      setTg((window as any)?.Telegram?.WebApp ?? null);
+      setLoading(false);
+    };
+    script.onerror = () => setLoading(false);
+    document.head.appendChild(script);
+
+    return () => {
+      script.onload = null;
+      script.onerror = null;
+    };
   }, []);
+
+  return { tg, loading };
 }
 
 export default function TgBotLoginWebApp() {
-  const tg = useTelegramWebApp();
+  const { tg, loading } = useTelegramWebApp();
   const [nickname, setNickname] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -48,12 +77,12 @@ export default function TgBotLoginWebApp() {
     }
   };
 
-  if (!tg) {
+  if (!loading && !tg) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white px-4">
         <div className="max-w-md w-full space-y-4 text-center">
           <h1 className="text-2xl font-semibold">Откройте из Telegram</h1>
-          <p>Эта форма работает только внутри Telegram-бота как WebApp.</p>
+          <p>Эта форма работает только внутри Telegram-бота как WebApp. Откройте кнопку снова из бота.</p>
         </div>
       </div>
     );
