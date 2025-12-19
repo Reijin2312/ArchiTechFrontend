@@ -32,6 +32,7 @@ export default function LoginPage() {
   const { search } = useLocation();
   const sp = new URLSearchParams(search);
   const [serverErr, setServerErr] = useState<string | null>(null);
+  const deviceCode = sp.get('device') || null;
 
   const rawRedirect = sp.get('redirect_uri') || sessionStorage.getItem('redirect_uri');
 
@@ -41,7 +42,7 @@ export default function LoginPage() {
   }, [search, sp]);
 
   const redirectUri = (() => {
-    if (!rawRedirect) return null;
+    if (!rawRedirect || deviceCode) return null;
     try {
       const url = new URL(rawRedirect);
       const host = url.hostname;
@@ -73,9 +74,10 @@ export default function LoginPage() {
   watch();
 
   useEffect(() => {
+    if (deviceCode) return;
     if (user && !redirectUri) navigate('/profile', { replace: true });
     setServerErr(null);
-  }, [user, navigate, redirectUri]);
+  }, [user, navigate, redirectUri, deviceCode]);
 
   useEffect(() => {
     if (!redirectUri) return;
@@ -115,7 +117,7 @@ export default function LoginPage() {
   async function onSubmit(v: Form) {
     try {
       const { data } = await http.post<LoginRes>(endpoints.login, v);
-      const me = await finalizeAuth(data.accessToken);
+      const me = deviceCode ? null : await finalizeAuth(data.accessToken);
       
       // ☁️ CLOUD MODEL: Store only session credentials for authentication
       if (data.sessionId && data.deviceId) {
@@ -130,6 +132,21 @@ export default function LoginPage() {
       
       // NOTE: WebSocket connection handled by SocialFloatingButton component
       // No need to connect here to avoid duplicate connections
+
+      if (deviceCode) {
+        await http.post(endpoints.deviceComplete, {
+          deviceCode,
+          payload: data,
+        });
+        const tg = (window as any)?.Telegram?.WebApp;
+        if (tg) {
+          setServerErr('Готово! Можно закрыть окно.');
+          try { tg.close(); } catch {}
+        } else {
+          navigate('/auth/device/done?seconds=4', { replace: true });
+        }
+        return;
+      }
 
       if (redirectUri && data.refreshToken) {
         await notifyLauncher({

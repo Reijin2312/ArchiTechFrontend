@@ -8,6 +8,9 @@ resetBegin: '/api/auth/password/reset/begin',
 resetConfirm: '/api/auth/password/reset/confirm',
 resetResend: '/api/auth/password/reset/resend',
 resetFinish: '/api/auth/password/reset/finish',
+ deviceBegin: '/api/auth/device/begin',
+ deviceComplete: '/api/auth/device/complete',
+ devicePoll: '/api/auth/device/poll',
 
 userByName: (u: string) => `/api/v1/users/by-name?username=${encodeURIComponent(u)}`,
 

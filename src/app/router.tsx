@@ -21,6 +21,7 @@ import ChangeEmailNewPage from '@/pages/settings/ChangeEmailNewPage';
 import ContactsPage from '@/pages/public/ContactsPage';
 import AboutServerPage from '@/pages/public/AboutServerPage';
 import TgBotLoginWebApp from '@/features/auth/pages/TgBotLoginWebApp';
+import DeviceLoginDonePage from '@/features/auth/pages/DeviceLoginDonePage';
 
 export const router = createBrowserRouter([
   { path: '/tg-login', element: <TgBotLoginWebApp /> },
@@ -35,6 +36,7 @@ export const router = createBrowserRouter([
       { path: '/auth/reset', element: <CodeVerifyPage mode="reset" /> },
       { path: '/auth/reset/new', element: <NewPasswordPage /> },
       { path: '/auth/reset/done', element: <ResetDonePage /> },
+      { path: '/auth/device/done', element: <DeviceLoginDonePage /> },
       { path: '/u/:username', element: <UserProfilePage /> },
       { path: '/profile', element: <RedirectToMyProfile /> },
       { path: '/rules', element: <RulesPage />},
