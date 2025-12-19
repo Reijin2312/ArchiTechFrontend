@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useWallpaper } from '@/shared/ui/wallpaper/useWallpaper'
-import { AnimatePresence, motion, useReducedMotion, type Variants, type Transition } from 'framer-motion'
+import { AnimatePresence, motion, useReducedMotion, type Variants } from 'framer-motion'
 import { Seo } from '@/shared/seo/seo'
 import { routesMeta } from '@/shared/seo/routesMeta'
 import { ResponsiveImage } from '@/shared/ui/image/ResponsiveImage'
@@ -29,21 +29,19 @@ type Season = {
 const SEASONS: Season[] = [
   {
     number: 1,
-    name: 'Истоки',
+    name: 'Мир островов',
     period: 'Май 2022 — Октябрь 2022',
     description: 'Первый сезон сервера. Время зарождения сообщества и формирования основ игрового процесса.',
-    features: [
-      'Первая сборка модов',
-      'Формирование правил',
-      'Создание базового комьюнити',
-      'Первые постройки и традиции'
-    ],
-    screenshots: ['/images/screen1.png', '/images/screen2.png'],
+    features: ['Первая сборка модов', 'Формирование правил', 'Создание базового комьюнити', 'Первые постройки и традиции'],
+    screenshots: ['/images/screen6.png', '/images/screen7.png'],
     players: [
       { username: 'Raijin', role: 'Основатель' },
       { username: 'Kelbor_Hal', role: 'Администратор' },
-      { username: 'Player1' },
-      { username: 'Player2' },
+      { username: 'kookyxa', role: 'Игрок' },
+      { username: 'kiduvl', role: 'Игрок' },
+      { username: 'Anjelka63', role: 'Игрок' },
+      { username: 'Orter', role: 'Игрок' },
+      { username: 'Vlad2509', role: 'Игрок' },
     ],
     legacy: true
   },
@@ -52,33 +50,23 @@ const SEASONS: Season[] = [
     name: 'Развитие',
     period: 'Ноябрь 2022 — Май 2023',
     description: 'Сезон активного роста и улучшения игрового опыта. Расширение модпака и функционала сервера.',
-    features: [
-      'Расширенная сборка модов',
-      'Новые механики',
-      'Рост сообщества',
-      'Масштабные постройки'
-    ],
+    features: ['Расширенная сборка модов', 'Новые механики', 'Рост сообщества', 'Масштабные постройки'],
     screenshots: ['/images/screen3.png', '/images/screen4.png'],
     players: [
       { username: 'Raijin', role: 'Основатель' },
       { username: 'Kelbor_Hal', role: 'Администратор' },
       { username: 'Wolle', role: 'Тех. Админ' },
       { username: 'Player3' },
-      { username: 'Player4' },
+      { username: 'Player4' }
     ],
     legacy: true
   },
   {
     number: 3,
-    name: 'Эволюция',
+    name: 'Промышленная революция',
     period: 'Июнь 2023 — Декабрь 2023',
     description: 'Переход на новую версию Minecraft и полное обновление модпака. Множество нововведений.',
-    features: [
-      'Обновлённая версия игры',
-      'Переработанная экономика',
-      'Новые возможности для строительства',
-      'Уникальные самописные моды'
-    ],
+    features: ['Обновлённая версия игры', 'Переработанная экономика', 'Новые возможности для строительства', 'Уникальные самописные моды'],
     screenshots: ['/images/screen5.png', '/images/screen6.png'],
     players: [
       { username: 'Raijin', role: 'Владелец' },
@@ -86,21 +74,17 @@ const SEASONS: Season[] = [
       { username: 'Wolle', role: 'Тех. Админ' },
       { username: 'Sile_Scorp', role: 'Дизайнер' },
       { username: 'Player5' },
-      { username: 'Player6' },
+      { username: 'Player6' }
     ],
     legacy: true
   },
   {
     number: 4,
-    name: 'Бесконечность',
-    period: 'Январь 2024 — Настоящее время',
-    description: 'Текущий сезон без вайпов. Мир будет существовать вечно, ваш прогресс никогда не будет потерян.',
-    features: [
-      'Отмена полных вайпов навсегда',
-      'Долгосрочные проекты',
-      'Стабильная экономика',
-      'Постоянное развитие'
-    ],
+    name: 'Инфинити',
+    period: '20 июля 2025 года — Настоящее время',
+    description:
+      'Текущий сезон без вайпов. Мир, перешедший с 3 сезона вместе с постройками, будет существовать вечно. Ваш прогресс никогда не будет потерян.',
+    features: ['Отмена полных вайпов навсегда', 'Магия сосуществует с техникой', 'Долгосрочные проекты', 'Стабильная экономика', 'Постоянное развитие'],
     screenshots: ['/images/screen7.png', '/images/screen8.png'],
     players: [
       { username: 'Raijin', role: 'Владелец & программист' },
@@ -110,11 +94,40 @@ const SEASONS: Season[] = [
       { username: 'Explyp', role: 'Python-программист' },
       { username: 'Player7' },
       { username: 'Player8' },
-      { username: 'Player9' },
+      { username: 'Player9' }
     ],
     legacy: false
   }
 ]
+
+function cx(...v: Array<string | false | undefined | null>) {
+  return v.filter(Boolean).join(' ')
+}
+
+function scrollToId(id: string, smooth: boolean) {
+  const el = document.getElementById(id)
+  if (!el) return
+  el.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto', block: 'start' })
+}
+
+function GlassCard({
+  className,
+  children
+}: {
+  className?: string
+  children: React.ReactNode
+}) {
+  return (
+    <div
+      className={cx(
+        'rounded-2xl border border-slate-800/80 bg-slate-900/35 backdrop-blur-md backdrop-saturate-150 shadow-xl shadow-slate-950/25',
+        className
+      )}
+    >
+      {children}
+    </div>
+  )
+}
 
 export default function AboutServerPage() {
   useWallpaper()
@@ -123,7 +136,7 @@ export default function AboutServerPage() {
   const reduceMotion = Boolean(prefersReducedMotion)
   const isMobile = useIsMobile()
   const disableEntranceMotion = reduceMotion || isMobile
-  const disableInteractiveMotion = reduceMotion
+  const disableInteractiveMotion = reduceMotion || isMobile
 
   const [expandedSeason, setExpandedSeason] = useState<number | null>(null)
   const [playerAvatars, setPlayerAvatars] = useState<Record<string, string>>({})
@@ -142,13 +155,17 @@ export default function AboutServerPage() {
     const allPlayers = SEASONS.flatMap((s) => s.players.map((p) => p.username))
     const uniquePlayers = Array.from(new Set(allPlayers))
 
+    const controller = new AbortController()
     let alive = true
+
     ;(async () => {
       const avatars: Record<string, string> = {}
       await Promise.all(
         uniquePlayers.map(async (username) => {
           try {
-            const r = await fetch(`/api/v1/users/by-name?username=${encodeURIComponent(username)}`)
+            const r = await fetch(`/api/v1/users/by-name?username=${encodeURIComponent(username)}`, {
+              signal: controller.signal
+            })
             if (!r.ok) return
             const data = await r.json()
             if (data.avatarUrl && alive) avatars[username] = data.avatarUrl
@@ -160,342 +177,356 @@ export default function AboutServerPage() {
 
     return () => {
       alive = false
+      controller.abort()
     }
   }, [])
 
   const containerVariants: Variants = {
     hidden: { opacity: 0 },
-    show: {
-      opacity: 1,
-      transition: { staggerChildren: 0.1, delayChildren: 0.1 }
-    }
+    show: { opacity: 1, transition: { staggerChildren: 0.09, delayChildren: 0.06 } }
   }
 
   const itemVariants: Variants = {
-    hidden: { opacity: 0, y: 20, scale: 0.98 },
-    show: {
-      opacity: 1,
-      y: 0,
-      scale: 1,
-      transition: { duration: 0.4, ease: 'easeOut' }
-    }
+    hidden: { opacity: 0, y: 18, scale: 0.99 },
+    show: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.42, ease: 'easeOut' } }
   }
 
   return (
     <>
       <Seo {...routesMeta['/about']} />
+
       <div className="min-h-dvh text-slate-100 relative overflow-x-hidden">
-        
-        {/* Hero Section */}
+        {/* Background */}
+        <div className="pointer-events-none absolute inset-0 overflow-hidden">
+          <div className="absolute -top-28 right-[-18%] h-[28rem] w-[28rem] rounded-full bg-indigo-500/14 blur-[120px]" />
+          <div className="absolute -bottom-36 left-[-20%] h-[32rem] w-[32rem] rounded-full bg-sky-500/12 blur-[140px]" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(99,102,241,0.10),_transparent_55%)]" />
+          <div className="absolute inset-0 opacity-[0.07] bg-[radial-gradient(circle,_white_1px,_transparent_1px)] [background-size:26px_26px]" />
+        </div>
+
+        {/* Hero */}
         <motion.section
-          className="mx-auto max-w-7xl px-4 pb-10 pt-10 md:pt-16"
-          initial={disableEntranceMotion ? undefined : { opacity: 0, y: 24, filter: 'blur(8px)' }}
+          className="mx-auto max-w-7xl px-4 pb-8 pt-10 md:pt-16 relative"
+          initial={disableEntranceMotion ? undefined : { opacity: 0, y: 22, filter: 'blur(8px)' }}
           animate={disableEntranceMotion ? undefined : { opacity: 1, y: 0, filter: 'blur(0px)' }}
           transition={{ duration: 0.5, ease: 'easeOut' }}
         >
-          <div className="text-center max-w-4xl mx-auto mb-12">
-            <h1 className="text-3xl md:text-4xl font-bold mb-4">
-              О сервере <span className="text-indigo-400">{SERVER_NAME}</span>
-            </h1>
-            <p className="text-lg text-slate-300">
-              Техномагический Minecraft-сервер с богатой историей, уникальными модами и дружным сообществом.
-              Мир без вайпов, где каждая постройка остаётся навсегда.
-            </p>
-          </div>
+          <GlassCard className="p-6 md:p-10">
+            <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+              <div className="inline-flex items-center gap-2 text-sm text-slate-300">
+                <span className="size-2 rounded-full bg-indigo-300/80" />
+                <span className="font-semibold tracking-wide">ArchiTech MC</span>
+              </div>
 
-          {/* Key Features */}
-          <div className="grid md:grid-cols-3 gap-6 mb-12">
+              <div className="flex flex-wrap items-center gap-4 text-sm text-slate-400">
+                <button onClick={() => scrollToId('seasons', !reduceMotion)} className="hover:text-slate-200 transition-colors">
+                  Сезоны
+                </button>
+                <button onClick={() => scrollToId('gallery', !reduceMotion)} className="hover:text-slate-200 transition-colors">
+                  Скриншоты
+                </button>
+                <button onClick={() => scrollToId('join', !reduceMotion)} className="hover:text-slate-200 transition-colors">
+                  Присоединиться
+                </button>
+              </div>
+            </div>
+
+            <div className="text-center max-w-4xl mx-auto">
+              <h1 className="text-3xl md:text-4xl font-bold mb-4">
+                О сервере <span className="text-indigo-400">{SERVER_NAME}</span>
+              </h1>
+              <p className="text-lg text-slate-300">
+                Техномагический Minecraft-сервер с богатой историей, уникальными модами и дружным сообществом.
+                Мир без вайпов, где каждая постройка остаётся навсегда.
+              </p>
+            </div>
+
+            {/* Features */}
             <motion.div
-              variants={disableEntranceMotion ? undefined : itemVariants}
+              className="grid md:grid-cols-3 gap-6 mt-8"
+              variants={disableEntranceMotion ? undefined : containerVariants}
               initial={disableEntranceMotion ? undefined : 'hidden'}
               animate={disableEntranceMotion ? undefined : 'show'}
-              className="relative rounded-2xl border border-slate-800 p-6 bg-linear-to-b from-indigo-900/20 to-slate-900/20 backdrop-blur-md backdrop-saturate-150"
             >
-              <div className="size-12 rounded-xl bg-indigo-600/20 grid place-items-center text-indigo-300 mb-4">
-                <SvgMcBlockGrass className="h-6" />
-              </div>
-              <h3 className="text-xl font-semibold mb-2">Без вайпов</h3>
-              <p className="text-slate-300 text-sm">
-                Ваши постройки и прогресс остаются навсегда. Никаких полных вайпов с 4 сезона.
-              </p>
-            </motion.div>
+              <motion.div variants={disableEntranceMotion ? undefined : itemVariants}>
+                <GlassCard className="p-6">
+                  <div className="size-12 rounded-xl bg-indigo-600/20 grid place-items-center text-indigo-300 mb-4 ring-1 ring-white/10">
+                    <SvgMcBlockGrass className="h-6" />
+                  </div>
+                  <h3 className="text-xl font-semibold mb-2">Без вайпов</h3>
+                  <p className="text-slate-300 text-sm">Ваши постройки и прогресс остаются навсегда. Никаких полных вайпов с 4 сезона.</p>
+                </GlassCard>
+              </motion.div>
 
-            <motion.div
-              variants={disableEntranceMotion ? undefined : itemVariants}
-              initial={disableEntranceMotion ? undefined : 'hidden'}
-              animate={disableEntranceMotion ? undefined : 'show'}
-              transition={{ delay: 0.1 }}
-              className="relative rounded-2xl border border-slate-800 p-6 bg-linear-to-b from-emerald-900/20 to-slate-900/20 backdrop-blur-md backdrop-saturate-150"
-            >
-              <div className="size-12 rounded-xl bg-emerald-600/20 grid place-items-center text-emerald-300 mb-4">
-                <span className="text-2xl">🔧</span>
-              </div>
-              <h3 className="text-xl font-semibold mb-2">Техномагия</h3>
-              <p className="text-slate-300 text-sm">
-                Богатый модпак с техническими и магическими модами для любого стиля игры.
-              </p>
-            </motion.div>
+              <motion.div variants={disableEntranceMotion ? undefined : itemVariants}>
+                <GlassCard className="p-6">
+                  <div className="size-12 rounded-xl bg-emerald-600/20 grid place-items-center text-emerald-300 mb-4 ring-1 ring-white/10">
+                    <span className="text-2xl" aria-hidden>
+                      🔧
+                    </span>
+                  </div>
+                  <h3 className="text-xl font-semibold mb-2">Техномагия</h3>
+                  <p className="text-slate-300 text-sm">Богатый модпак с техническими и магическими модами для любого стиля игры.</p>
+                </GlassCard>
+              </motion.div>
 
-            <motion.div
-              variants={disableEntranceMotion ? undefined : itemVariants}
-              initial={disableEntranceMotion ? undefined : 'hidden'}
-              animate={disableEntranceMotion ? undefined : 'show'}
-              transition={{ delay: 0.2 }}
-              className="relative rounded-2xl border border-slate-800 p-6 bg-linear-to-b from-sky-900/20 to-slate-900/20 backdrop-blur-md backdrop-saturate-150"
-            >
-              <div className="size-12 rounded-xl bg-sky-600/20 grid place-items-center text-sky-300 mb-4">
-                <span className="text-2xl">👥</span>
-              </div>
-              <h3 className="text-xl font-semibold mb-2">Сообщество</h3>
-              <p className="text-slate-300 text-sm">
-                Дружная атмосфера, отзывчивая администрация и активное комьюнити.
-              </p>
+              <motion.div variants={disableEntranceMotion ? undefined : itemVariants}>
+                <GlassCard className="p-6">
+                  <div className="size-12 rounded-xl bg-sky-600/20 grid place-items-center text-sky-300 mb-4 ring-1 ring-white/10">
+                    <span className="text-2xl" aria-hidden>
+                      👥
+                    </span>
+                  </div>
+                  <h3 className="text-xl font-semibold mb-2">Сообщество</h3>
+                  <p className="text-slate-300 text-sm">Дружная атмосфера, отзывчивая администрация и активное комьюнити.</p>
+                </GlassCard>
+              </motion.div>
             </motion.div>
-          </div>
+          </GlassCard>
         </motion.section>
 
-        {/* Hero Screenshot */}
+        {/* Screenshot */}
         <motion.section
-          className="mx-auto max-w-7xl px-4 py-10"
-          initial={disableEntranceMotion ? undefined : { opacity: 0, y: 24 }}
+          id="gallery"
+          className="mx-auto max-w-7xl px-4 py-10 relative"
+          initial={disableEntranceMotion ? undefined : { opacity: 0, y: 22 }}
           animate={disableEntranceMotion ? undefined : { opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, ease: 'easeOut', delay: 0.2 }}
+          transition={{ duration: 0.5, ease: 'easeOut', delay: 0.08 }}
         >
-          <div className="aspect-video w-full overflow-hidden rounded-2xl border border-slate-800 shadow-2xl">
-            <ResponsiveImage
-              name={toName(heroScreenshot) as keyof typeof IMAGES}
-              alt="Мир ArchiTech MC"
-              eager
-              width={1920}
-              height={1080}
-              sizes="(max-width: 1280px) 100vw, 1280px"
-              className="h-full w-full object-cover"
-            />
+          <div className="rounded-2xl p-[1px] bg-gradient-to-br from-indigo-500/35 via-slate-800/20 to-sky-500/25 shadow-2xl shadow-indigo-900/20">
+            <div className="aspect-video w-full overflow-hidden rounded-2xl border border-slate-800/70 bg-slate-900/30">
+              <ResponsiveImage
+                name={toName(heroScreenshot) as keyof typeof IMAGES}
+                alt="Мир ArchiTech MC"
+                eager
+                width={1920}
+                height={1080}
+                sizes="(max-width: 1280px) 100vw, 1280px"
+                className="h-full w-full object-cover"
+              />
+            </div>
           </div>
         </motion.section>
 
-        {/* Seasons Section */}
+        {/* Seasons */}
         <motion.section
-          className="mx-auto max-w-7xl px-4 py-10"
+          id="seasons"
+          className="mx-auto max-w-7xl px-4 py-10 relative"
           variants={containerVariants}
           initial={disableEntranceMotion ? undefined : 'hidden'}
           whileInView={disableEntranceMotion ? undefined : 'show'}
           viewport={{ once: true, margin: '-10% 0px' }}
         >
-          <h2 className="text-2xl md:text-3xl font-semibold mb-8 text-center">
-            История сезонов
-          </h2>
-          
+          <h2 className="text-2xl md:text-3xl font-semibold mb-8 text-center">История сезонов</h2>
+
           <div className="grid gap-4">
-            {SEASONS.map((season) => (
-              <motion.div
-                key={season.number}
-                variants={disableEntranceMotion ? undefined : itemVariants}
-                className="relative"
-              >
-                <div
-                  className={[
-                    'rounded-2xl border overflow-hidden backdrop-blur-md backdrop-saturate-150 transition-all',
-                    season.legacy
-                      ? 'border-slate-800 bg-slate-900/40'
-                      : 'border-indigo-500/50 bg-linear-to-br from-indigo-900/30 to-slate-900/30'
-                  ].join(' ')}
-                >
-                  <button
-                    onClick={() => setExpandedSeason(expandedSeason === season.number ? null : season.number)}
-                    className="w-full text-left px-5 py-4 hover:bg-slate-900/30 flex items-center justify-between transition-colors"
+            {SEASONS.map((season) => {
+              const isOpen = expandedSeason === season.number
+              const isCurrent = !season.legacy
+
+              return (
+                <motion.div key={season.number} variants={disableEntranceMotion ? undefined : itemVariants} className="relative">
+                  <div
+                    className={cx(
+                      'rounded-2xl border overflow-hidden backdrop-blur-md backdrop-saturate-150 transition-all shadow-lg shadow-slate-950/20',
+                      isCurrent
+                        ? 'border-indigo-500/45 bg-gradient-to-br from-indigo-900/28 to-slate-900/26'
+                        : 'border-slate-800 bg-slate-900/35'
+                    )}
                   >
-                    <div className="flex items-center gap-4">
-                      <div
-                        className={[
-                          'size-12 rounded-xl grid place-items-center text-xl font-bold',
-                          season.legacy
-                            ? 'bg-slate-700/30 text-slate-300'
-                            : 'bg-indigo-600/30 text-indigo-300'
-                        ].join(' ')}
-                      >
-                        {season.number}
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-3">
-                          <h3 className="text-xl font-semibold">{season.name}</h3>
-                          {!season.legacy && (
-                            <span className="text-xs px-2 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                              Текущий
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-sm text-slate-400 mt-1">{season.period}</p>
-                      </div>
-                    </div>
-                    <motion.span
-                      className="text-slate-400"
-                      animate={{ rotate: expandedSeason === season.number ? 180 : 0 }}
-                      transition={{ type: 'spring', stiffness: 400, damping: 24 }}
+                    <button
+                      onClick={() => setExpandedSeason(isOpen ? null : season.number)}
+                      className="w-full text-left px-5 py-4 hover:bg-slate-900/25 flex items-center justify-between transition-colors"
+                      aria-expanded={isOpen}
+                      aria-controls={`season-panel-${season.number}`}
                     >
-                      <SvgChevronDown className="size-5" />
-                    </motion.span>
-                  </button>
-
-                  <AnimatePresence initial={false}>
-                    {expandedSeason === season.number && (
-                      <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.3, ease: 'easeInOut' }}
-                        className="overflow-hidden border-t border-slate-800"
-                      >
-                        <div className="px-5 py-4 space-y-6">
-                          <p className="text-slate-300">{season.description}</p>
-                          
-                          <div>
-                            <h4 className="text-sm font-semibold text-slate-400 mb-2">
-                              Ключевые особенности:
-                            </h4>
-                            <ul className="space-y-2">
-                              {season.features.map((feature, idx) => (
-                                <li key={idx} className="flex items-start gap-2 text-sm text-slate-300">
-                                  <span className="text-indigo-400 mt-0.5">▸</span>
-                                  <span>{feature}</span>
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-
-                          {/* Screenshots Gallery */}
-                          {season.screenshots.length > 0 && (
-                            <div>
-                              <h4 className="text-sm font-semibold text-slate-400 mb-3">
-                                Постройки сезона:
-                              </h4>
-                              <div className="grid grid-cols-2 gap-3">
-                                {season.screenshots.map((screenshot, idx) => (
-                                  <motion.div
-                                    key={screenshot}
-                                    whileHover={{ scale: 1.03 }}
-                                    className="aspect-video rounded-lg overflow-hidden border border-slate-700/50 shadow-md"
-                                  >
-                                    <ResponsiveImage
-                                      name={toName(screenshot) as keyof typeof IMAGES}
-                                      alt={`${season.name} - скриншот ${idx + 1}`}
-                                      width={640}
-                                      height={360}
-                                      sizes="(max-width: 768px) 50vw, 320px"
-                                      className="h-full w-full object-cover"
-                                    />
-                                  </motion.div>
-                                ))}
-                              </div>
-                            </div>
+                      <div className="flex items-center gap-4 min-w-0">
+                        <div
+                          className={cx(
+                            'size-12 rounded-xl grid place-items-center text-xl font-bold ring-1 ring-white/10 shrink-0',
+                            isCurrent ? 'bg-indigo-600/25 text-indigo-200' : 'bg-slate-700/25 text-slate-300'
                           )}
+                        >
+                          {season.number}
+                        </div>
 
-                          {/* Players List */}
-                          {season.players.length > 0 && (
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-3 flex-wrap">
+                            <h3 className="text-xl font-semibold truncate">{season.name}</h3>
+                            {isCurrent && (
+                              <span className="text-xs px-2 py-1 rounded-full bg-emerald-500/15 text-emerald-200 border border-emerald-500/25">
+                                Текущий
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-sm text-slate-400 mt-1">{season.period}</p>
+                        </div>
+                      </div>
+
+                      <motion.span
+                        className="text-slate-400"
+                        animate={{ rotate: isOpen ? 180 : 0 }}
+                        transition={{ type: 'spring', stiffness: 380, damping: 26 }}
+                      >
+                        <SvgChevronDown className="size-5" />
+                      </motion.span>
+                    </button>
+
+                    <AnimatePresence initial={false}>
+                      {isOpen && (
+                        <motion.div
+                          id={`season-panel-${season.number}`}
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.28, ease: 'easeInOut' }}
+                          className="overflow-hidden border-t border-slate-800/80"
+                        >
+                          <div className="px-5 py-4 space-y-6">
+                            <p className="text-slate-300">{season.description}</p>
+
                             <div>
-                              <h4 className="text-sm font-semibold text-slate-400 mb-3">
-                                Игроки сезона ({season.players.length}):
-                              </h4>
-                              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                                {season.players.map((player) => {
-                                  const avatar = playerAvatars[player.username]
-                                  return (
-                                    <Link
-                                      key={player.username}
-                                      to={`/u/${encodeURIComponent(player.username)}`}
-                                      className="flex flex-col items-center gap-2 p-3 rounded-lg border border-slate-700/50 bg-slate-900/40 hover:bg-slate-800/60 hover:border-slate-600 transition-all group"
+                              <h4 className="text-sm font-semibold text-slate-400 mb-2">Ключевые особенности</h4>
+                              <ul className="space-y-2">
+                                {season.features.map((feature, idx) => (
+                                  <li key={idx} className="flex items-start gap-2 text-sm text-slate-300">
+                                    <span className="text-indigo-400 mt-0.5">▸</span>
+                                    <span>{feature}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+
+                            {season.screenshots.length > 0 && (
+                              <div>
+                                <h4 className="text-sm font-semibold text-slate-400 mb-3">Постройки сезона</h4>
+                                <div className="grid grid-cols-2 gap-3">
+                                  {season.screenshots.map((screenshot, idx) => (
+                                    <motion.div
+                                      key={screenshot}
+                                      whileHover={disableInteractiveMotion ? undefined : { scale: 1.03 }}
+                                      transition={{ type: 'spring', stiffness: 320, damping: 24 }}
+                                      className="aspect-video rounded-lg overflow-hidden border border-slate-700/50 shadow-md"
                                     >
-                                      {avatar ? (
-                                        <img
-                                          src={avatar}
-                                          alt={player.username}
-                                          width={48}
-                                          height={48}
-                                          className="w-12 h-12 rounded-lg object-cover border border-slate-700 group-hover:border-slate-600 transition-colors"
-                                          loading="lazy"
-                                          decoding="async"
-                                        />
-                                      ) : (
-                                        <div className="w-12 h-12 rounded-lg border border-slate-700 bg-slate-800 flex items-center justify-center text-lg text-slate-400 group-hover:border-slate-600 transition-colors">
-                                          {player.username[0]?.toUpperCase() || '?'}
-                                        </div>
-                                      )}
-                                      <div className="text-center w-full">
-                                        <div className="text-sm text-slate-200 group-hover:text-slate-100 truncate transition-colors">
-                                          {player.username}
-                                        </div>
-                                        {player.role && (
-                                          <div className="text-xs text-slate-500 truncate">
-                                            {player.role}
+                                      <ResponsiveImage
+                                        name={toName(screenshot) as keyof typeof IMAGES}
+                                        alt={`${season.name} — скриншот ${idx + 1}`}
+                                        width={640}
+                                        height={360}
+                                        sizes="(max-width: 768px) 50vw, 320px"
+                                        className="h-full w-full object-cover"
+                                      />
+                                    </motion.div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {season.players.length > 0 && (
+                              <div>
+                                <h4 className="text-sm font-semibold text-slate-400 mb-3">
+                                  Игроки сезона ({season.players.length})
+                                </h4>
+
+                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                                  {season.players.map((player) => {
+                                    const avatar = playerAvatars[player.username]
+                                    return (
+                                      <Link
+                                        key={player.username}
+                                        to={`/u/${encodeURIComponent(player.username)}`}
+                                        className="flex flex-col items-center gap-2 p-3 rounded-xl border border-slate-700/45 bg-slate-900/30 hover:bg-slate-800/45 hover:border-slate-600 transition-all group"
+                                      >
+                                        {avatar ? (
+                                          <img
+                                            src={avatar}
+                                            alt={player.username}
+                                            width={48}
+                                            height={48}
+                                            className="w-12 h-12 rounded-lg object-cover border border-slate-700 group-hover:border-slate-600 transition-colors"
+                                            loading="lazy"
+                                            decoding="async"
+                                          />
+                                        ) : (
+                                          <div className="w-12 h-12 rounded-lg border border-slate-700 bg-gradient-to-br from-slate-800 to-slate-900 flex items-center justify-center text-lg text-slate-300 group-hover:border-slate-600 transition-colors">
+                                            {player.username[0]?.toUpperCase() || '?'}
                                           </div>
                                         )}
-                                      </div>
-                                    </Link>
-                                  )
-                                })}
+
+                                        <div className="text-center w-full">
+                                          <div className="text-sm text-slate-200 group-hover:text-slate-100 truncate transition-colors">
+                                            {player.username}
+                                          </div>
+                                          {player.role && <div className="text-xs text-slate-500 truncate">{player.role}</div>}
+                                        </div>
+                                      </Link>
+                                    )
+                                  })}
+                                </div>
                               </div>
-                            </div>
-                          )}
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-              </motion.div>
-            ))}
+                            )}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                </motion.div>
+              )
+            })}
           </div>
         </motion.section>
 
-        {/* CTA Section */}
+        {/* CTA */}
         <motion.section
-          className="mx-auto max-w-7xl px-4 py-10 mb-10"
-          initial={disableEntranceMotion ? undefined : { opacity: 0, y: 24 }}
+          id="join"
+          className="mx-auto max-w-7xl px-4 py-10 mb-10 relative"
+          initial={disableEntranceMotion ? undefined : { opacity: 0, y: 22 }}
           animate={disableEntranceMotion ? undefined : { opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, ease: 'easeOut', delay: 0.4 }}
+          transition={{ duration: 0.5, ease: 'easeOut', delay: 0.12 }}
         >
-          <div className="relative rounded-3xl border border-indigo-500/50 p-8 md:p-12 bg-linear-to-br from-indigo-900/30 via-slate-900/30 to-slate-900/20 backdrop-blur-md backdrop-saturate-150 overflow-hidden text-center">
-            <div className="pointer-events-none absolute -top-32 -right-32 h-64 w-64 rounded-full bg-indigo-500/20 blur-3xl" />
-            <div className="pointer-events-none absolute -bottom-32 -left-32 h-64 w-64 rounded-full bg-sky-500/20 blur-3xl" />
-            
-            <div className="relative z-10">
-              <h2 className="text-2xl md:text-3xl font-bold mb-4">
-                Готов присоединиться?
-              </h2>
-              <p className="text-lg text-slate-300 mb-6 max-w-2xl mx-auto">
-                Скачай лаунчер, получи проходку и начни своё приключение на {SERVER_NAME}!
-              </p>
-              
-              <div className="flex flex-wrap gap-4 justify-center">
-                <a
-                  href={LAUNCHER_DOWNLOAD_URL}
-                  className="inline-flex rounded-xl px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-medium transition-colors"
-                >
-                  Скачать лаунчер
-                </a>
-                <Link
-                  to="/"
-                  className="inline-flex rounded-xl px-6 py-3 border border-slate-700 bg-slate-900/60 hover:bg-slate-800 text-white font-medium transition-colors"
-                >
-                  На главную
-                </Link>
-              </div>
+          <div className="rounded-3xl p-[1px] bg-gradient-to-br from-indigo-500/45 via-slate-800/20 to-sky-500/30 shadow-2xl shadow-indigo-900/20">
+            <div className="relative rounded-3xl border border-slate-800/70 p-8 md:p-12 bg-slate-900/35 backdrop-blur-md backdrop-saturate-150 overflow-hidden text-center">
+              <div className="pointer-events-none absolute -top-32 -right-32 h-64 w-64 rounded-full bg-indigo-500/14 blur-3xl" />
+              <div className="pointer-events-none absolute -bottom-32 -left-32 h-64 w-64 rounded-full bg-sky-500/14 blur-3xl" />
 
-              <div className="mt-6 flex flex-wrap gap-4 justify-center text-sm text-slate-400">
-                <a href={DISCORD_URL} className="hover:text-indigo-400 transition-colors">
-                  Discord
-                </a>
-                <span>•</span>
-                <a href={TELEGRAM_URL} className="hover:text-indigo-400 transition-colors">
-                  Telegram
-                </a>
-                <span>•</span>
-                <Link to="/wiki" className="hover:text-indigo-400 transition-colors">
-                  Wiki
-                </Link>
-                <span>•</span>
-                <Link to="/rules" className="hover:text-indigo-400 transition-colors">
-                  Правила
-                </Link>
+              <div className="relative z-10">
+                <h2 className="text-2xl md:text-3xl font-bold mb-4">Готов присоединиться?</h2>
+                <p className="text-lg text-slate-300 mb-6 max-w-2xl mx-auto">
+                  Скачай лаунчер, получи проходку и начни своё приключение на {SERVER_NAME}.
+                </p>
+
+                <div className="flex flex-wrap gap-4 justify-center">
+                  <a
+                    href={LAUNCHER_DOWNLOAD_URL}
+                    className="inline-flex rounded-xl px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-medium transition-colors shadow-lg shadow-indigo-900/20"
+                  >
+                    Скачать лаунчер
+                  </a>
+                  <Link
+                    to="/"
+                    className="inline-flex rounded-xl px-6 py-3 border border-slate-700 bg-slate-900/60 hover:bg-slate-800 text-white font-medium transition-colors"
+                  >
+                    На главную
+                  </Link>
+                </div>
+
+                <div className="mt-6 flex flex-wrap gap-4 justify-center text-sm text-slate-400">
+                  <a href={DISCORD_URL} className="hover:text-indigo-300 transition-colors">
+                    Discord
+                  </a>
+                  <span>•</span>
+                  <a href={TELEGRAM_URL} className="hover:text-indigo-300 transition-colors">
+                    Telegram
+                  </a>
+                  <span>•</span>
+                  <a href="/wiki" className="hover:text-indigo-300 transition-colors">
+                    Вики
+                  </a>
+                  <span>•</span>
+                  <a href="/rules" className="hover:text-indigo-300 transition-colors">
+                    Правила
+                  </a>
+                </div>
               </div>
             </div>
           </div>

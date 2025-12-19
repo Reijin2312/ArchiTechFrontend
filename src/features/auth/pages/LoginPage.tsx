@@ -44,7 +44,13 @@ export default function LoginPage() {
     if (!rawRedirect) return null;
     try {
       const url = new URL(rawRedirect);
-      if (url.protocol === 'http:' && url.hostname === 'localhost') return rawRedirect;
+      const host = url.hostname;
+      const isLoopback =
+        host === 'localhost' ||
+        host === '127.0.0.1' ||
+        host === '[::1]' ||
+        host.startsWith('127.');
+      if (url.protocol === 'http:' && isLoopback) return rawRedirect;
       return null;
     } catch {
       return null;

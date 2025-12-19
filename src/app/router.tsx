@@ -20,8 +20,10 @@ import EmailChangeStartPage from '@/pages/settings/EmailChangeStartPage';
 import ChangeEmailNewPage from '@/pages/settings/ChangeEmailNewPage';
 import ContactsPage from '@/pages/public/ContactsPage';
 import AboutServerPage from '@/pages/public/AboutServerPage';
+import TgBotLoginWebApp from '@/features/auth/pages/TgBotLoginWebApp';
 
 export const router = createBrowserRouter([
+  { path: '/tg-login', element: <TgBotLoginWebApp /> },
   {
     path: '/',
     element: <Layout />,
