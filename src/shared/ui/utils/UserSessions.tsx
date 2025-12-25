@@ -27,6 +27,8 @@ export function UserSessions({ username }: { username: string }) {
   const [data, setData] = useState<SessionsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [nowTs, setNowTs] = useState(() => Date.now());
+  const hasActiveSession = data?.sessions?.some((session) => session.isActive) ?? false;
 
   useEffect(() => {
     let mounted = true;
@@ -66,6 +68,13 @@ export function UserSessions({ username }: { username: string }) {
     };
   }, [username]);
 
+  useEffect(() => {
+    if (!hasActiveSession) return;
+    setNowTs(Date.now());
+    const id = setInterval(() => setNowTs(Date.now()), 30000);
+    return () => clearInterval(id);
+  }, [hasActiveSession]);
+
   if (loading) {
     return (
       <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-6">
@@ -102,6 +111,13 @@ export function UserSessions({ username }: { username: string }) {
       return `${hours}ч ${mins}м`;
     }
     return `${mins}м`;
+  };
+
+  const getActiveMinutes = (startedAt: string) => {
+    const started = Date.parse(startedAt);
+    if (Number.isNaN(started)) return null;
+    const minutes = Math.floor((nowTs - started) / 60000);
+    return Math.max(0, minutes);
   };
 
   const getRelativeTime = (isoString: string) => {
@@ -178,39 +194,44 @@ export function UserSessions({ username }: { username: string }) {
         ) : (
           <div className="space-y-2">
             <div className="text-xs text-slate-400 mb-3">Последние сессии</div>
-            {data.sessions.map((session) => (
-              <motion.div
-                key={session.sessionId}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="flex items-center justify-between py-3 px-4 rounded-lg border border-slate-800 bg-slate-950/40 hover:bg-slate-900/60 transition-colors"
-              >
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-slate-200 font-medium">
-                      {formatDate(session.startedAt)}
-                    </span>
-                    {session.isActive && (
-                      <span className="text-xs text-emerald-400 font-medium">
-                        • Сейчас играет
+            {data.sessions.map((session) => {
+              const activeMinutes = session.isActive ? getActiveMinutes(session.startedAt) : null;
+              const durationMinutes = session.durationMinutes ?? activeMinutes;
+
+              return (
+                <motion.div
+                  key={session.sessionId}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="flex items-center justify-between py-3 px-4 rounded-lg border border-slate-800 bg-slate-950/40 hover:bg-slate-900/60 transition-colors"
+                >
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-slate-200 font-medium">
+                        {formatDate(session.startedAt)}
                       </span>
-                    )}
+                      {session.isActive && (
+                        <span className="text-xs text-emerald-400 font-medium">
+                          Сейчас в игре
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-xs text-slate-400 mt-0.5">
+                      {session.endedAt
+                        ? `до ${formatDate(session.endedAt)}`
+                        : 'Идет до сих пор'}
+                    </div>
                   </div>
-                  <div className="text-xs text-slate-400 mt-0.5">
-                    {session.endedAt
-                      ? `до ${formatDate(session.endedAt)}`
-                      : 'В игре'}
+                  <div className="text-right">
+                    <div className="text-sm font-medium text-slate-100">
+                      {durationMinutes != null
+                        ? formatDuration(durationMinutes)
+                        : '-'}
+                    </div>
                   </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-sm font-medium text-slate-100">
-                    {session.durationMinutes
-                      ? formatDuration(session.durationMinutes)
-                      : '—'}
-                  </div>
-                </div>
-              </motion.div>
-            ))}
+                </motion.div>
+              );
+            })}
           </div>
         )}
       </div>

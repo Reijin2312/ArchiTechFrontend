@@ -295,7 +295,6 @@ export default function UserProfilePage() {
           </Card>
 
           <Card>
-            <h3 className="mb-3 text-sm font-semibold text-sky-300">Сессии</h3>
             {profileUsername ? (
               <UserSessions username={profileUsername} />
             ) : (
