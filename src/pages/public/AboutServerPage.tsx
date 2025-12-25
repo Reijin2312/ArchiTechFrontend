@@ -31,9 +31,14 @@ const SEASONS: Season[] = [
     number: 1,
     name: 'Мир островов',
     period: 'Май 2022 — Октябрь 2022',
-    description: 'Первый сезон сервера. Время зарождения сообщества и формирования основ игрового процесса.',
-    features: ['Первая сборка модов', 'Формирование правил', 'Создание базового комьюнити', 'Первые постройки и традиции'],
-    screenshots: ['/images/screen6.png', '/images/screen7.png'],
+    description: 'Первый сезон был пробной попыткой понять, насколько интересно будет играть с друзьями на локальном сервере «только для своих», который поднимался через локальную сеть. Мир сезона — «Мир островов» — жил на небольшой, разрозненной сборке модов, но уже тогда Create занял ключевое место в геймплее и стал символом технического направления сервера. Первой базой стала яма под домом в деревне на спавне, которую выкопали kiduvl и Raijin — простая стартовая точка, из которой позже выросли привычки и подходы, перекочевавшие в следующие сезоны.',
+    features: ['Постройка игроком Raijin базы и спавна, восточный стиль которых затем будет мигрировать с сезона на сезон',
+               'Мирная жизнь Kelbor_Hal на островке под названием Нострамо, который впоследствии был взорван его же руками',
+               'Основание первой и единственной промзоны Медуза-1 Vlad2509',
+               'Прокладывание титанической железной дороги, соединяющей спавн, базу игрока kookyxa и Медузу-1',
+               'Совместными силами прокладывается метро, которое так ни разу и не было запущено',
+               'Kelbor_Hal сооружает гранитную башню Энунция, скребущую небеса, которая была расстреляна из огромной пушки в знак окончания первого сезона и закрытия сервера'],
+    screenshots: ['/images/screen6.png', '/images/screen7.png', '/images/screen8.png'],
     players: [
       { username: 'Raijin', role: 'Основатель' },
       { username: 'Kelbor_Hal', role: 'Администратор' },
@@ -47,17 +52,25 @@ const SEASONS: Season[] = [
   },
   {
     number: 2,
-    name: 'Развитие',
+    name: 'Мир равнин',
     period: 'Ноябрь 2022 — Май 2023',
-    description: 'Сезон активного роста и улучшения игрового опыта. Расширение модпака и функционала сервера.',
-    features: ['Расширенная сборка модов', 'Новые механики', 'Рост сообщества', 'Масштабные постройки'],
+    description: 'Второй сезон стал воплощением желания снова собраться той же компанией и начать заново — уже с опытом и ожиданием больших проектов. Новый мир — «Мир равнин», новая сборка модов, знакомые лица. Центрами жизни сезона стали спавн и промзона «Олимпия». Спавн представлял собой горную долину с озером, где Kelbor_Hal начал строительство черного замка. Позже озеро полностью преобразилось: kiduvl засадил его «ельбезами» — гигантскими деревьями, которые стали визуальной визиткой сезона. «Олимпия» же закрепила статус сервера как технической площадки: Kelbor_Hal отвечал за архитектуру и внешний облик, а Raijin — за внутреннее наполнение, инфраструктуру и связность мира, включая железную дорогу и вокзалы на обеих станциях. Сезон завершился раньше, чем успел раскрыться: обстоятельства поставили точку, и ни один крупный проект не был доведён до полного финала.',
+    features: ['Запуск сезона в мире «Мир равнин» с обновлённой сборкой модов и возвращением старой компании',
+               'Начало строительства черного замка на озере спавна игроком Kelbor_Hal',
+               'Полное преобразование озера спавна «ельбезами» — гигантскими деревьями',
+               'Основание и развитие промзоны «Олимпия» как главного технического проекта сезона',
+               'Архитектурный дизайн цеха и территории «Олимпии» от Kelbor_Hal и техническое наполнение от Raijin',
+               'Прокладка железной дороги между спавном и «Олимпией», строительство вокзалов на каждой станции',
+               'Раннее завершение сезона, из-за чего проекты так и остались на стадии «почти получилось»'],
     screenshots: ['/images/screen3.png', '/images/screen4.png'],
     players: [
       { username: 'Raijin', role: 'Основатель' },
       { username: 'Kelbor_Hal', role: 'Администратор' },
       { username: 'Wolle', role: 'Тех. Админ' },
-      { username: 'Player3' },
-      { username: 'Player4' }
+      { username: 'kiduvl', role: 'Игрок'},
+      { username: 'Sile_Scorp', role: 'Игрок' },
+      { username: 'kookyxa', role: 'Игрок' },
+      { username: 'anton_roma', role: 'Игрок' }
     ],
     legacy: true
   },
@@ -73,8 +86,11 @@ const SEASONS: Season[] = [
       { username: 'Kelbor_Hal', role: 'Администратор' },
       { username: 'Wolle', role: 'Тех. Админ' },
       { username: 'Sile_Scorp', role: 'Дизайнер' },
-      { username: 'Player5' },
-      { username: 'Player6' }
+      { username: 'Explyp', role: 'Python-программист' },
+      { username: 'NephiliM', role: 'Игрок' },
+      { username: 'kiduvl', role: 'Игрок' },
+      { username: 'kookyxa', role: 'Игрок' },
+      { username: 'anton_roma', role: 'Игрок' }
     ],
     legacy: true
   },
@@ -92,9 +108,10 @@ const SEASONS: Season[] = [
       { username: 'Wolle', role: 'Тех. Админ' },
       { username: 'Sile_Scorp', role: 'Дизайнер' },
       { username: 'Explyp', role: 'Python-программист' },
-      { username: 'Player7' },
-      { username: 'Player8' },
-      { username: 'Player9' }
+      { username: 'NephiliM', role: 'Игрок' },
+      { username: 'kiduvl', role: 'Игрок' },
+      { username: 'kookyxa', role: 'Игрок' },
+      { username: 'anton_roma', role: 'Игрок' }
     ],
     legacy: false
   }
@@ -198,10 +215,10 @@ export default function AboutServerPage() {
       <div className="min-h-dvh text-slate-100 relative overflow-x-hidden">
         {/* Background */}
         <div className="pointer-events-none absolute inset-0 overflow-hidden">
-          <div className="absolute -top-28 right-[-18%] h-[28rem] w-[28rem] rounded-full bg-indigo-500/14 blur-[120px]" />
-          <div className="absolute -bottom-36 left-[-20%] h-[32rem] w-[32rem] rounded-full bg-sky-500/12 blur-[140px]" />
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(99,102,241,0.10),_transparent_55%)]" />
-          <div className="absolute inset-0 opacity-[0.07] bg-[radial-gradient(circle,_white_1px,_transparent_1px)] [background-size:26px_26px]" />
+          <div className="absolute -top-28 right-[-18%] h-112 w-md rounded-full bg-indigo-500/14 blur-[120px]" />
+          <div className="absolute -bottom-36 left-[-20%] h-128 w-lg rounded-full bg-sky-500/12 blur-[140px]" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(99,102,241,0.10),transparent_55%)]" />
+          <div className="absolute inset-0 opacity-[0.07] bg-[radial-gradient(circle,white_1px,transparent_1px)] bg-size-[26px_26px]" />
         </div>
 
         {/* Hero */}
@@ -293,7 +310,7 @@ export default function AboutServerPage() {
           animate={disableEntranceMotion ? undefined : { opacity: 1, y: 0 }}
           transition={{ duration: 0.5, ease: 'easeOut', delay: 0.08 }}
         >
-          <div className="rounded-2xl p-[1px] bg-gradient-to-br from-indigo-500/35 via-slate-800/20 to-sky-500/25 shadow-2xl shadow-indigo-900/20">
+          <div className="rounded-2xl p-px bg-linear-to-br from-indigo-500/35 via-slate-800/20 to-sky-500/25 shadow-2xl shadow-indigo-900/20">
             <div className="aspect-video w-full overflow-hidden rounded-2xl border border-slate-800/70 bg-slate-900/30">
               <ResponsiveImage
                 name={toName(heroScreenshot) as keyof typeof IMAGES}
@@ -330,7 +347,7 @@ export default function AboutServerPage() {
                     className={cx(
                       'rounded-2xl border overflow-hidden backdrop-blur-md backdrop-saturate-150 transition-all shadow-lg shadow-slate-950/20',
                       isCurrent
-                        ? 'border-indigo-500/45 bg-gradient-to-br from-indigo-900/28 to-slate-900/26'
+                        ? 'border-indigo-500/45 bg-linear-to-brrom-indigo-900/28 to-slate-900/26'
                         : 'border-slate-800 bg-slate-900/35'
                     )}
                   >
@@ -386,7 +403,7 @@ export default function AboutServerPage() {
                             <p className="text-slate-300">{season.description}</p>
 
                             <div>
-                              <h4 className="text-sm font-semibold text-slate-400 mb-2">Ключевые особенности</h4>
+                              <h4 className="text-sm font-semibold text-slate-400 mb-2">Ключевые события</h4>
                               <ul className="space-y-2">
                                 {season.features.map((feature, idx) => (
                                   <li key={idx} className="flex items-start gap-2 text-sm text-slate-300">
@@ -448,7 +465,7 @@ export default function AboutServerPage() {
                                             decoding="async"
                                           />
                                         ) : (
-                                          <div className="w-12 h-12 rounded-lg border border-slate-700 bg-gradient-to-br from-slate-800 to-slate-900 flex items-center justify-center text-lg text-slate-300 group-hover:border-slate-600 transition-colors">
+                                          <div className="w-12 h-12 rounded-lg border border-slate-700 bg-linear-to-br from-slate-800 to-slate-900 flex items-center justify-center text-lg text-slate-300 group-hover:border-slate-600 transition-colors">
                                             {player.username[0]?.toUpperCase() || '?'}
                                           </div>
                                         )}
@@ -484,7 +501,7 @@ export default function AboutServerPage() {
           animate={disableEntranceMotion ? undefined : { opacity: 1, y: 0 }}
           transition={{ duration: 0.5, ease: 'easeOut', delay: 0.12 }}
         >
-          <div className="rounded-3xl p-[1px] bg-gradient-to-br from-indigo-500/45 via-slate-800/20 to-sky-500/30 shadow-2xl shadow-indigo-900/20">
+          <div className="rounded-3xl p-px bg-linear-to-br from-indigo-500/45 via-slate-800/20 to-sky-500/30 shadow-2xl shadow-indigo-900/20">
             <div className="relative rounded-3xl border border-slate-800/70 p-8 md:p-12 bg-slate-900/35 backdrop-blur-md backdrop-saturate-150 overflow-hidden text-center">
               <div className="pointer-events-none absolute -top-32 -right-32 h-64 w-64 rounded-full bg-indigo-500/14 blur-3xl" />
               <div className="pointer-events-none absolute -bottom-32 -left-32 h-64 w-64 rounded-full bg-sky-500/14 blur-3xl" />

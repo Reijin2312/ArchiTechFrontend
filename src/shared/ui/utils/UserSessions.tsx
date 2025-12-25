@@ -34,7 +34,10 @@ export function UserSessions({ username }: { username: string }) {
     async function fetchSessions() {
       try {
         setLoading(true);
-        const response = await fetch(`/api/v1/users/${encodeURIComponent(username)}/sessions`);
+        const apiBase =
+          ((import.meta as any)?.env?.VITE_API_BASE as string | undefined) || window.location.origin;
+        const baseUrl = apiBase.replace(/\/$/, '');
+        const response = await fetch(`${baseUrl}/api/v1/users/${encodeURIComponent(username)}/sessions`);
         
         if (!response.ok) {
           throw new Error('Failed to fetch sessions');

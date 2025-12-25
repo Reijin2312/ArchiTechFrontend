@@ -1,0 +1,20 @@
+        percentLabel.getStyleClass().add("percent-label");
+
+        progressBar = new ProgressBar(0);
+        progressBar.setPrefWidth(Double.MAX_VALUE);
+        progressBar.getStyleClass().add("progress-bar");
+
+        progressLabel = new Label("Ожидание...");
+        progressLabel.getStyleClass().add("progress-label");
+        updateProgress("Ожидание...", 1);
+
+        StackPane barWrapper = new StackPane(progressBar);
+        barWrapper.setAlignment(Pos.CENTER);
+        barWrapper.getChildren().add(percentLabel);
+
+        BorderPane bottomLine = new BorderPane();
+        bottomLine.setLeft(progressLabel);
+        bottomLine.setRight(timerLabel);
+
+        PlayersPopup.setup(leftInfo, onlineLabelField);
+

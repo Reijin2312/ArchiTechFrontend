@@ -119,6 +119,7 @@ export default function UserProfilePage() {
     if (!iso) return null;
     try { return new Date(iso).toLocaleDateString(); } catch { return null; }
   }, [user?.registeredAt]);
+  const profileUsername = user?.username;
 
   return (
     <>
@@ -295,8 +296,11 @@ export default function UserProfilePage() {
 
           <Card>
             <h3 className="mb-3 text-sm font-semibold text-sky-300">Сессии</h3>
-            {/* Если компонент UserSessions не смог загрузиться/упал, показываем такой же по стилю блок */}
-            <Empty loading={false} text="Не удалось загрузить сессии" />
+            {profileUsername ? (
+              <UserSessions username={profileUsername} />
+            ) : (
+              <Empty loading={loading} text="Не удалось загрузить сессии" />
+            )}
           </Card>
         </div>
 
