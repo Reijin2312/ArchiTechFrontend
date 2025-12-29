@@ -13,7 +13,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import Turnstile from 'react-turnstile';
 import { useWallpaper } from '@/shared/ui/wallpaper/useWallpaper';
 import { Seo } from '@/shared/seo/seo';
-import { notifyLauncher } from '@/shared/auth/utils';
+import { notifyLauncher, requestDesktopToken } from '@/shared/auth/utils';
 import { useRedirectUri } from '@/shared/hooks/useRedirectUri';
 
 const schema = z
@@ -208,7 +208,12 @@ export default function RegisterPage() {
       if (resp.status === 200 && (resp.data as any)?.accessToken) {
         const d = resp.data as any;
 
-        await notifyLauncher(redirectUri, {accessToken: d.accessToken,refreshToken: d.refreshToken, user: d.user,});
+        if (redirectUri) {
+          const tokens = await requestDesktopToken(d.accessToken);
+          if (tokens) {
+            await notifyLauncher(redirectUri, { ...tokens, user: d.user });
+          }
+        }
       
 		    authStore.getState().setAuth(d.user, d.accessToken);  
         setServerErr(null);

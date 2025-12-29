@@ -6,9 +6,17 @@
  * Уведомление лаунчера о токенах
  * Используется в LoginPage, RegisterPage, CodeVerifyPage
  */
+import { endpoints } from '@/shared/api/endpoints'
+
 export async function notifyLauncher(
   redirectUri: string | null,
-  tokens: { accessToken: string; refreshToken: string; user: unknown }
+  tokens: {
+    accessToken: string
+    refreshToken: string
+    user: unknown
+    accessExpiresAt?: string
+    refreshExpiresAt?: string
+  }
 ): Promise<void> {
   if (!redirectUri) return;
   
@@ -26,10 +34,33 @@ export async function notifyLauncher(
   }
 }
 
-/**
- * Парсинг и валидация redirect_uri
- * Разрешены только localhost callback URL
- */
+export type DesktopTokenResponse = {
+  accessToken: string
+  refreshToken: string
+  accessExpiresAt?: string
+  refreshExpiresAt?: string
+}
+
+export async function requestDesktopToken(accessToken: string): Promise<DesktopTokenResponse | null> {
+  if (!accessToken) return null
+
+  try {
+    const r = await fetch(endpoints.desktopToken, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { Authorization: `Bearer ${accessToken}` },
+    })
+
+    if (!r.ok) return null
+    const data = await r.json()
+    if (!data?.accessToken || !data?.refreshToken) return null
+    return data
+  } catch (error) {
+    console.error('Failed to request desktop token:', error)
+    return null
+  }
+}
+
 export function parseRedirectUri(rawRedirect: string | null): string | null {
   if (!rawRedirect) return null;
   

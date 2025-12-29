@@ -13,6 +13,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import type { LoginRes } from '@/shared/api/types';
 import { finalizeAuth } from '@/shared/auth/finalizeAuth';
 import { endpoints } from '@/shared/api/endpoints';
+import { requestDesktopToken } from '@/shared/auth/utils';
 import { useWallpaper } from '@/shared/ui/wallpaper/useWallpaper';
 import { Seo } from '@/shared/seo/seo';
 import { useSessionKeyStore } from '@/stores/sessionKeyStore';
@@ -85,26 +86,16 @@ export default function LoginPage() {
     let cancelled = false;
     (async () => {
       try {
-        let me = await http.get(endpoints.profileMe, { withCredentials: true });
-        let data = await http.post(endpoints.desktopToken, null, {
-          withCredentials: true,
-          validateStatus: () => true,
-        });
+        const me = await http.get(endpoints.profileMe, { withCredentials: true });
+        const access = authStore.getState().accessToken || '';
+        const tokens = await requestDesktopToken(access);
 
-        if (data?.data?.accessToken && data?.data?.refreshToken) {
-          const { accessToken, refreshToken } = data.data;
-          await notifyLauncher({
-            accessToken,
-            refreshToken,
-            user: authStore.getState().user ?? me.data,
-          });
-          
-          if (!cancelled) {
-            const user = await finalizeAuth(accessToken).catch(() => me.data);
-            if (user?.username) {
-              navigate(`/u/${user.username}`, { replace: true });
-            }
-          }
+        if (tokens && redirectUri) {
+          await notifyLauncher({ ...tokens, user: authStore.getState().user ?? me.data });
+        }
+
+        if (!cancelled && me?.data?.username) {
+          navigate(`/u/${me.data.username}`, { replace: true });
         }
       } catch {}
     })();
@@ -133,10 +124,17 @@ export default function LoginPage() {
       // NOTE: WebSocket connection handled by SocialFloatingButton component
       // No need to connect here to avoid duplicate connections
 
+      const launcherUser = me ?? data.user;
+
       if (deviceCode) {
+        const tokens = await requestDesktopToken(data.accessToken);
+        if (!tokens) {
+          setServerErr('Failed to issue launcher tokens. Try again later.');
+          return;
+        }
         await http.post(endpoints.deviceComplete, {
           deviceCode,
-          payload: data,
+          payload: { ...tokens, user: launcherUser },
         });
         const tg = (window as any)?.Telegram?.WebApp;
         if (tg) {
@@ -148,12 +146,11 @@ export default function LoginPage() {
         return;
       }
 
-      if (redirectUri && data.refreshToken) {
-        await notifyLauncher({
-          accessToken: data.accessToken,
-          refreshToken: data.refreshToken,
-          user: me,
-        });
+      if (redirectUri) {
+        const tokens = await requestDesktopToken(data.accessToken);
+        if (tokens) {
+          await notifyLauncher({ ...tokens, user: launcherUser });
+        }
         if (me?.username) navigate(`/u/${me.username}`, { replace: true });
       } else if (me?.username) {
         navigate(`/u/${me.username}`, { replace: true });
@@ -163,7 +160,13 @@ export default function LoginPage() {
     }
   }
 
-  async function notifyLauncher(tokens: { accessToken: string; refreshToken: string; user: any }) {
+  async function notifyLauncher(tokens: {
+    accessToken: string;
+    refreshToken: string;
+    user: any;
+    accessExpiresAt?: string;
+    refreshExpiresAt?: string;
+  }) {
     if (!redirectUri) return;
     try {
       await fetch(redirectUri, {

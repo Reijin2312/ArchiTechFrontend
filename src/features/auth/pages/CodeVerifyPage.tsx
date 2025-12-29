@@ -7,7 +7,7 @@ import { Card } from '@/shared/ui/card/Card';
 import { endpoints } from '@/shared/api/endpoints';
 import type { VerifyEmailReq, VerifyEmailRes, ResetConfirmReq, ResetConfirmRes } from '@/shared/api/types';
 import { finalizeAuth } from '@/shared/auth/finalizeAuth';
-import { notifyLauncher } from '@/shared/auth/utils';
+import { notifyLauncher, requestDesktopToken } from '@/shared/auth/utils';
 import { useRedirectUri } from '@/shared/hooks/useRedirectUri';
 import { authStore } from '@/shared/store/auth';
 import { Seo } from '@/shared/seo/seo';
@@ -52,9 +52,9 @@ export default function CodeVerifyPage({ mode }:{ mode: 'email-verify'|'reset'|'
         const me = await finalizeAuth(data.accessToken);
 
         try {
-          const r = await http.post(endpoints.desktopToken, null, { withCredentials: true });
-          if (r?.data?.accessToken && r?.data?.refreshToken && redirectUri) {
-            await notifyLauncher(redirectUri, { ...r.data, user: me });
+          const tokens = await requestDesktopToken(data.accessToken);
+          if (tokens && redirectUri) {
+            await notifyLauncher(redirectUri, { ...tokens, user: me });
           }
         } catch {}
 
