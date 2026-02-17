@@ -588,7 +588,7 @@ export default function SettingsProfilePage() {
                 onError={setError}
               />
 
-              <Card className="mt-6">
+              <Card className="mt-6 relative z-40">
                 <h2 className="mb-4 text-sm font-semibold text-sky-300">Статус</h2>
                 <StatusSelect
                   value={userStatus}
@@ -605,7 +605,7 @@ export default function SettingsProfilePage() {
                 <SocialLinks links={socialLinks as never} onChange={(links) => setSocialLinks(links as never)} editable />
               </Card>
 
-              <Card className="mt-6">
+              <Card className="mt-6 relative z-40">
                 <ThemeSelector
                   value={profileTheme}
                   customColor1={customThemeColor1}

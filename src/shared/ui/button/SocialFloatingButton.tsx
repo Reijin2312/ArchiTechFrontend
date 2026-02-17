@@ -36,6 +36,7 @@ export function SocialFloatingButton() {
   const user = authStore(s => s.user);
   const userId = user?.id || '';
   const [isOpen, setIsOpen] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>('friends');
   const [requestsSubTab, setRequestsSubTab] = useState<RequestsSubTab>('incoming');
   const [friends, setFriends] = useState<Friend[]>([]);
@@ -73,6 +74,8 @@ export function SocialFloatingButton() {
   const selectedChatRef = useRef(selectedChat);
   const userRef = useRef(user);
   const isOpenRef = useRef(isOpen);
+  const friendsRef = useRef<Friend[]>([]);
+  const chatsRef = useRef<PrivateChat[]>([]);
 
   // Подбираем сетку для мультиизображений: фиксированный контейнер, предсказуемые ряды
   const getImageGridLayout = (count: number): ImageGridLayout => {
@@ -129,6 +132,81 @@ export function SocialFloatingButton() {
     messagesEndRef.current?.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto' });
   };
 
+  const closeMessenger = () => {
+    setIsOpen(false);
+    setIsFullscreen(false);
+  };
+
+  const normalizeAssetUrl = (url?: string): string | undefined => {
+    if (!url) return undefined;
+    try {
+      return new URL(url, window.location.origin).toString();
+    } catch {
+      return undefined;
+    }
+  };
+
+  const requestDesktopNotificationPermission = async () => {
+    if (!('Notification' in window)) return;
+    if (Notification.permission !== 'default') return;
+
+    try {
+      await Notification.requestPermission();
+    } catch (err) {
+      logger.warn('Failed to request Notification permission:', err);
+    }
+  };
+
+  const getNotificationBody = (msg: any): string => {
+    const text = typeof msg.content === 'string' ? msg.content.trim() : '';
+    if (text) return text;
+
+    if (msg.messageType === 'images') {
+      const count = Array.isArray(msg.images) ? msg.images.length : 0;
+      return count > 1 ? `${count} изображений` : 'Изображение';
+    }
+    if (msg.messageType === 'image') {
+      return 'Изображение';
+    }
+    return 'Новое сообщение';
+  };
+
+  const showDesktopNotification = (msg: any, currentUserId: string) => {
+    if (!('Notification' in window)) return;
+    if (Notification.permission !== 'granted') return;
+    if (msg.senderId === currentUserId) return;
+
+    const isBackgroundTab = document.visibilityState !== 'visible' || !document.hasFocus();
+    if (!isBackgroundTab) return;
+
+    const sender = friendsRef.current.find((friend) => friend.userId === msg.senderId);
+    const chat = chatsRef.current.find((item) => item.chatId === msg.chatId);
+    const title =
+      sender?.displayName ||
+      sender?.username ||
+      chat?.participantId?.slice(0, 8) ||
+      'Новое сообщение';
+    const icon =
+      normalizeAssetUrl(sender?.avatarUrl) ||
+      normalizeAssetUrl('/images/favicon-192.png');
+    const badge = normalizeAssetUrl('/images/favicon-32.png');
+
+    const notification = new Notification(title, {
+      body: getNotificationBody(msg),
+      icon,
+      badge,
+      tag: `chat-${msg.chatId}-${msg.messageId ?? Date.now()}`,
+    });
+
+    notification.onclick = () => {
+      window.focus();
+      setIsOpen(true);
+      setActiveTab('chat');
+      setSelectedChat(msg.chatId);
+      notification.close();
+    };
+  };
+
   useEffect(() => {
     selectedChatRef.current = selectedChat;
   }, [selectedChat]);
@@ -140,6 +218,37 @@ export function SocialFloatingButton() {
   useEffect(() => {
     isOpenRef.current = isOpen;
   }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const body = document.body;
+    const html = document.documentElement;
+    const prevBodyOverflow = body.style.overflow;
+    const prevBodyPaddingRight = body.style.paddingRight;
+    const prevHtmlOverflow = html.style.overflow;
+    const scrollbarWidth = window.innerWidth - html.clientWidth;
+
+    body.style.overflow = 'hidden';
+    html.style.overflow = 'hidden';
+    if (scrollbarWidth > 0) {
+      body.style.paddingRight = `${scrollbarWidth}px`;
+    }
+
+    return () => {
+      body.style.overflow = prevBodyOverflow;
+      body.style.paddingRight = prevBodyPaddingRight;
+      html.style.overflow = prevHtmlOverflow;
+    };
+  }, [isOpen]);
+
+  useEffect(() => {
+    friendsRef.current = friends;
+  }, [friends]);
+
+  useEffect(() => {
+    chatsRef.current = chats;
+  }, [chats]);
 
   useEffect(() => {
     if (!user) return;
@@ -422,6 +531,8 @@ export function SocialFloatingButton() {
       }
       processedMessageIds.current.add(msg.messageId);
 
+      showDesktopNotification(msg, currentUser.id);
+
       // Обновляем lastMessage в списке чатов локально (plaintext из WebSocket)
       setChats(prev => prev.map(c => {
         if (c.chatId !== msg.chatId) return c;
@@ -530,7 +641,12 @@ export function SocialFloatingButton() {
           } as ChatMessage];
         });
        
-        if (msg.senderId !== currentUser.id && isOpen && selectedChat === msg.chatId && document.visibilityState === 'visible') {
+        if (
+          msg.senderId !== currentUser.id &&
+          isOpenRef.current &&
+          currentChatId === msg.chatId &&
+          document.visibilityState === 'visible'
+        ) {
           markChatRead(msg.chatId, msg.messageId).catch(() => {});
         }
       }
@@ -1383,7 +1499,7 @@ export function SocialFloatingButton() {
     }
   };
 
-  const renderChatView = () => {
+  const renderChatView = ({ showBackButton = true }: { showBackButton?: boolean } = {}) => {
     if (selectedChat == null) {
       return (
         <div className="p-4 text-center text-sm text-slate-400">
@@ -1397,15 +1513,17 @@ export function SocialFloatingButton() {
     return (
       <div className="flex flex-col h-full">
         <div className="flex-none border-b border-slate-800/50 p-3 flex items-center gap-3 bg-slate-900/40">
-          <button
-            onClick={() => { setSelectedChat(null); setMessages([]); }}
-            className="p-2 hover:bg-slate-800 rounded-lg transition-colors"
-            title="Назад к списку"
-          >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-          </button>
+          {showBackButton && (
+            <button
+              onClick={() => { setSelectedChat(null); setMessages([]); }}
+              className="p-2 hover:bg-slate-800 rounded-lg transition-colors"
+              title="Назад к списку"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+          )}
           
           {friend?.avatarUrl && (
             <img src={friend.avatarUrl} alt="" className="w-10 h-10 rounded-full object-cover border-2 border-slate-700/50 shadow-lg" />
@@ -1810,6 +1928,147 @@ export function SocialFloatingButton() {
   const outgoingCount = outgoingRequests.length;
   const hasNotifications = incomingCount > 0;
 
+  const renderSidebarTabs = () => (
+    <div className="flex gap-1 px-2 py-2 border-b border-slate-800 bg-slate-900/40">
+      <TabButton
+        active={activeTab === 'chat'}
+        onClick={() => setActiveTab('chat')}
+        label="Чат"
+        count={chats.length}
+      />
+      <TabButton
+        active={activeTab === 'friends'}
+        onClick={() => setActiveTab('friends')}
+        label="Друзья"
+        count={friends.length}
+      />
+      <TabButton
+        active={activeTab === 'requests'}
+        onClick={() => setActiveTab('requests')}
+        label="Заявки"
+        count={incomingCount + outgoingCount}
+        badge={hasNotifications}
+      />
+      <TabButton
+        active={activeTab === 'search'}
+        onClick={() => setActiveTab('search')}
+        label="Поиск"
+      />
+    </div>
+  );
+
+  const renderSidebarContent = (forceChatList = false) => (
+    <AnimatePresence mode="wait">
+      {activeTab === 'friends' && (
+        <motion.div
+          key="friends"
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: 20 }}
+          transition={{ duration: 0.15 }}
+          className="h-full overflow-y-auto p-3"
+        >
+          <FriendsList friends={friends} onRemove={removeFriend} onOpenChat={openChatWith} />
+        </motion.div>
+      )}
+
+      {activeTab === 'search' && (
+        <motion.div
+          key="search"
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: 20 }}
+          transition={{ duration: 0.15 }}
+          className="h-full overflow-y-auto p-3"
+        >
+          <SearchUsers
+            query={searchQuery}
+            onQueryChange={setSearchQuery}
+            results={searchResults}
+            loading={loading}
+            onSendRequest={sendFriendRequest}
+            onCancelRequest={cancelRequest}
+          />
+        </motion.div>
+      )}
+
+      {activeTab === 'requests' && (
+        <motion.div
+          key="requests"
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: 20 }}
+          transition={{ duration: 0.15 }}
+          className="h-full overflow-y-auto p-3"
+        >
+          <div className="flex gap-2 mb-3">
+            <button
+              onClick={() => setRequestsSubTab('incoming')}
+              className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                requestsSubTab === 'incoming'
+                  ? 'bg-linear-to-br from-indigo-600 to-indigo-700 text-white shadow-lg shadow-indigo-500/30'
+                  : 'bg-slate-800/60 text-slate-300 hover:bg-slate-800 border border-slate-700/50'
+              }`}
+            >
+              Входящие {incomingCount > 0 && `(${incomingCount})`}
+            </button>
+            <button
+              onClick={() => setRequestsSubTab('outgoing')}
+              className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                requestsSubTab === 'outgoing'
+                  ? 'bg-linear-to-br from-indigo-600 to-indigo-700 text-white shadow-lg shadow-indigo-500/30'
+                  : 'bg-slate-800/60 text-slate-300 hover:bg-slate-800 border border-slate-700/50'
+              }`}
+            >
+              Исходящие {outgoingCount > 0 && `(${outgoingCount})`}
+            </button>
+          </div>
+          
+          {requestsSubTab === 'incoming' ? (
+            <IncomingRequests
+              requests={incomingRequests}
+              onAccept={acceptRequest}
+              onReject={rejectRequest}
+            />
+          ) : (
+            <OutgoingRequests
+              requests={outgoingRequests}
+              onCancel={cancelRequest}
+            />
+          )}
+        </motion.div>
+      )}
+      {activeTab === 'chat' && (
+        <motion.div
+          key="chat"
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: 20 }}
+          transition={{ duration: 0.15 }}
+          className="h-full flex flex-col overflow-hidden"
+        >
+          {!selectedChat || forceChatList ? (
+            <div className="h-full overflow-y-auto p-3 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
+              <ChatsList
+                chats={chats}
+                friends={friends}
+                incomingRequests={incomingRequests}
+                outgoingRequests={outgoingRequests}
+                searchResults={searchResults}
+                currentUserId={userId}
+                onSelectChat={(chatId) => { setSelectedChat(chatId); loadMessages(chatId); }}
+              />
+            </div>
+          ) : (
+            <div className="h-full flex flex-col overflow-hidden">
+              {renderChatView()}
+            </div>
+          )}
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+
   return (
     <>
       <AnimatePresence>
@@ -1820,7 +2079,7 @@ export function SocialFloatingButton() {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
             className="fixed inset-0 bg-black/30 z-40 backdrop-blur-sm"
-            onClick={() => setIsOpen(false)}
+            onClick={closeMessenger}
           />
         )}
       </AnimatePresence>
@@ -1828,185 +2087,110 @@ export function SocialFloatingButton() {
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            initial={{ opacity: 0, x: 400, y: 50 }}
-            animate={{ opacity: 1, x: 0, y: 0 }}
-            exit={{ opacity: 0, x: 400, y: 50 }}
+            initial={isFullscreen ? { opacity: 0, scale: 0.98 } : { opacity: 0, x: 400, y: 50 }}
+            animate={isFullscreen ? { opacity: 1, scale: 1 } : { opacity: 1, x: 0, y: 0 }}
+            exit={isFullscreen ? { opacity: 0, scale: 0.98 } : { opacity: 0, x: 400, y: 50 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="fixed bottom-24 right-6 w-96 max-w-[calc(100vw-3rem)] h-[600px] max-h-[calc(100vh-8rem)] z-50"
+            className={isFullscreen
+              ? 'fixed inset-0 z-50'
+              : 'fixed bottom-24 right-6 w-96 max-w-[calc(100vw-3rem)] h-[600px] max-h-[calc(100vh-8rem)] z-50'}
           >
-            <div className="h-full flex flex-col rounded-2xl border border-slate-800 bg-slate-950/95 backdrop-blur-xl shadow-2xl overflow-hidden">
+            <div className={`h-full flex flex-col border border-slate-800 bg-slate-950/95 backdrop-blur-xl shadow-2xl overflow-hidden ${isFullscreen ? 'rounded-none' : 'rounded-2xl'}`}>
               <div className="flex items-center justify-between px-4 py-3 border-b border-slate-800 bg-slate-900/60">
                 <h2 className="text-lg font-semibold">Друзья</h2>
-                <button
-                  onClick={() => setIsOpen(false)}
-                  className="p-1 hover:bg-slate-800 rounded-lg transition-colors"
-                  aria-label="Закрыть"
-                >
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => setIsFullscreen(prev => !prev)}
+                    className="p-1 hover:bg-slate-800 rounded-lg transition-colors"
+                    aria-label={isFullscreen ? 'Свернуть окно' : 'На весь экран'}
+                    title={isFullscreen ? 'Свернуть окно' : 'На весь экран'}
+                  >
+                    {isFullscreen ? (
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 9H4V4m11 0h5v5m0 6v5h-5m-6 0H4v-5" />
+                      </svg>
+                    ) : (
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 4H4v4m16 0V4h-4m0 16h4v-4M4 16v4h4" />
+                      </svg>
+                    )}
+                  </button>
+                  <button
+                    onClick={closeMessenger}
+                    className="p-1 hover:bg-slate-800 rounded-lg transition-colors"
+                    aria-label="Закрыть"
+                  >
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
               </div>
 
-              <div className="flex gap-1 px-2 py-2 border-b border-slate-800 bg-slate-900/40">
-                <TabButton
-                  active={activeTab === 'chat'}
-                  onClick={() => setActiveTab('chat')}
-                  label="Чат"
-                  count={chats.length}
-                />
-                <TabButton
-                  active={activeTab === 'friends'}
-                  onClick={() => setActiveTab('friends')}
-                  label="Друзья"
-                  count={friends.length}
-                />
-                <TabButton
-                  active={activeTab === 'requests'}
-                  onClick={() => setActiveTab('requests')}
-                  label="Заявки"
-                  count={incomingCount + outgoingCount}
-                  badge={hasNotifications}
-                />
-                <TabButton
-                  active={activeTab === 'search'}
-                  onClick={() => setActiveTab('search')}
-                  label="Поиск"
-                />
-              </div>
+              {isFullscreen ? (
+                <div className="flex flex-1 min-h-0 max-lg:flex-col">
+                  <div className="w-[360px] min-w-[300px] max-w-[38vw] border-r border-slate-800 bg-slate-950/80 flex flex-col max-lg:w-full max-lg:min-w-0 max-lg:max-w-none max-lg:h-[45%] max-lg:border-r-0 max-lg:border-b">
+                    {renderSidebarTabs()}
+                    <div className="flex-1 overflow-hidden">
+                      {renderSidebarContent(true)}
+                    </div>
+                  </div>
 
-              <div className="flex-1 overflow-hidden">
-                <AnimatePresence mode="wait">
-                  {activeTab === 'friends' && (
-                    <motion.div
-                      key="friends"
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: 20 }}
-                      transition={{ duration: 0.15 }}
-                      className="h-full overflow-y-auto p-3"
-                    >
-                      <FriendsList friends={friends} onRemove={removeFriend} onOpenChat={openChatWith} />
-                    </motion.div>
-                  )}
-
-                  {activeTab === 'search' && (
-                    <motion.div
-                      key="search"
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: 20 }}
-                      transition={{ duration: 0.15 }}
-                      className="h-full overflow-y-auto p-3"
-                    >
-                      <SearchUsers
-                        query={searchQuery}
-                        onQueryChange={setSearchQuery}
-                        results={searchResults}
-                        loading={loading}
-                        onSendRequest={sendFriendRequest}
-                        onCancelRequest={cancelRequest}
-                      />
-                    </motion.div>
-                  )}
-
-                  {activeTab === 'requests' && (
-                    <motion.div
-                      key="requests"
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: 20 }}
-                      transition={{ duration: 0.15 }}
-                      className="h-full overflow-y-auto p-3"
-                    >
-                      <div className="flex gap-2 mb-3">
-                        <button
-                          onClick={() => setRequestsSubTab('incoming')}
-                          className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                            requestsSubTab === 'incoming'
-                              ? 'bg-linear-to-br from-indigo-600 to-indigo-700 text-white shadow-lg shadow-indigo-500/30'
-                              : 'bg-slate-800/60 text-slate-300 hover:bg-slate-800 border border-slate-700/50'
-                          }`}
-                        >
-                          Входящие {incomingCount > 0 && `(${incomingCount})`}
-                        </button>
-                        <button
-                          onClick={() => setRequestsSubTab('outgoing')}
-                          className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                            requestsSubTab === 'outgoing'
-                              ? 'bg-linear-to-br from-indigo-600 to-indigo-700 text-white shadow-lg shadow-indigo-500/30'
-                              : 'bg-slate-800/60 text-slate-300 hover:bg-slate-800 border border-slate-700/50'
-                          }`}
-                        >
-                          Исходящие {outgoingCount > 0 && `(${outgoingCount})`}
-                        </button>
+                  <div className="flex-1 min-w-0 bg-slate-950/40">
+                    {selectedChat ? (
+                      <div className="h-full flex flex-col overflow-hidden">
+                        {renderChatView({ showBackButton: false })}
                       </div>
-                      
-                      {requestsSubTab === 'incoming' ? (
-                        <IncomingRequests
-                          requests={incomingRequests}
-                          onAccept={acceptRequest}
-                          onReject={rejectRequest}
-                        />
-                      ) : (
-                        <OutgoingRequests
-                          requests={outgoingRequests}
-                          onCancel={cancelRequest}
-                        />
-                      )}
-                    </motion.div>
-                  )}
-                  {activeTab === 'chat' && (
-                    <motion.div
-                      key="chat"
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: 20 }}
-                      transition={{ duration: 0.15 }}
-                      className="h-full flex flex-col overflow-hidden"
-                    >
-                      {!selectedChat ? (
-                        <div className="h-full overflow-y-auto p-3 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
-                          <ChatsList
-                            chats={chats}
-                            friends={friends}
-                            incomingRequests={incomingRequests}
-                            outgoingRequests={outgoingRequests}
-                            searchResults={searchResults}
-                            currentUserId={userId}
-                            onSelectChat={(chatId) => { setSelectedChat(chatId); loadMessages(chatId); }}
-                          />
+                    ) : (
+                      <div className="h-full flex items-center justify-center p-8 text-center">
+                        <div className="max-w-md space-y-3">
+                          <div className="text-6xl opacity-20">💬</div>
+                          <p className="text-lg font-medium text-slate-200">Выберите чат слева</p>
+                          <p className="text-sm text-slate-400">Откройте вкладку "Чат" и выберите собеседника.</p>
                         </div>
-                      ) : (
-                        <div className="h-full flex flex-col overflow-hidden">
-                          {renderChatView()}
-                        </div>
-                      )}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {renderSidebarTabs()}
+                  <div className="flex-1 overflow-hidden">
+                    {renderSidebarContent(false)}
+                  </div>
+                </>
+              )}
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      <motion.button
-        onClick={() => setIsOpen(!isOpen)}
-        className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg hover:shadow-xl transition-all flex items-center justify-center"
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
-        aria-label="Открыть социальную сеть"
-      >
-        {hasNotifications && (
-          <span className="absolute -top-1 -right-1 w-5 h-5 bg-rose-500 rounded-full flex items-center justify-center text-xs font-bold">
-            {incomingCount}
-          </span>
-        )}
-        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-        </svg>
-      </motion.button>
+      {!isFullscreen && (
+        <motion.button
+          onClick={() =>
+            setIsOpen((prev) => {
+              const next = !prev;
+              if (next) {
+                void requestDesktopNotificationPermission();
+              }
+              return next;
+            })
+          }
+          className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg hover:shadow-xl transition-all flex items-center justify-center"
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          aria-label="Открыть социальную сеть"
+        >
+          {hasNotifications && (
+            <span className="absolute -top-1 -right-1 w-5 h-5 bg-rose-500 rounded-full flex items-center justify-center text-xs font-bold">
+              {incomingCount}
+            </span>
+          )}
+          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+          </svg>
+        </motion.button>
+      )}
 
       {contextMenu && (
         <div
@@ -2119,6 +2303,22 @@ function TabButton({
 }
 
 function FriendsList({ friends, onRemove, onOpenChat }: { friends: Friend[], onRemove: (id: string) => void, onOpenChat: (userId: string) => void }) {
+  const [openMenuUserId, setOpenMenuUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (!target?.closest('[data-friend-menu]')) {
+        setOpenMenuUserId(null);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
   if (friends.length === 0) {
     return (
       <div className="text-center py-8 text-slate-400 text-sm">
@@ -2154,7 +2354,7 @@ function FriendsList({ friends, onRemove, onOpenChat }: { friends: Friend[], onR
           key={friend.userId}
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="group flex items-center gap-2 p-2 rounded-lg border border-slate-800 bg-slate-900/40 hover:bg-slate-900/60 transition-colors"
+          className="flex items-center gap-2 p-2 rounded-lg border border-slate-800 bg-slate-900/40 hover:bg-slate-900/60 transition-colors"
         >
           <Link to={`/u/${friend.username}`} className="flex items-center gap-2 flex-1 min-w-0">
             {friend.avatarUrl ? (
@@ -2189,15 +2389,39 @@ function FriendsList({ friends, onRemove, onOpenChat }: { friends: Friend[], onR
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
             </svg>
           </button>
-          <button
-            onClick={() => onRemove(friend.userId)}
-            className="opacity-0 group-hover:opacity-100 p-1.5 text-xs rounded hover:bg-slate-800 hover:text-rose-300 transition-all"
-            title="Удалить"
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+          <div className="relative" data-friend-menu>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setOpenMenuUserId((prev) => (prev === friend.userId ? null : friend.userId));
+              }}
+              className="p-1.5 rounded border border-slate-700/70 bg-slate-900/70 text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
+              title="Меню действий"
+              aria-haspopup="menu"
+              aria-expanded={openMenuUserId === friend.userId}
+              aria-label="Открыть меню действий"
+            >
+              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                <circle cx="6" cy="12" r="1.8" />
+                <circle cx="12" cy="12" r="1.8" />
+                <circle cx="18" cy="12" r="1.8" />
+              </svg>
+            </button>
+
+            {openMenuUserId === friend.userId && (
+              <div className="absolute right-0 top-full mt-1 z-20 min-w-[180px] rounded-lg border border-slate-700 bg-slate-900 shadow-xl overflow-hidden">
+                <button
+                  onClick={() => {
+                    setOpenMenuUserId(null);
+                    onRemove(friend.userId);
+                  }}
+                  className="w-full px-3 py-2 text-left text-sm text-rose-300 hover:bg-rose-500/10 transition-colors"
+                >
+                  Удалить из друзей
+                </button>
+              </div>
+            )}
+          </div>
         </motion.div>
       ))}
     </div>
