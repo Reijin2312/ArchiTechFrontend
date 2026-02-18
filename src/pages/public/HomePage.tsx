@@ -7,7 +7,7 @@ import { Seo } from '@/shared/seo/seo';
 import { routesMeta } from '@/shared/seo/routesMeta';
 import { ResponsiveImage } from '@/shared/ui/image/ResponsiveImage'
 import { IMAGES } from '@/shared/images.manifest'
-import { SvgTelegram, SvgDiscord, SvgUserPlus, SvgMcBlockGrass, SvgCheck, SvgCopy, SvgChevronDown } from '@/shared/ui/image/Icons'
+import { SvgTelegram, SvgDiscord, SvgUserPlus, SvgMcBlockGrass, SvgCheck, SvgCopy, SvgChevronDown, SvgCrown } from '@/shared/ui/image/Icons'
 import { useIsMobile } from '@/shared/ui/utils/useIsMobile';
 import { TEAM_MEMBERS } from '@/shared/data/team';
 import { useTeamAvatars } from '@/shared/hooks/useTeamAvatars';
@@ -29,6 +29,7 @@ type OnlineHistoryPoint = {
 }
 
 type OnlineRange = '24h' | '7d' | '30d'
+type LeaderboardRange = '7d' | '30d' | 'all'
 
 type OnlineTrendResponse = {
   range?: OnlineRange
@@ -44,6 +45,30 @@ type OnlineTrendResponse = {
     peakOnline?: number
     averageOnline?: number
   }
+}
+
+type LeaderboardPlayer = {
+  rank: number
+  username: string
+  totalMinutes: number
+  totalHours: number
+  sessions: number
+  activeDays: number
+}
+
+type LeaderboardResponse = {
+  range?: LeaderboardRange
+  from?: string
+  to?: string
+  limit?: number
+  players?: Array<{
+    rank?: number
+    username?: string
+    totalMinutes?: number
+    totalHours?: number
+    sessions?: number
+    activeDays?: number
+  }>
 }
 
 export default function HomePage() {
@@ -63,6 +88,10 @@ export default function HomePage() {
   const [playersListPosition, setPlayersListPosition] = useState({ top: 0 })
   const [onlinePoints, setOnlinePoints] = useState<OnlineHistoryPoint[]>([])
   const [onlineRange, setOnlineRange] = useState<OnlineRange>('7d')
+  const [leaderboardRange, setLeaderboardRange] = useState<LeaderboardRange>('7d')
+  const [leaderboardPlayers, setLeaderboardPlayers] = useState<LeaderboardPlayer[]>([])
+  const [leaderboardAvatars, setLeaderboardAvatars] = useState<Record<string, string>>({})
+  const [leaderboardLoading, setLeaderboardLoading] = useState(true)
   const shots = useMemo(
     () => [
       '/images/screen1.png',
@@ -271,6 +300,82 @@ export default function HomePage() {
   }, [onlineRange])
 
   useEffect(() => {
+    let stop = false
+
+    async function loadLeaderboard() {
+      if (!stop) setLeaderboardLoading(true)
+
+      try {
+        const response = await fetch(
+          `/api/v1/sessions/leaderboard?range=${encodeURIComponent(leaderboardRange)}&limit=5`,
+          { cache: 'no-store' },
+        )
+        if (!response.ok) throw new Error('leaderboard failed')
+
+        const data = (await response.json()) as LeaderboardResponse
+        const parsedPlayers = (data.players ?? [])
+          .map((item, index) => {
+            const username = (item?.username ?? '').trim()
+            if (!username) return null
+
+            const totalMinutes = Math.max(0, Math.round(Number(item?.totalMinutes ?? 0)))
+            const totalHours = Number(item?.totalHours ?? totalMinutes / 60)
+            const sessions = Math.max(0, Math.round(Number(item?.sessions ?? 0)))
+            const activeDays = Math.max(0, Math.round(Number(item?.activeDays ?? 0)))
+            const rankRaw = Math.round(Number(item?.rank ?? index + 1))
+
+            return {
+              rank: Math.max(1, rankRaw),
+              username,
+              totalMinutes,
+              totalHours: Number.isFinite(totalHours) ? totalHours : totalMinutes / 60,
+              sessions,
+              activeDays,
+            } as LeaderboardPlayer
+          })
+          .filter((item): item is LeaderboardPlayer => item !== null)
+
+        if (stop) return
+        setLeaderboardPlayers(parsedPlayers)
+
+        const avatars: Record<string, string> = {}
+        await Promise.all(
+          parsedPlayers.map(async (player) => {
+            try {
+              const profileResponse = await fetch(
+                `/api/v1/users/by-name?username=${encodeURIComponent(player.username)}`,
+                { cache: 'no-store' },
+              )
+              if (!profileResponse.ok) return
+              const profileData = await profileResponse.json()
+              if (typeof profileData?.avatarUrl === 'string' && profileData.avatarUrl) {
+                avatars[player.username] = profileData.avatarUrl
+              }
+            } catch {}
+          }),
+        )
+
+        if (!stop) setLeaderboardAvatars(avatars)
+      } catch {
+        if (!stop) {
+          setLeaderboardPlayers([])
+          setLeaderboardAvatars({})
+        }
+      } finally {
+        if (!stop) setLeaderboardLoading(false)
+      }
+    }
+
+    void loadLeaderboard()
+    const id = window.setInterval(() => void loadLeaderboard(), 120_000)
+
+    return () => {
+      stop = true
+      clearInterval(id)
+    }
+  }, [leaderboardRange])
+
+  useEffect(() => {
     if (disableInteractiveMotion) return
     if (sliderPaused) return
 
@@ -387,7 +492,7 @@ export default function HomePage() {
       >
         <div className="grid md:grid-cols-2 gap-10 md:gap-14 items-stretch">
           <div className="md:flex md:flex-col md:h-full">
-            <h1 className="mb-3 text-[22px] md:text-[24px] font-bold leading-tight text-left!">
+            <h1 className="mb-3 text-[22px] md:text-[24px] font-bold leading-tight text-left! font-techno text-techno-glow">
               Присоединяйся к <span className="text-indigo-400">{SERVER_NAME}!</span>
             </h1>
             <p className="mt-4 text-slate-300 max-w-prose">
@@ -656,7 +761,7 @@ export default function HomePage() {
         viewport={{ once: true, margin: '-10% 0px' }}
       >
         <motion.h2
-          className="text-2xl font-semibold mb-6"
+          className="text-2xl font-semibold mb-6 font-techno"
           variants={disableEntranceMotion ? undefined : faqItem}
         >
           Команда проекта
@@ -673,7 +778,31 @@ export default function HomePage() {
         viewport={{ once: true, margin: '-10% 0px' }}
       >
         <motion.h2
-          className="text-2xl font-semibold mb-6"
+          className="text-2xl font-semibold mb-6 font-techno"
+          variants={disableEntranceMotion ? undefined : faqItem}
+        >
+          {'\u0422\u043e\u043f \u0438\u0433\u0440\u043e\u043a\u043e\u0432'}
+        </motion.h2>
+
+        <TopPlayersSection
+          players={leaderboardPlayers}
+          avatars={leaderboardAvatars}
+          loading={leaderboardLoading}
+          range={leaderboardRange}
+          onRangeChange={setLeaderboardRange}
+          disableMotion={disableInteractiveMotion}
+        />
+      </motion.section>
+
+      <motion.section
+        className="mx-auto max-w-7xl px-4 py-10"
+        variants={faqContainer}
+        initial={disableEntranceMotion ? undefined : 'hidden'}
+        whileInView={disableEntranceMotion ? undefined : 'show'}
+        viewport={{ once: true, margin: '-10% 0px' }}
+      >
+        <motion.h2
+          className="text-2xl font-semibold mb-6 font-techno"
           variants={disableEntranceMotion ? undefined : faqItem}
         >
           Онлайн сервера
@@ -698,7 +827,7 @@ export default function HomePage() {
         viewport={{ once: true, margin: '-10% 0px' }}
       >
         <motion.h2
-          className="text-2xl font-semibold mb-6"
+          className="text-2xl font-semibold mb-6 font-techno"
           variants={disableEntranceMotion ? undefined : faqItem}
         >
           FAQ
@@ -1008,7 +1137,7 @@ function OnlineTrendSection({
   return (
     <div className="rounded-2xl border border-slate-800 bg-linear-to-b from-slate-900/70 to-slate-900/20 p-5 backdrop-blur-md backdrop-saturate-150">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <div className="text-sm font-medium text-slate-200">
+        <div className="text-sm font-medium text-slate-200 font-arcane uppercase">
           {'\u0414\u0438\u043d\u0430\u043c\u0438\u043a\u0430'} {rangeTitle}
         </div>
         <div className="inline-flex rounded-xl border border-slate-700 bg-slate-950/60 p-1">
@@ -1167,6 +1296,240 @@ function OnlineTrendSection({
     </div>
   )
 }
+
+function TopPlayersSection({
+  players,
+  avatars,
+  loading,
+  range,
+  onRangeChange,
+  disableMotion,
+}: {
+  players: LeaderboardPlayer[]
+  avatars: Record<string, string>
+  loading: boolean
+  range: LeaderboardRange
+  onRangeChange: (range: LeaderboardRange) => void
+  disableMotion?: boolean
+}) {
+  const rangeLabel = range === 'all' ? '\u0432\u0441\u0451 \u0432\u0440\u0435\u043c\u044f' : range === '7d' ? '7\u0434' : '30\u0434'
+  const rangeTabs: Array<{ value: LeaderboardRange; label: string }> = [
+    { value: '7d', label: '7\u0434' },
+    { value: '30d', label: '30\u0434' },
+    { value: 'all', label: '\u0432\u0441\u0451' },
+  ]
+  const rangePillLayoutId = `leaderboard-range-pill-${useId().replace(/:/g, '')}`
+
+  if (loading) {
+    return (
+      <div className="rounded-2xl border border-slate-800 bg-linear-to-b from-slate-900/70 to-slate-900/20 p-5 backdrop-blur-md backdrop-saturate-150">
+        <div className="mb-4 flex items-center justify-between gap-2">
+          <div className="text-sm text-slate-300 font-arcane uppercase">{'\u041b\u0438\u0434\u0435\u0440\u044b \u043f\u043e \u0438\u0433\u0440\u043e\u0432\u043e\u043c\u0443 \u0432\u0440\u0435\u043c\u0435\u043d\u0438 \u0437\u0430'} {rangeLabel}</div>
+          <div className="inline-flex rounded-xl border border-slate-700 bg-slate-950/60 p-1">
+            {rangeTabs.map((tab) => (
+              <button
+                key={tab.value}
+                type="button"
+                onClick={() => onRangeChange(tab.value)}
+                className={`rounded-lg px-3 py-1.5 text-xs transition-colors ${
+                  range === tab.value ? 'bg-indigo-600 text-white' : 'text-slate-300 hover:bg-slate-800'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="space-y-2">
+          {[0, 1, 2].map((idx) => (
+            <div key={idx} className="h-16 animate-pulse rounded-xl border border-slate-800 bg-slate-900/60" />
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="rounded-2xl border border-slate-800 bg-linear-to-b from-slate-900/70 to-slate-900/20 p-5 backdrop-blur-md backdrop-saturate-150">
+      <div className="mb-4 flex items-center justify-between gap-2">
+        <div className="text-sm text-slate-300 font-arcane uppercase">{'\u041b\u0438\u0434\u0435\u0440\u044b \u043f\u043e \u0438\u0433\u0440\u043e\u0432\u043e\u043c\u0443 \u0432\u0440\u0435\u043c\u0435\u043d\u0438 \u0437\u0430'} {rangeLabel}</div>
+        <div className="inline-flex rounded-xl border border-slate-700 bg-slate-950/60 p-1">
+          {rangeTabs.map((tab) => {
+            const active = range === tab.value
+            return (
+              <button
+                key={tab.value}
+                type="button"
+                onClick={() => onRangeChange(tab.value)}
+                className="relative rounded-lg px-3 py-1.5 text-xs text-slate-300 transition-colors hover:bg-slate-800"
+              >
+                {active && (
+                  <motion.span
+                    layoutId={rangePillLayoutId}
+                    transition={
+                      disableMotion
+                        ? { duration: 0 }
+                        : { type: 'spring', stiffness: 420, damping: 34, mass: 0.85 }
+                    }
+                    className="absolute inset-0 rounded-lg bg-indigo-600 shadow-[0_6px_18px_rgba(99,102,241,0.4)]"
+                  />
+                )}
+                <span className={`relative z-10 ${active ? 'text-white' : 'text-slate-300'}`}>{tab.label}</span>
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      {players.length === 0 ? (
+        <div className="rounded-xl border border-slate-800 bg-slate-950/50 px-4 py-5 text-sm text-slate-400">
+          {'\u041f\u043e\u043a\u0430 \u043d\u0435\u0442 \u0434\u0430\u043d\u043d\u044b\u0445 \u0434\u043b\u044f \u0440\u0435\u0439\u0442\u0438\u043d\u0433\u0430.'}
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {players.map((player, index) => {
+            const isKing = index === 0
+            const isSilver = index === 1
+            const isBronze = index === 2
+            const isTopThree = index < 3
+            const avatar = avatars[player.username]
+            const hours = player.totalHours >= 10 ? Math.round(player.totalHours).toString() : player.totalHours.toFixed(1)
+            const cardTone = isKing
+              ? 'border-amber-300/70 bg-linear-to-r from-amber-500/20 via-slate-900/84 to-slate-900/92 shadow-[0_0_22px_rgba(251,191,36,0.5)]'
+              : isSilver
+                ? 'border-slate-200/65 bg-linear-to-r from-slate-200/14 via-slate-900/88 to-slate-900/92 shadow-[0_0_20px_rgba(226,232,240,0.38)]'
+                : isBronze
+                  ? 'border-orange-300/65 bg-linear-to-r from-orange-500/16 via-slate-900/88 to-slate-900/92 shadow-[0_0_20px_rgba(251,146,60,0.35)]'
+                  : 'border-slate-800 bg-slate-950/60'
+            const rankTextTone = isKing
+              ? 'text-amber-200'
+              : isSilver
+                ? 'text-slate-200'
+                : isBronze
+                  ? 'text-orange-200'
+                  : 'text-slate-400'
+            const nameTone = isKing
+              ? 'text-amber-100'
+              : isSilver
+                ? 'text-slate-100'
+                : isBronze
+                  ? 'text-orange-100'
+                  : 'text-slate-100'
+            const hoursTone = isKing
+              ? 'text-amber-200'
+              : isSilver
+                ? 'text-slate-200'
+                : isBronze
+                  ? 'text-orange-300'
+                  : 'text-sky-300'
+            const avatarTone = isKing
+              ? 'border-amber-300/70 ring-2 ring-amber-300/40'
+              : isSilver
+                ? 'border-slate-300/65 ring-2 ring-slate-300/30'
+                : isBronze
+                  ? 'border-orange-300/70 ring-2 ring-orange-300/30'
+                  : 'border-slate-700'
+            const glowShadowMin = isKing
+              ? '0 0 0 1px rgba(251,191,36,0.54), 0 0 20px rgba(251,191,36,0.42), inset 0 0 11px rgba(251,191,36,0.18)'
+              : isSilver
+                ? '0 0 0 1px rgba(226,232,240,0.45), 0 0 18px rgba(226,232,240,0.32), inset 0 0 9px rgba(226,232,240,0.16)'
+                : '0 0 0 1px rgba(251,146,60,0.44), 0 0 18px rgba(251,146,60,0.3), inset 0 0 9px rgba(251,146,60,0.15)'
+            const glowShadowMax = isKing
+              ? '0 0 0 1px rgba(251,191,36,0.76), 0 0 30px rgba(251,191,36,0.68), inset 0 0 16px rgba(251,191,36,0.26)'
+              : isSilver
+                ? '0 0 0 1px rgba(226,232,240,0.68), 0 0 26px rgba(226,232,240,0.5), inset 0 0 14px rgba(226,232,240,0.24)'
+                : '0 0 0 1px rgba(251,146,60,0.68), 0 0 26px rgba(251,146,60,0.48), inset 0 0 14px rgba(251,146,60,0.22)'
+            const glowOrbTone = isKing ? 'bg-amber-200/42' : isSilver ? 'bg-slate-100/38' : 'bg-orange-200/40'
+
+            return (
+              <motion.div
+                key={player.username}
+                whileHover={disableMotion ? undefined : { y: -2, scale: 1.005 }}
+                className={[
+                  'relative overflow-hidden rounded-xl border px-3 py-2.5',
+                  cardTone,
+                ].join(' ')}
+              >
+                {isTopThree && !disableMotion && (
+                  <>
+                    <motion.div
+                      className="pointer-events-none absolute inset-0 rounded-xl mix-blend-screen"
+                      animate={{
+                        boxShadow: [glowShadowMin, glowShadowMax, glowShadowMin],
+                        opacity: [0.48, 0.86, 0.48],
+                      }}
+                      transition={{ duration: 2.8 + index * 0.35, repeat: Infinity, ease: 'easeInOut' }}
+                    />
+                    <motion.div
+                      className={`pointer-events-none absolute -top-10 left-0 h-28 w-28 rounded-full blur-3xl mix-blend-screen ${glowOrbTone}`}
+                      animate={{
+                        x: ['-30%', '320%', '0%'],
+                        y: [0, 8, 0],
+                        opacity: [0.28, 0.72, 0.28],
+                      }}
+                      transition={{ duration: 4.1 + index * 0.45, repeat: Infinity, ease: 'easeInOut' }}
+                    />
+                  </>
+                )}
+
+                <div className="relative z-10 flex items-center gap-3">
+                  <div
+                    className={[
+                      'relative size-11 shrink-0 overflow-hidden rounded-xl border bg-slate-900',
+                      avatarTone,
+                    ].join(' ')}
+                  >
+                    {avatar ? (
+                      <img
+                        src={avatar}
+                        alt={player.username}
+                        className="h-full w-full object-cover"
+                        loading="lazy"
+                        decoding="async"
+                      />
+                    ) : (
+                      <div className="grid h-full w-full place-items-center text-sm font-semibold text-slate-300">
+                        {player.username[0]?.toUpperCase() ?? '?'}
+                      </div>
+                    )}
+
+                    {isKing && (
+                      <div className="absolute -right-1 -top-1 grid h-5 w-5 place-items-center rounded-full border border-amber-300/70 bg-amber-400/90 text-slate-950 shadow-[0_0_12px_rgba(251,191,36,0.65)]">
+                        <SvgCrown className="h-3 w-3" />
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className={`text-xs font-semibold ${rankTextTone}`}>
+                        #{player.rank}
+                      </span>
+                      <span className={`truncate text-sm font-semibold ${nameTone}`}>
+                        {player.username}
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-slate-400">
+                      {player.activeDays} {'\u0434\u043d. \u0430\u043a\u0442\u0438\u0432\u043d\u043e\u0441\u0442\u0438 \u00b7'} {player.sessions} {'\u0441\u0435\u0441\u0441\u0438\u0439'}
+                    </div>
+                  </div>
+
+                  <div className="text-right">
+                    <div className={`text-lg font-semibold leading-none ${hoursTone}`}>
+                      {hours}ч
+                    </div>
+                    <div className="mt-1 text-[11px] text-slate-400">{'\u043d\u0430\u0438\u0433\u0440\u0430\u043d\u043e'}</div>
+                  </div>
+                </div>
+              </motion.div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function MetricCard({ label, value, accent }: { label: string; value: number; accent: string }) {
   return (
     <div className="rounded-xl border border-slate-800 bg-slate-950/50 px-3 py-2">
@@ -1408,3 +1771,4 @@ function Faq({ q, a }: { q: string; a: React.ReactNode }) {
     </div>
   )
 }
+

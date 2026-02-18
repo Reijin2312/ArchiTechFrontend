@@ -84,6 +84,13 @@ export const SvgChevronDown: React.FC<IconProps> = (props) => (
   </svg>
 );
 
+export const SvgCrown: React.FC<IconProps> = (props) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" {...props}>
+    <path d="M3 7 7.5 11 12 5l4.5 6L21 7l-2 12H5L3 7Z" strokeLinecap="round" strokeLinejoin="round" />
+    <path d="M7 15h10" strokeLinecap="round" />
+  </svg>
+);
+
 export const SvgMenu: React.FC<IconProps> = (props) => (
   <svg viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" {...props}>
     <path d="M4 7h16M4 12h16M4 17h16" />
