@@ -71,6 +71,11 @@ type LeaderboardResponse = {
   }>
 }
 
+type ShotMeta = {
+  title: string
+  subtitle: string
+}
+
 export default function HomePage() {
   useWallpaper();
 
@@ -92,20 +97,37 @@ export default function HomePage() {
   const [leaderboardPlayers, setLeaderboardPlayers] = useState<LeaderboardPlayer[]>([])
   const [leaderboardAvatars, setLeaderboardAvatars] = useState<Record<string, string>>({})
   const [leaderboardLoading, setLeaderboardLoading] = useState(true)
+  const [galleryHover, setGalleryHover] = useState(false)
   const shots = useMemo(
     () => [
-      '/images/screen1.png',
+      '/images/screen10.png',
       '/images/screen2.png',
-      '/images/screen3.png',
+      '/images/screen9.png',
       '/images/screen4.png',
-      '/images/screen5.png',
-      '/images/screen6.png',
-      '/images/screen7.png',
-      '/images/screen8.png',
+      '/images/screen11.png',
+      '/images/screen1.png',
+      '/images/screen3.png',
+      '/images/screen12.png',
     ],
     [],
   )
+  const shotMeta = useMemo<Record<string, ShotMeta>>(
+    () => ({
+      '/images/screen1.png': { title: 'Ветрогенераторы', subtitle: 'Построены Hoshimori Inc.' },
+      '/images/screen2.png': { title: 'Старый маяк', subtitle: 'Он был здесь до начала времён' },
+      '/images/screen3.png': { title: 'Дирижабль', subtitle: 'Так и сгинул, упал в океан... Дирижабль Левиафан' },
+      '/images/screen4.png': { title: 'Как это тут оказалось?', subtitle: 'Игрок KIDron позирует на ветрогенераторе' },
+      '/images/screen9.png': { title: 'Цитадель Альянса', subtitle: 'По совместительству база игрока Andrej_Dinera' },
+      '/images/screen10.png': { title: 'Ходячий замок', subtitle: 'Нестареющая классика' },
+      '/images/screen11.png': { title: 'Радиотелескоп', subtitle: 'ОНИ следят за нами...' },
+      '/images/screen12.png': { title: 'Портал', subtitle: 'Главный портал спавна в стиле древнего монолита' },
+    }),
+    [],
+  )
   const [shot, setShot] = useState(shots[0])
+  const activeShotMeta =
+    shotMeta[shot] ??
+    ({ title: 'Скриншот ArchiTech', subtitle: 'Момент из жизни сервера' } as ShotMeta)
   const [prevShot, setPrevShot] = useState<string | null>(null)
   const [cross, setCross] = useState(true);
   const [activeIndex, setActiveIndex] = useState(0)
@@ -637,10 +659,22 @@ export default function HomePage() {
 
         <div
           className="relative max-w-full overflow-x-hidden"
-          onMouseEnter={() => setSliderPaused(true)}
-          onMouseLeave={() => setSliderPaused(false)}
-          onFocus={() => setSliderPaused(true)}
-          onBlur={() => setSliderPaused(false)}
+          onMouseEnter={() => {
+            setSliderPaused(true)
+            setGalleryHover(true)
+          }}
+          onMouseLeave={() => {
+            setSliderPaused(false)
+            setGalleryHover(false)
+          }}
+          onFocus={() => {
+            setSliderPaused(true)
+            setGalleryHover(true)
+          }}
+          onBlur={() => {
+            setSliderPaused(false)
+            setGalleryHover(false)
+          }}
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
@@ -669,6 +703,23 @@ export default function HomePage() {
                   />
                 </motion.div>
               </AnimatePresence>
+
+              <motion.div
+                className="pointer-events-none absolute inset-x-0 bottom-0 p-4 sm:p-5"
+                initial={false}
+                animate={galleryHover ? { opacity: 1, y: 0 } : { opacity: 0, y: 10 }}
+                transition={
+                  disableInteractiveMotion
+                    ? { duration: 0.12 }
+                    : { type: 'spring', stiffness: 280, damping: 28, mass: 0.65 }
+                }
+              >
+                <div className="w-fit max-w-[90%] rounded-xl border border-slate-700/80 bg-slate-950/75 px-4 py-2.5 backdrop-blur-md shadow-[0_10px_30px_rgba(2,6,23,0.62)]">
+                  <div className="text-[10px] uppercase tracking-[0.14em] text-indigo-300/95">Галерея</div>
+                  <div className="mt-1 text-sm font-semibold text-slate-100">{activeShotMeta.title}</div>
+                  <div className="text-xs text-slate-300">{activeShotMeta.subtitle}</div>
+                </div>
+              </motion.div>
             </div>
           </div>
 
@@ -680,6 +731,7 @@ export default function HomePage() {
               const idx = (activeIndex + i) % shots.length
               const src = shots[idx]
               const isActive = shot === src
+              const thumbMeta = shotMeta[src]
 
               return (
                 <motion.button
@@ -693,7 +745,7 @@ export default function HomePage() {
                   onClick={() => changeTo(src)}
                   aria-label="Показать скриншот"
                   className={[
-                    'flex-none w-16 aspect-square rounded-xl ring-offset-2 ring-offset-slate-950 border',
+                    'group relative flex-none w-16 aspect-square rounded-xl ring-offset-2 ring-offset-slate-950 border',
                     isActive
                       ? 'border-transparent ring-2 ring-indigo-500/40'
                       : 'border-slate-800 ring-0 ring-transparent',
@@ -707,6 +759,9 @@ export default function HomePage() {
                     sizes="64px"
                     className="h-full w-full object-cover rounded-xl"
                   />
+                  <span className="pointer-events-none absolute left-1/2 top-0 z-20 hidden -translate-x-1/2 -translate-y-[118%] whitespace-nowrap rounded-lg border border-slate-700/85 bg-slate-950/95 px-2 py-1 text-[10px] font-medium text-slate-100 opacity-0 shadow-xl transition-all duration-200 group-hover:-translate-y-[130%] group-hover:opacity-100 group-focus-visible:-translate-y-[130%] group-focus-visible:opacity-100 md:block">
+                    {thumbMeta?.title ?? 'Скриншот'}
+                  </span>
                 </motion.button>
               )
             })}

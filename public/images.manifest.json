@@ -105,6 +105,189 @@
       }
     ]
   },
+  "screen10.png": {
+    "original": {
+      "w": 2560,
+      "h": 1440,
+      "png": "/images/screen10.png",
+      "avif": "/images/screen10.avif",
+      "webp": "/images/screen10.webp"
+    },
+    "avif": [
+      {
+        "w": 320,
+        "path": "/images/screen10-320.avif"
+      },
+      {
+        "w": 640,
+        "path": "/images/screen10-640.avif"
+      },
+      {
+        "w": 960,
+        "path": "/images/screen10-960.avif"
+      },
+      {
+        "w": 1280,
+        "path": "/images/screen10-1280.avif"
+      },
+      {
+        "w": 1600,
+        "path": "/images/screen10-1600.avif"
+      },
+      {
+        "w": 1920,
+        "path": "/images/screen10-1920.avif"
+      }
+    ],
+    "webp": [
+      {
+        "w": 320,
+        "path": "/images/screen10-320.webp"
+      },
+      {
+        "w": 640,
+        "path": "/images/screen10-640.webp"
+      },
+      {
+        "w": 960,
+        "path": "/images/screen10-960.webp"
+      },
+      {
+        "w": 1280,
+        "path": "/images/screen10-1280.webp"
+      },
+      {
+        "w": 1600,
+        "path": "/images/screen10-1600.webp"
+      },
+      {
+        "w": 1920,
+        "path": "/images/screen10-1920.webp"
+      }
+    ]
+  },
+  "screen11.png": {
+    "original": {
+      "w": 2560,
+      "h": 1440,
+      "png": "/images/screen11.png",
+      "avif": "/images/screen11.avif",
+      "webp": "/images/screen11.webp"
+    },
+    "avif": [
+      {
+        "w": 320,
+        "path": "/images/screen11-320.avif"
+      },
+      {
+        "w": 640,
+        "path": "/images/screen11-640.avif"
+      },
+      {
+        "w": 960,
+        "path": "/images/screen11-960.avif"
+      },
+      {
+        "w": 1280,
+        "path": "/images/screen11-1280.avif"
+      },
+      {
+        "w": 1600,
+        "path": "/images/screen11-1600.avif"
+      },
+      {
+        "w": 1920,
+        "path": "/images/screen11-1920.avif"
+      }
+    ],
+    "webp": [
+      {
+        "w": 320,
+        "path": "/images/screen11-320.webp"
+      },
+      {
+        "w": 640,
+        "path": "/images/screen11-640.webp"
+      },
+      {
+        "w": 960,
+        "path": "/images/screen11-960.webp"
+      },
+      {
+        "w": 1280,
+        "path": "/images/screen11-1280.webp"
+      },
+      {
+        "w": 1600,
+        "path": "/images/screen11-1600.webp"
+      },
+      {
+        "w": 1920,
+        "path": "/images/screen11-1920.webp"
+      }
+    ]
+  },
+  "screen12.png": {
+    "original": {
+      "w": 2560,
+      "h": 1440,
+      "png": "/images/screen12.png",
+      "avif": "/images/screen12.avif",
+      "webp": "/images/screen12.webp"
+    },
+    "avif": [
+      {
+        "w": 320,
+        "path": "/images/screen12-320.avif"
+      },
+      {
+        "w": 640,
+        "path": "/images/screen12-640.avif"
+      },
+      {
+        "w": 960,
+        "path": "/images/screen12-960.avif"
+      },
+      {
+        "w": 1280,
+        "path": "/images/screen12-1280.avif"
+      },
+      {
+        "w": 1600,
+        "path": "/images/screen12-1600.avif"
+      },
+      {
+        "w": 1920,
+        "path": "/images/screen12-1920.avif"
+      }
+    ],
+    "webp": [
+      {
+        "w": 320,
+        "path": "/images/screen12-320.webp"
+      },
+      {
+        "w": 640,
+        "path": "/images/screen12-640.webp"
+      },
+      {
+        "w": 960,
+        "path": "/images/screen12-960.webp"
+      },
+      {
+        "w": 1280,
+        "path": "/images/screen12-1280.webp"
+      },
+      {
+        "w": 1600,
+        "path": "/images/screen12-1600.webp"
+      },
+      {
+        "w": 1920,
+        "path": "/images/screen12-1920.webp"
+      }
+    ]
+  },
   "screen2.png": {
     "original": {
       "w": 2560,
@@ -441,6 +624,67 @@
       {
         "w": 1280,
         "path": "/images/screen8-1280.webp"
+      }
+    ]
+  },
+  "screen9.png": {
+    "original": {
+      "w": 2560,
+      "h": 1440,
+      "png": "/images/screen9.png",
+      "avif": "/images/screen9.avif",
+      "webp": "/images/screen9.webp"
+    },
+    "avif": [
+      {
+        "w": 320,
+        "path": "/images/screen9-320.avif"
+      },
+      {
+        "w": 640,
+        "path": "/images/screen9-640.avif"
+      },
+      {
+        "w": 960,
+        "path": "/images/screen9-960.avif"
+      },
+      {
+        "w": 1280,
+        "path": "/images/screen9-1280.avif"
+      },
+      {
+        "w": 1600,
+        "path": "/images/screen9-1600.avif"
+      },
+      {
+        "w": 1920,
+        "path": "/images/screen9-1920.avif"
+      }
+    ],
+    "webp": [
+      {
+        "w": 320,
+        "path": "/images/screen9-320.webp"
+      },
+      {
+        "w": 640,
+        "path": "/images/screen9-640.webp"
+      },
+      {
+        "w": 960,
+        "path": "/images/screen9-960.webp"
+      },
+      {
+        "w": 1280,
+        "path": "/images/screen9-1280.webp"
+      },
+      {
+        "w": 1600,
+        "path": "/images/screen9-1600.webp"
+      },
+      {
+        "w": 1920,
+        "path": "/images/screen9-1920.webp"
       }
     ]
   }
