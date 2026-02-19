@@ -1,5 +1,3 @@
-// hooks/useSecureChatWebSocket.ts
-// Secure WebSocket implementation with protocol validation and encryption support
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import CryptoJS from 'crypto-js'
@@ -40,9 +38,6 @@ export function useSecureChatWebSocket() {
   const maxReconnectAttempts = 5
   const reconnectDelay = 3000
 
-  /**
-   * Generate message ID (UUID v4)
-   */
   const generateMessageId = useCallback((): string => {
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
       const r = (Math.random() * 16) | 0
@@ -51,9 +46,6 @@ export function useSecureChatWebSocket() {
     })
   }, [])
 
-  /**
-   * Calculate HMAC-SHA256
-   */
   const calculateHMAC = useCallback((message: string, sessionKey: string): string => {
     try {
       return CryptoJS.HmacSHA256(message, sessionKey).toString()
@@ -63,9 +55,6 @@ export function useSecureChatWebSocket() {
     }
   }, [])
 
-  /**
-   * Validate HMAC signature
-   */
   const validateHMAC = useCallback(
     (message: string, providedHmac: string, sessionKey: string): boolean => {
       try {
@@ -78,9 +67,6 @@ export function useSecureChatWebSocket() {
     [calculateHMAC]
   )
 
-  /**
-   * Create protocol message with HMAC
-   */
   const createProtocolMessage = useCallback(
     (
       type: ProtocolMessage['type'],
@@ -117,9 +103,6 @@ export function useSecureChatWebSocket() {
     [generateMessageId, calculateHMAC, sessionKeyStore]
   )
 
-  /**
-   * Validate protocol message
-   */
   const validateProtocolMessage = useCallback(
     (message: ProtocolMessage): boolean => {
       try {
@@ -146,11 +129,10 @@ export function useSecureChatWebSocket() {
           return false
         }
 
-        // Check timestamp freshness
         const now = Date.now()
         const age = now - message.timestamp
-        const maxAge = 5 * 60 * 1000 // 5 minutes
-        const clockSkew = 30 * 1000 // 30 seconds
+        const maxAge = 5 * 60 * 1000
+        const clockSkew = 30 * 1000
 
         if (age > maxAge) {
           securityStore.logSecurityEvent('MESSAGE_EXPIRED', {
@@ -168,7 +150,6 @@ export function useSecureChatWebSocket() {
           })
         }
 
-        // Check sequence number
         if (message.type !== 'ping') {
           if (message.seq_no <= remoteSequenceNumber.current) {
             securityStore.logSecurityEvent('REPLAY_ATTACK_DETECTED', {
@@ -196,9 +177,6 @@ export function useSecureChatWebSocket() {
     [sessionKeyStore, validateHMAC, securityStore]
   )
 
-  /**
-   * Handle WebSocket open
-   */
   const handleOpen = useCallback(() => {
     setIsConnecting(false)
     setIsConnected(true)
@@ -223,9 +201,6 @@ export function useSecureChatWebSocket() {
     if (handler) handler({})
   }, [createProtocolMessage])
 
-  /**
-   * Handle WebSocket message
-   */
   const handleMessage = useCallback(
     (event: MessageEvent) => {
       try {
@@ -253,9 +228,6 @@ export function useSecureChatWebSocket() {
     [validateProtocolMessage, securityStore]
   )
 
-  /**
-   * Handle WebSocket error
-   */
   const handleError = useCallback(() => {
     setLastError('WebSocket error occurred')
     console.error('[WebSocket] Error')
@@ -264,9 +236,6 @@ export function useSecureChatWebSocket() {
     })
   }, [securityStore])
 
-  /**
-   * Handle WebSocket close
-   */
   const handleClose = useCallback(() => {
     setIsConnected(false)
     setIsConnecting(false)
@@ -280,7 +249,6 @@ export function useSecureChatWebSocket() {
       )
 
       setTimeout(() => {
-        // Reconnect logic will be handled by connect() call
       }, reconnectDelay)
     } else {
       setLastError('Failed to reconnect after maximum attempts')
@@ -294,9 +262,6 @@ export function useSecureChatWebSocket() {
     if (handler) handler({})
   }, [reconnectAttempts, securityStore, maxReconnectAttempts])
 
-  /**
-   * Connect to WebSocket
-   */
   const connect = useCallback(
     async (config: WSConfig): Promise<void> => {
       if (import.meta.env.PROD && !config.url.startsWith('wss://')) {
@@ -341,9 +306,6 @@ export function useSecureChatWebSocket() {
     [isConnecting, isConnected, sessionKeyStore, handleOpen, handleMessage, handleError, handleClose]
   )
 
-  /**
-   * Send message through WebSocket
-   */
   const sendMessage = useCallback(
     (type: ProtocolMessage['type'], payload: any): void => {
       if (!isConnected) {
@@ -377,9 +339,6 @@ export function useSecureChatWebSocket() {
     [isConnected, createProtocolMessage]
   )
 
-  /**
-   * Register message handler
-   */
   const onMessage = useCallback(
     (type: string, handler: (data: any) => void): (() => void) => {
       messageHandlers.current.set(type, handler)
@@ -391,9 +350,6 @@ export function useSecureChatWebSocket() {
     []
   )
 
-  /**
-   * Disconnect WebSocket
-   */
   const disconnect = useCallback(() => {
     if (wsRef.current) {
       wsRef.current.close()
@@ -404,9 +360,6 @@ export function useSecureChatWebSocket() {
     messageBuffer.current = []
   }, [])
 
-  /**
-   * Cleanup on unmount
-   */
   useEffect(() => {
     return () => {
       disconnect()

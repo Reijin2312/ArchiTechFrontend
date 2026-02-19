@@ -7,16 +7,10 @@ type Skin3DViewerProps = {
   className?: string
   skinUrl: string
   autoRotate?: boolean
+  animated?: boolean
 }
 
-/**
- * 3D Minecraft skin viewer component using skinview3d
- * - Loads and displays a Minecraft skin in 3D
- * - Supports camera controls (orbit, zoom)
- * - Auto-fits the model to the viewport
- * - Responsive to container size changes
- */
-export function Skin3DViewer({ className = '', skinUrl, autoRotate = false }: Skin3DViewerProps) {
+export function Skin3DViewer({ className = '', skinUrl, autoRotate = false, animated = true }: Skin3DViewerProps) {
   const wrapRef = useRef<HTMLDivElement | null>(null)
   const viewerRef = useRef<any>(null)
   const controlsRef = useRef<OrbitControls | null>(null)
@@ -35,7 +29,6 @@ export function Skin3DViewer({ className = '', skinUrl, autoRotate = false }: Sk
     wrapRef.current.innerHTML = ''
     wrapRef.current.appendChild(viewer.canvas)
 
-    // Configure viewer appearance
     viewer.background = '#0f172a'
     viewer.camera.fov = 40
     viewer.camera.zoom = 1
@@ -44,10 +37,9 @@ export function Skin3DViewer({ className = '', skinUrl, autoRotate = false }: Sk
     viewer.camera.updateProjectionMatrix()
     viewer.cameraLight.intensity = 2
     viewer.globalLight.intensity = 2
-    viewer.animation = new skinview3d.IdleAnimation()
-    viewer.animation.speed = 1
+    viewer.animation = animated ? new skinview3d.IdleAnimation() : null
+    if (animated && viewer.animation) viewer.animation.speed = 1
 
-    // Setup orbit controls
     const controls = new OrbitControls((viewer as any).camera, viewer.canvas)
     controls.enableDamping = true
     controls.dampingFactor = 0.08
@@ -55,7 +47,6 @@ export function Skin3DViewer({ className = '', skinUrl, autoRotate = false }: Sk
     controls.addEventListener('change', () => viewer.render())
     controlsRef.current = controls
 
-    // Style canvas to fill container
     const cv = viewer.canvas as HTMLCanvasElement
     cv.style.position = 'absolute'
     cv.style.inset = '0'
@@ -65,7 +56,6 @@ export function Skin3DViewer({ className = '', skinUrl, autoRotate = false }: Sk
 
     const PAD = 1.05
 
-    // Frame the 3D model to fit in viewport
     const frameToFit = () => {
       const v = viewerRef.current
       if (!v) return
@@ -108,7 +98,6 @@ export function Skin3DViewer({ className = '', skinUrl, autoRotate = false }: Sk
       v.render()
     }
 
-    // Update canvas dimensions
     const fitPixels = () => {
       const el = wrapRef.current
       if (!el) return
@@ -127,14 +116,12 @@ export function Skin3DViewer({ className = '', skinUrl, autoRotate = false }: Sk
       frameToFit()
     }
 
-    // Load skin
     Promise.resolve(viewer.loadSkin(skinUrl as any))
       .catch(() => {})
       .finally(() => {
         fitPixels()
       })
 
-    // Observe container size changes
     const ro = new ResizeObserver(fitPixels)
     ro.observe(wrapRef.current!)
     roRef.current = ro
@@ -144,7 +131,6 @@ export function Skin3DViewer({ className = '', skinUrl, autoRotate = false }: Sk
 
     fitPixels()
 
-    // Cleanup
     return () => {
       window.removeEventListener('resize', onResize)
       roRef.current?.disconnect()
@@ -153,9 +139,8 @@ export function Skin3DViewer({ className = '', skinUrl, autoRotate = false }: Sk
       viewerRef.current = null
       controlsRef.current = null
     }
-  }, [skinUrl])
+  }, [skinUrl, animated])
 
-  // Handle auto-rotation
   useEffect(() => {
     const viewer = viewerRef.current
     if (!viewer) return

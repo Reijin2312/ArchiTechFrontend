@@ -7,8 +7,6 @@ export async function finalizeAuth(accessToken: string): Promise<User> {
   const me = await http.get<User>(endpoints.profileMe);
   authStore.getState().setAuth(me.data, accessToken);
   
-  // 🔐 Encryption keys are now managed by KMS on server side
-  // No client-side initialization required
   
   return me.data;
 }

@@ -48,7 +48,7 @@ export function TeamGrid({ team, avatars, disableMotion, className }: TeamGridPr
         variants={disableMotion ? undefined : teamItem}
         whileHover={disableMotion ? undefined : { y: -4, scale: 1.005 }}
         whileTap={disableMotion ? undefined : { scale: 0.995 }}
-        className="relative overflow-hidden rounded-2xl border border-sky-500/40 bg-linear-to-br from-slate-900/85 via-slate-900/65 to-sky-950/35 p-5 shadow-[0_14px_38px_rgba(2,6,23,0.55)]"
+        className="relative overflow-hidden rounded-2xl border border-sky-500/40 bg-linear-to-br from-slate-900/72 via-slate-900/56 to-sky-950/30 p-5 backdrop-blur-md backdrop-saturate-150 shadow-[0_14px_38px_rgba(2,6,23,0.55)]"
       >
         <div className="pointer-events-none absolute -right-12 -top-12 h-32 w-32 rounded-full bg-sky-400/15 blur-2xl" />
         <div className="pointer-events-none absolute -bottom-16 -left-10 h-36 w-36 rounded-full bg-indigo-500/18 blur-3xl" />
@@ -114,4 +114,3 @@ export function TeamGrid({ team, avatars, disableMotion, className }: TeamGridPr
     </motion.div>
   );
 }
-

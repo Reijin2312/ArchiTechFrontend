@@ -263,7 +263,6 @@ export default function RegisterPage() {
     }
   }
 
-  // Используем общую утилиту notifyLauncher
 
   useEffect(() => {
     if (serverErr) setServerErr(null);

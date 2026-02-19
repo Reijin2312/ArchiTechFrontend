@@ -30,7 +30,6 @@ export function UploadProgress({
   return (
     <div className={`relative inline-flex items-center justify-center ${className}`}>
       <svg width={circle} height={circle} className="transform -rotate-90">
-        {/* Background circle */}
         <circle
           cx={circle / 2}
           cy={circle / 2}
@@ -40,7 +39,6 @@ export function UploadProgress({
           fill="none"
           className="text-slate-700"
         />
-        {/* Progress circle */}
         <motion.circle
           cx={circle / 2}
           cy={circle / 2}

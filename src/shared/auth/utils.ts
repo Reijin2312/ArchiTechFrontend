@@ -2,10 +2,6 @@
  * Общие утилиты для работы с аутентификацией
  */
 
-/**
- * Уведомление лаунчера о токенах
- * Используется в LoginPage, RegisterPage, CodeVerifyPage
- */
 import { endpoints } from '@/shared/api/endpoints'
 
 export async function notifyLauncher(
@@ -76,10 +72,8 @@ export function parseRedirectUri(rawRedirect: string | null): string | null {
     // Проверяем протокол
     if (!/^https?:$/.test(u.protocol)) return null;
     
-    // Проверяем что это localhost
     if (!/^(localhost|127\.0\.0\.1|::1)$/i.test(u.hostname)) return null;
     
-    // Проверяем pathname
     if (!(u.pathname === '/cb' || u.pathname === '/cb/')) return null;
     
     return `${u.origin}/cb`;
@@ -103,7 +97,6 @@ export function normalizeErrorMessage(error: unknown): string {
     message?: string;
   };
   
-  // Проверяем response.data
   if (err.response?.data) {
     const data = err.response.data;
     if (typeof data === 'string') return data;
@@ -113,7 +106,6 @@ export function normalizeErrorMessage(error: unknown): string {
     }
   }
   
-  // Проверяем message
   if (typeof err.message === 'string') return err.message;
   
   return 'Неизвестная ошибка';

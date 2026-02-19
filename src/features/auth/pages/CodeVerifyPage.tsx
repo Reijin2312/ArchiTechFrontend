@@ -35,7 +35,6 @@ export default function CodeVerifyPage({ mode }:{ mode: 'email-verify'|'reset'|'
     return () => clearTimeout(t);
   }, [resendLock]);
 
-  // redirectUri управляется useRedirectUri
 
   async function confirm() {
     try {

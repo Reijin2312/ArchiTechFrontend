@@ -5,7 +5,6 @@ import { repairObjectStrings } from '@/shared/utils/text'
 
 export const http = axios.create({ baseURL: '/', withCredentials: true })
 
-// Globally repair mojibake in response data (UTF-8 mis-decoded as Latin-1/CP1251)
 http.interceptors.response.use((res) => {
   try {
     res.data = repairObjectStrings(res.data)

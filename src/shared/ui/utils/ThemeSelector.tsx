@@ -96,7 +96,6 @@ export function ThemeSelector({ value = 'default', customColor1, customColor2, o
           )
         })}
         
-        {/* Custom Theme */}
         <motion.button
           type="button"
           onClick={() => onChange('custom', localColor1, localColor2)}
@@ -127,7 +126,6 @@ export function ThemeSelector({ value = 'default', customColor1, customColor2, o
         </motion.button>
       </div>
 
-      {/* Custom Color Pickers */}
       {isCustom && (
         <motion.div
           initial={{ opacity: 0, height: 0 }}
@@ -170,9 +168,6 @@ export function ThemeSelector({ value = 'default', customColor1, customColor2, o
   )
 }
 
-/**
- * Helper function to get CSS gradient string for inline styles
- */
 const GRADIENT_ALPHA = 0.65
 
 function toRgbaWithAlpha(color: string, alpha: number) {
@@ -215,12 +210,10 @@ function buildGradient(colorA: string, colorB: string, alpha = GRADIENT_ALPHA) {
 export function getThemeGradient(themeId?: string, color1?: string, color2?: string): string {
   if (!themeId) return ''
   
-  // Custom theme
   if (themeId === 'custom' && color1 && color2) {
     return buildGradient(color1, color2)
   }
   
-  // Convert TailwindCSS gradient to inline CSS style
   const gradientMap: Record<string, string> = {
     'default': buildGradient('rgb(15 23 42)', 'rgb(2 6 23)'),
     'ocean': buildGradient('rgb(22 78 99)', 'rgb(23 37 84)'),

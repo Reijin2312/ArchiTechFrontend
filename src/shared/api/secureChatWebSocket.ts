@@ -1,29 +1,14 @@
-/**
- * Enhanced Chat WebSocket with Security Protocol
- * 
- * ☁️ CLOUD MODEL (Non-E2E):
- * Content is sent as PLAINTEXT with HMAC for integrity.
- * Server encrypts before storage, decrypts before broadcasting.
- * 
- * Features:
- * - WSS-only (no ws://)
- * - Session key management (per-device)
- * - Protocol message validation (seq_no, timestamp, HMAC)
- * - Anti-replay detection
- * - Device binding verification
- * - Strict message ordering
- */
 
 export interface SecureProtocolMessage {
-  msg_id: number;              // Unique message ID
-  seq_no: number;              // Sequence number (anti-replay)
-  timestamp: number;            // Message timestamp (milliseconds)
-  chat_id: number;              // ⚠️ SIGNED: Prevents room substitution attacks
+  msg_id: number;
+  seq_no: number;
+  timestamp: number;
+  chat_id: number;
   content_type: 'text' | 'image' | 'binary';
-  content: string;              // ☁️ PLAINTEXT content (server encrypts before storage)
-  hmac: string;                 // HMAC signature (Base64) - covers all fields including chat_id
-  reply_to_id?: number;         // Optional reply reference
-  attachments?: string[];       // Attachment hashes
+  content: string;
+  hmac: string;
+  reply_to_id?: number;
+  attachments?: string[];
 }
 
 export interface SessionKeyInfo {
@@ -38,15 +23,12 @@ export interface ChatWebSocketMessage {
         'friend_reject' | 'message_read' | 'message_edited' | 'message_deleted' |
         'session_key_rotated' | 'device_revoked' | 'protocol_error';
   
-  // Message payload
   chatId?: number;
   message?: SecureProtocolMessage;
   
-  // Session management
   sessionId?: string;
   newSessionKey?: SessionKeyInfo;
   
-  // Error details
   errorCode?: string;
   errorMessage?: string;
 }
@@ -59,10 +41,9 @@ type MessageHandler = (message: ChatWebSocketMessage) => void;
 class ClientProtocolValidator {
   private lastSeqNo = -1;
   private messageIds = new Set<number>();
-  private maxTimestampSkewMs = 30000;  // 30 seconds
+  private maxTimestampSkewMs = 30000;
   
   validate(msg: SecureProtocolMessage): boolean {
-    // 1. seq_no must be strictly increasing
     if (msg.seq_no <= this.lastSeqNo) {
       console.error('Protocol violation: seq_no not increasing', {
         last: this.lastSeqNo,
@@ -71,7 +52,6 @@ class ClientProtocolValidator {
       return false;
     }
     
-    // 2. timestamp must be recent
     const now = Date.now();
     const age = now - msg.timestamp;
     if (age < -this.maxTimestampSkewMs || age > this.maxTimestampSkewMs) {
@@ -83,17 +63,14 @@ class ClientProtocolValidator {
       return false;
     }
     
-    // 3. msg_id must be unique
     if (this.messageIds.has(msg.msg_id)) {
       console.error('Protocol violation: duplicate msg_id', { msg_id: msg.msg_id });
       return false;
     }
     
-    // Update state
     this.lastSeqNo = msg.seq_no;
     this.messageIds.add(msg.msg_id);
     
-    // Cleanup old msg_ids
     if (this.messageIds.size > 10000) {
       this.messageIds.clear();
     }
@@ -107,9 +84,6 @@ class ClientProtocolValidator {
   }
 }
 
-/**
- * Enhanced Chat WebSocket Service with Security Protocol
- */
 class SecureChatWebSocketService {
   private ws: WebSocket | null = null;
   private handlers: Set<MessageHandler> = new Set();
@@ -120,7 +94,6 @@ class SecureChatWebSocketService {
   private isIntentionallyClosed = false;
   private isConnecting = false;
   
-  // Session and security
   private sessionId: string | null = null;
   private deviceId: string | null = null;
   private sessionKey: string | null = null;
@@ -131,21 +104,10 @@ class SecureChatWebSocketService {
     this.restoreSessionFromStorage();
   }
   
-  /**
-   * Session credentials are now stored in HttpOnly cookies (secure from XSS).
-   * After page reload, they will be restored from refresh endpoint response.
-   * No need to restore from localStorage/sessionStorage.
-   */
   private restoreSessionFromStorage() {
-    // 🔐 DEPRECATED: Session/device IDs now come from refresh endpoint
-    // Cookies are sent automatically with credentials: 'include'
     console.log('✅ Session credentials will be restored from refresh endpoint on bootstrap');
   }
 
-  /**
-   * Connect to secure WebSocket.
-   * Enforces WSS-only, no fallback to WS.
-   */
   connect(userId: string) {
     if (this.ws?.readyState === WebSocket.OPEN || this.isConnecting) {
       console.log('[SecureWS] WebSocket already connected or connecting');
@@ -162,28 +124,17 @@ class SecureChatWebSocketService {
     });
   }
   
-  /**
-   * Set session credentials from login response (server-issued).
-   * This MUST be called before connect() to use server-issued deviceId.
-   */
   setSessionCredentials(sessionId: string | null, deviceId: string | null) {
     if (sessionId && deviceId) {
       this.sessionId = sessionId;
       this.deviceId = deviceId;
       this.cachedDeviceToken = null;
       
-      // 🔐 SECURITY: Do NOT store in localStorage/sessionStorage - XSS risk!
-      // These are now in HttpOnly cookies on backend, safe from JavaScript access
-      // We keep them in memory (class properties) for WebSocket headers only
       
       console.log('✅ Server credentials set in memory: sessionId and deviceId from login response');
     }
   }
 
-  /**
-   * Get or refresh device token.
-   * Automatically fetches new token if expired or missing.
-   */
   private async getDeviceToken(): Promise<{ deviceToken: string; expiresIn: number }> {
     const now = Date.now()
     if (this.cachedDeviceToken) {
@@ -236,15 +187,12 @@ class SecureChatWebSocketService {
     this.isConnecting = true;
     
     try {
-      // 🔐 CRITICAL: Ensure we have server-issued credentials before connecting
       if (!this.sessionId || !this.deviceId) {
         throw new Error('❌ Cannot connect: sessionId or deviceId not set. Call setSessionCredentials() after login.');
       }
       
-      // Get WS ticket from API with proper headers
       const apiBase = (import.meta as any)?.env?.VITE_API_BASE as string || window.location.origin
       
-      // 1️⃣ Get WS ticket from API
       const response = await fetch(`${apiBase}/api/v1/chat/ws-ticket`, {
         method: 'POST',
         headers: { 
@@ -261,12 +209,8 @@ class SecureChatWebSocketService {
       
       const { ticket } = await response.json();
       
-      // 2️⃣ Get or refresh server-bound device token (tied to sessionId/deviceId/IP/UA)
-      // This endpoint verifies that session and device are active in SessionKeyStore
-      // Token is automatically refreshed if expired
       const { deviceToken, expiresIn } = await this.getDeviceToken();
       
-      // Build WSS URL - ENFORCE WSS ONLY
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'wss:';
       if (window.location.protocol !== 'https:' && !window.location.hostname.includes('localhost')) {
         throw new Error('❌ SECURITY: WSS required! Cannot connect via insecure channel.');
@@ -279,8 +223,6 @@ class SecureChatWebSocketService {
       console.log('🔐 Connecting to secure WSS endpoint with server-bound device token');
       this.ws = new WebSocket(wsUrl);
       
-      // Important: WebSocket doesn't allow custom headers, so ticket and deviceToken are in query
-      // Origin header is sent automatically and will be validated by server
       
       this.ws.onopen = () => {
         console.log('✅ Secure WebSocket connected');
@@ -293,7 +235,6 @@ class SecureChatWebSocketService {
         try {
           const data: ChatWebSocketMessage = JSON.parse(event.data);
           
-          // Handle session key rotation
           if (data.type === 'connected' && data.sessionId) {
             this.sessionId = data.sessionId;
             console.log('✅ Session established:', this.sessionId);
@@ -304,14 +245,12 @@ class SecureChatWebSocketService {
             this.handleSessionKeyRotation(data.newSessionKey);
           }
           
-          // Validate protocol for secure messages
           if (data.message && !this.protocolValidator.validate(data.message)) {
             console.error('⚠️ Protocol validation failed - dropping message');
             this.emitProtocolError('PROTOCOL_VALIDATION_FAILED', 'Message validation failed');
             return;
           }
           
-          // Emit to handlers
           this.handlers.forEach(handler => {
             try {
               handler(data);
@@ -336,18 +275,14 @@ class SecureChatWebSocketService {
         this.ws = null;
         this.isConnecting = false;
         
-        // Handle specific close codes
         if (event.code === 1008) {
-          // Policy violation - might be invalid/expired device token
           if (event.reason === 'invalid_device_token' || event.reason === 'rate_limited') {
             console.error('🚨 Device token rejected:', event.reason);
             
-            // Clear cached token to force refresh on next connect
             this.cachedDeviceToken = null;
             
             if (event.reason === 'rate_limited') {
               console.error('🚨 Rate limited - too many failed attempts. Wait before reconnecting.');
-              // Don't auto-reconnect if rate limited - user needs to wait
               this.emitProtocolError('RATE_LIMITED', 'Too many failed authentication attempts');
               return;
             }
@@ -391,7 +326,6 @@ class SecureChatWebSocketService {
     this.sessionId = newKey.sessionId;
     this.deviceId = newKey.deviceId;
     
-    // Clear cached device token so next fetch is bound to the rotated session/device
     this.cachedDeviceToken = null;
   }
   

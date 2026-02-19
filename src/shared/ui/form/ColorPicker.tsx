@@ -13,9 +13,6 @@ const PRESET_COLORS = [
   '#a855f7', '#8b5cf6', '#6366f1', '#3b82f6', '#64748b',
 ]
 
-/**
- * Color picker with gradient panel and presets
- */
 export function ColorPicker({ value, onChange, className = '' }: ColorPickerProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [hue, setHue] = useState(200)
@@ -24,7 +21,6 @@ export function ColorPicker({ value, onChange, className = '' }: ColorPickerProp
   const containerRef = useRef<HTMLDivElement>(null)
   const gradientRef = useRef<HTMLDivElement>(null)
 
-  // Parse HSL from hex
   useEffect(() => {
     if (!value.startsWith('#')) return
     const hex = value.replace('#', '')
@@ -59,7 +55,6 @@ export function ColorPicker({ value, onChange, className = '' }: ColorPickerProp
     setLightness(Math.round(l * 100))
   }, [value])
 
-  // Convert HSL to Hex
   const hslToHex = (h: number, s: number, l: number) => {
     l /= 100
     const a = (s * Math.min(l, 1 - l)) / 100
@@ -85,7 +80,6 @@ export function ColorPicker({ value, onChange, className = '' }: ColorPickerProp
     onChange(hslToHex(hue, newSat, newLight))
   }
 
-  // Close on outside click
   useEffect(() => {
     if (!isOpen) return
     const handleClick = (e: MouseEvent) => {
@@ -121,7 +115,6 @@ export function ColorPicker({ value, onChange, className = '' }: ColorPickerProp
             exit={{ opacity: 0, y: -10 }}
             className="absolute left-0 top-full z-50 mt-2 w-64 rounded-xl border border-slate-700 bg-slate-900 p-4 shadow-2xl"
           >
-            {/* Gradient Picker */}
             <div
               ref={gradientRef}
               onClick={handleGradientClick}
@@ -137,7 +130,6 @@ export function ColorPicker({ value, onChange, className = '' }: ColorPickerProp
                 backgroundBlendMode: 'multiply',
               }}
             >
-              {/* Cursor */}
               <div
                 className="absolute h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow-lg"
                 style={{
@@ -148,7 +140,6 @@ export function ColorPicker({ value, onChange, className = '' }: ColorPickerProp
               />
             </div>
 
-            {/* Hue Slider */}
             <div className="mt-3">
               <input
                 type="range"
@@ -167,7 +158,6 @@ export function ColorPicker({ value, onChange, className = '' }: ColorPickerProp
               />
             </div>
 
-            {/* Preset Colors */}
             <div className="mt-3 grid grid-cols-5 gap-2">
               {PRESET_COLORS.map((color) => (
                 <button
@@ -185,7 +175,6 @@ export function ColorPicker({ value, onChange, className = '' }: ColorPickerProp
               ))}
             </div>
 
-            {/* Hex Input */}
             <div className="mt-3">
               <input
                 type="text"

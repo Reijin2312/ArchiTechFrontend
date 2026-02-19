@@ -8,10 +8,6 @@ interface ValidationResult {
   reason?: string;
 }
 
-/**
- * Универсальный хук для асинхронной валидации с дебаунсом
- * Используется для валидации email, username и т.д.
- */
 export function useAsyncValidation(
   value: string,
   validationFn: (value: string, signal: AbortSignal) => Promise<ValidationResult>,

@@ -1,10 +1,8 @@
 export function fixMojibake(str: string): string {
   if (typeof str !== 'string' || str.length === 0) return str;
-  // Quick heuristic to avoid touching normal strings
   const looksBroken = /[ÐÑÃÂÒÓРС]/.test(str);
   if (!looksBroken) return str;
   try {
-    // escape -> percent-encode as Latin-1; decodeURIComponent -> interpret as UTF-8
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const repaired = decodeURIComponent((escape as any)(str));
     return repaired;

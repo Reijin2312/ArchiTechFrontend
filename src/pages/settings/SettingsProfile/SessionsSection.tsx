@@ -36,7 +36,6 @@ function fmt(x?: string) {
 function parseDeviceName(ua?: string | null): string {
   if (!ua) return 'Неизвестное устройство';
   
-  // Operating Systems
   if (ua.includes('Windows NT 10')) return 'Windows 10/11';
   if (ua.includes('Windows')) return 'Windows';
   if (ua.includes('Mac OS X')) return 'macOS';
@@ -50,7 +49,6 @@ function parseDeviceName(ua?: string | null): string {
 function parseBrowser(ua?: string | null): string {
   if (!ua) return '';
   
-  // Browsers (order matters - check Edge before Chrome)
   if (ua.includes('Edg/')) return 'Edge';
   if (ua.includes('Chrome/')) return 'Chrome';
   if (ua.includes('Firefox/')) return 'Firefox';
@@ -191,7 +189,6 @@ export function SessionsSection({
               <div key={s.tokenId} className="rounded-xl border border-slate-800 bg-slate-900 p-4 text-xs hover:border-slate-700 transition-colors">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
-                    {/* Device info */}
                     <div className="flex items-center gap-2 mb-2">
                       <span className="text-lg">{deviceIcon}</span>
                       <div className="flex-1 min-w-0">
@@ -209,7 +206,6 @@ export function SessionsSection({
                       </div>
                     </div>
                     
-                    {/* IP and location */}
                     {s.ip && (
                       <div className="flex items-center gap-1.5 text-slate-400 mb-1">
                         <span>📍</span>
@@ -217,7 +213,6 @@ export function SessionsSection({
                       </div>
                     )}
                     
-                    {/* Timestamps */}
                     <div className="text-slate-500 space-y-0.5 mt-2">
                       <div>🕐 Создана: {fmt(s.createdAt)}</div>
                       <div>⏰ Истекает: {fmt(s.expiresAt)}</div>
@@ -226,7 +221,6 @@ export function SessionsSection({
                     </div>
                   </div>
                   
-                  {/* Status badge */}
                   <div className="flex flex-col items-end gap-2">
                     <span className={badgeClass(status)}>{status}</span>
                     {status === 'active' && (
@@ -241,7 +235,6 @@ export function SessionsSection({
                   </div>
                 </div>
                 
-                {/* Full user agent (collapsed by default) */}
                 {s.ua && (
                   <details className="mt-3 pt-3 border-t border-slate-800">
                     <summary className="cursor-pointer text-slate-500 hover:text-slate-400 text-[10px]">

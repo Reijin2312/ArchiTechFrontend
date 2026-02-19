@@ -238,7 +238,12 @@ export const routesMeta: Record<string, any> = {
   '/settings/password': { title: 'Смена пароля', robots: 'noindex,follow', canonical: `${ORIGIN}/settings/password` },
   '/me': { title: 'Мой профиль', robots: 'noindex,follow', canonical: `${ORIGIN}/me` },
 
-  "/u/:username": { title: "Профиль игрока - ArchiTech MC", robots: "noindex,follow", og: { image: OG } }
+  "/u/:username": { title: "Профиль игрока - ArchiTech MC", robots: "noindex,follow", og: { image: OG } },
+  "/u/:username/achievements": {
+    title: "Достижения игрока - ArchiTech MC",
+    robots: "noindex,follow",
+    og: { image: OG },
+  }
 } as const;
 
 export type RoutePath = keyof typeof routesMeta;

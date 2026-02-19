@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { http } from '@/shared/api/http';
@@ -370,7 +370,6 @@ export function SocialFloatingButton() {
           if (prev.some(r => r.userId === req.userId)) return prev;
           return [req as any, ...prev];
         });
-        // Подтягиваем свежие данные (аватар, username, id)
         loadIncomingRequests();
         loadOutgoingRequests();
         return;
@@ -458,7 +457,6 @@ export function SocialFloatingButton() {
           return;
         }
         
-        // ☁️ CLOUD MODEL: Server sends plaintext 'content' (already decrypted)
         if (wsMessage.message?.content !== undefined) {
           setMessages(prev => prev.map(m =>
             m.messageId === wsMessage.messageId
@@ -522,7 +520,7 @@ export function SocialFloatingButton() {
           ));
         }
         
-        return; // Не добавляем в processedMessageIds повторно
+        return;
       }
 
       if (processedMessageIds.current.has(msg.messageId)) {
@@ -533,7 +531,6 @@ export function SocialFloatingButton() {
 
       showDesktopNotification(msg, currentUser.id);
 
-      // Обновляем lastMessage в списке чатов локально (plaintext из WebSocket)
       setChats(prev => prev.map(c => {
         if (c.chatId !== msg.chatId) return c;
 
@@ -560,16 +557,13 @@ export function SocialFloatingButton() {
 
       if (currentChatId === msg.chatId) {
         setMessages((prev) => {
-          // Проверяем что сообщение не дублируется, НО если это image с imageUrl - обновляем
           const existingIndex = prev.findIndex(m => m.messageId === msg.messageId);
           if (existingIndex !== -1) {
-            // Сообщение уже есть — обновляем медиаданные, если пришли реальные URL/токены
             const existing = prev[existingIndex];
             if (msg.messageType === 'image' || msg.messageType === 'images') {
               const updated = [...prev];
               updated[existingIndex] = {
                 ...existing,
-                // предпочитаем серверные url с токеном
                 imageUrl: msg.imageUrl || existing.imageUrl,
                 imagePath: msg.imagePath || existing.imagePath,
                 images: msg.images?.length ? msg.images : existing.images,
@@ -580,7 +574,6 @@ export function SocialFloatingButton() {
           }
           
           if (msg.senderId === currentUser.id) {
-            // Ищем последнее локальное отправляемое сообщение (pending) текущего типа
             let tempIndex = -1;
             for (let i = prev.length - 1; i >= 0; i--) {
               const candidate = prev[i];
@@ -620,7 +613,6 @@ export function SocialFloatingButton() {
           }
 
           // Если это новое сообщение (не от нас или нет временного), добавляем
-          // ☁️ Пытаемся найти replyToMessage в загруженных сообщениях если сервер не прислал
           let replyToMessage = msg.replyToMessage as ChatMessage | undefined;
           if (!replyToMessage && msg.replyToId) {
             replyToMessage = prev.find(m => m.messageId === msg.replyToId);
@@ -629,11 +621,11 @@ export function SocialFloatingButton() {
           return [...prev, {
             messageId: msg.messageId,
             senderId: msg.senderId,
-            content: msg.content || '',  // ☁️ Plaintext from server
+            content: msg.content || '',
             messageType: msg.messageType,
             imagePath: msg.imagePath,
             imageUrl: msg.imageUrl,
-            images: msg.images,  // 🖼️ Multiple images array
+            images: msg.images,
             createdAt: msg.createdAt,
             isRead: msg.isRead, // ☁️ Доверяем серверу - он знает правильный статус
             replyToId: msg.replyToId,
@@ -1022,7 +1014,7 @@ export function SocialFloatingButton() {
           content: message,
           messageType,
           imagePath,
-          imageUrl: data.imageUrl, // 🔐 Сохраняем imageUrl с токеном
+          imageUrl: data.imageUrl,
           createdAt,
           isRead: false,
           replyToId: replyingTo?.messageId,
@@ -1030,7 +1022,6 @@ export function SocialFloatingButton() {
         } as ChatMessage
       } : c));
 
-      // WebSocket позже может дополнить статус/прочтение тем же messageId
 
       setReplyingTo(null);
     } catch (e) {
@@ -1098,15 +1089,13 @@ export function SocialFloatingButton() {
       imagePath: '',
       images: imagesToSend.map((img, idx) => ({
         imagePath: '',
-        imageUrl: img.preview // временно используем preview
+        imageUrl: img.preview
       })),
       createdAt: new Date().toISOString(),
     };
     
-    // Добавляем временное сообщение в UI
     setMessages(prev => [...prev, tempMessage]);
     
-    // Очищаем preview
     setAttachedImages([]);
     setMessageInput('');
     
@@ -1131,7 +1120,7 @@ export function SocialFloatingButton() {
       }
       
       // Загружаем все изображения ПАРАЛЛЕЛЬНО
-      const finalChatId = chat.chatId; // Используем финальный chatId
+      const finalChatId = chat.chatId;
       const uploadPromises = imagesToSend.map((img, idx) => {
         return (async () => {
           try {
@@ -1226,7 +1215,6 @@ export function SocialFloatingButton() {
       
       console.log('✅ Multi-image message sent:', data);
       
-      // Заменяем временное сообщение на реальное, сохраняя localId
       setMessages(prev => prev.map(m => 
         (m.localId === localId || m.messageId === localId)
           ? {
@@ -1251,7 +1239,6 @@ export function SocialFloatingButton() {
           : m
       ));
 
-      // Обновляем lastMessage в чате
       setChats(prev => prev.map(c => 
         c.chatId === chat!.chatId 
           ? { ...c, lastMessage: {
@@ -1291,7 +1278,6 @@ export function SocialFloatingButton() {
     
     const id = `attached-${Date.now()}-${Math.random()}`;
     
-    // Создаем preview
     const preview = await new Promise<string>(resolve => {
       const reader = new FileReader();
       reader.onload = (e) => resolve(e.target?.result as string);
@@ -1312,15 +1298,14 @@ export function SocialFloatingButton() {
   };
 
   const editMessage = async (messageId: number | string, newContent: string) => {
-    if (!selectedChat || typeof messageId === 'string') return; // Can't edit temporary messages
+    if (!selectedChat || typeof messageId === 'string') return;
     
     try {
       const chat = chats.find(c => c.chatId === selectedChat);
       if (!chat) return;
 
-      // ☁️ CLOUD MODEL: Send plaintext, server encrypts
       await http.put(endpoints.chatMessageEdit(messageId), {
-        content: newContent,  // ☁️ Plaintext
+        content: newContent,
       });
 
       setMessages(prev => prev.map(m => 
@@ -1335,7 +1320,7 @@ export function SocialFloatingButton() {
   };
 
   const deleteMessage = async (messageId: number | string) => {
-    if (!selectedChat || typeof messageId === 'string') return; // Can't delete temporary messages
+    if (!selectedChat || typeof messageId === 'string') return;
     
     if (!confirm('Удалить сообщение?')) return;
     
@@ -1403,7 +1388,6 @@ export function SocialFloatingButton() {
         url: `${endpoints.chatUpload}?chatId=${selectedChat}`
       });
       
-      // Не указываем Content-Type вручную - браузер автоматически установит multipart/form-data с boundary
       const { data } = await http.post<UploadImageResponse>(
         `${endpoints.chatUpload}?chatId=${selectedChat}`, 
         form,
@@ -1860,7 +1844,6 @@ export function SocialFloatingButton() {
                       attachImage(files[i]);
                     }
                   }
-                  // Очищаем input для возможности повторной загрузки того же файла
                   e.target.value = '';
                 }} 
               />

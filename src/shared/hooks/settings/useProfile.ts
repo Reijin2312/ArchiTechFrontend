@@ -3,6 +3,21 @@ import { http } from '@/shared/api/http';
 import { endpoints } from '@/shared/api/endpoints';
 
 interface Profile {
+  achievements?: Array<{
+    id: string;
+    icon: string;
+    title: string;
+    description: string;
+    unlocked: boolean;
+    unlockedAt?: string;
+  }>;
+  savedSkins?: Array<{
+    id: string;
+    name: string;
+    url: string;
+    model: 'classic' | 'slim';
+    savedAt: string;
+  }>;
   id: string;
   userId?: string;
   username: string;

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { http } from '@/shared/api/http';
 import { endpoints } from '@/shared/api/endpoints';
@@ -12,10 +12,6 @@ import { ThemeSelector } from '@/shared/ui/utils/ThemeSelector';
 import { WallpaperPicker } from '@/shared/ui/wallpaper/WallpaperPicker';
 import { BannerPicker } from '@/shared/ui/card/BannerPicker';
 import { AvatarPicker } from '@/shared/ui/avatar/AvatarPicker';
-import { SkinPicker } from '@/shared/ui/skin/SkinPicker';
-import { SkinGallery } from '@/shared/ui/skin/SkinGallery';
-import { Skin3DPreview } from '@/shared/ui/skin/Skin3DPreview';
-import { Badge } from '@/shared/ui/utils/Badge';
 import { AvatarCropperDialog } from '@/shared/ui/avatar/AvatarCropperDialog';
 import { ProfileThemeProvider } from '@/shared/ui/utils/ProfileThemeContext';
 import { useProfile } from '@/shared/hooks/settings/useProfile';
@@ -27,8 +23,6 @@ import { AccountSection } from './AccountSection';
 import { SessionsSection } from './SessionsSection';
 import { DangerZoneSection } from './DangerZoneSection';
 import { ToastStack } from './ToastStack';
-import type { SkinModel } from './types';
-import { useRef, useCallback } from 'react';
 
 export default function SettingsProfilePage() {
   useWallpaper();
@@ -62,11 +56,6 @@ export default function SettingsProfilePage() {
   const [website, setWebsite] = useState('');
   const [birthDate, setBirthDate] = useState('');
 
-  // Аватар и скин
-  const [skinUrlInput, setSkinUrlInput] = useState('');
-  const [skinModel, setSkinModel] = useState<SkinModel>('classic');
-  const [show3DSkin, setShow3DSkin] = useState(true);
-
   // Учётная запись
   const [email, setEmail] = useState('');
   const [pwdDummy, setPwdDummy] = useState('');
@@ -82,19 +71,6 @@ export default function SettingsProfilePage() {
   const [userStatus, setUserStatus] = useState<string>('online');
   const [customStatus, setCustomStatus] = useState<string>('');
   const [socialLinks, setSocialLinks] = useState<Array<{ type: string; value: string }>>([]);
-  const [savedSkins, setSavedSkins] = useState<
-    Array<{ id: string; name: string; url: string; model: SkinModel; savedAt: string }>
-  >([]);
-  const [achievements] = useState<
-    Array<{ id: string; icon: string; title: string; description: string; unlocked: boolean; unlockedAt?: string }>
-  >([
-    { id: '1', icon: '🎨', title: 'Первый аватар', description: 'Загрузить свой первый аватар', unlocked: false },
-    { id: '2', icon: '👕', title: 'Модник', description: 'Сохранить 5 скинов', unlocked: false },
-    { id: '3', icon: '💯', title: 'Сотня', description: '100 сессий на сервере', unlocked: false },
-    { id: '4', icon: '🏆', title: 'Легенда', description: 'Играть больше года', unlocked: false },
-  ]);
-
-  // Аватар cropper
   const [avatarCropSrc, setAvatarCropSrc] = useState<string | null>(null);
   const [avatarCropOpen, setAvatarCropOpen] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement | null>(null);
@@ -115,13 +91,12 @@ export default function SettingsProfilePage() {
     if (profile.birthDate) filled++;
     if (bannerUrl) filled++;
     if (socialLinks.length > 0) filled++;
-    if (savedSkins.length > 0) filled++;
+    if ((profile.savedSkins?.length ?? 0) > 0) filled++;
     if (profile.skinUrl) filled++;
 
     return Math.round((filled / total) * 100);
-  }, [profile, bannerUrl, socialLinks, savedSkins]);
+  }, [profile, bannerUrl, socialLinks]);
 
-  // Синхронизация с authStore
   function syncAuth(partial: Partial<{ avatarUrl: string; username: string }>) {
     authStore.setState((s) => (s.user ? { user: { ...s.user, ...partial } } : s));
   }
@@ -137,8 +112,6 @@ export default function SettingsProfilePage() {
     setBirthDate(profile.birthDate ?? '');
     setEmail(profile.email ?? '');
     setNewUsername(profile.username ?? '');
-    setSkinModel(profile.skinModel === 'slim' ? 'slim' : 'classic');
-
     if (profile.bannerUrl) setBannerUrl(profile.bannerUrl);
     if (profile.profileTheme) setProfileTheme(profile.profileTheme);
     if (profile.customThemeColor1) setCustomThemeColor1(profile.customThemeColor1);
@@ -149,7 +122,6 @@ export default function SettingsProfilePage() {
     if (profile.socialLinks) setSocialLinks(profile.socialLinks);
   }, [profile]);
 
-  // Toast notifications
   useEffect(() => {
     if (!error) return;
     pushToast('error', normalizeMessage(error));
@@ -162,7 +134,6 @@ export default function SettingsProfilePage() {
     setNotice(null);
   }, [notice, pushToast]);
 
-  // Username validation
   useEffect(() => {
     const u = newUsername.trim().toLowerCase();
     if (!u || !profile) {
@@ -288,58 +259,6 @@ export default function SettingsProfilePage() {
     }
   }
 
-  // Загрузка скина
-  async function uploadSkinFile(file: File) {
-    setBusy('skin-file');
-    setNotice(null);
-    setError(null);
-    try {
-      const fd = new FormData();
-      fd.append('file', file);
-
-      const url = `${endpoints.profileSkin}?model=${encodeURIComponent(skinModel)}`;
-
-      const { data } = await http.post<{ skinUrl: string; skinModel?: SkinModel }>(url, fd, { withCredentials: true });
-
-      setProfile((m) => (m ? { ...m, skinUrl: data.skinUrl, skinModel: data.skinModel ?? skinModel } : m));
-
-      setNotice('Скин обновлён');
-    } catch (e: unknown) {
-      const err = e as { response?: { data?: unknown }; message?: string };
-      setError(err?.response?.data as string || err?.message || 'Ошибка загрузки скина');
-    } finally {
-      setBusy(null);
-    }
-  }
-
-  async function uploadSkinUrl() {
-    const url = skinUrlInput.trim();
-    if (!url) return;
-    setBusy('skin-url');
-    setNotice(null);
-    setError(null);
-    try {
-      const urlWithModel = `${endpoints.profileSkinUrl}?model=${encodeURIComponent(skinModel)}`;
-
-      const { data } = await http.post<{ skinUrl: string; skinModel?: SkinModel }>(
-        urlWithModel,
-        { url },
-        { withCredentials: true, headers: { 'Content-Type': 'application/json' } },
-      );
-
-      setProfile((m) => (m ? { ...m, skinUrl: data.skinUrl, skinModel: data.skinModel ?? skinModel } : m));
-
-      setSkinUrlInput('');
-      setNotice('Скин обновлён');
-    } catch (e: unknown) {
-      const err = e as { response?: { data?: unknown }; message?: string };
-      setError(err?.response?.data as string || err?.message || 'Ошибка загрузки по URL');
-    } finally {
-      setBusy(null);
-    }
-  }
-
-  // Смена username
   async function changeUsername() {
     const u = newUsername.trim().toLowerCase();
     if (!u || usernameOk !== true) return;
@@ -443,90 +362,6 @@ export default function SettingsProfilePage() {
                   onChange={handleAvatarFileChange}
                 />
               </Card>
-
-              <Card className="mt-6">
-                <h2 className="mb-3 text-sm font-semibold text-sky-300">Скин</h2>
-                <SkinPicker
-                  value={profile?.skinUrl || ''}
-                  busy={busy === 'skin-file'}
-                  loading={loading}
-                  onChange={(file) => uploadSkinFile(file)}
-                />
-
-                <div className="mt-4">
-                  <label className="mb-1 block text-xs text-slate-400">URL картинки</label>
-                  <div className="flex gap-2">
-                    <input
-                      value={skinUrlInput}
-                      onChange={(e) => setSkinUrlInput(e.target.value)}
-                      placeholder="https://…"
-                      className="w-full rounded-xl border border-slate-800 bg-slate-900 px-3 py-2 text-sm outline-none focus:border-slate-600"
-                    />
-                    <button
-                      disabled={!skinUrlInput || busy === 'skin-url'}
-                      onClick={uploadSkinUrl}
-                      className="rounded-xl border border-slate-700 px-3 py-2 text-sm hover:border-slate-500 disabled:opacity-50"
-                    >
-                      Применить
-                    </button>
-                  </div>
-                </div>
-
-                <div className="mt-4">
-                  <div className="mb-1 flex items-center gap-2">
-                    <label className="text-xs text-slate-400">Модель скина</label>
-                  </div>
-                  <div className="flex gap-2 text-xs">
-                    <button
-                      type="button"
-                      onClick={() => setSkinModel('classic')}
-                      className={
-                        'rounded-lg border px-3 py-1 ' +
-                        (skinModel === 'classic'
-                          ? 'border-sky-700 bg-sky-900/40 text-sky-300'
-                          : 'border-slate-700 text-slate-300 hover:border-slate-500')
-                      }
-                    >
-                      Classic (Steve)
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setSkinModel('slim')}
-                      className={
-                        'rounded-lg border px-3 py-1 ' +
-                        (skinModel === 'slim'
-                          ? 'border-sky-700 bg-sky-900/40 text-sky-300'
-                          : 'border-slate-700 text-slate-300 hover:border-slate-500')
-                      }
-                    >
-                      Slim (Alex)
-                    </button>
-                  </div>
-                </div>
-              </Card>
-
-              {/* 3D превью скина */}
-              {profile?.skinUrl && show3DSkin && (
-                <Card className="mt-6 flex flex-col">
-                  <div className="mb-3 flex items-center justify-between">
-                    <h2 className="text-sm font-semibold text-sky-300">3D Превью скина</h2>
-                    <button
-                      type="button"
-                      onClick={() => setShow3DSkin(false)}
-                      className="text-xs text-slate-400 hover:text-slate-300"
-                    >
-                      Скрыть
-                    </button>
-                  </div>
-                  <div className="h-[400px]">
-                    <Skin3DPreview
-                      skinUrl={profile.skinUrl}
-                      autoRotate
-                      className="h-full w-full overflow-hidden rounded-xl border border-slate-800 bg-slate-900"
-                    />
-                  </div>
-                </Card>
-              )}
 
               <SessionsSection
                 visibleSessions={visibleSessions}
@@ -674,26 +509,6 @@ export default function SettingsProfilePage() {
                   }}
                   onClear={() => setBannerUrl('')}
                 />
-              </Card>
-
-              <Card className="mt-6">
-                <SkinGallery skins={savedSkins as never} onSelect={() => {}} onDelete={() => {}} onSave={() => {}} />
-              </Card>
-
-              <Card className="mt-6">
-                <h2 className="mb-4 text-sm font-semibold text-sky-300">Достижения</h2>
-                <div className="grid grid-cols-2 gap-3">
-                  {achievements.map((achievement) => (
-                    <Badge
-                      key={achievement.id}
-                      icon={achievement.icon}
-                      title={achievement.title}
-                      description={achievement.description}
-                      unlocked={achievement.unlocked}
-                      unlockedAt={achievement.unlockedAt}
-                    />
-                  ))}
-                </div>
               </Card>
 
               <DangerZoneSection onLogout={logout} />

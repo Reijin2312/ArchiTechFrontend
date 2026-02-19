@@ -12,7 +12,6 @@ interface SessionData {
   fingerprint: string
   createdAt: number
   expiresAt: number
-  // Phase 4: Device key password (stored in memory only)
   devicePassword?: string
 }
 
@@ -160,7 +159,7 @@ export const useSessionKeyStore = create<SessionKeyStore>((set, get) => ({
   getKeyVersion: () => get().sessionData?.keyVersion || 1,
   getDevicePassword: () => get().sessionData?.devicePassword || null,
 
-  isDeviceRevoked: () => false, // TODO: Check with backend
+  isDeviceRevoked: () => false,
 
   clearSession: () => {
     set({

@@ -1,27 +1,10 @@
 import { authStore } from '@/shared/store/auth'
 
-/**
- * ☁️ CLOUD CHAT MODEL (Server-side encryption)
- * 
- * Архитектура:
- * - Клиент отправляет plaintext над TLS (аутентифицирован через session key)
- * - Сервер: plaintext → AES-256-GCM (KMS chat-key) → store in DB encrypted
- * - Сервер: DB (encrypted) → decrypt → send plaintext over TLS
- * - История синхронизируется между устройствами автоматически
- * 
- * ✅ Преимущества:
- * - Мгновенная синхронизация истории между устройствами
- * - Поддержка мультивхода
- * - Сервер может искать, индексировать, создавать резервные копии
- * - Упрощенная модель безопасности (trust server infrastructure)
- */
 
-// ☁️ CLOUD MODEL: Session management handled server-side
-// useSessionKeyStore removed - not needed for cloud encryption model
 
 export interface ChatMessage {
   chatId: number
-  content: string // Plaintext - отправляем как есть над TLS
+  content: string
   messageType?: 'text' | 'image'
   replyToId?: number
   imagePath?: string
@@ -31,7 +14,7 @@ export interface ReceivedMessage {
   messageId: number
   chatId: number
   senderId: string
-  content: string // Plaintext от сервера
+  content: string
   messageType: 'text' | 'image'
   imagePath?: string
   imageUrl?: string
@@ -69,26 +52,6 @@ export interface WebSocketConfig {
   heartbeatInterval?: number
 }
 
-/**
- * ☁️ Клиент для облачного чата
- * 
- * Использование:
- * ```typescript
- * const chatClient = new CloudChatClient()
- * await chatClient.connect()
- * 
- * // Отправка plaintext
- * await chatClient.sendMessage({
- *   chatId: 1,
- *   content: "Hello, world!"
- * })
- * 
- * // Получение plaintext
- * chatClient.onMessage((msg) => {
- *   console.log(msg.message?.content) // Already decrypted on server
- * })
- * ```
- */
 export class CloudChatClient {
   private ws: WebSocket | null = null
   private messageHandlers: Set<(msg: WebSocketEvent) => void> = new Set()
@@ -103,17 +66,10 @@ export class CloudChatClient {
       heartbeatInterval: config.heartbeatInterval || 30000
     }
     
-    // 🔐 Restore session credentials from storage on page reload
     this.restoreCredentialsFromStorage()
   }
   
-  /**
-   * 🔐 Session credentials now restored from refresh endpoint, not storage.
-   * This prevents XSS attacks from stealing credentials.
-   */
   private restoreCredentialsFromStorage(): void {
-    // 🔐 DEPRECATED: Credentials now come from refresh endpoint on bootstrap
-    // authStore will be populated by bootstrap.ts
     console.log('✅ Session credentials will be restored from refresh endpoint');
   }
   
@@ -122,7 +78,6 @@ export class CloudChatClient {
     
     if (wsUrl) return wsUrl
     
-    // Default: same origin, Vite proxies /ws to backend ws port
     const origin = window.location.origin
     const url = new URL(origin)
     url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:'
@@ -171,13 +126,9 @@ export class CloudChatClient {
     })
   }
   
-  /**
-   * Получить ticket для подключения
-   */
   private async getTicket(): Promise<string> {
     const apiBase = (import.meta as any)?.env?.VITE_API_BASE as string || window.location.origin
     
-    // ☁️ CLOUD MODEL: Headers managed server-side via session middleware
     const state = authStore.getState()
     const { accessToken, sessionId, deviceId } = state
 
@@ -189,7 +140,6 @@ export class CloudChatClient {
       throw new Error(`Missing auth/session credentials for chat ticket (${missing.join(', ')}). Please re-login.`)
     }
 
-    // Debug log to trace headers sent for ticket request (no secrets)
     console.log('[ChatTicket] sending ticket request', {
       sessionId: sessionId.slice(0, 8),
       deviceId: deviceId.slice(0, 8),
@@ -215,9 +165,6 @@ export class CloudChatClient {
     return data.ticket
   }
 
-  /**
-   * Получить deviceToken (обязателен для WS, сервер проверяет device binding)
-   */
   private async getDeviceToken(): Promise<string> {
     const apiBase = (import.meta as any)?.env?.VITE_API_BASE as string || window.location.origin
     const state = authStore.getState()
@@ -256,21 +203,11 @@ export class CloudChatClient {
     return deviceToken
   }
   
-  /**
-   * ☁️ Отправить сообщение (plaintext над TLS)
-   * 
-   * Сервер будет:
-   * 1. Получить plaintext от клиента
-   * 2. Зашифровать AES-256-GCM (KMS chat-key)
-   * 3. Сохранить encrypted в БД
-   * 4. Отправить plaintext всем участникам
-   */
   async sendMessage(message: ChatMessage): Promise<void> {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
       throw new Error('WebSocket not connected')
     }
     
-    // ☁️ Отправляем plaintext - сервер сам зашифрует
     const protocolMessage = {
       type: 'new_message',
       chatId: message.chatId,
@@ -288,17 +225,11 @@ export class CloudChatClient {
     })
   }
   
-  /**
-   * ☁️ Обработка входящего сообщения
-   * 
-   * Сервер уже расшифровал, получаем plaintext
-   */
   private async handleMessage(data: string): Promise<void> {
     try {
       const parsed = JSON.parse(data)
       
       if (parsed.type === 'new_message' && parsed.message) {
-        // Plaintext уже на клиенте
         this.notifyHandlers({
           type: 'new_message',
           message: parsed.message,
@@ -429,9 +360,6 @@ export class CloudChatClient {
   }
 }
 
-/**
- * ☁️ Singleton instance
- */
 export const cloudChatClient = new CloudChatClient()
 
 // Экспортируем для обратной совместимости

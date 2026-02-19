@@ -22,6 +22,8 @@ import ContactsPage from '@/pages/public/ContactsPage';
 import AboutServerPage from '@/pages/public/AboutServerPage';
 import TgBotLoginWebApp from '@/features/auth/pages/TgBotLoginWebApp';
 import DeviceLoginDonePage from '@/features/auth/pages/DeviceLoginDonePage';
+import UserAchievementsPage from '@/pages/public/UserAchievementsPage';
+import UserSkinsPage from '@/pages/public/UserSkinsPage';
 
 export const router = createBrowserRouter([
   { path: '/tg-login', element: <TgBotLoginWebApp /> },
@@ -38,6 +40,8 @@ export const router = createBrowserRouter([
       { path: '/auth/reset/done', element: <ResetDonePage /> },
       { path: '/auth/device/done', element: <DeviceLoginDonePage /> },
       { path: '/u/:username', element: <UserProfilePage /> },
+      { path: '/u/:username/achievements', element: <UserAchievementsPage /> },
+      { path: '/u/:username/skins', element: <UserSkinsPage /> },
       { path: '/profile', element: <RedirectToMyProfile /> },
       { path: '/rules', element: <RulesPage />},
       { path: '/shop', element: <ShopPage/>},

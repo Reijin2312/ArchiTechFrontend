@@ -28,7 +28,6 @@ const SOCIAL_ICONS: Record<string, { icon: React.ReactNode; placeholder: string;
 export function SocialLinks({ links, onChange, editable = false, readOnly = false, className = '' }: SocialLinksProps) {
   const [editing, setEditing] = useState(false)
   
-  // Normalize links to array format
   const normalizedLinks: SocialLink[] = Array.isArray(links)
     ? links
     : Object.entries(links).map(([type, value]) => ({ 

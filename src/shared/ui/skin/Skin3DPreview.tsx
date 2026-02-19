@@ -9,10 +9,6 @@ type Skin3DPreviewProps = {
   compact?: boolean
 }
 
-/**
- * Wrapper component for Skin3DViewer with loading state
- * Used in settings page to show 3D skin preview
- */
 export function Skin3DPreview({ skinUrl, className = '', autoRotate = false, compact = false }: Skin3DPreviewProps) {
   const [loading] = useState(false)
 

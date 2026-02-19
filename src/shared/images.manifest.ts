@@ -1,4 +1,3 @@
-// auto-generated
 export type ImgVariant = { w:number; path:string };
 export type ImgEntry = { original:{ w:number; h:number; png:string; avif:string; webp:string }; avif:ImgVariant[]; webp:ImgVariant[] };
 export const IMAGES: Record<string, ImgEntry> = {

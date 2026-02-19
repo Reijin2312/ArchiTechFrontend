@@ -2,13 +2,12 @@ export type Tokens = { accessToken : string; refreshToken: string }
 export type User = { id : string; username: string; email: string }
 
 export type LoginReq = { email: string; password: string }
-// 🔐 PHASE 2 ACTIVE: Backend now returns sessionId, sessionKey, sessionKeyIv
 export type LoginRes = Tokens & { 
   user: User;
-  deviceId?: string;          // Device identifier for WS authentication
-  sessionId?: string;          // Session ID for protocol validation (Phase 2)
-  sessionKey?: string;         // Encrypted session key (safe to send)
-  sessionKeyIv?: string;       // IV for session key decryption
+  deviceId?: string;
+  sessionId?: string;
+  sessionKey?: string;
+  sessionKeyIv?: string;
 }
 
 export type RegisterReq = { email: string; username: string; password: string }
@@ -79,28 +78,26 @@ export interface FriendStatusResponse {
 }
 
 export interface ChatMessage {
-  messageId: number | string  // 🔄 Can be string for temporary messages while uploading
-  localId?: string            // Stable client id to keep React keys while status changes
+  messageId: number | string
+  localId?: string
   status?: 'pending' | 'sent' | 'delivered' | 'read'
   senderId: string
-  content: string  // ☁️ CLOUD MODEL: Plaintext content from server
+  content: string
   messageType: 'text' | 'image' | 'images'
   imagePath?: string
   imageUrl?: string
-  images?: Array<{  // 🖼️ Multiple images in one message
+  images?: Array<{
     imagePath: string
     imageUrl?: string
     imageKeyVersion?: number
   }>
   createdAt: string
   isRead?: boolean
-  replyToId?: number | string  // 🔄 Can be string for temporary messages
+  replyToId?: number | string
   replyToMessage?: ChatMessage
   edited?: boolean
-  // 🔐 Key versions for tracking encrypted/decrypted state
   messageKeyVersion?: number
   imageKeyVersion?: number
-  // 🔐 Protocol security metadata
   messageHmac?: string
   sequenceNumber?: number
   signatureTimestamp?: number
@@ -123,7 +120,7 @@ export interface ChatMessagesResponse {
 
 export interface SendMessageRequest {
   chatId: number
-  content: string  // ☁️ Plaintext content (server encrypts before storage)
+  content: string
   messageType?: 'text' | 'image'
   imagePath?: string
   replyToId?: number
@@ -132,11 +129,11 @@ export interface SendMessageRequest {
 export interface SendMessageResponse {
   success: boolean
   messageId: number
-  imageUrl?: string // 🔐 URL изображения с токеном (для типа 'image')
+  imageUrl?: string
   imageUrls?: Array<{
     imagePath: string
     imageUrl: string
-  }> // 🖼️ URLs для multiple images (для типа 'images')
+  }>
 }
 
 export interface CreateChatRequest {

@@ -213,7 +213,6 @@ export default function AboutServerPage() {
       <Seo {...routesMeta['/about']} />
 
       <div className="min-h-dvh text-slate-100 relative overflow-x-hidden">
-        {/* Background */}
         <div className="pointer-events-none absolute inset-0 overflow-hidden">
           <div className="absolute -top-28 right-[-18%] h-112 w-md rounded-full bg-indigo-500/14 blur-[120px]" />
           <div className="absolute -bottom-36 left-[-20%] h-128 w-lg rounded-full bg-sky-500/12 blur-[140px]" />
@@ -221,7 +220,6 @@ export default function AboutServerPage() {
           <div className="absolute inset-0 opacity-[0.07] bg-[radial-gradient(circle,white_1px,transparent_1px)] bg-size-[26px_26px]" />
         </div>
 
-        {/* Hero */}
         <motion.section
           className="mx-auto max-w-7xl px-4 pb-8 pt-10 md:pt-16 relative"
           initial={disableEntranceMotion ? undefined : { opacity: 0, y: 22, filter: 'blur(8px)' }}
@@ -258,7 +256,6 @@ export default function AboutServerPage() {
               </p>
             </div>
 
-            {/* Features */}
             <motion.div
               className="grid md:grid-cols-3 gap-6 mt-8"
               variants={disableEntranceMotion ? undefined : containerVariants}
@@ -302,7 +299,6 @@ export default function AboutServerPage() {
           </GlassCard>
         </motion.section>
 
-        {/* Screenshot */}
         <motion.section
           id="gallery"
           className="mx-auto max-w-7xl px-4 py-10 relative"
@@ -325,7 +321,6 @@ export default function AboutServerPage() {
           </div>
         </motion.section>
 
-        {/* Seasons */}
         <motion.section
           id="seasons"
           className="mx-auto max-w-7xl px-4 py-10 relative"
@@ -493,7 +488,6 @@ export default function AboutServerPage() {
           </div>
         </motion.section>
 
-        {/* CTA */}
         <motion.section
           id="join"
           className="mx-auto max-w-7xl px-4 py-10 mb-10 relative"

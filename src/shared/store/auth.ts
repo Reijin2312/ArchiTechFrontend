@@ -6,16 +6,14 @@ export type User = { id: string; username: string; email?: string }
 type State = {
   user: User | null
   accessToken: string | null
-  // Device/Session binding credentials (memory only)
   sessionId: string | null
   deviceId: string | null
-  sessionKey: string | null // Encrypted session key (never decrypted on client)
-  sessionKeyIv: string | null // IV for session key
+  sessionKey: string | null
+  sessionKeyIv: string | null
 }
 
 type Actions = {
   setAuth: (u: User | null, a: string | null) => void
-  // Set session credentials from login response (server-issued)
   setSessionCredentials: (
     sessionId: string | undefined,
     deviceId: string | undefined,
@@ -59,7 +57,6 @@ export const authStore = create<State & Actions>((set) => ({
       sessionKeyIv: null
     })
 
-    // Clean up leftovers from older versions that used web storage
     sessionStorage.removeItem('__device_token__')
     sessionStorage.removeItem('__device_token_expires__')
     sessionStorage.removeItem('__session_key__')

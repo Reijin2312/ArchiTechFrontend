@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { http } from '@/shared/api/http';
 import { endpoints } from '@/shared/api/endpoints';
 import { isSelf } from '@/shared/auth/isSelf';
@@ -7,13 +7,20 @@ import { useWallpaper } from '@/shared/ui/wallpaper/useWallpaper';
 import { Seo } from '@/shared/seo/seo';
 import { Badge } from '@/shared/ui/utils/Badge';
 import { SocialLinks } from '@/shared/ui/utils/SocialLinks';
-import { getThemeGradient } from '@/shared/ui/utils/ThemeSelector';
 import { Skin3DViewer } from '@/shared/ui/skin/Skin3DViewer';
 import { UserSessions } from '@/shared/ui/utils/UserSessions';
 import { ProfileThemeProvider, useProfileTheme } from '@/shared/ui/utils/ProfileThemeContext';
 import { SERVER_IP } from '@/shared/constants';
 
 type PublicUser = {
+  achievements?: Array<{
+    id: string;
+    icon: string;
+    title: string;
+    description: string;
+    unlocked: boolean;
+    unlockedAt?: string;
+  }>;
   id: string;
   username: string;
   displayName?: string;
@@ -40,15 +47,6 @@ type Stats = {
   online?: boolean
 };
 
-type McStatus = {
-  online: boolean;
-  version?: string;
-  motd?: string;
-  players?: { online: number; max: number; sample?: { name: string }[] };
-  latencyMs?: number;
-  tps?: number;
-};
-
 export default function UserProfilePage() {
   const username = useParams().username!;
   const self = isSelf(username);
@@ -58,7 +56,6 @@ export default function UserProfilePage() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
 
-  // Use profile wallpaper if available, otherwise default
   useWallpaper(user?.profileWallpaper || '/images/bg.avif');
 
   useEffect(() => {
@@ -120,6 +117,32 @@ export default function UserProfilePage() {
     try { return new Date(iso).toLocaleDateString(); } catch { return null; }
   }, [user?.registeredAt]);
   const profileUsername = user?.username;
+  const achievementsHref = `/u/${encodeURIComponent(username)}/achievements`;
+  const skinsHref = `/u/${encodeURIComponent(username)}/skins`;
+  const previewAchievements = useMemo(
+    () => (user?.achievements ?? []).filter((ach) => ach.unlocked).slice(0, 6),
+    [user?.achievements],
+  );
+  const handleShareProfile = async () => {
+    const shareUrl = `${window.location.origin}/u/${encodeURIComponent(username)}`;
+    const shareTitle = user?.displayName || user?.username || username;
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: `${shareTitle} — ArchiTech MC`,
+          text: `Профиль игрока ${shareTitle}`,
+          url: shareUrl,
+        });
+        return;
+      }
+    } catch {}
+
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+    } catch {
+      window.prompt('Ссылка на профиль:', shareUrl);
+    }
+  };
 
   return (
     <>
@@ -136,8 +159,21 @@ export default function UserProfilePage() {
           <section className="order-2 flex flex-col md:col-span-3 md:order-1">
             <Card className="flex h-full flex-col">
               <div className="mb-3 flex items-center justify-between">
-                <h2 className="text-sm font-semibold">Скин</h2>
-                <div className="text-xs text-slate-400">3D</div>
+                <h2 className="text-sm font-semibold font-techno">Скин</h2>
+                <div className="flex items-center gap-2">
+                  <Link
+                    to={skinsHref}
+                    className="group inline-flex h-8 w-8 items-center justify-center rounded-full border border-sky-500/35 bg-[radial-gradient(circle_at_30%_20%,rgba(56,189,248,.22),rgba(15,23,42,.92))] text-sky-200 shadow-[0_0_0_1px_rgba(56,189,248,.12)_inset,0_10px_22px_-14px_rgba(0,0,0,.9)] transition hover:scale-105 hover:border-sky-300/60 hover:text-sky-100"
+                    aria-label="Открыть галерею скинов"
+                    title="Галерея скинов"
+                  >
+                    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden="true">
+                      <path d="M14 5h5v5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                      <path d="M10 14L19 5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                      <path d="M19 13v6H5V5h6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </Link>
+                </div>
               </div>
               <div className="h-[400px] md:flex-1 md:h-auto">
                 <Skin3DViewer
@@ -151,7 +187,6 @@ export default function UserProfilePage() {
           <section className="order-1 flex flex-col md:col-span-9 md:order-2">
             <Card className="relative flex h-full flex-col overflow-hidden">
             
-            {/* Banner background with gradient fade */}
             {(user as any)?.bannerUrl && (
               <div className="absolute left-0 right-0 top-0 h-48 overflow-hidden">
                 <img
@@ -165,6 +200,20 @@ export default function UserProfilePage() {
             )}
             
             {self && (
+              <>
+              <button
+                type="button"
+                onClick={handleShareProfile}
+                className="absolute right-14 top-4 z-10 inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-700 bg-slate-900/70 text-slate-200 hover:border-slate-500 hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-300 backdrop-blur-sm"
+                aria-label="Поделиться профилем"
+                title="Поделиться профилем"
+              >
+                <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true">
+                  <path d="M14 5h5v5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M10 14L19 5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M19 13v6H5V5h6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
               <a
                 href="/settings/profile"
                 className="absolute right-4 top-4 z-10 inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-700 bg-slate-900/70 text-slate-200 hover:border-slate-500 hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-300 backdrop-blur-sm"
@@ -185,52 +234,40 @@ export default function UserProfilePage() {
                   />
                 </svg>
               </a>
+              </>
             )}
 
             <div className="relative z-10 mt-28 flex justify-center">
-              <Avatar url={(user as any)?.avatarUrl} loading={loading} />
+              <Avatar url={(user as any)?.avatarUrl} loading={loading} online={stats?.online} />
             </div>
 
             <div className="pt-4 text-center">
               {(user as any)?.displayName && (
-                <div className="mb-1 text-xl font-semibold text-slate-300">
+                <div className="mb-1 text-xl font-semibold text-slate-300 font-techno">
                   {(user as any).displayName}
                 </div>
               )}
               <div className="mb-1 flex items-center justify-center gap-2">
-                <h1 className="truncate text-2xl font-bold">
+                <h1 className="truncate text-2xl font-bold font-techno text-techno-glow">
                   {loading ? 'Загрузка…' : user ? `${user.username}` : '—'}
                 </h1>
-                {stats?.online != null && (
-                  <span
-                    className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs ${
-                      stats.online ? 'border-green-700 text-green-400' : 'border-slate-700 text-slate-400'
-                    }`}
-                    title={stats.online ? 'Онлайн' : 'Оффлайн'}
-                  >
-                    <span className={`h-2 w-2 rounded-full ${stats.online ? 'bg-green-500' : 'bg-slate-500'}`} />
-                    {stats.online ? 'online' : 'offline'}
-                  </span>
-                )}
               </div>
 
-              {/* Custom Status */}
               {(user as any)?.customStatus && (
-                <div className="mb-2 text-sm text-slate-300">
+                <div className="mb-2 text-sm text-slate-300 font-arcane">
                   {(user as any).customStatus}
                 </div>
               )}
 
-              <div className="mb-4 text-xs text-slate-400">
+              <div className="mb-4 text-xs text-slate-400 font-arcane">
                 {since && <span>с {since}</span>}
                 {self && <span className="ml-2 rounded-md border border-slate-700 px-2 py-0.5 text-sky-400">это вы</span>}
               </div>
 
               <p className="mx-auto max-w-2xl whitespace-pre-wrap text-sm text-slate-200">
-                {loading ? '…' : user?.bio || 'Описание не заполнено'}
+                {loading ? '…' : user?.bio || 'О себе пока ничего не указано'}
               </p>
 
-              {/* Social Links */}
               {(user as any)?.socialLinks && Object.keys((user as any).socialLinks).length > 0 && (
                 <div className="mt-4">
                   <SocialLinks 
@@ -241,29 +278,17 @@ export default function UserProfilePage() {
                 </div>
               )}
 
-              <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
-                {self ? (
-                  <>
-                    {}
-                    <button className="rounded-xl border border-slate-700 px-3 py-1.5 text-sm hover:border-slate-500">
-                      Поделиться
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <button className="rounded-xl border border-slate-700 px-3 py-1.5 text-sm hover:border-slate-500">
-                      Написать
-                    </button>
-                    <button className="rounded-xl border border-red-800 px-3 py-1.5 text-sm text-red-400 hover:bg-red-900/20">
-                      Пожаловаться
-                    </button>
-                  </>
-                )}
-              </div>
+              {!self && (
+                <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
+                  <button className="rounded-xl border border-slate-700 px-3 py-1.5 text-sm hover:border-slate-500">
+                    Написать
+                  </button>
+                  <button className="rounded-xl border border-red-800 px-3 py-1.5 text-sm text-red-400 hover:bg-red-900/20">
+                    Пожаловаться
+                  </button>
+                </div>
+              )}
 
-              <div className="mt-6 grid grid-cols-3 gap-2 text-center text-sm">
-                {/* ...existing code... */}
-              </div>
             </div>
           </Card>
           </section>
@@ -271,16 +296,28 @@ export default function UserProfilePage() {
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           <Card>
-            <h3 className="mb-3 text-sm font-semibold text-sky-300">Достижения</h3>
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <h3 className="text-sm font-semibold text-sky-300 font-techno">Достижения</h3>
+              <Link
+                to={achievementsHref}
+                className="group inline-flex h-8 w-8 items-center justify-center rounded-full border border-sky-500/35 bg-[radial-gradient(circle_at_30%_20%,rgba(56,189,248,.22),rgba(15,23,42,.92))] text-sky-200 shadow-[0_0_0_1px_rgba(56,189,248,.12)_inset,0_10px_22px_-14px_rgba(0,0,0,.9)] transition hover:scale-105 hover:border-sky-300/60 hover:text-sky-100"
+                aria-label="Открыть все достижения"
+                title="Все достижения"
+              >
+                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden="true">
+                  <path d="M14 5h5v5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M10 14L19 5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M19 13v6H5V5h6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </Link>
+            </div>
             {loading ? (
               <Empty loading={true} text="" />
-            ) : (user as any)?.achievements && (user as any).achievements.length > 0 ? (
+            ) : previewAchievements.length > 0 ? (
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                {(user as any).achievements
-                  .filter((ach: any) => ach.unlocked)
-                  .map((ach: any, idx: number) => (
+                {previewAchievements.map((ach) => (
                     <Badge
-                      key={idx}
+                      key={ach.id}
                       icon={ach.icon}
                       title={ach.title}
                       description={ach.description}
@@ -290,7 +327,7 @@ export default function UserProfilePage() {
                   ))}
               </div>
             ) : (
-              <Empty loading={false} text="Нет достижений" />
+              <Empty loading={false} text="У игрока пока нет достижений" />
             )}
           </Card>
 
@@ -319,7 +356,6 @@ export default function UserProfilePage() {
 function Card(props: { children: React.ReactNode; className?: string; style?: React.CSSProperties }) {
   const { getThemeStyle } = useProfileTheme();
   const customStyle = getThemeStyle();
-  const hasCustomTheme = Object.keys(customStyle).length > 0;
   
   const finalStyle = {
     backgroundColor: 'rgba(15, 23, 42, 0.6)',
@@ -337,16 +373,15 @@ function Card(props: { children: React.ReactNode; className?: string; style?: Re
   );
 }
 
-function Avatar({ url, loading }: { url?: string; loading: boolean }) {
+function Avatar({ url, loading, online }: { url?: string; loading: boolean; online?: boolean }) {
   return (
-    <div className="h-32 w-32 rounded-3xl border-2 border-sky-700/50 bg-slate-900 shadow-[0_8px_24px_rgba(2,132,199,0.25)]">
+    <div className="relative h-32 w-32 rounded-3xl border-2 border-sky-700/50 bg-slate-900 shadow-[0_8px_24px_rgba(2,132,199,0.25)]">
       {loading ? (
         <div className="h-full w-full animate-pulse rounded-3xl bg-slate-800" />
       ) : url ? (
         <img
           src={url}
           alt="Аватар"
-          // ...existing code...
           loading="lazy"
           decoding="async"
           className="h-full w-full rounded-3xl object-cover"
@@ -354,15 +389,17 @@ function Avatar({ url, loading }: { url?: string; loading: boolean }) {
       ) : (
         <div className="flex h-full w-full items-center justify-center rounded-3xl text-slate-400">AVA</div>
       )}
-    </div>
-  );
-}
-
-function Stat({ label, value, loading }: { label: string; value?: number; loading: boolean }) {
-  return (
-    <div className="rounded-xl border border-slate-800 bg-slate-900 p-3">
-      <div className="text-lg font-semibold text-sky-300">{loading ? '…' : value ?? 0}</div>
-      <div className="text-xs text-slate-400">{label}</div>
+      {typeof online === 'boolean' && !loading && (
+        <span
+          className={`absolute -bottom-1 -right-1 h-5 w-5 rounded-full border-2 border-slate-900 ${
+            online
+              ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,.75)]'
+              : 'bg-slate-500 shadow-[0_0_6px_rgba(100,116,139,.55)]'
+          }`}
+          title={online ? 'Онлайн' : 'Оффлайн'}
+          aria-label={online ? 'Онлайн' : 'Оффлайн'}
+        />
+      )}
     </div>
   );
 }

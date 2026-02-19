@@ -1,21 +1,14 @@
-/**
- * 🔐 Device Key Management - Phase 4
- * 
- * Управление RSA keypair для каждого устройства.
- * Private key хранится в IndexedDB (encrypted with password-derived key).
- * Public key отправляется на сервер для per-device KMS wrapping.
- */
 
 import { openDB, DBSchema, IDBPDatabase } from 'idb'
 
 interface DeviceKeysDB extends DBSchema {
   'device-keys': {
-    key: string // deviceId
+    key: string
     value: {
       deviceId: string
-      publicKey: string // JWK format, Base64
-      encryptedPrivateKey: string // Encrypted JWK, Base64
-      privateKeyIv: string // IV for private key encryption
+      publicKey: string
+      encryptedPrivateKey: string
+      privateKeyIv: string
       createdAt: number
       lastUsed: number
     }
@@ -28,9 +21,6 @@ const STORE_NAME = 'device-keys'
 
 let dbInstance: IDBPDatabase<DeviceKeysDB> | null = null
 
-/**
- * Open IndexedDB connection
- */
 async function getDB(): Promise<IDBPDatabase<DeviceKeysDB>> {
   if (dbInstance) return dbInstance
 
@@ -45,11 +35,6 @@ async function getDB(): Promise<IDBPDatabase<DeviceKeysDB>> {
   return dbInstance
 }
 
-/**
- * 🔐 Generate RSA-OAEP keypair for device
- * 
- * Returns both public and private keys in JWK format
- */
 export async function generateDeviceKeypair(): Promise<{
   publicKey: JsonWebKey
   privateKey: JsonWebKey
@@ -61,7 +46,7 @@ export async function generateDeviceKeypair(): Promise<{
       publicExponent: new Uint8Array([1, 0, 1]),
       hash: 'SHA-256',
     },
-    true, // extractable
+    true,
     ['wrapKey', 'unwrapKey']
   )
 
@@ -71,11 +56,6 @@ export async function generateDeviceKeypair(): Promise<{
   return { publicKey, privateKey }
 }
 
-/**
- * 🔐 Derive encryption key from user password
- * 
- * Uses PBKDF2 to derive a key for encrypting the private key
- */
 async function deriveEncryptionKey(password: string, salt: Uint8Array): Promise<CryptoKey> {
   const encoder = new TextEncoder()
   const passwordData = encoder.encode(password)
@@ -102,9 +82,6 @@ async function deriveEncryptionKey(password: string, salt: Uint8Array): Promise<
   )
 }
 
-/**
- * 🔐 Encrypt private key with password
- */
 async function encryptPrivateKey(
   privateKey: JsonWebKey,
   password: string
@@ -129,9 +106,6 @@ async function encryptPrivateKey(
   }
 }
 
-/**
- * 🔐 Decrypt private key with password
- */
 async function decryptPrivateKey(
   encryptedPrivateKey: string,
   iv: string,
@@ -155,11 +129,6 @@ async function decryptPrivateKey(
   return JSON.parse(privateKeyJson)
 }
 
-/**
- * 🔐 Store device keypair in IndexedDB
- * 
- * Private key is encrypted with user password before storage
- */
 export async function storeDeviceKeypair(
   deviceId: string,
   publicKey: JsonWebKey,
@@ -172,7 +141,7 @@ export async function storeDeviceKeypair(
   await db.put(STORE_NAME, {
     deviceId,
     publicKey: btoa(JSON.stringify(publicKey)),
-    encryptedPrivateKey: `${salt}:${encrypted}`, // Store salt with encrypted data
+    encryptedPrivateKey: `${salt}:${encrypted}`,
     privateKeyIv: iv,
     createdAt: Date.now(),
     lastUsed: Date.now(),
@@ -181,11 +150,6 @@ export async function storeDeviceKeypair(
   console.log('🔐 Device keypair stored in IndexedDB:', deviceId)
 }
 
-/**
- * 🔐 Load device private key from IndexedDB
- * 
- * Requires user password to decrypt
- */
 export async function loadDevicePrivateKey(
   deviceId: string,
   password: string
@@ -199,7 +163,6 @@ export async function loadDevicePrivateKey(
   }
 
   try {
-    // Extract salt from encrypted data
     const [salt, encrypted] = record.encryptedPrivateKey.split(':')
     
     const privateKeyJwk = await decryptPrivateKey(
@@ -209,7 +172,6 @@ export async function loadDevicePrivateKey(
       password
     )
 
-    // Import private key for unwrapping
     const privateKey = await crypto.subtle.importKey(
       'jwk',
       privateKeyJwk,
@@ -221,7 +183,6 @@ export async function loadDevicePrivateKey(
       ['unwrapKey']
     )
 
-    // Update last used timestamp
     await db.put(STORE_NAME, { ...record, lastUsed: Date.now() })
 
     return privateKey
@@ -231,11 +192,6 @@ export async function loadDevicePrivateKey(
   }
 }
 
-/**
- * 🔐 Load device public key from IndexedDB
- * 
- * No password required (public key is not encrypted)
- */
 export async function loadDevicePublicKey(deviceId: string): Promise<JsonWebKey | null> {
   const db = await getDB()
   const record = await db.get(STORE_NAME, deviceId)
@@ -245,27 +201,18 @@ export async function loadDevicePublicKey(deviceId: string): Promise<JsonWebKey 
   return JSON.parse(atob(record.publicKey))
 }
 
-/**
- * 🔐 Check if device has keypair
- */
 export async function hasDeviceKeypair(deviceId: string): Promise<boolean> {
   const db = await getDB()
   const record = await db.get(STORE_NAME, deviceId)
   return record !== undefined
 }
 
-/**
- * 🔐 Delete device keypair (on device removal/logout)
- */
 export async function deleteDeviceKeypair(deviceId: string): Promise<void> {
   const db = await getDB()
   await db.delete(STORE_NAME, deviceId)
   console.log('🗑️ Device keypair deleted:', deviceId)
 }
 
-/**
- * Register device public key with server
- */
 export async function registerDevicePublicKey(
   deviceId: string,
   publicKey: JsonWebKey
@@ -292,7 +239,6 @@ export async function registerDevicePublicKey(
   console.log('✅ Device public key registered with server:', deviceId)
 }
 
-// Utility functions
 function arrayBufferToBase64(buffer: ArrayBuffer): string {
   const bytes = new Uint8Array(buffer)
   let binary = ''

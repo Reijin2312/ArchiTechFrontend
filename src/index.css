@@ -22,7 +22,10 @@
 .label { @apply block text-sm mb-1 text-slate-300; }
 .hint { @apply text-xs text-slate-400 mt-1; }
 .hint.error { @apply text-red-400; }
-.error { @apply text-sm text-red-400; }
+.error {
+  @apply my-2 block rounded-[999px] border border-red-400/70 bg-red-500/10 px-4 py-2 text-sm font-medium text-red-200 backdrop-blur-sm;
+  box-shadow: 0 10px 28px -16px rgba(248, 113, 113, 0.75);
+}
 .sep { @apply my-4 h-px bg-slate-800; }
 .wrap { @apply min-h-dvh grid place-items-center px-4; }
 .site-footer { @apply fixed bottom-2 right-3 text-sm text-slate-400 z-50; }
