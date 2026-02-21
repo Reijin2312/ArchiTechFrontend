@@ -78,8 +78,8 @@ const SEASONS: Season[] = [
     number: 3,
     name: 'Промышленная революция',
     period: 'Июнь 2023 — Декабрь 2023',
-    description: 'Переход на новую версию Minecraft и полное обновление модпака. Множество нововведений.',
-    features: ['Обновлённая версия игры', 'Переработанная экономика', 'Новые возможности для строительства', 'Уникальные самописные моды'],
+    description: 'Третий сезон стал переходным: обновили версию игры, пересобрали модпак и начали проверять, как это всё держится в долгой игре. Часть решений прижилась сразу, часть пришлось менять уже по ходу сезона.',
+    features: ['Переезд на новую версию Minecraft и пересборка модпака', 'Первая крупная правка серверной экономики', 'Тест ранних версий самописных модов в реальной игре', 'Подготовка базы под формат мира без вайпов'],
     screenshots: ['/images/screen5.png', '/images/screen6.png'],
     players: [
       { username: 'Raijin', role: 'Владелец' },
@@ -99,9 +99,12 @@ const SEASONS: Season[] = [
     name: 'Инфинити',
     period: '20 июля 2025 года — Настоящее время',
     description:
-      'Текущий сезон без вайпов. Мир, перешедший с 3 сезона вместе с постройками, будет существовать вечно. Ваш прогресс никогда не будет потерян.',
-    features: ['Отмена полных вайпов навсегда', 'Магия сосуществует с техникой', 'Долгосрочные проекты', 'Стабильная экономика', 'Постоянное развитие'],
-    screenshots: ['/images/screen7.png', '/images/screen8.png'],
+      'Это текущий сезон. Мир перенесли из третьего сезона вместе с дорогами и постройками, так что никто не стартовал с пустого места. Идея простая: развивать один живой мир без регулярных обнулений.',
+    features: ['Полные вайпы отключены', 'Техника и магия развиваются параллельно', 'Упор на долгие совместные проекты', 'Экономика меняется аккуратно, без резких обнулений'],
+    screenshots: [
+      '/images/screen10.png',
+      '/images/screen12.png'
+    ],
     players: [
       { username: 'Raijin', role: 'Владелец & программист' },
       { username: 'Kelbor_Hal', role: 'Мл. Админ' },
@@ -121,12 +124,6 @@ function cx(...v: Array<string | false | undefined | null>) {
   return v.filter(Boolean).join(' ')
 }
 
-function scrollToId(id: string, smooth: boolean) {
-  const el = document.getElementById(id)
-  if (!el) return
-  el.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto', block: 'start' })
-}
-
 function GlassCard({
   className,
   children
@@ -137,7 +134,7 @@ function GlassCard({
   return (
     <div
       className={cx(
-        'rounded-2xl border border-slate-800/80 bg-slate-900/35 backdrop-blur-md backdrop-saturate-150 shadow-xl shadow-slate-950/25',
+        'rounded-2xl border border-slate-700/80 bg-slate-900/22 backdrop-blur-xl backdrop-saturate-180 shadow-xl shadow-slate-950/25 ring-1 ring-white/6',
         className
       )}
     >
@@ -226,73 +223,54 @@ export default function AboutServerPage() {
           animate={disableEntranceMotion ? undefined : { opacity: 1, y: 0, filter: 'blur(0px)' }}
           transition={{ duration: 0.5, ease: 'easeOut' }}
         >
-          <GlassCard className="p-6 md:p-10">
-            <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-              <div className="inline-flex items-center gap-2 text-sm text-slate-300">
-                <span className="size-2 rounded-full bg-indigo-300/80" />
-                <span className="font-semibold tracking-wide">ArchiTech MC</span>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-4 text-sm text-slate-400">
-                <button onClick={() => scrollToId('seasons', !reduceMotion)} className="hover:text-slate-200 transition-colors">
-                  Сезоны
-                </button>
-                <button onClick={() => scrollToId('gallery', !reduceMotion)} className="hover:text-slate-200 transition-colors">
-                  Скриншоты
-                </button>
-                <button onClick={() => scrollToId('join', !reduceMotion)} className="hover:text-slate-200 transition-colors">
-                  Присоединиться
-                </button>
-              </div>
-            </div>
-
+          <GlassCard className="p-6 md:p-10 bg-slate-900/10 backdrop-blur-none backdrop-saturate-100">
             <div className="text-center max-w-4xl mx-auto">
               <h1 className="text-3xl md:text-4xl font-bold mb-4">
                 О сервере <span className="text-indigo-400">{SERVER_NAME}</span>
               </h1>
               <p className="text-lg text-slate-300">
-                Техномагический Minecraft-сервер с богатой историей, уникальными модами и дружным сообществом.
-                Мир без вайпов, где каждая постройка остаётся навсегда.
+                Это сервер, который вырос из простой игры с друзьями в долгий общий мир... Общий путь.
+                Тут развивают технику и магию, строят то, что нравится, от простых коробок из грязи до огромных дворцов, и не боятся, что завтра мир поглотит очередной вайп.
               </p>
             </div>
 
             <motion.div
-              className="grid md:grid-cols-3 gap-6 mt-8"
+              className="mt-8 grid gap-6 md:grid-cols-3 md:items-stretch"
               variants={disableEntranceMotion ? undefined : containerVariants}
               initial={disableEntranceMotion ? undefined : 'hidden'}
               animate={disableEntranceMotion ? undefined : 'show'}
             >
-              <motion.div variants={disableEntranceMotion ? undefined : itemVariants}>
-                <GlassCard className="p-6">
+              <motion.div className="h-full" variants={disableEntranceMotion ? undefined : itemVariants}>
+                <GlassCard className="flex h-full flex-col p-6 bg-slate-900/16 backdrop-blur-2xl backdrop-saturate-200 border-slate-600/80 ring-1 ring-white/12 shadow-[0_20px_40px_-24px_rgba(0,0,0,.85)]">
                   <div className="size-12 rounded-xl bg-indigo-600/20 grid place-items-center text-indigo-300 mb-4 ring-1 ring-white/10">
                     <SvgMcBlockGrass className="h-6" />
                   </div>
                   <h3 className="text-xl font-semibold mb-2">Без вайпов</h3>
-                  <p className="text-slate-300 text-sm">Ваши постройки и прогресс остаются навсегда. Никаких полных вайпов с 4 сезона.</p>
+                  <p className="text-slate-300 text-sm">С четвёртого сезона полные вайпы отменены навсегда. Если вложил все силы в базу, можешь быть уверен, что она не исчезнет после обновления</p>
                 </GlassCard>
               </motion.div>
 
-              <motion.div variants={disableEntranceMotion ? undefined : itemVariants}>
-                <GlassCard className="p-6">
+              <motion.div className="h-full" variants={disableEntranceMotion ? undefined : itemVariants}>
+                <GlassCard className="flex h-full flex-col p-6 bg-slate-900/16 backdrop-blur-2xl backdrop-saturate-200 border-slate-600/80 ring-1 ring-white/12 shadow-[0_20px_40px_-24px_rgba(0,0,0,.85)]">
                   <div className="size-12 rounded-xl bg-emerald-600/20 grid place-items-center text-emerald-300 mb-4 ring-1 ring-white/10">
                     <span className="text-2xl" aria-hidden>
                       🔧
                     </span>
                   </div>
                   <h3 className="text-xl font-semibold mb-2">Техномагия</h3>
-                  <p className="text-slate-300 text-sm">Богатый модпак с техническими и магическими модами для любого стиля игры.</p>
+                  <p className="text-slate-300 text-sm">В сборке спокойно соседствуют Create и Ars Nouveau. Можно погрузиться с головой в технику и машины, а можно в ритуалы и заклинания, но кто запретит оба сразу?</p>
                 </GlassCard>
               </motion.div>
 
-              <motion.div variants={disableEntranceMotion ? undefined : itemVariants}>
-                <GlassCard className="p-6">
+              <motion.div className="h-full" variants={disableEntranceMotion ? undefined : itemVariants}>
+                <GlassCard className="flex h-full flex-col p-6 bg-slate-900/16 backdrop-blur-2xl backdrop-saturate-200 border-slate-600/80 ring-1 ring-white/12 shadow-[0_20px_40px_-24px_rgba(0,0,0,.85)]">
                   <div className="size-12 rounded-xl bg-sky-600/20 grid place-items-center text-sky-300 mb-4 ring-1 ring-white/10">
                     <span className="text-2xl" aria-hidden>
                       👥
                     </span>
                   </div>
                   <h3 className="text-xl font-semibold mb-2">Сообщество</h3>
-                  <p className="text-slate-300 text-sm">Дружная атмосфера, отзывчивая администрация и активное комьюнити.</p>
+                  <p className="text-slate-300 text-sm">Люди здесь и вправду играют вместе: помогают со стройкой проектов, делятся ресурсами и идеями, стоит лишь попросить</p>
                 </GlassCard>
               </motion.div>
             </motion.div>
@@ -340,10 +318,10 @@ export default function AboutServerPage() {
                 <motion.div key={season.number} variants={disableEntranceMotion ? undefined : itemVariants} className="relative">
                   <div
                     className={cx(
-                      'rounded-2xl border overflow-hidden backdrop-blur-md backdrop-saturate-150 transition-all shadow-lg shadow-slate-950/20',
+                      'rounded-2xl border overflow-hidden backdrop-blur-xl backdrop-saturate-180 transition-all shadow-lg shadow-slate-950/20',
                       isCurrent
-                        ? 'border-indigo-500/45 bg-linear-to-brrom-indigo-900/28 to-slate-900/26'
-                        : 'border-slate-800 bg-slate-900/35'
+                        ? 'border-indigo-500/45 bg-linear-to-br from-indigo-900/20 to-slate-900/14 ring-1 ring-indigo-300/20'
+                        : 'border-slate-700/80 bg-slate-900/20 ring-1 ring-white/6'
                     )}
                   >
                     <button
@@ -447,7 +425,7 @@ export default function AboutServerPage() {
                                       <Link
                                         key={player.username}
                                         to={`/u/${encodeURIComponent(player.username)}`}
-                                        className="flex flex-col items-center gap-2 p-3 rounded-xl border border-slate-700/45 bg-slate-900/30 hover:bg-slate-800/45 hover:border-slate-600 transition-all group"
+                                        className="flex flex-col items-center gap-2 p-3 rounded-xl border border-slate-700/45 bg-slate-900/24 backdrop-blur-md backdrop-saturate-150 hover:bg-slate-800/38 hover:border-slate-600 transition-all group"
                                       >
                                         {avatar ? (
                                           <img
@@ -501,9 +479,9 @@ export default function AboutServerPage() {
               <div className="pointer-events-none absolute -bottom-32 -left-32 h-64 w-64 rounded-full bg-sky-500/14 blur-3xl" />
 
               <div className="relative z-10">
-                <h2 className="text-2xl md:text-3xl font-bold mb-4">Готов присоединиться?</h2>
+                <h2 className="text-2xl md:text-3xl font-bold mb-4">Можно начать прямо сейчас</h2>
                 <p className="text-lg text-slate-300 mb-6 max-w-2xl mx-auto">
-                  Скачай лаунчер, получи проходку и начни своё приключение на {SERVER_NAME}.
+                  Если хочется спокойный долгий сервер без вечного старта с нуля, просто скачай лаунчер и получи проходку через бота
                 </p>
 
                 <div className="flex flex-wrap gap-4 justify-center">

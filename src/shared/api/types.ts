@@ -2,13 +2,36 @@ export type Tokens = { accessToken : string; refreshToken: string }
 export type User = { id : string; username: string; email: string }
 
 export type LoginReq = { email: string; password: string }
-export type LoginRes = Tokens & { 
+export type LoginSuccessRes = Tokens & { 
   user: User;
   deviceId?: string;
   sessionId?: string;
   sessionKey?: string;
   sessionKeyIv?: string;
 }
+export type Login2faRequiredRes = {
+  requires2fa: true
+  challengeToken: string
+  method: 'totp'
+}
+export type LoginRes = LoginSuccessRes | Login2faRequiredRes
+
+export type TwoFactorStatusRes = {
+  enabled: boolean
+  pendingSetup: boolean
+  method: 'totp'
+}
+
+export type TwoFactorSetupStartReq = { password: string }
+export type TwoFactorSetupStartRes = {
+  secret: string
+  otpauthUri: string
+  issuer: string
+  accountName: string
+}
+
+export type TwoFactorSetupConfirmReq = { code: string }
+export type TwoFactorDisableReq = { password: string; code: string }
 
 export type RegisterReq = { email: string; username: string; password: string }
 export type RegisterRes =

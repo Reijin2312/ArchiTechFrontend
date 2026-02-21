@@ -1,7 +1,8 @@
-import React from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { http } from '@/shared/api/http';
 import { endpoints } from '@/shared/api/endpoints';
+import type { TwoFactorStatusRes } from '@/shared/api/types';
 import { Card, InputRow, inp } from './components';
 
 interface AccountSectionProps {
@@ -34,6 +35,14 @@ export function AccountSection({
   const navigate = useNavigate();
   const location = useLocation();
 
+  const [twoFaStatus, setTwoFaStatus] = useState<TwoFactorStatusRes | null>(null);
+  const [twoFaLoading, setTwoFaLoading] = useState(true);
+  const [twoFaError, setTwoFaError] = useState<string | null>(null);
+
+  useEffect(() => {
+    void loadTwoFaStatus();
+  }, []);
+
   const handlePasswordReset = async () => {
     onError('');
     const emailVal = email.trim();
@@ -41,21 +50,43 @@ export function AccountSection({
       onError('Введите email для сброса пароля');
       return;
     }
-    
+
     try {
       const next = location.pathname + (location.search || '') || '/profile';
       const { data } = await http.post(
         endpoints.resetBegin,
         { email: emailVal },
-        { withCredentials: true, headers: { 'Content-Type': 'application/json' } }
+        { withCredentials: true, headers: { 'Content-Type': 'application/json' } },
       );
       const qs = new URLSearchParams({ ticket: data.ticket, email: emailVal, next }).toString();
       navigate('/auth/reset/code?' + qs, { replace: true });
     } catch (e: unknown) {
-      const err = e as { response?: { data?: unknown }; message?: string };
-      onError(err?.response?.data as string || err?.message || 'Не удалось начать сброс пароля');
+      onError(normalizeAccountError(e, 'Не удалось начать сброс пароля'));
     }
   };
+
+  async function loadTwoFaStatus() {
+    setTwoFaLoading(true);
+    setTwoFaError(null);
+    try {
+      const { data } = await http.get<TwoFactorStatusRes>(endpoints.account2faStatus, { withCredentials: true });
+      setTwoFaStatus(data);
+    } catch (e) {
+      setTwoFaError(normalizeTwoFaError(e, 'Не удалось загрузить состояние 2FA'));
+    } finally {
+      setTwoFaLoading(false);
+    }
+  }
+
+  function openTwoFaSetupPage() {
+    navigate('/settings/2fa/setup');
+  }
+
+  function openTwoFaDisablePage() {
+    navigate('/settings/2fa/disable');
+  }
+
+  const isTwoFaEnabled = !!twoFaStatus?.enabled;
 
   return (
     <Card className="mt-6">
@@ -157,6 +188,83 @@ export function AccountSection({
           <p className="mt-1 text-xs text-green-400">Доступен</p>
         )}
       </InputRow>
+
+      <div className="mt-6 rounded-xl border border-slate-800 bg-slate-900/50 p-3">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h3 className="text-sm font-semibold text-sky-300">Двухфакторная аутентификация</h3>
+            <p className="mt-1 text-xs text-slate-400">Google Authenticator (TOTP)</p>
+          </div>
+          {!twoFaLoading && (
+            <span
+              className={`rounded-full px-2 py-1 text-[11px] font-medium ${
+                isTwoFaEnabled
+                  ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                  : 'bg-slate-700/60 text-slate-300 border border-slate-600'
+              }`}
+            >
+              {isTwoFaEnabled ? 'Включено' : 'Выключено'}
+            </span>
+          )}
+        </div>
+
+        {twoFaError && <p className="mt-3 text-xs text-red-400">{twoFaError}</p>}
+        {twoFaLoading && <p className="mt-3 text-xs text-slate-400">Загрузка состояния 2FA...</p>}
+
+        {!twoFaLoading && (
+          <div className="mt-3 space-y-3">
+            {isTwoFaEnabled ? (
+              <button
+                type="button"
+                onClick={openTwoFaDisablePage}
+                className="rounded-xl border border-red-500/60 px-3 py-2 text-sm text-red-200 hover:bg-red-500/10"
+              >
+                Открыть мастер отключения 2FA
+              </button>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={openTwoFaSetupPage}
+                  className="rounded-xl border border-slate-700 px-3 py-2 text-sm hover:border-slate-500 hover:bg-slate-800"
+                >
+                  Открыть мастер настройки 2FA
+                </button>
+                {twoFaStatus?.pendingSetup && (
+                  <p className="text-xs text-amber-300">
+                    Настройка уже начата, но не завершена. Откройте мастер и подтвердите код.
+                  </p>
+                )}
+              </>
+            )}
+          </div>
+        )}
+      </div>
     </Card>
   );
+}
+
+function normalizeAccountError(error: unknown, fallback: string): string {
+  const data = (error as { response?: { data?: unknown } })?.response?.data;
+  if (typeof data === 'string' && data.trim()) return data;
+
+  const message = (error as { message?: string })?.message;
+  if (typeof message === 'string' && message.trim()) return message;
+
+  return fallback;
+}
+
+function normalizeTwoFaError(error: unknown, fallback: string): string {
+  const status = (error as { response?: { status?: unknown } })?.response?.status;
+  const data = (error as { response?: { data?: unknown } })?.response?.data;
+  const code = typeof data === 'object' && data !== null ? (data as { error?: unknown }).error : null;
+
+  if (code === 'bad_password' || status === 403) return 'Неверный пароль';
+  if (code === 'invalid_2fa_code') return 'Неверный код из Google Authenticator';
+  if (code === '2fa_not_enabled') return '2FA уже отключена';
+  if (code === 'bad_request' || status === 400) return 'Проверьте введённые данные';
+
+  const message = normalizeAccountError(error, fallback);
+  if (/^Request failed with status code \d+$/i.test(message)) return fallback;
+  return message;
 }

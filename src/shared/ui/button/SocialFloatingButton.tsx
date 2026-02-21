@@ -1493,7 +1493,7 @@ export function SocialFloatingButton() {
     }
     const chat = chats.find(c => c.chatId === selectedChat);
     const friend = friends.find(f => f.userId === chat?.participantId);
-    const displayName = friend?.displayName || friend?.username || chat?.participantId.slice(0, 8) || 'РџРѕР»СЊР·РѕРІР°С‚РµР»СЊ';
+    const displayName = friend?.displayName || friend?.username || chat?.participantId.slice(0, 8) || 'Пользователь';
     return (
       <div className="flex flex-col h-full">
         <div className="flex-none border-b border-slate-800/50 p-3 flex items-center gap-3 bg-slate-900/40">

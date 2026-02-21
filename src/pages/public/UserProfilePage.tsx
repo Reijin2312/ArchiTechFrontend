@@ -117,6 +117,9 @@ export default function UserProfilePage() {
     try { return new Date(iso).toLocaleDateString(); } catch { return null; }
   }, [user?.registeredAt]);
   const profileUsername = user?.username;
+  const displayName = (user as any)?.displayName?.trim?.() || '';
+  const usernameText = user?.username?.trim?.() || '';
+  const showDisplayName = Boolean(displayName) && displayName.toLowerCase() !== usernameText.toLowerCase();
   const achievementsHref = `/u/${encodeURIComponent(username)}/achievements`;
   const skinsHref = `/u/${encodeURIComponent(username)}/skins`;
   const previewAchievements = useMemo(
@@ -242,9 +245,9 @@ export default function UserProfilePage() {
             </div>
 
             <div className="pt-4 text-center">
-              {(user as any)?.displayName && (
+              {showDisplayName && (
                 <div className="mb-1 text-xl font-semibold text-slate-300 font-techno">
-                  {(user as any).displayName}
+                  {displayName}
                 </div>
               )}
               <div className="mb-1 flex items-center justify-center gap-2">

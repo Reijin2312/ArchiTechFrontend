@@ -10,13 +10,14 @@ import { Card } from '@/shared/ui/card/Card';
 import { FormHint } from '@/shared/ui/form/FormHint';
 import PasswordField from '../components/PasswordField';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import type { LoginRes } from '@/shared/api/types';
+import type { LoginRes, LoginSuccessRes } from '@/shared/api/types';
 import { finalizeAuth } from '@/shared/auth/finalizeAuth';
 import { endpoints } from '@/shared/api/endpoints';
 import { normalizeErrorMessage, requestDesktopToken } from '@/shared/auth/utils';
 import { useWallpaper } from '@/shared/ui/wallpaper/useWallpaper';
 import { Seo } from '@/shared/seo/seo';
 import { useSessionKeyStore } from '@/stores/sessionKeyStore';
+import { clearPendingLoginPassword, setPendingLoginPassword } from '@/shared/auth/pendingLoginPassword';
 
 const schema = z.object({
   email: z.string().email({ message: 'Некорректная почта' }),
@@ -122,24 +123,39 @@ export default function LoginPage() {
 
   async function onSubmit(v: Form) {
     setServerErr(null);
+    clearPendingLoginPassword();
     try {
       const { data } = await http.post<LoginRes>(endpoints.login, v);
-      const me = deviceCode ? null : await finalizeAuth(data.accessToken);
+
+      if ('requires2fa' in data && data.requires2fa) {
+        setPendingLoginPassword(v.password);
+        const qs = new URLSearchParams({
+          challenge: data.challengeToken,
+          ...(deviceCode ? { device: deviceCode } : {}),
+          ...(redirectUri ? { redirect_uri: redirectUri } : {}),
+        }).toString();
+        navigate('/auth/login/2fa?' + qs, { replace: true });
+        return;
+      }
+
+      const loginData = data as LoginSuccessRes;
+      const me = deviceCode ? null : await finalizeAuth(loginData.accessToken);
       
-      if (data.sessionId && data.deviceId) {
-        authStore.getState().setSessionCredentials(data.sessionId, data.deviceId, data.sessionKey, data.sessionKeyIv);
+      if (loginData.sessionId && loginData.deviceId) {
+        authStore.getState().setSessionCredentials(loginData.sessionId, loginData.deviceId, loginData.sessionKey, loginData.sessionKeyIv);
         
         const sessionKeyStore = useSessionKeyStore.getState();
-        if (data.sessionKey && me?.id) {
-          sessionKeyStore.initializeSession(me.id, data.sessionKey, 1, v.password);
+        if (loginData.sessionKey && me?.id) {
+          sessionKeyStore.initializeSession(me.id, loginData.sessionKey, 1, v.password);
         }
       }
       
 
-      const launcherUser = me ?? data.user;
+      const launcherUser = me ?? loginData.user;
+      clearPendingLoginPassword();
 
       if (deviceCode) {
-        const tokens = await requestDesktopToken(data.accessToken);
+        const tokens = await requestDesktopToken(loginData.accessToken);
         if (!tokens) {
           setServerErr('Failed to issue launcher tokens. Try again later.');
           return;
@@ -159,7 +175,7 @@ export default function LoginPage() {
       }
 
       if (redirectUri) {
-        const tokens = await requestDesktopToken(data.accessToken);
+        const tokens = await requestDesktopToken(loginData.accessToken);
         if (tokens) {
           await notifyLauncher({ ...tokens, user: launcherUser });
         }
@@ -168,6 +184,7 @@ export default function LoginPage() {
         navigate(`/u/${me.username}`, { replace: true });
       }
     } catch (e: unknown) {
+      clearPendingLoginPassword();
       const status = getHttpStatus(e);
       const code = getBackendErrorCode(e);
 

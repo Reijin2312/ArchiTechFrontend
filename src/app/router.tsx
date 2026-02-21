@@ -14,6 +14,8 @@ import WikiPage from '@/pages/public/WikiPage';
 import SettingsProfilePage from '@/pages/settings/SettingsProfile/SettingsProfilePage';
 import ChangeEmailPage from '@/pages/settings/EmailChangeStartPage';
 import ChangePasswordPage from '@/pages/settings/ChangePasswordPage';
+import TwoFactorSetupPage from '@/pages/settings/TwoFactorSetupPage';
+import TwoFactorDisablePage from '@/pages/settings/TwoFactorDisablePage';
 import UserAgreementPage from '@/pages/legal/UserAgreementPage';
 import PrivacyPolicyPage from '@/pages/legal/PrivacyPolicyPage';
 import EmailChangeStartPage from '@/pages/settings/EmailChangeStartPage';
@@ -22,6 +24,7 @@ import ContactsPage from '@/pages/public/ContactsPage';
 import AboutServerPage from '@/pages/public/AboutServerPage';
 import TgBotLoginWebApp from '@/features/auth/pages/TgBotLoginWebApp';
 import DeviceLoginDonePage from '@/features/auth/pages/DeviceLoginDonePage';
+import LoginTwoFactorPage from '@/features/auth/pages/LoginTwoFactorPage';
 import UserAchievementsPage from '@/pages/public/UserAchievementsPage';
 import UserSkinsPage from '@/pages/public/UserSkinsPage';
 
@@ -33,6 +36,7 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <HomePage /> },
       { path: '/auth/login', element: <LoginPage /> },
+      { path: '/auth/login/2fa', element: <LoginTwoFactorPage /> },
       { path: '/auth/register', element: <RegisterPage /> },
       { path: '/auth/verify', element: <CodeVerifyPage mode="email-verify" /> },
       { path: '/auth/reset', element: <CodeVerifyPage mode="reset" /> },
@@ -55,6 +59,8 @@ export const router = createBrowserRouter([
       { path: '/settings/email/new', element: <ChangeEmailNewPage/> },
       { path: '/verify/email-change-old', element: <CodeVerifyPage mode="email-change-old" /> },
       { path: '/settings/password', element: <ChangePasswordPage/> },
+      { path: '/settings/2fa/setup', element: <TwoFactorSetupPage/> },
+      { path: '/settings/2fa/disable', element: <TwoFactorDisablePage/> },
       { path: '/verify/email',    element: <CodeVerifyPage mode="email-verify" /> },
       { path: '/auth/reset/code', element: <CodeVerifyPage mode="reset" /> },
       { path: '*', element: <Navigate to="/" replace /> },

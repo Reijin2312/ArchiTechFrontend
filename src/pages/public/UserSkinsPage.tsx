@@ -7,6 +7,8 @@ import { useWallpaper } from '@/shared/ui/wallpaper/useWallpaper';
 import { Seo } from '@/shared/seo/seo';
 import { ProfileThemeProvider } from '@/shared/ui/utils/ProfileThemeContext';
 import { Skin3DViewer } from '@/shared/ui/skin/Skin3DViewer';
+import { useToast } from '@/shared/hooks/settings/useToast';
+import { ToastStack } from '@/pages/settings/SettingsProfile/ToastStack';
 
 type SkinModel = 'classic' | 'slim';
 
@@ -17,6 +19,7 @@ type SavedSkin = {
   model: SkinModel;
   savedAt: string;
   slot?: number;
+  active?: boolean;
 };
 
 type PublicUser = {
@@ -39,6 +42,7 @@ type PublicUser = {
   customStatus?: string;
   socialLinks?: Array<{ type: string; value: string }>;
   savedSkins?: SavedSkin[];
+  activeSavedSkinId?: string | null;
 };
 
 type Me = PublicUser & { email?: string };
@@ -56,9 +60,11 @@ export default function UserSkinsPage() {
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState<'upload' | 'apply' | 'save' | 'delete' | null>(null);
   const [selectedSlot, setSelectedSlot] = useState(0);
+  const [activeSlotOverride, setActiveSlotOverride] = useState<number | null>(null);
   const [dragOverSlot, setDragOverSlot] = useState<number | null>(null);
   const [uploadModel, setUploadModel] = useState<SkinModel>('classic');
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const { toasts, pushToast, closeToast } = useToast();
 
   useWallpaper(user?.profileWallpaper || '/images/bg.avif');
 
@@ -67,6 +73,7 @@ export default function UserSkinsPage() {
     setLoading(true);
     setErr(null);
     setNotice(null);
+    setActiveSlotOverride(null);
 
     const req = self
       ? http.get<Me>(endpoints.profileMe, { withCredentials: true })
@@ -75,10 +82,14 @@ export default function UserSkinsPage() {
     req
       .then(({ data }) => {
         if (!alive) return;
-        const next = normalizeUser(data);
+        const normalized = normalizeUser(data);
+        const normalizedSavedSkins = applyActiveSavedSkinId(
+          normalizeSavedSkins(normalized.savedSkins),
+          normalized.activeSavedSkinId,
+        );
+        const next = { ...normalized, savedSkins: normalizedSavedSkins };
         setUser(next);
-        const slots = buildSlots(next.savedSkins ?? []);
-        setSelectedSlot(firstFilledSlot(slots));
+        setSelectedSlot(resolveInitialSelectedSlot(next, normalizedSavedSkins));
       })
       .catch((e: unknown) => {
         if (!alive) return;
@@ -93,13 +104,40 @@ export default function UserSkinsPage() {
     };
   }, [username, self]);
 
-  const savedSkins = useMemo(() => normalizeSavedSkins(user?.savedSkins), [user?.savedSkins]);
+  useEffect(() => {
+    if (!notice) return;
+    pushToast('success', notice);
+    setNotice(null);
+  }, [notice, pushToast]);
+
+  const savedSkins = useMemo(
+    () => applyActiveSavedSkinId(normalizeSavedSkins(user?.savedSkins), user?.activeSavedSkinId),
+    [user?.savedSkins, user?.activeSavedSkinId],
+  );
   const slots = useMemo(() => buildSlots(savedSkins), [savedSkins]);
   const selectedSkin = slots[selectedSlot];
+  const selectedSkinLegacy = Boolean(selectedSkin && isLegacyActiveSkinUrl(selectedSkin.url));
+  const legacySlotsCount = useMemo(
+    () => slots.filter((slot) => Boolean(slot && isLegacyActiveSkinUrl(slot.url))).length,
+    [slots],
+  );
   const allEmpty = slots.every((slot) => !slot);
   const hasCurrentSkin = Boolean(user?.skinUrl);
   const displayName = user?.displayName || user?.username || username;
   const profileHref = `/u/${encodeURIComponent(username)}`;
+  const activeSkinPath = useMemo(() => canonicalSkinPath(user?.skinUrl), [user?.skinUrl]);
+  const activeSlotFromStored = useMemo(
+    () => slots.findIndex((slot) => Boolean(slot?.active)),
+    [slots],
+  );
+  const activeSlotFromPath = useMemo(
+    () =>
+      slots.findIndex((slot) => {
+        if (!slot || !activeSkinPath) return false;
+        return canonicalSkinPath(slot.url) === activeSkinPath;
+      }),
+    [slots, activeSkinPath],
+  );
 
   const carouselSlots = useMemo(() => {
     if (!allEmpty || !user?.skinUrl) return slots;
@@ -153,6 +191,7 @@ export default function UserSkinsPage() {
           customStatus: user.customStatus,
           socialLinks: user.socialLinks ?? [],
           savedSkins: nextSavedSkins,
+          activeSavedSkinId: nextSavedSkins.find((skin) => skin.active)?.id ?? null,
         },
         { withCredentials: true, headers: { 'Content-Type': 'application/json' } },
       );
@@ -165,12 +204,29 @@ export default function UserSkinsPage() {
     }
   }
 
-  async function uploadSkinFile(file: File, model: SkinModel) {
+  async function uploadSkinFile(file: File, model: SkinModel, target: 'active' | 'gallery' = 'active') {
     const fd = new FormData();
     fd.append('file', file);
-    const url = `${endpoints.profileSkin}?model=${encodeURIComponent(model)}`;
+    const query = new URLSearchParams({ model });
+    if (target === 'gallery') {
+      query.set('gallery', '1');
+      query.set('target', 'gallery');
+    }
+    const url = `${endpoints.profileSkin}?${query.toString()}`;
     const { data } = await http.post<{ skinUrl: string; skinModel?: SkinModel }>(url, fd, { withCredentials: true });
+    if (target === 'gallery' && !isSavedSkinUrl(data.skinUrl)) {
+      throw new Error('Сервер сохранил скин как активный, а не как слот. Обновите/перезапустите LauncherBackend с поддержкой gallery.');
+    }
     return { url: data.skinUrl, model: data.skinModel === 'slim' ? 'slim' : model };
+  }
+
+  async function applySavedSkinAsActive(skin: SavedSkin) {
+    const skinUrl = toAbsoluteUrl(skin.url);
+    const response = await fetch(skinUrl, { credentials: 'include' });
+    if (!response.ok) throw new Error(`Не удалось получить файл скина (${response.status})`);
+    const blob = await response.blob();
+    const file = new File([blob], `${skin.id}.png`, { type: blob.type || 'image/png' });
+    await uploadSkinFile(file, skin.model, 'active');
   }
 
   async function onUploadToSlot(file: File, slot: number) {
@@ -186,7 +242,7 @@ export default function UserSkinsPage() {
     setErr(null);
     setNotice(null);
     try {
-      const uploaded = await uploadSkinFile(file, uploadModel);
+      const uploaded = await uploadSkinFile(file, uploadModel, 'gallery');
       const skin: SavedSkin = {
         id: makeSkinId(),
         name: `Скин ${slot + 1}`,
@@ -194,6 +250,7 @@ export default function UserSkinsPage() {
         model: uploaded.model,
         savedAt: new Date().toISOString(),
         slot,
+        active: false,
       };
       const next = upsertSkinAtSlot(savedSkins, skin, slot);
       await persistSavedSkins(next);
@@ -213,17 +270,19 @@ export default function UserSkinsPage() {
 
   async function onApplySelectedSkin() {
     if (!self || !selectedSkin) return;
+    if (isLegacyActiveSkinUrl(selectedSkin.url)) {
+      setErr('Этот слот сохранён в старом формате и ссылается на активный скин. Перезагрузите скин в слот.');
+      setNotice(null);
+      return;
+    }
     setBusy('apply');
     setErr(null);
     setNotice(null);
     try {
-      const skinUrl = toAbsoluteUrl(selectedSkin.url);
-      const response = await fetch(skinUrl, { credentials: 'include' });
-      if (!response.ok) throw new Error(`Не удалось получить файл скина (${response.status})`);
-      const blob = await response.blob();
-      const file = new File([blob], `${selectedSkin.id}.png`, { type: blob.type || 'image/png' });
-      await uploadSkinFile(file, selectedSkin.model);
-      await refreshSelfProfile();
+      await applySavedSkinAsActive(selectedSkin);
+      const nextSavedSkins = markActiveSavedSkin(savedSkins, selectedSkin.id);
+      await persistSavedSkins(nextSavedSkins);
+      setActiveSlotOverride(selectedSlot);
       setNotice('Скин применён');
     } catch (e: unknown) {
       setErr(toErrorText(e, 'Не удалось применить скин'));
@@ -238,9 +297,36 @@ export default function UserSkinsPage() {
     setErr(null);
     setNotice(null);
     try {
+      const wasActive = Boolean(
+        selectedSkin.active ||
+          (activeSlotOverride !== null && activeSlotOverride === selectedSlot) ||
+          (activeSlotFromStored >= 0 && activeSlotFromStored === selectedSlot) ||
+          (activeSlotFromPath >= 0 && activeSlotFromPath === selectedSlot),
+      );
       const next = removeSkinFromSlot(savedSkins, selectedSlot);
-      await persistSavedSkins(next);
-      setNotice('Скин удалён из галереи');
+
+      if (wasActive) {
+        const nextSlots = buildSlots(next);
+        const fallbackSlot = findNearestFilledSlot(nextSlots, selectedSlot);
+        if (fallbackSlot >= 0) {
+          const fallbackSkin = nextSlots[fallbackSlot]!;
+          await applySavedSkinAsActive(fallbackSkin);
+          const nextMarked = markActiveSavedSkin(next, fallbackSkin.id);
+          await persistSavedSkins(nextMarked);
+          setSelectedSlot(fallbackSlot);
+          setActiveSlotOverride(fallbackSlot);
+          setNotice('Скин удалён. Активным назначен ближайший слот.');
+        } else {
+          const nextCleared = clearActiveSavedSkin(next);
+          await persistSavedSkins(nextCleared);
+          setActiveSlotOverride(null);
+          setNotice('Скин удалён из галереи');
+        }
+      } else {
+        await persistSavedSkins(next);
+        if (activeSlotOverride === selectedSlot) setActiveSlotOverride(null);
+        setNotice('Скин удалён из галереи');
+      }
     } catch {
       setBusy(null);
     }
@@ -248,21 +334,37 @@ export default function UserSkinsPage() {
 
   async function onAddCurrentSkinToSlot() {
     if (!self || !user?.skinUrl) return;
-    const model: SkinModel = user.skinModel === 'slim' ? 'slim' : 'classic';
-    const skin: SavedSkin = {
-      id: makeSkinId(),
-      name: `Скин ${selectedSlot + 1}`,
-      url: user.skinUrl,
-      model,
-      savedAt: new Date().toISOString(),
-      slot: selectedSlot,
-    };
-    const next = upsertSkinAtSlot(savedSkins, skin, selectedSlot);
-    await persistSavedSkins(next);
+    setBusy('upload');
+    setErr(null);
+    setNotice(null);
+    try {
+      const model: SkinModel = user.skinModel === 'slim' ? 'slim' : 'classic';
+      const sourceUrl = toAbsoluteUrl(user.skinUrl);
+      const response = await fetch(sourceUrl, { credentials: 'include' });
+      if (!response.ok) throw new Error(`Не удалось получить текущий скин (${response.status})`);
+      const blob = await response.blob();
+      const file = new File([blob], `current_${Date.now()}.png`, { type: blob.type || 'image/png' });
+      const uploaded = await uploadSkinFile(file, model, 'gallery');
+
+      const skin: SavedSkin = {
+        id: makeSkinId(),
+        name: `Скин ${selectedSlot + 1}`,
+        url: uploaded.url,
+        model: uploaded.model,
+        savedAt: new Date().toISOString(),
+        slot: selectedSlot,
+        active: false,
+      };
+      const next = upsertSkinAtSlot(savedSkins, skin, selectedSlot);
+      await persistSavedSkins(next);
+    } catch (e: unknown) {
+      setErr(toErrorText(e, 'Не удалось сохранить текущий скин в слот'));
+      setBusy(null);
+    }
   }
 
-  const moveCarouselLeft = () => setSelectedSlot((v) => wrapIndex(v + 1, MAX_SLOTS));
-  const moveCarouselRight = () => setSelectedSlot((v) => wrapIndex(v - 1, MAX_SLOTS));
+  const moveCarouselLeft = () => setSelectedSlot((v) => wrapIndex(v - 1, MAX_SLOTS));
+  const moveCarouselRight = () => setSelectedSlot((v) => wrapIndex(v + 1, MAX_SLOTS));
 
   return (
     <>
@@ -306,7 +408,7 @@ export default function UserSkinsPage() {
                   to={profileHref}
                   className="absolute right-0 top-0 inline-flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-900/70 px-3 py-1.5 text-sm text-slate-200 hover:border-slate-500"
                 >
-                  <span aria-hidden="true">↩</span> К профилю
+                  <span aria-hidden="true">←</span> К профилю
                 </Link>
               </div>
 
@@ -318,6 +420,13 @@ export default function UserSkinsPage() {
                     {carouselCards.map(({ index, delta, visible, skin: renderedSkin }) => {
                       const dropEnabled = self && busy === null && visible;
                       const isDropTarget = dragOverSlot === index;
+                      const isActiveSkin = Boolean(
+                        renderedSkin &&
+                          ((activeSlotOverride !== null && activeSlotOverride === index) ||
+                            (activeSlotFromStored >= 0 && activeSlotFromStored === index) ||
+                            (activeSlotFromPath >= 0 && activeSlotFromPath === index) ||
+                            (activeSkinPath && canonicalSkinPath(renderedSkin.url) === activeSkinPath)),
+                      );
                       return (
                         <button
                           key={index}
@@ -354,10 +463,12 @@ export default function UserSkinsPage() {
                             !visible ? 'pointer-events-none' : ''
                           } ${isDropTarget ? 'border-sky-300 shadow-[0_0_0_1px_rgba(56,189,248,.65),0_20px_52px_-20px_rgba(56,189,248,.75)]' : ''} ${
                             self ? 'cursor-pointer' : ''
-                          } ${
-                            delta === 0 && visible
+                          } ${isActiveSkin ? 'ring-2 ring-emerald-300/90 shadow-[0_0_0_1px_rgba(16,185,129,.55),0_18px_48px_-18px_rgba(16,185,129,.5)]' : ''} ${
+                            !isActiveSkin && delta === 0 && visible
                               ? 'border-sky-400/80 shadow-[0_18px_48px_-20px_rgba(56,189,248,.55)]'
-                              : 'border-slate-700/80 hover:border-slate-500'
+                              : !isActiveSkin
+                                ? 'border-slate-700/80 hover:border-slate-500'
+                                : ''
                           }`}
                           style={cardStyle(delta, visible)}
                           aria-label={`Слот ${index + 1}`}
@@ -467,8 +578,8 @@ export default function UserSkinsPage() {
                             <button
                               type="button"
                               onClick={onApplySelectedSkin}
-                              disabled={busy !== null}
-                              className="rounded-lg border border-sky-700 bg-sky-900/30 px-3 py-1.5 text-sky-100 hover:border-sky-500 disabled:opacity-60"
+                              disabled={busy !== null || selectedSkinLegacy}
+                              className="rounded-lg border border-sky-700 bg-sky-900/30 px-3 py-1.5 text-sky-100 hover:border-sky-500 disabled:cursor-not-allowed disabled:opacity-60"
                             >
                               Сделать активным
                             </button>
@@ -499,6 +610,11 @@ export default function UserSkinsPage() {
                         Перетащите изображение в нужный слот или нажмите на центральную карточку для выбора файла.
                       </div>
                       <div className="text-center text-[11px] text-slate-500">PNG/JPG до 2 МБ, 64×64 или 64×32</div>
+                      {legacySlotsCount > 0 && (
+                        <div className="mt-3 rounded-xl border border-amber-700/60 bg-amber-950/30 p-3 text-center text-xs text-amber-200">
+                          Найдено слотов старого формата: {legacySlotsCount}. Их нужно загрузить заново, иначе они будут ссылаться на текущий активный скин.
+                        </div>
+                      )}
                       <input
                         ref={fileInputRef}
                         type="file"
@@ -517,16 +633,12 @@ export default function UserSkinsPage() {
                     </div>
                   )}
 
-                  {notice && (
-                    <div className="mt-4 rounded-xl border border-emerald-800 bg-emerald-950/30 p-3 text-sm text-emerald-300">
-                      {notice}
-                    </div>
-                  )}
                   {err && <div className="mt-4 rounded-xl border border-red-800 bg-red-950/30 p-3 text-sm text-red-300">{err}</div>}
                 </div>
               )}
             </section>
 
+            <ToastStack toasts={toasts} onClose={closeToast} />
           </main>
         </div>
       </ProfileThemeProvider>
@@ -567,6 +679,20 @@ function firstFilledSlot(slots: Array<SavedSkin | null>): number {
   return idx >= 0 ? idx : 0;
 }
 
+function resolveInitialSelectedSlot(user: PublicUser | Me, skins: SavedSkin[]): number {
+  const slots = buildSlots(skins);
+  const activeByFlag = slots.findIndex((slot) => Boolean(slot?.active));
+  if (activeByFlag >= 0) return activeByFlag;
+
+  const activePath = canonicalSkinPath(user.skinUrl);
+  if (activePath) {
+    const activeByPath = slots.findIndex((slot) => Boolean(slot && canonicalSkinPath(slot.url) === activePath));
+    if (activeByPath >= 0) return activeByPath;
+  }
+
+  return firstFilledSlot(slots);
+}
+
 function buildSlots(skins: SavedSkin[]): Array<SavedSkin | null> {
   const slots: Array<SavedSkin | null> = Array.from({ length: MAX_SLOTS }, () => null);
   for (const skin of skins) {
@@ -587,6 +713,43 @@ function removeSkinFromSlot(skins: SavedSkin[], slot: number): SavedSkin[] {
   return normalizeSavedSkins(skins.filter((skin) => skin.slot !== slot));
 }
 
+function markActiveSavedSkin(skins: SavedSkin[], activeId: string): SavedSkin[] {
+  return normalizeSavedSkins(
+    skins.map((skin) => ({
+      ...skin,
+      active: skin.id === activeId,
+    })),
+  );
+}
+
+function clearActiveSavedSkin(skins: SavedSkin[]): SavedSkin[] {
+  return normalizeSavedSkins(
+    skins.map((skin) => ({
+      ...skin,
+      active: false,
+    })),
+  );
+}
+
+function applyActiveSavedSkinId(skins: SavedSkin[], activeId?: string | null): SavedSkin[] {
+  const normalizedActiveId = typeof activeId === 'string' ? activeId.trim() : '';
+  if (!normalizedActiveId) return skins;
+  if (!skins.some((skin) => skin.id === normalizedActiveId)) return skins;
+  return markActiveSavedSkin(skins, normalizedActiveId);
+}
+
+function findNearestFilledSlot(slots: Array<SavedSkin | null>, from: number): number {
+  if (!slots.some(Boolean)) return -1;
+  const total = slots.length;
+  for (let d = 0; d < total; d += 1) {
+    const right = wrapIndex(from + d, total);
+    if (slots[right]) return right;
+    const left = wrapIndex(from - d, total);
+    if (slots[left]) return left;
+  }
+  return -1;
+}
+
 function normalizeUser<T extends PublicUser | Me>(user: T): T {
   return {
     ...user,
@@ -599,6 +762,7 @@ function normalizeSavedSkins(raw: unknown): SavedSkin[] {
   const out: SavedSkin[] = [];
   const usedSlots = new Set<number>();
   let fallbackSlot = 0;
+  let hasActive = false;
 
   for (const item of raw) {
     if (!item || typeof item !== 'object') continue;
@@ -610,6 +774,7 @@ function normalizeSavedSkins(raw: unknown): SavedSkin[] {
     const name = typeof entry.name === 'string' && entry.name.trim() ? entry.name.trim() : 'Скин';
     const model: SkinModel = entry.model === 'slim' ? 'slim' : 'classic';
     const savedAt = typeof entry.savedAt === 'string' ? entry.savedAt : new Date().toISOString();
+    const activeRaw = entry.active === true;
 
     let slot = Number.isInteger(entry.slot) ? Number(entry.slot) : -1;
     if (slot < 0 || slot >= MAX_SLOTS || usedSlots.has(slot)) {
@@ -619,7 +784,9 @@ function normalizeSavedSkins(raw: unknown): SavedSkin[] {
     if (slot < 0 || slot >= MAX_SLOTS) continue;
 
     usedSlots.add(slot);
-    out.push({ id, name, url, model, savedAt, slot });
+    const active = !hasActive && activeRaw;
+    if (active) hasActive = true;
+    out.push({ id, name, url, model, savedAt, slot, active });
   }
 
   out.sort((a, b) => (a.slot ?? 0) - (b.slot ?? 0));
@@ -629,6 +796,36 @@ function normalizeSavedSkins(raw: unknown): SavedSkin[] {
 function toAbsoluteUrl(url: string): string {
   if (/^https?:\/\//i.test(url)) return url;
   return new URL(url, window.location.origin).toString();
+}
+
+function canonicalSkinPath(url?: string | null): string | null {
+  if (!url) return null;
+  try {
+    const parsed = new URL(url, window.location.origin);
+    return `${parsed.origin}${parsed.pathname}`;
+  } catch {
+    return null;
+  }
+}
+
+function isSavedSkinUrl(url?: string | null): boolean {
+  if (!url) return false;
+  try {
+    const parsed = new URL(url, window.location.origin);
+    return parsed.pathname.includes('/media/saved-skins/');
+  } catch {
+    return false;
+  }
+}
+
+function isLegacyActiveSkinUrl(url?: string | null): boolean {
+  if (!url) return false;
+  try {
+    const parsed = new URL(url, window.location.origin);
+    return parsed.pathname.includes('/media/skins/') || parsed.pathname.includes('/api/v1/profile/skin');
+  } catch {
+    return false;
+  }
 }
 
 function validateSkinFile(file: File): string | null {

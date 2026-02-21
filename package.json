@@ -18,6 +18,7 @@
     "crypto-js": "^4.2.0",
     "framer-motion": "^12.23.24",
     "idb": "^8.0.3",
+    "qrcode": "^1.5.4",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-easy-crop": "^5.5.3",

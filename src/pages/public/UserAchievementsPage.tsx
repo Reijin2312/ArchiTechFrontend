@@ -232,9 +232,6 @@ export default function UserAchievementsPage() {
               </div>
               <div className="relative z-10 mb-3 flex flex-col items-center justify-center gap-1 text-center">
                 <h2 className="text-base font-semibold uppercase tracking-[0.12em] text-amber-100">Закрепленные награды</h2>
-                <span className="rounded-full border border-amber-300/30 bg-slate-950/50 px-2 py-0.5 text-xs text-amber-100/90">
-                  {pinned.length}
-                </span>
               </div>
 
               {loading ? (

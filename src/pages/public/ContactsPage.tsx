@@ -38,10 +38,10 @@ const CONTACT_CARDS: ContactCardConfig[] = [
   {
     id: 'support',
     title: 'Поддержка',
-    description: 'Поможем с лаунчером, игрой, доступом на сервер. Принимаем репорты о найденных багах и прочих технических проблемах.',
+    description: 'Если не запускается лаунчер, не пускает на сервер или что-то сломалось в игре — пишите сюда.',
     icon: 'support',
-    badge: 'Ответ в день обращения',
-    meta: 'Работаем ежедневно с 12:00 до 22:00 МСК.',
+    badge: 'Техвопросы',
+    meta: 'Чтобы не терять время, приложите скрин и что именно уже пробовали сделать.',
     actions: [
       { label: 'Перейти в поддержку', href: DISCORD_URL, external: true, variant: 'primary' },
       { label: 'Написать на почту', href: `mailto:${SUPPORT_EMAIL}`, variant: 'secondary' },
@@ -50,10 +50,10 @@ const CONTACT_CARDS: ContactCardConfig[] = [
   {
     id: 'moderation',
     title: 'Модерация',
-    description: 'Жалобы на игроков, вопросы по правилам, разбан. При подаче жалобы предоставляйте доказательства.',
+    description: 'Жалобы на игроков, спорные ситуации по правилам и апелляции по наказаниям.',
     icon: 'moderation',
-    badge: 'Справедливость - приоритет',
-    meta: 'Для апелляций используйте закреплённый шаблон в канале #helpdesk.',
+    badge: 'Жалобы и апелляции',
+    meta: 'По жалобам нужны доказательства: скриншоты, видео или логи.',
     actions: [
       { label: 'Открыть гайд', href: '/rules#penalties', variant: 'primary' },
       { label: 'Написать модераторам', href: DISCORD_URL, external: true, variant: 'secondary' },
@@ -61,10 +61,10 @@ const CONTACT_CARDS: ContactCardConfig[] = [
   },
   {
     id: 'telegram',
-    title: 'Telegram канал',
-    description: 'Анонсы, статусы серверов, новые ивенты. Уведомления приходят моментально.',
+    title: 'Telegram-канал',
+    description: 'Там публикуем обновления, техработы и короткие новости по серверу.',
     icon: 'telegram',
-    badge: 'Новости без спама',
+    badge: 'Анонсы сервера',
     actions: [
       { label: 'Перейти в канал', href: TELEGRAM_URL, external: true, variant: 'primary' },
     ],
@@ -72,10 +72,10 @@ const CONTACT_CARDS: ContactCardConfig[] = [
   {
     id: 'discord',
     title: 'Discord сервер',
-    description: 'Посиделки в голосовых каналах, приятная атмосфера.',
+    description: 'Основное общение комьюнити: текстовые каналы, голос, помощь и быстрый контакт с командой.',
     icon: 'discord',
-    badge: 'Ламповое сообщество',
-    meta: 'Для входа нужна роль игрока или активная подписка.',
+    badge: 'Голос и чат',
+    meta: 'Если нужна помощь по игре, удобнее всего писать именно в Discord.',
     actions: [
       { label: 'Перейти на сервер', href: DISCORD_URL, external: true, variant: 'primary' },
     ],
@@ -141,13 +141,13 @@ export default function ContactsPage() {
           animate={disableMotion ? undefined : { opacity: 1, y: 0, filter: 'blur(0px)' }}
           transition={{ duration: 0.5, ease: 'easeOut' }}
         >
-          <p className="text-sm uppercase tracking-[0.35em] text-slate-400">Contacts</p>
+          <p className="text-sm uppercase tracking-[0.35em] text-slate-400">Связь</p>
           <h1 className="mt-3 text-3xl font-semibold leading-tight">
             Контакты ArchiTech MC
           </h1>
           <p className="mt-4 text-base text-slate-300">
-            Свяжитесь с поддержкой, модерацией, зайдите на дискорд-сервер или подпишитесь на Telegram-канал сообщества.
-            Мы отвечаем максимально быстро и публикуем все апдейты сразу.
+            Здесь всё, что нужно для связи: техподдержка, модерация, Discord и Telegram.
+            Без лишнего — просто выбирайте нужный канал.
           </p>
         </motion.section>
 
@@ -196,11 +196,8 @@ export default function ContactsPage() {
           transition={{ duration: 0.5, ease: 'easeOut' }}
         >
           <div className="flex flex-col gap-3 mb-6 text-center">
-            <p className="text-sm uppercase tracking-[0.35em] text-slate-400">Team</p>
+            <p className="text-sm uppercase tracking-[0.35em] text-slate-400">Команда</p>
             <h2 className="text-2xl font-semibold">Администрация и команда</h2>
-            <p className="text-sm text-slate-300 max-w-2xl mx-auto">
-              Напрямую доступны в Discord и на сайте. Профиль каждого участника содержит ссылки на соцсети и открытый чат.
-            </p>
           </div>
           <TeamGrid team={TEAM_MEMBERS} avatars={avatars} disableMotion={disableMotion} />
         </motion.section>
