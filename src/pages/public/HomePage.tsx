@@ -101,7 +101,7 @@ export default function HomePage() {
   const shots = useMemo(
     () => [
       '/images/screen10.png',
-      '/images/screen2.png',
+      '/images/screen13.png',
       '/images/screen9.png',
       '/images/screen4.png',
       '/images/screen11.png',
@@ -114,7 +114,7 @@ export default function HomePage() {
   const shotMeta = useMemo<Record<string, ShotMeta>>(
     () => ({
       '/images/screen1.png': { title: 'Ветрогенераторы', subtitle: 'Построены Hoshimori Inc.' },
-      '/images/screen2.png': { title: 'Старый маяк', subtitle: 'Он был здесь до начала времён' },
+      '/images/screen13.png': { title: 'Портальная лягушка', subtitle: 'It is Wednesday, my dudes' },
       '/images/screen3.png': { title: 'Дирижабль', subtitle: 'Так и сгинул, упал в океан... Дирижабль Левиафан' },
       '/images/screen4.png': { title: 'Как это тут оказалось?', subtitle: 'Игрок KIDron позирует на ветрогенераторе' },
       '/images/screen9.png': { title: 'Цитадель Альянса', subtitle: 'По совместительству база игрока Andrej_Dinera' },
@@ -518,7 +518,7 @@ export default function HomePage() {
               Присоединяйся к <span className="text-indigo-400">{SERVER_NAME}!</span>
             </h1>
             <p className="mt-4 text-slate-300 max-w-prose">
-              Модифицированный техномагический сервер c упором на строительство и творчество. Без вайпов и с уникальными самописными модами. Добрая администрация и отсутствие гриферов.
+              Небольшой ламповый техномагический сервер c упором на строительство и творчество. Без вайпов и с уникальными самописными модами. Добрая администрация и отсутствие гриферов.
             </p>
 
             <div className="mt-6 grid gap-3">
@@ -658,7 +658,7 @@ export default function HomePage() {
           </div>
 
         <div
-          className="relative max-w-full px-2"
+          className="relative max-w-full overflow-x-hidden px-2 md:overflow-visible"
           onMouseEnter={() => {
             setSliderPaused(true)
             setGalleryHover(true)
@@ -724,7 +724,7 @@ export default function HomePage() {
           </div>
 
           <motion.div
-            className="mt-3 flex w-[calc(100%+3rem)] -mx-2 flex-nowrap gap-3 overflow-x-auto py-2 px-2 no-scrollbar"
+            className="mt-3 flex w-full flex-nowrap gap-3 overflow-x-auto py-2 px-2 no-scrollbar md:w-[calc(100%+3rem)] md:-mx-2"
             layout
           >
             {shots.map((_, i) => {
@@ -762,6 +762,7 @@ export default function HomePage() {
                 </motion.button>
               )
             })}
+            <div className="flex-none w-4" aria-hidden />
           </motion.div>
         </div>
       </div>
@@ -882,7 +883,7 @@ export default function HomePage() {
           className="text-2xl font-semibold mb-6 font-techno"
           variants={disableEntranceMotion ? undefined : faqItem}
         >
-          FAQ
+          Популярные вопросы
         </motion.h2>
 
         <motion.div className="grid gap-3">
@@ -1220,16 +1221,17 @@ function OnlineTrendSection({
         </div>
       </div>
 
-      <div className="mb-4 grid gap-3 sm:grid-cols-3">
+      <div className="mb-4 grid w-full grid-cols-3 gap-2 sm:gap-3">
         <MetricCard label="Сейчас" value={current} accent="text-emerald-300" />
         <MetricCard label="Пик" value={peak} accent="text-sky-300" />
         <MetricCard label="Средний" value={average} accent="text-indigo-300" />
       </div>
 
-      <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-3">
-        <svg
+      <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-2 sm:p-3">
+        <div className="-mx-1 overflow-x-auto px-1">
+          <svg
           viewBox={`0 0 ${chart.width} ${chart.height}`}
-          className="h-64 w-full"
+          className="h-72 w-[720px] min-w-[720px] sm:h-64 sm:w-full sm:min-w-0"
           role="img"
           aria-label="График онлайна сервера"
           onPointerMove={handlePointerMove}
@@ -1343,7 +1345,8 @@ function OnlineTrendSection({
           <text x={chart.width - chart.padX} y={chart.height - 2} textAnchor="end" fill="rgba(148,163,184,0.75)" fontSize="11">
             {chart.labels.end}
           </text>
-        </svg>
+          </svg>
+        </div>
       </div>
     </div>
   )
@@ -1584,9 +1587,9 @@ function TopPlayersSection({
 
 function MetricCard({ label, value, accent }: { label: string; value: number; accent: string }) {
   return (
-    <div className="rounded-xl border border-slate-800 bg-slate-950/50 px-3 py-2">
-      <div className="text-[11px] text-slate-400">{label}</div>
-      <div className={`text-xl font-semibold ${accent}`}>{value}</div>
+    <div className="grid aspect-square place-content-center gap-1 rounded-xl border border-slate-800 bg-slate-950/50 p-1 text-center sm:aspect-auto sm:px-3 sm:py-2 sm:text-left sm:place-content-start">
+      <div className="text-xs leading-none text-slate-300 sm:text-[11px]">{label}</div>
+      <div className={`text-xl leading-none font-semibold sm:text-xl ${accent}`}>{value}</div>
     </div>
   )
 }
