@@ -658,7 +658,7 @@ export default function HomePage() {
           </div>
 
         <div
-          className="relative max-w-full overflow-x-hidden"
+          className="relative max-w-full px-2"
           onMouseEnter={() => {
             setSliderPaused(true)
             setGalleryHover(true)
@@ -724,14 +724,13 @@ export default function HomePage() {
           </div>
 
           <motion.div
-            className="mt-3 flex flex-nowrap gap-3 overflow-x-auto overflow-y-visible py-1 -mx-1 px-2 no-scrollbar"
+            className="mt-3 flex w-[calc(100%+3rem)] -mx-2 flex-nowrap gap-3 overflow-x-auto py-2 px-2 no-scrollbar"
             layout
           >
             {shots.map((_, i) => {
               const idx = (activeIndex + i) % shots.length
               const src = shots[idx]
               const isActive = shot === src
-              const thumbMeta = shotMeta[src]
 
               return (
                 <motion.button
@@ -746,6 +745,7 @@ export default function HomePage() {
                   aria-label="Показать скриншот"
                   className={[
                     'group relative flex-none w-16 aspect-square rounded-xl ring-offset-2 ring-offset-slate-950 border',
+                    i === 0 ? 'origin-left' : i === shots.length - 1 ? 'origin-right' : 'origin-center',
                     isActive
                       ? 'border-transparent ring-2 ring-indigo-500/40'
                       : 'border-slate-800 ring-0 ring-transparent',
@@ -759,9 +759,6 @@ export default function HomePage() {
                     sizes="64px"
                     className="h-full w-full object-cover rounded-xl"
                   />
-                  <span className="pointer-events-none absolute left-1/2 top-0 z-20 hidden -translate-x-1/2 -translate-y-[118%] whitespace-nowrap rounded-lg border border-slate-700/85 bg-slate-950/95 px-2 py-1 text-[10px] font-medium text-slate-100 opacity-0 shadow-xl transition-all duration-200 group-hover:-translate-y-[130%] group-hover:opacity-100 group-focus-visible:-translate-y-[130%] group-focus-visible:opacity-100 md:block">
-                    {thumbMeta?.title ?? 'Скриншот'}
-                  </span>
                 </motion.button>
               )
             })}

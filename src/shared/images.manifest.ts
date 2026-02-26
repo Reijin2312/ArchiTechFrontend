@@ -1,67 +1,7 @@
+// auto-generated
 export type ImgVariant = { w:number; path:string };
 export type ImgEntry = { original:{ w:number; h:number; png:string; avif:string; webp:string }; avif:ImgVariant[]; webp:ImgVariant[] };
 export const IMAGES: Record<string, ImgEntry> = {
-  "bg.png": {
-    "original": {
-      "w": 4140,
-      "h": 2016,
-      "png": "/images/bg.png",
-      "avif": "/images/bg.avif",
-      "webp": "/images/bg.webp"
-    },
-    "avif": [
-      {
-        "w": 320,
-        "path": "/images/bg-320.avif"
-      },
-      {
-        "w": 640,
-        "path": "/images/bg-640.avif"
-      },
-      {
-        "w": 960,
-        "path": "/images/bg-960.avif"
-      },
-      {
-        "w": 1280,
-        "path": "/images/bg-1280.avif"
-      },
-      {
-        "w": 1600,
-        "path": "/images/bg-1600.avif"
-      },
-      {
-        "w": 1920,
-        "path": "/images/bg-1920.avif"
-      }
-    ],
-    "webp": [
-      {
-        "w": 320,
-        "path": "/images/bg-320.webp"
-      },
-      {
-        "w": 640,
-        "path": "/images/bg-640.webp"
-      },
-      {
-        "w": 960,
-        "path": "/images/bg-960.webp"
-      },
-      {
-        "w": 1280,
-        "path": "/images/bg-1280.webp"
-      },
-      {
-        "w": 1600,
-        "path": "/images/bg-1600.webp"
-      },
-      {
-        "w": 1920,
-        "path": "/images/bg-1920.webp"
-      }
-    ]
-  },
   "screen1.png": {
     "original": {
       "w": 1280,
@@ -287,6 +227,67 @@ export const IMAGES: Record<string, ImgEntry> = {
       {
         "w": 1920,
         "path": "/images/screen12-1920.webp"
+      }
+    ]
+  },
+  "screen13.png": {
+    "original": {
+      "w": 2560,
+      "h": 1440,
+      "png": "/images/screen13.png",
+      "avif": "/images/screen13.avif",
+      "webp": "/images/screen13.webp"
+    },
+    "avif": [
+      {
+        "w": 320,
+        "path": "/images/screen13-320.avif"
+      },
+      {
+        "w": 640,
+        "path": "/images/screen13-640.avif"
+      },
+      {
+        "w": 960,
+        "path": "/images/screen13-960.avif"
+      },
+      {
+        "w": 1280,
+        "path": "/images/screen13-1280.avif"
+      },
+      {
+        "w": 1600,
+        "path": "/images/screen13-1600.avif"
+      },
+      {
+        "w": 1920,
+        "path": "/images/screen13-1920.avif"
+      }
+    ],
+    "webp": [
+      {
+        "w": 320,
+        "path": "/images/screen13-320.webp"
+      },
+      {
+        "w": 640,
+        "path": "/images/screen13-640.webp"
+      },
+      {
+        "w": 960,
+        "path": "/images/screen13-960.webp"
+      },
+      {
+        "w": 1280,
+        "path": "/images/screen13-1280.webp"
+      },
+      {
+        "w": 1600,
+        "path": "/images/screen13-1600.webp"
+      },
+      {
+        "w": 1920,
+        "path": "/images/screen13-1920.webp"
       }
     ]
   },
