@@ -4,6 +4,7 @@ import { fileURLToPath, URL } from 'node:url'
 import fs from 'node:fs'
 
 const outDir = 'dist'
+const apiUrl = 'http://localhost:34947'
 
 export default defineConfig({
   plugins: [react()],
@@ -15,10 +16,9 @@ export default defineConfig({
     cert: fs.readFileSync('./certs/localhost.pem'),
     },
     proxy: {
-      '/api': { target: 'http://localhost:51788', changeOrigin: true },
-      "/media": { target: "http://localhost:51788", changeOrigin: true },
-      // Proxy WebSocket through dev server to avoid mixed-content issues (frontend https, backend ws)
-      '/ws': { target: 'http://localhost:51789', ws: true, changeOrigin: true },
+      '/api': { target: apiUrl, changeOrigin: true },
+      "/media": { target: apiUrl, changeOrigin: true },
+      '/ws': { target: apiUrl, ws: true, changeOrigin: true },
     },
   },
   resolve: {

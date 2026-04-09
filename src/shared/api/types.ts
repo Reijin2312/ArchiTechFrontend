@@ -100,18 +100,48 @@ export interface FriendStatusResponse {
   status: FriendStatus
 }
 
+export type ChatMessageEntityType =
+  | 'BOLD'
+  | 'ITALIC'
+  | 'UNDERLINE'
+  | 'STRIKETHROUGH'
+  | 'SPOILER'
+  | 'CODE'
+  | 'PRE'
+  | 'LINK'
+
+export interface ChatMessageEntity {
+  offset: number
+  length: number
+  type: ChatMessageEntityType
+  url?: string
+  language?: string
+}
+
 export interface ChatMessage {
   messageId: number | string
   localId?: string
   status?: 'pending' | 'sent' | 'delivered' | 'read'
   senderId: string
   content: string
-  messageType: 'text' | 'image' | 'images'
+  messageType:
+    | 'text'
+    | 'image'
+    | 'images'
+    | 'file'
+    | 'files'
+    | 'voice'
+    | 'circle'
+  entities?: ChatMessageEntity[]
   imagePath?: string
   imageUrl?: string
   images?: Array<{
     imagePath: string
     imageUrl?: string
+    fileName?: string
+    contentType?: string
+    sizeBytes?: number
+    isImage?: boolean
     imageKeyVersion?: number
   }>
   createdAt: string
@@ -144,7 +174,7 @@ export interface ChatMessagesResponse {
 export interface SendMessageRequest {
   chatId: number
   content: string
-  messageType?: 'text' | 'image'
+  messageType?: 'text' | 'image' | 'images' | 'file' | 'files' | 'voice' | 'circle'
   imagePath?: string
   replyToId?: number
 }
@@ -172,6 +202,10 @@ export interface UploadImageResponse {
   success: boolean
   imagePath: string
   imageUrl: string
+  fileName?: string
+  contentType?: string
+  sizeBytes?: number
+  isImage?: boolean
   // 🔐 Метаданные шифрования
   imageEncrypted?: boolean
   imageEncryptionIv?: string
@@ -181,6 +215,11 @@ export interface UploadImageResponse {
 export interface MarkReadRequest {
   chatId: number
   lastReadMessageId: number
+}
+
+export interface ChatPresenceResponse {
+  userId: string
+  online: boolean
 }
 
 export interface PublicKeyRequest {

@@ -4,7 +4,15 @@ export interface SecureProtocolMessage {
   seq_no: number;
   timestamp: number;
   chat_id: number;
-  content_type: 'text' | 'image' | 'binary';
+  content_type:
+    | 'text'
+    | 'image'
+    | 'images'
+    | 'file'
+    | 'files'
+    | 'voice'
+    | 'circle'
+    | 'binary';
   content: string;
   hmac: string;
   reply_to_id?: number;
@@ -21,6 +29,7 @@ export interface SessionKeyInfo {
 export interface ChatWebSocketMessage {
   type: 'connected' | 'new_message' | 'friend_request' | 'friend_accept' | 
         'friend_reject' | 'message_read' | 'message_edited' | 'message_deleted' |
+        'typing_state' | 'presence_changed' |
         'session_key_rotated' | 'device_revoked' | 'protocol_error';
   
   chatId?: number;

@@ -58,6 +58,8 @@ chatMessages: (chatId: number, before?: number, limit = 50) => `/api/v1/chat/${c
 chatSend: '/api/v1/chat/send',
 chatUpload: '/api/v1/chat/upload',
 chatRead: '/api/v1/chat/read',
+chatTyping: '/api/v1/chat/typing',
+chatPresence: (userId: string) => `/api/v1/chat/presence/${userId}`,
 chatMessageEdit: (messageId: number) => `/api/v1/chat/message/${messageId}/edit`,
 chatMessageDelete: (messageId: number) => `/api/v1/chat/message/${messageId}/delete`,
   chatWsTicket: '/api/v1/chat/ws-ticket',

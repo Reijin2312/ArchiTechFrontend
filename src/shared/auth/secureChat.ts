@@ -1,13 +1,21 @@
 import { authStore } from '@/shared/store/auth'
 
 
+export interface TextEntity {
+  offset: number
+  length: number
+  type: 'BOLD' | 'ITALIC' | 'UNDERLINE' | 'STRIKETHROUGH' | 'SPOILER' | 'CODE' | 'PRE' | 'LINK'
+  url?: string
+  language?: string
+}
 
 export interface ChatMessage {
   chatId: number
   content: string
-  messageType?: 'text' | 'image'
+  messageType?: 'text' | 'image' | 'images' | 'file' | 'files' | 'voice' | 'circle'
   replyToId?: number
   imagePath?: string
+  entities?: TextEntity[]
 }
 
 export interface ReceivedMessage {
@@ -15,7 +23,8 @@ export interface ReceivedMessage {
   chatId: number
   senderId: string
   content: string
-  messageType: 'text' | 'image'
+  messageType: 'text' | 'image' | 'images' | 'file' | 'files' | 'voice' | 'circle'
+  entities?: TextEntity[]
   imagePath?: string
   imageUrl?: string
   createdAt: string
@@ -35,11 +44,15 @@ export interface WebSocketEvent {
     | 'message_read'
     | 'message_edited'
     | 'message_deleted'
+    | 'typing_state'
+    | 'presence_changed'
   message?: ReceivedMessage
   chatId?: number
   messageId?: number
   lastReadMessageId?: number
   userId?: string
+  typing?: boolean
+  online?: boolean
   displayName?: string
   username?: string
   requestId?: number
@@ -58,6 +71,8 @@ export class CloudChatClient {
   private errorHandlers: Set<(error: Error) => void> = new Set()
   private config: Required<WebSocketConfig>
   private cachedDeviceToken: { token: string; expiresAt: number } | null = null
+  private connectingPromise: Promise<void> | null = null
+  private connectionGeneration = 0
   
   constructor(config: WebSocketConfig = {}) {
     this.config = {
@@ -89,43 +104,73 @@ export class CloudChatClient {
    * Подключение к серверу
    */
   async connect(): Promise<void> {
-    const ticket = await this.getTicket()
-    const deviceToken = await this.getDeviceToken()
-    const url = `${this.config.wsUrl}?ticket=${encodeURIComponent(ticket)}&deviceToken=${encodeURIComponent(deviceToken)}`
-    console.log('🌐 Opening chat WebSocket', { url })
-    
-    return new Promise((resolve, reject) => {
-      try {
-        this.ws = new WebSocket(url)
-        
-        this.ws.onopen = () => {
-          console.log('☁️ Cloud chat WebSocket connected')
-          resolve()
-        }
-        
-        this.ws.onmessage = (event) => {
-          this.handleMessage(event.data).catch(err => {
-            console.error('❌ Message handling error:', err)
-            this.errorHandlers.forEach(handler => handler(err))
-          })
-        }
-        
-        this.ws.onerror = (error) => {
-          console.error('❌ WebSocket error:', error)
-          reject(new Error('WebSocket connection failed'))
-        }
-        
-        this.ws.onclose = (event) => {
-          console.log('🔌 Cloud chat WebSocket disconnected', { code: event.code, reason: event.reason })
-          this.ws = null
-        }
-        
-      } catch (error) {
-        reject(error)
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      return
+    }
+    if (this.connectingPromise) {
+      return this.connectingPromise
+    }
+
+    const generation = this.connectionGeneration
+    const pending = (async () => {
+      const ticket = await this.getTicket()
+      const deviceToken = await this.getDeviceToken()
+      if (generation !== this.connectionGeneration) {
+        return
       }
-    })
+
+      const url = `${this.config.wsUrl}?ticket=${encodeURIComponent(ticket)}&deviceToken=${encodeURIComponent(deviceToken)}`
+      console.log('🌐 Opening chat WebSocket', { url })
+
+      await new Promise<void>((resolve, reject) => {
+        try {
+          const socket = new WebSocket(url)
+          this.ws = socket
+
+          socket.onopen = () => {
+            if (generation !== this.connectionGeneration) {
+              socket.close(1000, 'stale_connect')
+              resolve()
+              return
+            }
+            console.log('☁️ Cloud chat WebSocket connected')
+            resolve()
+          }
+
+          socket.onmessage = (event) => {
+            this.handleMessage(event.data).catch(err => {
+              console.error('❌ Message handling error:', err)
+              this.errorHandlers.forEach(handler => handler(err))
+            })
+          }
+
+          socket.onerror = (error) => {
+            console.error('❌ WebSocket error:', error)
+            reject(new Error('WebSocket connection failed'))
+          }
+
+          socket.onclose = (event) => {
+            console.log('🔌 Cloud chat WebSocket disconnected', { code: event.code, reason: event.reason })
+            if (this.ws === socket) {
+              this.ws = null
+            }
+          }
+        } catch (error) {
+          reject(error)
+        }
+      })
+    })()
+
+    this.connectingPromise = pending
+    try {
+      await pending
+    } finally {
+      if (this.connectingPromise === pending) {
+        this.connectingPromise = null
+      }
+    }
   }
-  
+
   private async getTicket(): Promise<string> {
     const apiBase = (import.meta as any)?.env?.VITE_API_BASE as string || window.location.origin
     
@@ -293,7 +338,8 @@ export class CloudChatClient {
         const editedPayload: any = parsed.message || {
           chatId: parsed.chatId,
           messageId: parsed.messageId,
-          content: parsed.content
+          content: parsed.content,
+          entities: parsed.entities
         }
 
         this.notifyHandlers({
@@ -307,6 +353,19 @@ export class CloudChatClient {
           type: 'message_deleted',
           chatId: parsed.chatId,
           messageId: parsed.messageId
+        })
+      } else if (parsed.type === 'typing_state') {
+        this.notifyHandlers({
+          type: 'typing_state',
+          chatId: parsed.chatId,
+          userId: parsed.userId,
+          typing: !!parsed.typing,
+        })
+      } else if (parsed.type === 'presence_changed') {
+        this.notifyHandlers({
+          type: 'presence_changed',
+          userId: parsed.userId,
+          online: !!parsed.online,
         })
       } else if (parsed.type === 'error') {
         console.error('Server error:', parsed.message)
@@ -351,6 +410,8 @@ export class CloudChatClient {
    * Отключиться
    */
   disconnect(): void {
+    this.connectionGeneration += 1
+    this.connectingPromise = null
     if (this.ws) {
       this.ws.close()
       this.ws = null
@@ -364,3 +425,5 @@ export const cloudChatClient = new CloudChatClient()
 
 // Экспортируем для обратной совместимости
 export const secureChatClient = cloudChatClient
+
+
