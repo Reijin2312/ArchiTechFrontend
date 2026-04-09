@@ -42,7 +42,7 @@
   }
 
   body.has-wallpaper {
-    --overlay-alpha: .75;
+    --overlay-alpha: .50;
     position: relative;
   }
 
@@ -54,7 +54,7 @@
 
     background-image:
       linear-gradient(rgb(2 6 23 / var(--overlay-alpha)), rgb(2 6 23 / var(--overlay-alpha))),
-      var(--bg-url, url('/images/bg.avif'));
+      var(--bg-url, url('/images/wallpaper.avif'));
     background-position: center center;
     background-size: cover;
     background-repeat: no-repeat;

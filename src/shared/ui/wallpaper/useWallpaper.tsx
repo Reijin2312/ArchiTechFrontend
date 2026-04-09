@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 
-export function useWallpaper(url: string = '/images/bg.avif') {
+export function useWallpaper(url: string = '/images/screen2.png') {
   useEffect(() => {
     const b = document.body;
     const prev = b.style.getPropertyValue('--bg-url');
