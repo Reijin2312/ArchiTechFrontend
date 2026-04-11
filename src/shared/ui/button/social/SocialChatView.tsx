@@ -72,14 +72,21 @@ export function SocialChatView({ model, showBackButton = true }: SocialChatViewP
       );
     }
     const chat = chats.find(c => c.chatId === selectedChat);
-    const friend = friends.find(f => f.userId === chat?.participantId);
-    const displayName = friend?.displayName || friend?.username || chat?.participantId.slice(0, 8) || 'User';
+    const isPrivateChat = chat?.chatType === 'PRIVATE';
+    const friend = isPrivateChat
+      ? friends.find(f => f.userId === chat?.participantId)
+      : undefined;
+    const displayName =
+      chat?.chatType === 'GROUP'
+        ? chat.title?.trim() || `Group #${chat.chatId}`
+        : friend?.displayName || friend?.username || chat?.participantId?.slice(0, 8) || 'User';
 
   return (
     <div className="flex flex-col h-full">
       <ChatHeader
         model={model}
         selectedChat={selectedChat}
+        chat={chat}
         friend={friend}
         displayName={displayName}
         showBackButton={showBackButton}

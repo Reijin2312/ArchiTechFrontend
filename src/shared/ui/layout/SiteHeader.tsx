@@ -7,7 +7,16 @@ import { PRIVACY_SECTIONS } from '@/pages/legal/PrivacyPolicyPage';
 import { TERMS_SECTIONS } from '@/pages/legal/UserAgreementPage';
 import { SvgTelegram, SvgDiscord, SvgMenu, SvgX } from '@/shared/ui/image/Icons';
 
-import { SERVER_NAME, RULES_URL, SHOP_URL, WIKI_URL, CONTACTS_URL, DISCORD_URL, TELEGRAM_URL } from '@/shared/constants';
+import {
+  SERVER_NAME,
+  RULES_URL,
+  SHOP_URL,
+  WIKI_URL,
+  CHAT_URL,
+  CONTACTS_URL,
+  DISCORD_URL,
+  TELEGRAM_URL,
+} from '@/shared/constants';
 
 const MAIN_URL = '/';
 const ABOUT_URL = '/about';
@@ -171,6 +180,13 @@ export default function SiteHeader() {
               aria-current={isActive(WIKI_URL) ? 'page' : undefined}
             >
               Вики
+            </a>
+            <a
+              href={CHAT_URL}
+              className={linkCls(isActive(CHAT_URL))}
+              aria-current={isActive(CHAT_URL) ? 'page' : undefined}
+            >
+              Chat
             </a>
             <a
               href={TELEGRAM_URL}
@@ -368,6 +384,15 @@ export default function SiteHeader() {
             >
               Вики
             </a>
+            <a
+              href={CHAT_URL}
+              onClick={() => setMobileOpen(false)}
+              className={`rounded-lg px-3 py-2 ${
+                isActive(CHAT_URL) ? 'bg-slate-800 text-sky-300' : 'text-slate-200 hover:bg-slate-900'
+              }`}
+            >
+              Chat
+            </a>
           </nav>
 
           {/* Блок профиля / логина */}
@@ -448,3 +473,4 @@ export default function SiteHeader() {
     </>
   );
 }
+

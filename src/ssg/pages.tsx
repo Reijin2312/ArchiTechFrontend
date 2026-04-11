@@ -2,6 +2,7 @@ import HomePage from '../pages/public/HomePage'
 import RulesPage from '../pages/public/RulesPage'
 import ShopPage from '../pages/public/ShopPage'
 import WikiPage from '../pages/public/WikiPage'
+import ChatPage from '../pages/public/ChatPage'
 import AboutServerPage from '../pages/public/AboutServerPage'
 import ContactsPage from '../pages/public/ContactsPage'
 import UserAgreementPage from '../pages/legal/UserAgreementPage'
@@ -14,6 +15,7 @@ export const pages = {
   '/rules': () => (<><SiteHeader/><main><RulesPage/></main><SiteFooter/></>),
   '/shop': () => (<><SiteHeader/><main><ShopPage/></main><SiteFooter/></>),
   '/wiki': () => (<><SiteHeader/><main><WikiPage/></main><SiteFooter/></>),
+  '/chat': () => (<ChatPage/>),
   '/about': () => (<><SiteHeader/><main><AboutServerPage/></main><SiteFooter/></>),
   '/contacts': () => (<><SiteHeader/><main><ContactsPage/></main><SiteFooter/></>),
   '/terms': () => (<><SiteHeader/><main><UserAgreementPage/></main><SiteFooter/></>),

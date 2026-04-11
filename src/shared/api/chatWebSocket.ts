@@ -30,7 +30,7 @@ class ChatWebSocketServiceAdapter {
   }
 
   isConnected(): boolean {
-    return true;
+    return secureChatClient.isConnected();
   }
 
   setSessionCredentials(sessionId: string, sessionKey?: string, sessionKeyIv?: string) {

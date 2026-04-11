@@ -361,7 +361,7 @@ function VoiceMessageBubble(props: VoiceMessageBubbleProps) {
             <span className={`ml-auto text-[10px] ${timeClass}`}>
               {new Date(createdAt).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
               {isOwn ? (
-                <span className="ml-1.5 -space-x-0.5 inline-flex align-middle">
+                <span className="ml-4 -space-x-0.5 inline-flex align-middle">
                   {isRead ? (
                     <>
                       <span className="text-[#7de4b7]">✓</span>
@@ -660,7 +660,15 @@ export function ChatMessages({ model }: ChatMessagesProps) {
   };
 
   return (
-    <div className="h-full overflow-y-auto px-4 py-3 space-y-3 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
+    <div
+      className="h-full space-y-3 overflow-y-auto px-4 py-4 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-slate-700"
+      style={{
+        backgroundColor: '#070b14',
+        backgroundImage:
+          'radial-gradient(circle at 14% 18%, rgba(14,165,233,0.12), transparent 33%), radial-gradient(circle at 84% 8%, rgba(99,102,241,0.12), transparent 30%), linear-gradient(rgba(30,41,59,0.22) 1px, transparent 1px), linear-gradient(90deg, rgba(30,41,59,0.22) 1px, transparent 1px)',
+        backgroundSize: '100% 100%, 100% 100%, 26px 26px, 26px 26px',
+      }}
+    >
       {messages.length === 0 ? (
         <div className="flex items-center justify-center h-full">
           <div className="text-center space-y-2">
@@ -711,23 +719,23 @@ export function ChatMessages({ model }: ChatMessagesProps) {
               <div
                 className={
                   isVoiceOnlyMessage || isCircleOnlyMessage
-                    ? 'max-w-[75%] relative text-sm whitespace-pre-wrap wrap-break-word p-0 bg-transparent shadow-none border-0 overflow-visible'
-                    : `max-w-[75%] rounded-2xl overflow-hidden text-sm whitespace-pre-wrap wrap-break-word shadow-lg relative ${
-                        isMediaMessage ? 'p-0' : 'px-2 py-1'
+                    ? 'relative max-w-[78%] overflow-visible border-0 bg-transparent p-0 text-sm whitespace-pre-wrap wrap-break-word shadow-none'
+                    : `relative max-w-[78%] overflow-hidden rounded-[18px] text-sm whitespace-pre-wrap shadow-lg wrap-break-word ${
+                        isMediaMessage ? 'p-0' : 'px-2.5 py-1.5'
                       } ${
                         m.senderId === userId
-                          ? 'bg-linear-to-br from-indigo-600 to-indigo-700 text-white shadow-indigo-500/30'
-                          : 'bg-slate-800/90 text-slate-100 shadow-slate-900/50 border border-slate-700/50'
+                          ? 'bg-linear-to-br from-sky-500 to-indigo-600 text-white shadow-sky-500/25'
+                          : 'border border-slate-700/70 bg-slate-800/90 text-slate-100 shadow-slate-950/60'
                       }`
                 }
               >
                 {m.replyToMessage && (
                   <div
                     className={`rounded-lg border-l-2 ${
-                      isMediaMessage ? 'px-2 py-1 mx-3 mt-3 mb-2' : 'px-2 py-1 mb-2'
-                    } ${m.senderId === userId ? 'bg-indigo-800/40 border-indigo-400' : 'bg-slate-700/40 border-slate-500'}`}
+                      isMediaMessage ? 'mx-3 mb-2 mt-3 px-2 py-1' : 'mb-2 px-2 py-1'
+                    } ${m.senderId === userId ? 'border-sky-300 bg-sky-700/30' : 'border-slate-500 bg-slate-700/40'}`}
                   >
-                    <div className={`text-[10px] font-medium mb-1 ${m.senderId === userId ? 'text-indigo-300' : 'text-slate-400'}`}>
+                    <div className={`mb-1 text-[10px] font-medium ${m.senderId === userId ? 'text-sky-100' : 'text-slate-400'}`}>
                       {m.replyToMessage.senderId === userId
                         ? 'You'
                         : friends.find(f => f.userId === m.replyToMessage!.senderId)?.username || 'User'}

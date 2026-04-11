@@ -228,6 +228,11 @@ export const routesMeta: Record<string, any> = {
       }
     ]
   },
+  '/chat': {
+    title: 'Чат - ArchiTech MC',
+    robots: 'noindex,follow',
+    canonical: `${ORIGIN}/chat`,
+  },
 
   '/auth/login': { title: 'Вход - ArchiTech MC', robots: 'noindex,follow', canonical: `${ORIGIN}/auth/login` },
   '/auth/register': { title: 'Регистрация - ArchiTech MC', robots: 'noindex,follow', canonical: `${ORIGIN}/auth/register` },

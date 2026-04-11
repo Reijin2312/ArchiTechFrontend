@@ -20,11 +20,17 @@ export type ImageGridLayout = {
   spans: { colSpan: number; rowSpan: number }[];
 };
 
-export function useSocialFloatingModel() {
+type SocialFloatingModelOptions = {
+  mode?: 'floating' | 'page';
+};
+
+export function useSocialFloatingModel(options: SocialFloatingModelOptions = {}) {
+  const mode = options.mode ?? 'floating';
+  const isPageMode = mode === 'page';
 
   const user = authStore(s => s.user);
   const userId = user?.id || '';
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(isPageMode);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>('chat');
   const [requestsSubTab, setRequestsSubTab] = useState<RequestsSubTab>('incoming');
@@ -139,6 +145,11 @@ export function useSocialFloatingModel() {
   };
 
   const closeMessenger = () => {
+    if (isPageMode) {
+      setSelectedChat(null);
+      setMessages([]);
+      return;
+    }
     setIsOpen(false);
     setIsFullscreen(false);
     setActiveTab('chat');
@@ -205,7 +216,9 @@ export function useSocialFloatingModel() {
     const title =
       sender?.displayName ||
       sender?.username ||
-      chat?.participantId?.slice(0, 8) ||
+      (chat?.chatType === 'GROUP'
+        ? chat.title?.trim() || `Group #${chat.chatId}`
+        : chat?.participantId?.slice(0, 8)) ||
       'Новое сообщение';
     const icon =
       normalizeAssetUrl(sender?.avatarUrl) ||
@@ -244,6 +257,7 @@ export function useSocialFloatingModel() {
     loadChats,
     loadMessages,
     openChatWith,
+    createGroupChat,
     sendTypingState,
     sendMessageToUser,
     sendChatMessage,
@@ -332,6 +346,7 @@ export function useSocialFloatingModel() {
     searchQuery,
     setSearchResults,
     searchUsers,
+    disableBodyScrollLock: isPageMode,
   });
 
 
@@ -422,6 +437,7 @@ export function useSocialFloatingModel() {
     loadChats,
     loadMessages,
     openChatWith,
+    createGroupChat,
     sendTypingState,
     sendMessageToUser,
     sendChatMessage,

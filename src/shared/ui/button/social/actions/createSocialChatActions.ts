@@ -257,33 +257,60 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
     }
   };
     
+    const findPrivateChatByParticipant = (participantId: string) =>
+    chats.find((chat) => chat.chatType === 'PRIVATE' && chat.participantId === participantId);
+
   const openChatWith = async (participantId: string) => {
     try {
-      const existingChat = chats.find(c => c.participantId === participantId);
+      const existingChat = findPrivateChatByParticipant(participantId);
       if (existingChat) {
-        console.log('✅ Chat already exists, opening chatId:', existingChat.chatId);
         setActiveTab('chat');
         setSelectedChat(existingChat.chatId);
         return;
       }
 
       const { data } = await http.post<CreateChatResponse>(endpoints.chatCreate, {
-        participantId
+        participantId,
       });
 
       await loadChats();
       setActiveTab('chat');
       setSelectedChat(data.chatId);
-     
     } catch (e) {
       console.error('Failed to open chat:', e);
       alert(e instanceof Error ? e.message : 'Unable to open chat');
     }
   };
 
-  const sendMessageToUser = async (
-    recipientId: string, 
-    message: string, 
+  const createGroupChat = async (payload: {
+    title: string;
+    participantIds?: string[];
+    avatarPath?: string;
+  }) => {
+    const title = payload.title.trim();
+    if (!title) {
+      throw new Error('Group title is required');
+    }
+
+    const uniqueParticipantIds = Array.from(
+      new Set((payload.participantIds || []).filter((id) => id && id.trim().length > 0))
+    );
+
+    const { data } = await http.post<CreateChatResponse>(endpoints.chatCreate, {
+      type: 'GROUP',
+      title,
+      avatarPath: payload.avatarPath,
+      participantIds: uniqueParticipantIds,
+    });
+
+    await loadChats();
+    setActiveTab('chat');
+    setSelectedChat(data.chatId);
+  };
+
+  const sendMessageToChat = async (
+    chatId: number,
+    message: string,
     messageType: 'text' | 'image' | 'images' | 'file' | 'files' | 'voice' | 'circle' = 'text',
     imagePath?: string,
     imageEncrypted?: boolean,
@@ -297,32 +324,8 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
     const normalizedContent = isVoiceOrCircle ? '' : parsed.content;
     const normalizedEntities =
       !isVoiceOrCircle && parsed.entities.length > 0 ? parsed.entities : undefined;
-    
+
     try {
-      let chat = chats.find(c => c.participantId === recipientId);
-      
-      if (!chat) {
-        console.log('✅ Creating new chat with user:', recipientId);
-        
-        const { data: createData } = await http.post<{ chatId: number }>(endpoints.chatCreate, {
-          participantId: recipientId
-        });
-        
-        console.log('✅ Chat created, chatId:', createData.chatId);
-        
-        chat = {
-          chatId: createData.chatId,
-          participantId: recipientId,
-          lastMessage: undefined,
-          createdAt: new Date().toISOString()
-        };
-        setChats(prev => [chat!, ...prev]);
-        setSelectedChat(createData.chatId);
-      }
-      
-      console.log('✅ Getting chat key for chatId:', chat.chatId);
-      console.log('✅ Sending plaintext message with protocol integrity...');
-      
       const tempMessage: ChatMessage = {
         localId,
         messageId: localId,
@@ -336,19 +339,16 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
         replyToId: replyingTo?.messageId,
         replyToMessage: replyingTo || undefined,
       };
-      
-      setMessages(prev => [...prev, tempMessage]);
-      
-      // Прокручиваем к концу чата
+
+      setMessages((prev) => [...prev, tempMessage]);
       setTimeout(() => scrollToBottom(), 0);
-       
+
       const { msgId, seqNo, timestamp } = nextProtocolEnvelope();
-       
       const { data } = await http.post<SendMessageResponse>(endpoints.chatSend, {
         msg_id: msgId,
         seq_no: seqNo,
-        timestamp: timestamp,
-        chat_id: chat!.chatId,
+        timestamp,
+        chat_id: chatId,
         content_type: messageType,
         content: normalizedContent,
         entities: normalizedEntities,
@@ -359,56 +359,97 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
         image_encryption_iv: imageEncryptionIv,
         image_key_version: imageKeyVersion,
       });
-      
-      console.log('✅ Message sent, messageId:', data.messageId, 'response:', data);
 
-      setMessages(prev => prev.map(m => {
-        if (m.localId === localId || m.messageId === localId) {
-          return {
-            ...m,
-            messageId: data.messageId,
-            status: m.isRead ? 'read' : 'sent',
-            content: m.content || normalizedContent,
-            entities: m.entities ?? normalizedEntities,
-            imageUrl: data.imageUrl ?? m.imageUrl,
-            imagePath: imagePath ?? m.imagePath,
-            isRead: false,
-          };
-        }
-        return m;
-      }));
-      
+      setMessages((prev) =>
+        prev.map((m) => {
+          if (m.localId === localId || m.messageId === localId) {
+            return {
+              ...m,
+              messageId: data.messageId,
+              status: m.isRead ? 'read' : 'sent',
+              content: m.content || normalizedContent,
+              entities: m.entities ?? normalizedEntities,
+              imageUrl: data.imageUrl ?? m.imageUrl,
+              imagePath: imagePath ?? m.imagePath,
+              isRead: false,
+            };
+          }
+          return m;
+        })
+      );
 
-      // Обновляем превью последнего сообщения в списке чатов
-      setChats(prev => prev.map(c => c.chatId === chat!.chatId ? {
-        ...c,
-        lastMessage: {
-          messageId: data.messageId,
-          senderId: user?.id || '',
-          content: normalizedContent,
-          entities: normalizedEntities,
-          messageType,
-          imagePath,
-          imageUrl: data.imageUrl,
-          createdAt,
-          isRead: false,
-          replyToId: replyingTo?.messageId,
-          replyToMessage: replyingTo || undefined,
-        } as ChatMessage
-      } : c));
-
+      setChats((prev) =>
+        prev.map((c) =>
+          c.chatId === chatId
+            ? {
+                ...c,
+                lastMessage: {
+                  messageId: data.messageId,
+                  senderId: user?.id || '',
+                  content: normalizedContent,
+                  entities: normalizedEntities,
+                  messageType,
+                  imagePath,
+                  imageUrl: data.imageUrl,
+                  createdAt,
+                  isRead: false,
+                  replyToId: replyingTo?.messageId,
+                  replyToMessage: replyingTo || undefined,
+                } as ChatMessage,
+              }
+            : c
+        )
+      );
 
       setReplyingTo(null);
     } catch (e) {
-      console.error('Failed to send message to user', e);
-      
-      // Удаляем временное сообщение при ошибке
-      setMessages(prev => prev.filter(m => m.localId !== localId && m.messageId !== localId));
-      
-      alert(e instanceof Error ? e.message : 'Ошибка отправки сообщения');
+      console.error('Failed to send message', e);
+      setMessages((prev) => prev.filter((m) => m.localId !== localId && m.messageId !== localId));
+      alert(e instanceof Error ? e.message : '������ �������� ���������');
     }
   };
-  
+
+  const sendMessageToUser = async (
+    recipientId: string,
+    message: string,
+    messageType: 'text' | 'image' | 'images' | 'file' | 'files' | 'voice' | 'circle' = 'text',
+    imagePath?: string,
+    imageEncrypted?: boolean,
+    imageEncryptionIv?: string,
+    imageKeyVersion?: number
+  ) => {
+    let chat = findPrivateChatByParticipant(recipientId);
+    if (!chat) {
+      const { data: createData } = await http.post<CreateChatResponse>(endpoints.chatCreate, {
+        participantId: recipientId,
+      });
+
+      chat = {
+        chatId: createData.chatId,
+        chatType: createData.chatType || 'PRIVATE',
+        participantId: createData.participantId || recipientId,
+        title: createData.title,
+        avatarPath: createData.avatarPath,
+        memberCount: createData.memberCount,
+        participantIds: createData.participantIds,
+        lastMessage: undefined,
+        createdAt: new Date().toISOString(),
+      };
+      setChats((prev) => [chat!, ...prev]);
+      setSelectedChat(createData.chatId);
+    }
+
+    await sendMessageToChat(
+      chat.chatId,
+      message,
+      messageType,
+      imagePath,
+      imageEncrypted,
+      imageEncryptionIv,
+      imageKeyVersion
+    );
+  };
+
   const sendChatMessage = async () => {
     console.log('sendChatMessage called', { selectedChat, messageInput, attachedImagesCount: attachedImages.length });
     const draftText = messageInput;
@@ -438,16 +479,11 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
         setEditingMessage(null);
         setAttachedImages([]);
       } else if (selectedChat) {
-        const chat = chats.find(c => c.chatId === selectedChat);
-        if (!chat) {
-          console.warn('Chat not found');
-          return;
-        }
 
         if (attachedImages.length > 0) {
-          await sendMessagesWithImages(chat.participantId, draftText);
+          await sendMessagesWithImages(selectedChat, draftText);
         } else {
-          await sendMessageToUser(chat.participantId, draftText);
+          await sendMessageToChat(selectedChat, draftText);
         }
 
         setMessageInput('');
@@ -463,7 +499,7 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
   };
 
   // 🖼️ Отправка сообщений с прикрепленными изображениями
-  const sendMessagesWithImages = async (recipientId: string, textContent: string) => {
+  const sendMessagesWithImages = async (chatId: number, textContent: string) => {
     const attachmentsToSend = attachedImages.slice(0, MAX_ATTACHMENTS);
     if (attachmentsToSend.length === 0) return;
     const tempMessageType = resolveAttachmentMessageType(attachmentsToSend);
@@ -504,22 +540,7 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
     setTimeout(() => scrollToBottom(), 0);
 
     try {
-      let chat = chats.find(c => c.participantId === recipientId);
-      if (!chat) {
-        const { data: createData } = await http.post<{ chatId: number }>(endpoints.chatCreate, {
-          participantId: recipientId
-        });
-        chat = {
-          chatId: createData.chatId,
-          participantId: recipientId,
-          lastMessage: undefined,
-          createdAt: new Date().toISOString()
-        };
-        setChats(prev => [chat!, ...prev]);
-        setSelectedChat(createData.chatId);
-      }
-
-      const finalChatId = chat.chatId;
+      const finalChatId = chatId;
       const uploadPromises = attachmentsToSend.map((attachment, idx) => {
         return (async () => {
           const form = new FormData();
@@ -595,7 +616,7 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
         msg_id: msgId,
         seq_no: seqNo,
         timestamp: timestamp,
-        chat_id: chat!.chatId,
+        chat_id: finalChatId,
         content_type: messageType,
         content: normalizedContent,
         entities: normalizedEntities,
@@ -662,7 +683,7 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
       ));
 
       setChats(prev => prev.map(c =>
-        c.chatId === chat!.chatId
+        c.chatId === finalChatId
           ? { ...c, lastMessage: {
               localId,
               messageId: data.messageId,
@@ -694,17 +715,18 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
 
   const attachImage = async (
     file: File,
-    options?: { forcedMessageType?: 'voice' | 'circle'; preview?: string }
+    options?: { forcedMessageType?: 'voice' | 'circle'; preview?: string; sendAsFile?: boolean }
   ) => {
     if (!selectedChat) return;
     
     const id = `attached-${Date.now()}-${Math.random()}`;
     const fileType = (file.type || '').toLowerCase();
     const forcedMessageType = options?.forcedMessageType;
-    const isImage = !forcedMessageType && fileType.startsWith('image/');
+    const isRawImage = fileType.startsWith('image/');
+    const isImage = !forcedMessageType && !options?.sendAsFile && isRawImage;
     let preview: string | undefined = options?.preview;
 
-    if (!preview && isImage) {
+    if (!preview && isRawImage) {
       preview = await new Promise<string>(resolve => {
         const reader = new FileReader();
         reader.onload = (e) => resolve(e.target?.result as string);
@@ -971,6 +993,7 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
     loadChats,
     loadMessages,
     openChatWith,
+    createGroupChat,
     sendTypingState,
     sendMessageToUser,
     sendChatMessage,
@@ -983,3 +1006,4 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
     uploadImage,
   };
 }
+

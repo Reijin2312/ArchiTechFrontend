@@ -8,6 +8,7 @@ export const TELEGRAM_BOT_URL = 'https://t.me/Archi_payment_bot';
 export const RULES_URL = '/rules';
 export const SHOP_URL = '/shop';
 export const WIKI_URL = '/wiki';
+export const CHAT_URL = '/chat';
 export const CONTACTS_URL = '/contacts';
 
 export const SUPPORT_EMAIL = 'hello@architech-mc.ru';

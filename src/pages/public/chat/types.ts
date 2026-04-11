@@ -1,0 +1,38 @@
+import type { ChatMessage, ChatType } from '@/shared/api/types';
+
+export type SidebarChat = {
+  chatId: number;
+  chatType: ChatType;
+  participantId?: string;
+  participantIds?: string[];
+  memberCount?: number;
+  name: string;
+  avatarUrl?: string;
+  avatarText: string;
+  avatarBg: string;
+  preview: string;
+  time: string;
+  selected: boolean;
+  outgoing: boolean;
+  unread: boolean;
+  deliveryStatus?: 'pending' | 'sent' | 'delivered' | 'read';
+};
+
+export type MessageRow =
+  | { type: 'divider'; key: string; label: string }
+  | { type: 'message'; key: string; message: ChatMessage };
+
+export type ChatPlaybackKind = 'voice' | 'circle';
+
+export type ChatPlaybackState = {
+  mediaId: string;
+  kind: ChatPlaybackKind;
+  author: string;
+  createdAt: string;
+  currentSec: number;
+  durationSec: number;
+  isPlaying: boolean;
+  togglePlay: () => void;
+  seekBy: (deltaSec: number) => void;
+  stop: () => void;
+};

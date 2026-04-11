@@ -55,6 +55,7 @@ type SocialFloatingEffectsContext = {
   searchQuery: string;
   setSearchResults: Dispatch<SetStateAction<UserSearchResult[]>>;
   searchUsers: () => Promise<void>;
+  disableBodyScrollLock?: boolean;
 };
 
 export function useSocialFloatingEffects(ctx: SocialFloatingEffectsContext) {
@@ -99,6 +100,7 @@ export function useSocialFloatingEffects(ctx: SocialFloatingEffectsContext) {
     searchQuery,
     setSearchResults,
     searchUsers,
+    disableBodyScrollLock,
   } = ctx;
 
   useEffect(() => {
@@ -114,7 +116,7 @@ export function useSocialFloatingEffects(ctx: SocialFloatingEffectsContext) {
   }, [isOpen]);
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || disableBodyScrollLock) return;
 
     const body = document.body;
     const html = document.documentElement;
@@ -309,7 +311,11 @@ export function useSocialFloatingEffects(ctx: SocialFloatingEffectsContext) {
           setFriends(prev => prev.filter(f => f.userId !== removerId));
           setOutgoingRequests(prev => prev.filter(r => r.userId !== removerId));
           setIncomingRequests(prev => prev.filter(r => r.userId !== removerId));
-          setChats(prev => prev.filter(c => c.participantId !== removerId));
+          setChats(prev =>
+            prev.filter(
+              (c) => c.chatType !== 'PRIVATE' || !c.participantId || c.participantId !== removerId
+            )
+          );
         }
         try {
           const { data } = await http.get<FriendsListResponse>(endpoints.friendsList);
@@ -584,6 +590,8 @@ export function useSocialFloatingEffects(ctx: SocialFloatingEffectsContext) {
           lastMessage: {
             messageId: msg.messageId,
             senderId: msg.senderId,
+            senderUsername: msg.senderUsername,
+            senderDisplayName: msg.senderDisplayName,
             content: (existingContent ?? msg.content) || '',
             entities: msg.entities,
             messageType: msg.messageType,
@@ -732,6 +740,8 @@ export function useSocialFloatingEffects(ctx: SocialFloatingEffectsContext) {
           return [...prev, {
             messageId: msg.messageId,
             senderId: msg.senderId,
+            senderUsername: msg.senderUsername,
+            senderDisplayName: msg.senderDisplayName,
             content: msg.content || '',
             entities: msg.entities,
             messageType: msg.messageType,
@@ -795,7 +805,8 @@ export function useSocialFloatingEffects(ctx: SocialFloatingEffectsContext) {
   useEffect(() => {
     if (!selectedChat || !user) return;
     const chat = chats.find((item) => item.chatId === selectedChat);
-    const participantId = chat?.participantId;
+    if (!chat || chat.chatType !== 'PRIVATE') return;
+    const participantId = chat.participantId;
     if (!participantId) return;
 
     let cancelled = false;

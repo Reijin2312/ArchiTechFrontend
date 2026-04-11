@@ -39,7 +39,11 @@ export function ChatComposer({ model }: ChatComposerProps) {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const MAX_COMPOSER_TEXTAREA_HEIGHT = 220;
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const mediaStreamRef = useRef<MediaStream | null>(null);
+  const sourceMediaStreamRef = useRef<MediaStream | null>(null);
+  const recorderMediaStreamRef = useRef<MediaStream | null>(null);
+  const circleSourceVideoRef = useRef<HTMLVideoElement | null>(null);
+  const circleCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const circleRenderRafRef = useRef<number | null>(null);
   const recordingKindRef = useRef<'voice' | 'circle' | null>(null);
   const recordingChunksRef = useRef<Blob[]>([]);
   const actionButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -56,6 +60,7 @@ export function ChatComposer({ model }: ChatComposerProps) {
   const [isPointerInCancelZone, setIsPointerInCancelZone] = useState(false);
   const [recordingElapsedMs, setRecordingElapsedMs] = useState(0);
   const [lockHintProgress, setLockHintProgress] = useState(0);
+  const CIRCLE_RECORD_SIZE = 720;
 
   const isRecordingActive = isRecordingVoice || isRecordingCircle;
   const hasText = messageInput.trim().length > 0;
@@ -104,6 +109,111 @@ export function ChatComposer({ model }: ChatComposerProps) {
     }
   };
 
+  const stopStreamTracks = (stream: MediaStream | null) => {
+    if (!stream) return;
+    stream.getTracks().forEach((track) => track.stop());
+  };
+
+  const stopCircleRenderPipeline = () => {
+    if (circleRenderRafRef.current !== null) {
+      cancelAnimationFrame(circleRenderRafRef.current);
+      circleRenderRafRef.current = null;
+    }
+    if (circleSourceVideoRef.current) {
+      circleSourceVideoRef.current.pause();
+      circleSourceVideoRef.current.srcObject = null;
+      circleSourceVideoRef.current = null;
+    }
+    circleCanvasRef.current = null;
+  };
+
+  const buildCircleRecorderStream = async (sourceStream: MediaStream) => {
+    const sourceVideoTrack = sourceStream.getVideoTracks()[0];
+    if (!sourceVideoTrack) {
+      throw new Error('Camera video track is missing');
+    }
+
+    const video = document.createElement('video');
+    video.muted = true;
+    video.playsInline = true;
+    video.autoplay = true;
+    video.srcObject = new MediaStream([sourceVideoTrack]);
+
+    await new Promise<void>((resolve, reject) => {
+      let settled = false;
+      const finishResolve = () => {
+        if (settled) return;
+        settled = true;
+        resolve();
+      };
+      const finishReject = (error: unknown) => {
+        if (settled) return;
+        settled = true;
+        reject(error);
+      };
+
+      const timeoutId = window.setTimeout(() => {
+        finishReject(new Error('Timed out waiting for camera metadata'));
+      }, 4000);
+
+      video.onloadedmetadata = () => {
+        clearTimeout(timeoutId);
+        finishResolve();
+      };
+      video.onerror = () => {
+        clearTimeout(timeoutId);
+        finishReject(new Error('Failed to initialize camera preview'));
+      };
+    });
+
+    await video.play().catch(() => undefined);
+
+    const canvas = document.createElement('canvas');
+    canvas.width = CIRCLE_RECORD_SIZE;
+    canvas.height = CIRCLE_RECORD_SIZE;
+    const ctx = canvas.getContext('2d', { alpha: false });
+    if (!ctx) {
+      throw new Error('2D canvas context is unavailable');
+    }
+
+    const drawFrame = () => {
+      const width = video.videoWidth;
+      const height = video.videoHeight;
+      if (width > 0 && height > 0) {
+        const sourceSize = Math.min(width, height);
+        const sx = (width - sourceSize) / 2;
+        const sy = (height - sourceSize) / 2;
+        // Normalize selfie-camera mirroring for persisted circle videos.
+        ctx.save();
+        ctx.translate(CIRCLE_RECORD_SIZE, 0);
+        ctx.scale(-1, 1);
+        ctx.drawImage(
+          video,
+          sx,
+          sy,
+          sourceSize,
+          sourceSize,
+          0,
+          0,
+          CIRCLE_RECORD_SIZE,
+          CIRCLE_RECORD_SIZE
+        );
+        ctx.restore();
+      }
+      circleRenderRafRef.current = requestAnimationFrame(drawFrame);
+    };
+
+    drawFrame();
+
+    const recorderStream = canvas.captureStream(30);
+    sourceStream.getAudioTracks().forEach((track) => recorderStream.addTrack(track));
+
+    circleSourceVideoRef.current = video;
+    circleCanvasRef.current = canvas;
+
+    return recorderStream;
+  };
+
   useLayoutEffect(() => {
     const input = inputRef.current;
     if (!input) return;
@@ -119,10 +229,11 @@ export function ChatComposer({ model }: ChatComposerProps) {
       if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
         mediaRecorderRef.current.stop();
       }
-      if (mediaStreamRef.current) {
-        mediaStreamRef.current.getTracks().forEach((track) => track.stop());
-        mediaStreamRef.current = null;
-      }
+      stopCircleRenderPipeline();
+      stopStreamTracks(recorderMediaStreamRef.current);
+      stopStreamTracks(sourceMediaStreamRef.current);
+      recorderMediaStreamRef.current = null;
+      sourceMediaStreamRef.current = null;
     };
   }, []);
 
@@ -153,10 +264,11 @@ export function ChatComposer({ model }: ChatComposerProps) {
     setLockHintProgress(0);
     setIsPointerInCancelZone(false);
     setRecordingCircleStream(null);
-    if (mediaStreamRef.current) {
-      mediaStreamRef.current.getTracks().forEach((track) => track.stop());
-      mediaStreamRef.current = null;
-    }
+    stopCircleRenderPipeline();
+    stopStreamTracks(recorderMediaStreamRef.current);
+    stopStreamTracks(sourceMediaStreamRef.current);
+    recorderMediaStreamRef.current = null;
+    sourceMediaStreamRef.current = null;
     setIsRecordingVoice(false);
     setIsRecordingCircle(false);
     setIsRecordingLocked(false);
@@ -178,24 +290,37 @@ export function ChatComposer({ model }: ChatComposerProps) {
           : {
               audio: true,
               video: {
-                width: { ideal: 640 },
-                height: { ideal: 640 },
+                width: { ideal: 1280 },
+                height: { ideal: 1280 },
                 facingMode: 'user',
               },
             };
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      const sourceStream = await navigator.mediaDevices.getUserMedia(constraints);
+      const recorderStream =
+        kind === 'circle' ? await buildCircleRecorderStream(sourceStream) : sourceStream;
       const mimeType = selectMimeType(kind);
-      const recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+      const recorder = mimeType
+        ? new MediaRecorder(recorderStream, {
+            mimeType,
+            ...(kind === 'circle'
+              ? {
+                  videoBitsPerSecond: 900_000,
+                  audioBitsPerSecond: 64_000,
+                }
+              : {}),
+          })
+        : new MediaRecorder(recorderStream);
 
       recordingKindRef.current = kind;
       recordingChunksRef.current = [];
-      mediaStreamRef.current = stream;
+      sourceMediaStreamRef.current = sourceStream;
+      recorderMediaStreamRef.current = recorderStream;
       mediaRecorderRef.current = recorder;
       if (kind === 'voice') {
         setRecordingCircleStream(null);
         setIsRecordingVoice(true);
       } else {
-        setRecordingCircleStream(stream);
+        setRecordingCircleStream(sourceStream);
         setIsRecordingCircle(true);
       }
 
@@ -512,9 +637,9 @@ export function ChatComposer({ model }: ChatComposerProps) {
   };
 
   return (
-    <div className="flex-none p-3 border-t border-slate-800/50 bg-slate-900/30">
+    <div className="flex-none border-t border-slate-800/80 bg-slate-900/95 p-3">
       {editingMessage && (
-        <div className="mb-2 px-3 py-2 rounded-lg bg-indigo-900/40 border border-indigo-700/50 flex items-start gap-2">
+        <div className="mb-2 flex items-start gap-2 rounded-lg border border-sky-700/50 bg-sky-900/25 px-3 py-2">
           <div className="flex-1 min-w-0">
             <div className="text-xs text-indigo-400 font-medium mb-1">Editing message:</div>
             <div className="text-xs text-slate-300 truncate">{editingMessage.content}</div>
@@ -535,7 +660,7 @@ export function ChatComposer({ model }: ChatComposerProps) {
       )}
 
       {replyingTo && (
-        <div className="mb-2 px-3 py-2 rounded-lg bg-slate-800/60 border border-slate-700/50 flex items-start gap-2">
+        <div className="mb-2 flex items-start gap-2 rounded-lg border border-slate-700/70 bg-slate-800/70 px-3 py-2">
           <div className="flex-1 min-w-0">
             <div className="text-xs text-indigo-400 font-medium mb-1">
               Reply to {replyingTo.senderId === userId ? 'yourself' : friends.find(f => f.userId === replyingTo.senderId)?.username || 'user'}:
@@ -579,7 +704,7 @@ export function ChatComposer({ model }: ChatComposerProps) {
               className={`flex min-h-[42px] flex-1 items-center gap-4 rounded-xl border px-4 py-2.5 text-sm transition-colors ${
                 isPointerInCancelZone
                   ? 'border-red-500/60 bg-red-900/20'
-                  : 'border-slate-700/50 bg-slate-800/80'
+                  : 'border-slate-700/70 bg-slate-900/90'
               }`}
             >
               <div className="flex items-center gap-2 text-white">
@@ -619,13 +744,13 @@ export function ChatComposer({ model }: ChatComposerProps) {
               }}
               onKeyDown={handleComposerKeyDown}
               rows={1}
-              className="flex-1 bg-slate-800/80 border border-slate-700/50 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all placeholder:text-slate-500 resize-none min-h-[42px]"
+              className="min-h-[42px] flex-1 resize-none rounded-2xl border border-slate-700/70 bg-slate-900/95 px-4 py-2.5 text-sm text-slate-100 placeholder:text-slate-500 transition-all focus:border-sky-500/70 focus:outline-none focus:ring-2 focus:ring-sky-500/40"
               placeholder="Type a message..."
             />
           )}
 
           {!isRecordingActive ? (
-            <label className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-slate-800/80 border border-slate-700/50 hover:bg-slate-700/80 cursor-pointer transition-colors group shrink-0">
+            <label className="group inline-flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full border border-slate-700/70 bg-slate-900/90 transition-colors hover:bg-slate-800/95">
               <input
                 type="file"
                 className="hidden"
@@ -651,7 +776,7 @@ export function ChatComposer({ model }: ChatComposerProps) {
               ref={actionButtonRef}
               type="button"
               onClick={handlePrimaryButtonClick}
-              className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-linear-to-br from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-sm font-medium transition-all shadow-lg shadow-indigo-500/30 hover:shadow-indigo-500/50 shrink-0"
+              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-linear-to-br from-sky-500 to-indigo-600 text-sm font-medium shadow-lg shadow-sky-500/30 transition-all hover:from-sky-400 hover:to-indigo-500 hover:shadow-sky-500/50"
               title={isRecordingLocked ? 'Send recording' : 'Send message'}
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -664,12 +789,12 @@ export function ChatComposer({ model }: ChatComposerProps) {
               type="button"
               onPointerDown={handleRecordButtonPointerDown}
               onClick={handleRecordButtonClick}
-              className={`relative inline-flex items-center justify-center w-10 h-10 rounded-xl border transition-colors shrink-0 ${
+              className={`relative inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border transition-colors ${
                 isCancelGestureActive
                   ? 'bg-red-600/90 border-red-500 text-white'
                   : shouldShowRecordWaves
                   ? 'bg-sky-500/90 border-sky-400 text-white'
-                  : 'bg-slate-800/80 border-slate-700/50 text-slate-400 hover:bg-slate-700/80 hover:text-indigo-400'
+                  : 'border-slate-700/70 bg-slate-900/90 text-slate-400 hover:bg-slate-800/95 hover:text-sky-300'
               }`}
               title={
                 recordingMode === 'voice'

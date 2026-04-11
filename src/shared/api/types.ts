@@ -123,6 +123,8 @@ export interface ChatMessage {
   localId?: string
   status?: 'pending' | 'sent' | 'delivered' | 'read'
   senderId: string
+  senderUsername?: string
+  senderDisplayName?: string
   content: string
   messageType:
     | 'text'
@@ -156,19 +158,42 @@ export interface ChatMessage {
   signatureTimestamp?: number
 }
 
-export interface PrivateChat {
+export type ChatType = 'PRIVATE' | 'GROUP'
+
+export interface ChatConversation {
   chatId: number
-  participantId: string
+  chatType: ChatType
+  participantId?: string
+  title?: string
+  avatarPath?: string
+  memberCount?: number
+  participantIds?: string[]
   lastMessage?: ChatMessage
   createdAt: string
 }
 
+export type PrivateChat = ChatConversation
+
 export interface ChatListResponse {
-  chats: PrivateChat[]
+  chats: ChatConversation[]
 }
 
 export interface ChatMessagesResponse {
   messages: ChatMessage[]
+}
+
+export interface ChatLinkItem {
+  messageId: number
+  createdAt: string
+  url: string
+  title?: string
+  previewText?: string
+}
+
+export interface ChatLinksResponse {
+  items: ChatLinkItem[]
+  hasMore: boolean
+  nextBeforeMessageId?: number | null
 }
 
 export interface SendMessageRequest {
@@ -190,12 +215,21 @@ export interface SendMessageResponse {
 }
 
 export interface CreateChatRequest {
-  participantId: string
+  participantId?: string
+  participantIds?: string[]
+  title?: string
+  avatarPath?: string
+  type?: 'PRIVATE' | 'GROUP'
 }
 
 export interface CreateChatResponse {
   chatId: number
-  participantId: string
+  chatType: ChatType
+  participantId?: string
+  title?: string
+  avatarPath?: string
+  memberCount?: number
+  participantIds?: string[]
 }
 
 export interface UploadImageResponse {

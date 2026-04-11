@@ -23,6 +23,7 @@ export type AttachedImage = {
 export type AttachImageOptions = {
   forcedMessageType?: 'voice' | 'circle';
   preview?: string;
+  sendAsFile?: boolean;
 };
 
 export type SocialFloatingActionsContext = {
@@ -79,6 +80,11 @@ export type SocialChatActions = {
   loadChats: () => Promise<void>;
   loadMessages: (chatId: number, append?: boolean) => Promise<void>;
   openChatWith: (participantId: string) => Promise<void>;
+  createGroupChat: (payload: {
+    title: string;
+    participantIds?: string[];
+    avatarPath?: string;
+  }) => Promise<void>;
   sendTypingState: (chatId: number, typing: boolean, force?: boolean) => Promise<void>;
   sendMessageToUser: (
     recipientId: string,
@@ -90,7 +96,7 @@ export type SocialChatActions = {
     imageKeyVersion?: number,
   ) => Promise<void>;
   sendChatMessage: () => Promise<void>;
-  sendMessagesWithImages: (recipientId: string, textContent: string) => Promise<void>;
+  sendMessagesWithImages: (chatId: number, textContent: string) => Promise<void>;
   attachImage: (file: File, options?: AttachImageOptions) => Promise<void>;
   removeAttachedImage: (id: string) => void;
   editMessage: (messageId: number | string, newContent: string) => Promise<void>;

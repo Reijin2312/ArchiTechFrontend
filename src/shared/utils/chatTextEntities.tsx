@@ -10,7 +10,16 @@ type OpenMarker = {
   offset: number
 }
 
+export type ChatResolvedLink = {
+  text: string
+  href: string
+  offset: number
+  length: number
+}
+
 const MAX_ENTITIES = 128
+const AUTOLINK_PATTERN =
+  /(?:https?:\/\/)?(?:www\.)?(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}(?::\d{2,5})?(?:\/[^\s<]*)?/gi
 
 const MARKERS: MarkerDefinition[] = [
   { marker: '```', type: 'PRE' },
@@ -84,6 +93,8 @@ export function buildMessageTextAndEntities(input: string): {
     return { content: input, entities: [] }
   }
 
+  entities.push(...detectAutoLinkEntities(plainText, entities))
+
   const normalized = entities
     .sort((left, right) => {
       if (left.offset !== right.offset) return left.offset - right.offset
@@ -113,7 +124,7 @@ export function renderMessageContent(
   content: string,
   entities?: ChatMessageEntity[] | null
 ): ReactNode {
-  const validEntities = normalizeEntitiesForRender(content, entities)
+  const validEntities = buildEntitiesWithAutoLinks(content, entities)
   if (!validEntities.length) {
     return <span className="whitespace-pre-wrap break-words">{content}</span>
   }
@@ -151,6 +162,43 @@ export function renderMessageContent(
   }
 
   return <span className="whitespace-pre-wrap break-words">{nodes}</span>
+}
+
+export function extractMessageLinks(
+  content: string,
+  entities?: ChatMessageEntity[] | null
+): ChatResolvedLink[] {
+  const resolved = buildEntitiesWithAutoLinks(content, entities)
+    .filter((entity): entity is ChatMessageEntity & { url: string } => entity.type === 'LINK' && !!entity.url)
+    .sort((left, right) => left.offset - right.offset)
+
+  const unique = new Set<string>()
+  const output: ChatResolvedLink[] = []
+
+  for (const entity of resolved) {
+    const href = entity.url
+    if (!href || unique.has(href)) continue
+    unique.add(href)
+    output.push({
+      text: content.slice(entity.offset, entity.offset + entity.length),
+      href,
+      offset: entity.offset,
+      length: entity.length
+    })
+  }
+
+  return output
+}
+
+function buildEntitiesWithAutoLinks(
+  content: string,
+  entities?: ChatMessageEntity[] | null
+): ChatMessageEntity[] {
+  const baseEntities = normalizeEntitiesForRender(content, entities)
+  return normalizeEntitiesForRender(content, [
+    ...baseEntities,
+    ...detectAutoLinkEntities(content, baseEntities)
+  ])
 }
 
 function normalizeEntitiesForRender(
@@ -229,7 +277,7 @@ function wrapEntityNode(node: ReactNode, entity: ChatMessageEntity, key: string)
           href={href}
           target="_blank"
           rel="noopener noreferrer"
-          className="underline text-indigo-300 hover:text-indigo-200"
+          className="underline decoration-1 underline-offset-2 text-indigo-300 hover:text-indigo-200"
         >
           {node}
         </a>
@@ -238,4 +286,85 @@ function wrapEntityNode(node: ReactNode, entity: ChatMessageEntity, key: string)
     default:
       return node
   }
+}
+
+function detectAutoLinkEntities(
+  content: string,
+  entities: ChatMessageEntity[]
+): ChatMessageEntity[] {
+  if (!content) return []
+
+  const output: ChatMessageEntity[] = []
+  const matcher = new RegExp(AUTOLINK_PATTERN.source, AUTOLINK_PATTERN.flags)
+  let match: RegExpExecArray | null = null
+
+  while ((match = matcher.exec(content))) {
+    const raw = match[0]
+    const start = match.index
+    if (!raw || start == null) continue
+    if (start > 0 && content[start - 1] === '@') continue
+
+    const trimmedRaw = trimLinkEnding(raw)
+    if (!trimmedRaw) continue
+
+    const end = start + trimmedRaw.length
+    const blocked = entities.some((entity) => {
+      const entityStart = entity.offset
+      const entityEnd = entity.offset + entity.length
+      const overlaps = start < entityEnd && end > entityStart
+      if (!overlaps) return false
+      return entity.type === 'LINK' || entity.type === 'CODE' || entity.type === 'PRE'
+    })
+    if (blocked) continue
+
+    output.push({
+      offset: start,
+      length: trimmedRaw.length,
+      type: 'LINK',
+      url: toAbsoluteLink(trimmedRaw)
+    })
+
+    if (output.length >= MAX_ENTITIES) break
+  }
+
+  return output
+}
+
+function trimLinkEnding(value: string): string {
+  let next = value
+  while (next.length > 0) {
+    const last = next[next.length - 1]
+    if ('.!,?:;'.includes(last)) {
+      next = next.slice(0, -1)
+      continue
+    }
+
+    if (last === ')' && hasMoreClosing(next, '(', ')')) {
+      next = next.slice(0, -1)
+      continue
+    }
+    if (last === ']' && hasMoreClosing(next, '[', ']')) {
+      next = next.slice(0, -1)
+      continue
+    }
+    if (last === '}' && hasMoreClosing(next, '{', '}')) {
+      next = next.slice(0, -1)
+      continue
+    }
+    break
+  }
+  return next
+}
+
+function hasMoreClosing(value: string, open: string, close: string): boolean {
+  const opens = [...value].filter((char) => char === open).length
+  const closes = [...value].filter((char) => char === close).length
+  return closes > opens
+}
+
+function toAbsoluteLink(value: string): string {
+  if (value.startsWith('http://') || value.startsWith('https://')) {
+    return value
+  }
+  return `https://${value}`
 }
