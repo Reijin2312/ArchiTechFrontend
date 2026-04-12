@@ -10,7 +10,7 @@ import type {
   SendMessageResponse,
   UploadImageResponse,
 } from '@/shared/api/types';
-import type { SocialChatActions, SocialFloatingActionsContext } from './types';
+import type { AttachedImage, SocialChatActions, SocialFloatingActionsContext } from './types';
 
 export function createSocialChatActions(ctx: SocialFloatingActionsContext): SocialChatActions {
   const {
@@ -59,6 +59,8 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
   };
 
   const MAX_ATTACHMENTS = 9;
+  const shouldSendAttachmentsSeparately = (attachments: AttachedImage[]) =>
+    attachments.length > 1 && attachments.every((attachment) => attachment.groupWithOthers === false);
 
   const isImageAttachment = (attachment: {
     isImage?: boolean;
@@ -607,8 +609,9 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
   const sendChatMessage = async () => {
     console.log('sendChatMessage called', { selectedChat, messageInput, attachedImagesCount: attachedImages.length });
     const draftText = messageInput;
+    const attachmentsToSend = attachedImages.slice(0, MAX_ATTACHMENTS);
 
-    if (!draftText.trim() && attachedImages.length === 0) {
+    if (!draftText.trim() && attachmentsToSend.length === 0) {
       console.warn('Cannot send: empty message and no attachments');
       return;
     }
@@ -637,9 +640,27 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
         setEditingMessage(null);
         setAttachedImages([]);
       } else if (selectedChat) {
+        const replyToMessageId =
+          typeof replyingTo?.messageId === 'number' ? replyingTo.messageId : undefined;
 
-        if (attachedImages.length > 0) {
-          await sendMessagesWithImages(selectedChat, draftText);
+        if (attachmentsToSend.length > 0) {
+          if (shouldSendAttachmentsSeparately(attachmentsToSend)) {
+            for (let index = 0; index < attachmentsToSend.length; index += 1) {
+              await sendMessagesWithImages(selectedChat, index === 0 ? draftText : '', {
+                attachments: [attachmentsToSend[index]],
+                clearComposerDraft: index === 0,
+                replyToMessageId: index === 0 ? replyToMessageId : undefined,
+                resetReplyTo: index === 0,
+              });
+            }
+          } else {
+            await sendMessagesWithImages(selectedChat, draftText, {
+              attachments: attachmentsToSend,
+              clearComposerDraft: true,
+              replyToMessageId,
+              resetReplyTo: true,
+            });
+          }
         } else {
           await sendMessageToChat(selectedChat, draftText);
         }
@@ -657,9 +678,20 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
   };
 
   // рџ–јпёЏ РћС‚РїСЂР°РІРєР° СЃРѕРѕР±С‰РµРЅРёР№ СЃ РїСЂРёРєСЂРµРїР»РµРЅРЅС‹РјРё РёР·РѕР±СЂР°Р¶РµРЅРёСЏРјРё
-  const sendMessagesWithImages = async (chatId: number, textContent: string) => {
-    const attachmentsToSend = attachedImages.slice(0, MAX_ATTACHMENTS);
+  const sendMessagesWithImages = async (
+    chatId: number,
+    textContent: string,
+    options?: {
+      attachments?: AttachedImage[];
+      clearComposerDraft?: boolean;
+      replyToMessageId?: number;
+      resetReplyTo?: boolean;
+    }
+  ) => {
+    const attachmentsToSend = (options?.attachments ?? attachedImages).slice(0, MAX_ATTACHMENTS);
     if (attachmentsToSend.length === 0) return;
+    const clearComposerDraft = options?.clearComposerDraft ?? true;
+    const resetReplyTo = options?.resetReplyTo ?? true;
     const tempMessageType = resolveAttachmentMessageType(attachmentsToSend);
     const isVoiceOrCircle = tempMessageType === 'voice' || tempMessageType === 'circle';
     const parsed = buildMessageTextAndEntities(textContent);
@@ -693,8 +725,10 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
     };
 
     setMessages(prev => [...prev, tempMessage]);
-    setAttachedImages([]);
-    setMessageInput('');
+    if (clearComposerDraft) {
+      setAttachedImages([]);
+      setMessageInput('');
+    }
     setTimeout(() => scrollToBottom(), 0);
 
     try {
@@ -779,7 +813,7 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
         content: normalizedContent,
         entities: normalizedEntities,
         hmac: '',
-        reply_to_id: replyingTo?.messageId,
+        reply_to_id: options?.replyToMessageId,
         image_path: uploadedAttachments[0].image_path,
         image_encrypted: uploadedAttachments[0].image_encrypted,
         image_encryption_iv: uploadedAttachments[0].image_encryption_iv,
@@ -856,7 +890,9 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
           : c
       ));
 
-      setReplyingTo(null);
+      if (resetReplyTo) {
+        setReplyingTo(null);
+      }
     } catch (e) {
       console.error('Failed to send multi-attachment message:', e);
       setMessages(prev => prev.filter(m => m.localId !== localId && m.messageId !== localId));
@@ -873,7 +909,12 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
 
   const attachImage = async (
     file: File,
-    options?: { forcedMessageType?: 'voice' | 'circle'; preview?: string; sendAsFile?: boolean }
+    options?: {
+      forcedMessageType?: 'voice' | 'circle';
+      preview?: string;
+      sendAsFile?: boolean;
+      groupWithOthers?: boolean;
+    }
   ) => {
     if (!selectedChat) return;
     
@@ -897,6 +938,7 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
       file,
       preview,
       isImage,
+      groupWithOthers: options?.groupWithOthers ?? true,
       forcedMessageType,
       contentType: file.type || 'application/octet-stream',
       sizeBytes: file.size,

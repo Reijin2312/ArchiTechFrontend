@@ -23,6 +23,10 @@ import {
   type GroupInfoMember,
   type GroupInfoTab,
 } from './chat/components/GroupInfoPanel';
+import {
+  GroupAddMembersPanel,
+  type GroupAddMemberCandidate,
+} from './chat/components/GroupAddMembersPanel';
 import { ChatSidebar, type ChatSidebarContact } from './chat/components/ChatSidebar';
 import { chatPageStyles, chatWallpaperSvg } from './chat/styles';
 import type { ChatPlaybackState, SidebarChat } from './chat/types';
@@ -176,12 +180,16 @@ export default function ChatPage() {
   const [messageSearchQuery, setMessageSearchQuery] = useState('');
   const [messageSearchIndex, setMessageSearchIndex] = useState(0);
   const [isGroupInfoOpen, setIsGroupInfoOpen] = useState(false);
+  const [isGroupAddMembersOpen, setIsGroupAddMembersOpen] = useState(false);
   const [groupInfoTab, setGroupInfoTab] = useState<GroupInfoTab>('members');
   const [groupNotificationsEnabled, setGroupNotificationsEnabled] = useState(true);
   const [groupInfoLinks, setGroupInfoLinks] = useState<GroupInfoLinkItem[]>([]);
   const [groupInfoLinksCursor, setGroupInfoLinksCursor] = useState<number | null>(null);
   const [groupInfoLinksHasMore, setGroupInfoLinksHasMore] = useState(true);
   const [groupInfoLinksLoading, setGroupInfoLinksLoading] = useState(false);
+  const [groupAddMembersQuery, setGroupAddMembersQuery] = useState('');
+  const [selectedGroupAddMemberIds, setSelectedGroupAddMemberIds] = useState<string[]>([]);
+  const [isAddingGroupMembers, setIsAddingGroupMembers] = useState(false);
   const [presenceNowMs, setPresenceNowMs] = useState(() => Date.now());
   const [isDocumentVisible, setIsDocumentVisible] = useState(
     () => typeof document === 'undefined' || document.visibilityState === 'visible'
@@ -621,16 +629,103 @@ export default function ChatPage() {
         : formatPresenceLabel(selectedPresence);
   const selectedGroupChat = selectedChat?.chatType === 'GROUP' ? selectedChat : undefined;
   const isGroupInfoVisible = isGroupInfoOpen && !!selectedGroupChat;
+  const selectedGroupParticipantIdSet = useMemo(() => {
+    const ids = new Set<string>((selectedGroupChat?.participantIds || []).filter(Boolean));
+    if (model.userId) {
+      ids.add(model.userId);
+    }
+    return ids;
+  }, [model.userId, selectedGroupChat]);
+  const groupAddMemberCandidates = useMemo<GroupAddMemberCandidate[]>(() => {
+    if (!selectedGroupChat) {
+      return [];
+    }
+
+    return privateChatContacts
+      .filter((contact) => !selectedGroupParticipantIdSet.has(contact.userId))
+      .map((contact) => ({
+        userId: contact.userId,
+        name: contact.name,
+        avatarUrl: contact.avatarUrl,
+        avatarBg: contact.avatarBg,
+        avatarText: contact.avatarText,
+        statusText: contact.statusText,
+        isOnline: !!model.presenceByUser[contact.userId]?.online,
+      }));
+  }, [model.presenceByUser, privateChatContacts, selectedGroupChat, selectedGroupParticipantIdSet]);
+  const filteredGroupAddMemberCandidates = useMemo(() => {
+    const normalizedQuery = groupAddMembersQuery.trim().toLowerCase();
+    if (!normalizedQuery) {
+      return groupAddMemberCandidates;
+    }
+    return groupAddMemberCandidates.filter((candidate) =>
+      candidate.name.toLowerCase().includes(normalizedQuery) ||
+      (candidate.statusText || '').toLowerCase().includes(normalizedQuery)
+    );
+  }, [groupAddMemberCandidates, groupAddMembersQuery]);
+  const toggleGroupAddMember = useCallback((userId: string) => {
+    setSelectedGroupAddMemberIds((prev) =>
+      prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]
+    );
+  }, []);
+  const submitGroupAddMembers = useCallback(async () => {
+    if (!selectedGroupChat || selectedGroupAddMemberIds.length === 0 || isAddingGroupMembers) {
+      return;
+    }
+
+    setIsAddingGroupMembers(true);
+    try {
+      await http.post(endpoints.chatAddMembers(selectedGroupChat.chatId), {
+        participantIds: selectedGroupAddMemberIds,
+      });
+
+      setSelectedGroupAddMemberIds([]);
+      setGroupAddMembersQuery('');
+      setIsGroupAddMembersOpen(false);
+
+      await model.loadChats();
+      if (model.selectedChat === selectedGroupChat.chatId) {
+        await model.loadMessages(selectedGroupChat.chatId, false);
+      }
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Failed to add members to the group');
+    } finally {
+      setIsAddingGroupMembers(false);
+    }
+  }, [
+    isAddingGroupMembers,
+    model,
+    selectedGroupAddMemberIds,
+    selectedGroupChat,
+  ]);
+
+  useEffect(() => {
+    if (selectedGroupAddMemberIds.length === 0) return;
+    const candidateIds = new Set(groupAddMemberCandidates.map((candidate) => candidate.userId));
+    setSelectedGroupAddMemberIds((prev) => prev.filter((id) => candidateIds.has(id)));
+  }, [groupAddMemberCandidates, selectedGroupAddMemberIds.length]);
 
   useEffect(() => {
     setIsGroupInfoOpen(false);
+    setIsGroupAddMembersOpen(false);
     setGroupInfoTab('members');
     setGroupInfoLinks([]);
     setGroupInfoLinksCursor(null);
     setGroupInfoLinksHasMore(true);
     setGroupInfoLinksLoading(false);
     groupInfoLinksLoadingRef.current = false;
+    setGroupAddMembersQuery('');
+    setSelectedGroupAddMemberIds([]);
+    setIsAddingGroupMembers(false);
   }, [selectedChat?.chatId]);
+
+  useEffect(() => {
+    if (isGroupInfoOpen) return;
+    setIsGroupAddMembersOpen(false);
+    setGroupAddMembersQuery('');
+    setSelectedGroupAddMemberIds([]);
+    setIsAddingGroupMembers(false);
+  }, [isGroupInfoOpen]);
 
   const normalizedMessageSearchQuery = messageSearchQuery.trim().toLowerCase();
   const messageSearchMatches = useMemo(() => {
@@ -1186,20 +1281,45 @@ export default function ChatPage() {
                         : 'pointer-events-none translate-x-8 opacity-0'
                     }`}
                   >
-                    <GroupInfoPanel
-                      chat={selectedGroupChat}
-                      memberCount={groupInfoMemberCount}
-                      members={groupInfoMembers}
-                      links={groupInfoLinks}
-                      linksLoading={groupInfoLinksLoading}
-                      linksHasMore={groupInfoLinksHasMore}
-                      onLinksLoadMore={handleGroupInfoLinksLoadMore}
-                      activeTab={groupInfoTab}
-                      onTabChange={setGroupInfoTab}
-                      notificationsEnabled={groupNotificationsEnabled}
-                      onNotificationsEnabledChange={setGroupNotificationsEnabled}
-                      onClose={() => setIsGroupInfoOpen(false)}
-                    />
+                    {isGroupAddMembersOpen ? (
+                      <GroupAddMembersPanel
+                        query={groupAddMembersQuery}
+                        onQueryChange={setGroupAddMembersQuery}
+                        candidates={filteredGroupAddMemberCandidates}
+                        selectedIds={selectedGroupAddMemberIds}
+                        onToggleSelect={toggleGroupAddMember}
+                        onBack={() => {
+                          setIsGroupAddMembersOpen(false);
+                          setGroupAddMembersQuery('');
+                          setSelectedGroupAddMemberIds([]);
+                        }}
+                        onSubmit={() => {
+                          void submitGroupAddMembers();
+                        }}
+                        isSubmitting={isAddingGroupMembers}
+                      />
+                    ) : (
+                      <GroupInfoPanel
+                        chat={selectedGroupChat}
+                        memberCount={groupInfoMemberCount}
+                        members={groupInfoMembers}
+                        links={groupInfoLinks}
+                        linksLoading={groupInfoLinksLoading}
+                        linksHasMore={groupInfoLinksHasMore}
+                        onLinksLoadMore={handleGroupInfoLinksLoadMore}
+                        activeTab={groupInfoTab}
+                        onTabChange={setGroupInfoTab}
+                        notificationsEnabled={groupNotificationsEnabled}
+                        onNotificationsEnabledChange={setGroupNotificationsEnabled}
+                        onAddMembersClick={() => {
+                          setIsGroupAddMembersOpen(true);
+                        }}
+                        onClose={() => {
+                          setIsGroupAddMembersOpen(false);
+                          setIsGroupInfoOpen(false);
+                        }}
+                      />
+                    )}
                   </div>
                 </div>
               ) : null}
@@ -1209,7 +1329,10 @@ export default function ChatPage() {
                   className={`absolute inset-0 z-[46] bg-black/55 backdrop-blur-[1.5px] transition-opacity duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] lg:hidden ${
                     isGroupInfoVisible ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'
                   }`}
-                  onClick={() => setIsGroupInfoOpen(false)}
+                  onClick={() => {
+                    setIsGroupAddMembersOpen(false);
+                    setIsGroupInfoOpen(false);
+                  }}
                 >
                   <div
                     className={`ml-auto h-full w-full max-w-[420px] transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
@@ -1217,20 +1340,45 @@ export default function ChatPage() {
                     }`}
                     onClick={(event) => event.stopPropagation()}
                   >
-                    <GroupInfoPanel
-                      chat={selectedGroupChat}
-                      memberCount={groupInfoMemberCount}
-                      members={groupInfoMembers}
-                      links={groupInfoLinks}
-                      linksLoading={groupInfoLinksLoading}
-                      linksHasMore={groupInfoLinksHasMore}
-                      onLinksLoadMore={handleGroupInfoLinksLoadMore}
-                      activeTab={groupInfoTab}
-                      onTabChange={setGroupInfoTab}
-                      notificationsEnabled={groupNotificationsEnabled}
-                      onNotificationsEnabledChange={setGroupNotificationsEnabled}
-                      onClose={() => setIsGroupInfoOpen(false)}
-                    />
+                    {isGroupAddMembersOpen ? (
+                      <GroupAddMembersPanel
+                        query={groupAddMembersQuery}
+                        onQueryChange={setGroupAddMembersQuery}
+                        candidates={filteredGroupAddMemberCandidates}
+                        selectedIds={selectedGroupAddMemberIds}
+                        onToggleSelect={toggleGroupAddMember}
+                        onBack={() => {
+                          setIsGroupAddMembersOpen(false);
+                          setGroupAddMembersQuery('');
+                          setSelectedGroupAddMemberIds([]);
+                        }}
+                        onSubmit={() => {
+                          void submitGroupAddMembers();
+                        }}
+                        isSubmitting={isAddingGroupMembers}
+                      />
+                    ) : (
+                      <GroupInfoPanel
+                        chat={selectedGroupChat}
+                        memberCount={groupInfoMemberCount}
+                        members={groupInfoMembers}
+                        links={groupInfoLinks}
+                        linksLoading={groupInfoLinksLoading}
+                        linksHasMore={groupInfoLinksHasMore}
+                        onLinksLoadMore={handleGroupInfoLinksLoadMore}
+                        activeTab={groupInfoTab}
+                        onTabChange={setGroupInfoTab}
+                        notificationsEnabled={groupNotificationsEnabled}
+                        onNotificationsEnabledChange={setGroupNotificationsEnabled}
+                        onAddMembersClick={() => {
+                          setIsGroupAddMembersOpen(true);
+                        }}
+                        onClose={() => {
+                          setIsGroupAddMembersOpen(false);
+                          setIsGroupInfoOpen(false);
+                        }}
+                      />
+                    )}
                   </div>
                 </div>
               ) : null}

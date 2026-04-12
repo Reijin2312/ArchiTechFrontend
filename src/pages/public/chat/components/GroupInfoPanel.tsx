@@ -42,6 +42,7 @@ type GroupInfoPanelProps = {
   onTabChange: (tab: GroupInfoTab) => void;
   notificationsEnabled: boolean;
   onNotificationsEnabledChange: (next: boolean) => void;
+  onAddMembersClick?: () => void;
   onClose: () => void;
 };
 
@@ -297,6 +298,7 @@ export function GroupInfoPanel({
   onTabChange,
   notificationsEnabled,
   onNotificationsEnabledChange,
+  onAddMembersClick,
   onClose,
 }: GroupInfoPanelProps) {
   const inviteLink = `t.me/+group${chat.chatId.toString(36)}`;
@@ -496,6 +498,7 @@ export function GroupInfoPanel({
       {activeTab === 'members' ? (
         <button
           type="button"
+          onClick={onAddMembersClick}
           className="absolute bottom-6 right-5 grid h-[66px] w-[66px] place-items-center rounded-full bg-[#7d65e8] text-white shadow-[0_14px_26px_rgba(126,102,235,0.45)] transition-colors hover:bg-[#927cff]"
           aria-label="Add member"
         >

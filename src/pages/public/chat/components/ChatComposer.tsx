@@ -1,22 +1,26 @@
-import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import type { SocialFloatingModel } from '@/shared/ui/button/social/useSocialFloatingModel';
 import { CloseIcon, MicIcon, PaperclipIcon, SendIcon, SmilePlusIcon, VideoIcon } from '../icons';
 import { formatFileSize } from '../utils';
 import { useChatRecorder } from '../hooks/useChatRecorder';
 import { EmojiHoverPanel } from './EmojiHoverPanel';
+import { buildImageGridRows } from './messageTypes/imageGridPattern';
 
 type ChatComposerProps = {
   model: SocialFloatingModel;
 };
 
-type PendingImageDraft = {
+type PendingImageDraftItem = {
+  id: string;
   file: File;
-  queue: File[];
+  previewUrl: string;
+};
+
+type PendingImageDraft = {
+  items: PendingImageDraftItem[];
   caption: string;
   sendAsFile: boolean;
-  index: number;
-  total: number;
-  previewUrl: string;
+  groupImages: boolean;
 };
 
 const formatRecordingTimer = (valueMs: number) => {
@@ -68,7 +72,7 @@ export function ChatComposer({ model }: ChatComposerProps) {
   const activePointerIdRef = useRef<number | null>(null);
   const holdTriggeredRef = useRef(false);
   const isRecordingRef = useRef(recorder.isRecording);
-  const pendingPreviewUrlRef = useRef<string | null>(null);
+  const pendingPreviewUrlsRef = useRef<string[]>([]);
   const emojiHideTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [isRecordingLocked, setIsRecordingLocked] = useState(false);
   const [isPointerInCancelZone, setIsPointerInCancelZone] = useState(false);
@@ -144,35 +148,33 @@ export function ChatComposer({ model }: ChatComposerProps) {
   const editingPreview = model.editingMessage ? resolveMessagePreview(model.editingMessage) : '';
   const hasComposerState = !!model.editingMessage || !!model.replyingTo;
 
-  const releasePendingPreviewUrl = () => {
-    if (!pendingPreviewUrlRef.current) return;
-    URL.revokeObjectURL(pendingPreviewUrlRef.current);
-    pendingPreviewUrlRef.current = null;
+  const releasePendingPreviewUrls = () => {
+    if (pendingPreviewUrlsRef.current.length === 0) return;
+    pendingPreviewUrlsRef.current.forEach((previewUrl) => {
+      URL.revokeObjectURL(previewUrl);
+    });
+    pendingPreviewUrlsRef.current = [];
   };
 
-  const openPendingImageDraft = (
-    file: File,
-    queue: File[],
-    index: number,
-    total: number,
-    sendAsFile = false
-  ) => {
-    releasePendingPreviewUrl();
-    const previewUrl = URL.createObjectURL(file);
-    pendingPreviewUrlRef.current = previewUrl;
-    setPendingImageDraft({
+  const openPendingImageDraft = (files: File[], sendAsFile = false) => {
+    if (files.length === 0) return;
+    releasePendingPreviewUrls();
+    const items = files.slice(0, 9).map((file, index) => ({
+      id: `pending-${Date.now()}-${index}-${Math.random().toString(16).slice(2)}`,
       file,
-      queue,
+      previewUrl: URL.createObjectURL(file),
+    }));
+    pendingPreviewUrlsRef.current = items.map((item) => item.previewUrl);
+    setPendingImageDraft({
+      items,
       caption: '',
       sendAsFile,
-      index,
-      total,
-      previewUrl,
+      groupImages: items.length > 1,
     });
   };
 
   const closePendingImageDraft = () => {
-    releasePendingPreviewUrl();
+    releasePendingPreviewUrls();
     setPendingImageDraft(null);
     setIsPendingImageApplying(false);
   };
@@ -248,45 +250,60 @@ export function ChatComposer({ model }: ChatComposerProps) {
     });
 
     if (imageFiles.length === 0) return;
-    openPendingImageDraft(imageFiles[0], imageFiles.slice(1), 1, imageFiles.length);
+    openPendingImageDraft(imageFiles);
   };
 
-  const applyPendingImage = (mode: 'add' | 'send') => {
+  const removePendingDraftItem = (itemId: string) => {
+    let removedPreviewUrl: string | null = null;
+    setPendingImageDraft((prev) => {
+      if (!prev) return prev;
+      const nextItems = prev.items.filter((item) => {
+        if (item.id === itemId) {
+          removedPreviewUrl = item.previewUrl;
+          return false;
+        }
+        return true;
+      });
+      if (nextItems.length === 0) {
+        return null;
+      }
+      return {
+        ...prev,
+        items: nextItems,
+        groupImages: nextItems.length > 1 ? prev.groupImages : true,
+      };
+    });
+
+    if (removedPreviewUrl) {
+      URL.revokeObjectURL(removedPreviewUrl);
+      pendingPreviewUrlsRef.current = pendingPreviewUrlsRef.current.filter(
+        (previewUrl) => previewUrl !== removedPreviewUrl
+      );
+    }
+  };
+
+  const pendingGridRows = useMemo(() => {
+    if (!pendingImageDraft || pendingImageDraft.items.length === 0) {
+      return [];
+    }
+    return buildImageGridRows(pendingImageDraft.items) as Array<{
+      columns: number;
+      items: PendingImageDraftItem[];
+    }>;
+  }, [pendingImageDraft]);
+
+  const applyPendingImage = (_mode: 'add' | 'send') => {
     if (!pendingImageDraft || isPendingImageApplying) return;
 
     void (async () => {
       setIsPendingImageApplying(true);
       try {
         appendCaptionToInput(pendingImageDraft.caption);
-
-        if (mode === 'send') {
-          const filesToAttach = [pendingImageDraft.file, ...pendingImageDraft.queue];
-          for (const file of filesToAttach) {
-            await model.attachImage(
-              file,
-              pendingImageDraft.sendAsFile ? { sendAsFile: true } : undefined
-            );
-          }
-          closePendingImageDraft();
-          return;
-        }
-
-        await model.attachImage(
-          pendingImageDraft.file,
-          pendingImageDraft.sendAsFile ? { sendAsFile: true } : undefined
-        );
-
-        if (pendingImageDraft.queue.length > 0) {
-          const [nextFile, ...restQueue] = pendingImageDraft.queue;
-          openPendingImageDraft(
-            nextFile,
-            restQueue,
-            pendingImageDraft.index + 1,
-            pendingImageDraft.total,
-            pendingImageDraft.sendAsFile
-          );
-          setIsPendingImageApplying(false);
-          return;
+        for (const item of pendingImageDraft.items) {
+          await model.attachImage(item.file, {
+            sendAsFile: pendingImageDraft.sendAsFile,
+            groupWithOthers: pendingImageDraft.groupImages,
+          });
         }
 
         closePendingImageDraft();
@@ -299,7 +316,7 @@ export function ChatComposer({ model }: ChatComposerProps) {
 
   useEffect(
     () => () => {
-      releasePendingPreviewUrl();
+      releasePendingPreviewUrls();
     },
     []
   );
@@ -502,9 +519,9 @@ export function ChatComposer({ model }: ChatComposerProps) {
             }}
           >
             <div className="flex items-center justify-between px-4 pb-2 pt-3">
-              <div className="text-[30px] leading-none text-[#b79cff]/70">⋮</div>
-              <h3 className="text-[16px] font-[500] tracking-tight text-white/96">
-                Отправить изображение
+              <h3 className="text-[16px] font-[600] tracking-tight text-white/96">
+                Selected {pendingImageDraft.items.length}{' '}
+                {pendingImageDraft.items.length === 1 ? 'image' : 'images'}
               </h3>
               <button
                 type="button"
@@ -518,19 +535,62 @@ export function ChatComposer({ model }: ChatComposerProps) {
             </div>
 
             <div className="px-4 pb-2">
-              <div className="relative overflow-hidden rounded-[6px] bg-black/35">
-                <img
-                  src={pendingImageDraft.previewUrl}
-                  alt={pendingImageDraft.file.name}
-                  className="h-[220px] w-full object-cover"
-                />
-                {pendingImageDraft.total > 1 ? (
-                  <div className="absolute left-2 top-2 rounded-full bg-[#8e77ef]/85 px-2 py-1 text-[12px] text-white/96">
-                    {pendingImageDraft.index}/{pendingImageDraft.total}
+              <div className="max-h-[min(46vh,420px)] overflow-y-auto">
+                <div className="overflow-hidden rounded-[10px] bg-black/22 p-[2px]">
+                  <div className="flex flex-col gap-[2px]">
+                    {pendingGridRows.map((row, rowIndex) => (
+                      <div
+                        key={`pending-row-${rowIndex}`}
+                        className="grid gap-[2px]"
+                        style={{ gridTemplateColumns: `repeat(${row.columns}, minmax(0, 1fr))` }}
+                      >
+                        {row.items.map((item) => (
+                          <div
+                            key={item.id}
+                            className={`group relative overflow-hidden bg-black/35 ${
+                              row.columns === 1 ? 'aspect-[16/10]' : 'aspect-square'
+                            }`}
+                          >
+                            <img
+                              src={item.previewUrl}
+                              alt={item.file.name}
+                              className="h-full w-full object-cover"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => removePendingDraftItem(item.id)}
+                              className="absolute right-1.5 top-1.5 z-10 grid h-6 w-6 place-items-center rounded-full bg-black/52 text-white/92 opacity-100 transition-colors hover:bg-black/72"
+                              aria-label="Remove image from selection"
+                              disabled={isPendingImageApplying}
+                            >
+                              <CloseIcon size={13} strokeWidth={2.4} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    ))}
                   </div>
-                ) : null}
+                </div>
               </div>
             </div>
+
+            {pendingImageDraft.items.length > 1 ? (
+              <div className="px-4 pb-2 pt-1">
+                <label className="flex items-center gap-2.5 text-[14px] text-white/94">
+                  <input
+                    type="checkbox"
+                    checked={pendingImageDraft.groupImages}
+                    onChange={(event) => {
+                      const checked = event.target.checked;
+                      setPendingImageDraft((prev) => (prev ? { ...prev, groupImages: checked } : prev));
+                    }}
+                    className="h-5 w-5 rounded-[5px] border border-[#8e77ef]/55 bg-transparent accent-[#8e77ef]"
+                    disabled={isPendingImageApplying}
+                  />
+                  Group
+                </label>
+              </div>
+            ) : null}
 
             <div className="px-4 pb-3 pt-1">
               <label className="flex items-center gap-2.5 text-[14px] text-white/94">
@@ -544,12 +604,12 @@ export function ChatComposer({ model }: ChatComposerProps) {
                   className="h-5 w-5 rounded-[5px] border border-[#8e77ef]/55 bg-transparent accent-[#8e77ef]"
                   disabled={isPendingImageApplying}
                 />
-                Отправить как файл
+                Send as files
               </label>
             </div>
 
             <div className="px-4 pb-2">
-              <div className="text-[13px] font-[600] text-[#b79cff]">Подпись</div>
+              <div className="text-[13px] font-[600] text-[#b79cff]">Caption</div>
               <div className="mt-1 flex items-center gap-2 border-b border-[#8e77ef]/50 pb-1.5">
                 <input
                   value={pendingImageDraft.caption}
@@ -557,7 +617,7 @@ export function ChatComposer({ model }: ChatComposerProps) {
                     const value = event.target.value;
                     setPendingImageDraft((prev) => (prev ? { ...prev, caption: value } : prev));
                   }}
-                  placeholder="Введите подпись"
+                  placeholder="Write a caption"
                   className="h-8 flex-1 bg-transparent text-[15px] text-white/92 placeholder:text-white/35 focus:outline-none"
                   disabled={isPendingImageApplying}
                 />
@@ -572,7 +632,7 @@ export function ChatComposer({ model }: ChatComposerProps) {
                 className="rounded-xl px-3 py-2 text-center text-[14px] font-[500] text-[#b79cff] transition-colors hover:bg-[#8e77ef]/14"
                 disabled={isPendingImageApplying}
               >
-                Добавить
+                Add
               </button>
               <button
                 type="button"
@@ -580,7 +640,7 @@ export function ChatComposer({ model }: ChatComposerProps) {
                 className="rounded-xl px-3 py-2 text-center text-[14px] font-[500] text-[#b79cff] transition-colors hover:bg-[#8e77ef]/14"
                 disabled={isPendingImageApplying}
               >
-                Отмена
+                Cancel
               </button>
               <button
                 type="button"
@@ -588,7 +648,7 @@ export function ChatComposer({ model }: ChatComposerProps) {
                 className="rounded-xl px-3 py-2 text-center text-[14px] font-[600] text-[#b79cff] transition-colors hover:bg-[#8e77ef]/14"
                 disabled={isPendingImageApplying}
               >
-                Отправить
+                Send
               </button>
             </div>
           </div>

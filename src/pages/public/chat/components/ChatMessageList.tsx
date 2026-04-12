@@ -11,6 +11,12 @@ import {
 import { CheckCheckIcon, PauseIcon, PlayIcon } from '../icons';
 import type { ChatPlaybackState, MessageRow } from '../types';
 import {
+  MultiImageBubble,
+  ReplyPreviewBlock,
+  SingleImageBubble,
+  type ReplyPreview,
+} from './messageTypes/ImageMessageBubbles';
+import {
   buildFallbackWaveform,
   formatDivider,
   formatDuration,
@@ -46,11 +52,6 @@ type ChatMessageListProps = {
   onCopyMessage: (text: string) => void;
 };
 
-type ReplyPreview = {
-  author: string;
-  text: string;
-};
-
 type MessageTextBubbleProps = {
   content: string;
   entities?: ChatMessage['entities'];
@@ -63,6 +64,7 @@ type MessageTextBubbleProps = {
   replyPreview?: ReplyPreview;
   hideTail?: boolean;
 };
+
 
 type VideoLinkPreview = {
   sourceLabel: string;
@@ -109,7 +111,8 @@ type CircleMessageBubbleProps = {
 type GroupServiceMessageType =
   | 'group_created'
   | 'group_title_updated'
-  | 'group_avatar_updated';
+  | 'group_avatar_updated'
+  | 'group_members_added';
 
 const IMAGE_FILE_PATTERN = /\.(png|jpe?g|gif|webp|avif|bmp|svg)(?:$|[?#])/i;
 const BUBBLE_CHAIN_WINDOW_MS = 5 * 60 * 1000;
@@ -124,6 +127,10 @@ function toGroupServiceMessageType(value?: string): GroupServiceMessageType | nu
       return 'group_title_updated';
     case 'group_avatar_updated':
       return 'group_avatar_updated';
+    case 'group_member_added':
+    case 'group_members_added':
+    case 'group_participants_added':
+      return 'group_members_added';
     default:
       return null;
   }
@@ -159,6 +166,49 @@ function parseSystemPayload(content: string): { title?: string; avatarUrl?: stri
   } catch {
     return {};
   }
+}
+
+function parseAddedMembers(content: string): string[] {
+  const trimmed = content.trim();
+  if (!trimmed) {
+    return [];
+  }
+
+  if (!trimmed.startsWith('{') || !trimmed.endsWith('}')) {
+    const lowered = trimmed.toLowerCase();
+    if (lowered.includes('добав') || lowered.includes('added')) {
+      return [];
+    }
+    return trimmed
+      .split(',')
+      .map((value) => value.trim())
+      .filter((value) => value.length > 0);
+  }
+
+  try {
+    const parsed = JSON.parse(trimmed) as Record<string, unknown>;
+    const candidates = [
+      parsed.addedUsers,
+      parsed.members,
+      parsed.usernames,
+      parsed.addedUserNames,
+      parsed.addedDisplayNames,
+    ];
+
+    for (const candidate of candidates) {
+      if (!Array.isArray(candidate)) continue;
+      const normalized = candidate
+        .map((value) => (typeof value === 'string' ? value.trim() : ''))
+        .filter((value) => value.length > 0);
+      if (normalized.length > 0) {
+        return normalized;
+      }
+    }
+  } catch {
+    return [];
+  }
+
+  return [];
 }
 
 function resolveGroupServiceAvatarUrl(
@@ -222,12 +272,24 @@ function GroupServiceMessageBubble({
   const contentTitle = (payload.title || message.content || '').trim();
   const safeTitle = contentTitle || 'Без названия';
 
-  const text =
-    messageType === 'group_created'
-      ? `${actorName} создал(а) группу «${safeTitle}»`
-      : messageType === 'group_title_updated'
-        ? `${actorName} изменил(а) название группы на «${safeTitle}»`
-        : `${actorName} обновил(а) фотографию группы`;
+  let text = `${actorName} updated group`;
+  if (messageType === 'group_created') {
+    text = `${actorName} создал(а) группу «${safeTitle}»`;
+  } else if (messageType === 'group_title_updated') {
+    text = `${actorName} изменил(а) название группы на «${safeTitle}»`;
+  } else if (messageType === 'group_avatar_updated') {
+    text = `${actorName} обновил(а) фотографию группы`;
+  } else if (messageType === 'group_members_added') {
+    const addedMembers = parseAddedMembers(message.content || '');
+    if (addedMembers.length === 1) {
+      text = `${actorName} добавил(а) ${addedMembers[0]}`;
+    } else if (addedMembers.length > 1) {
+      text = `${actorName} добавил(а) ${addedMembers.join(', ')}`;
+    } else {
+      const content = (message.content || '').trim();
+      text = content || `${actorName} добавил(а) новых участников`;
+    }
+  }
 
   const avatarUrl =
     messageType === 'group_avatar_updated'
@@ -772,34 +834,6 @@ function decodeLinkTitle(value: string): string {
   } catch {
     return normalized;
   }
-}
-
-function ReplyPreviewBlock({
-  replyPreview,
-  isOwn,
-}: {
-  replyPreview: ReplyPreview;
-  isOwn: boolean;
-}) {
-  return (
-    <div
-      className={`mb-[7px] overflow-hidden rounded-[12px] ${
-        isOwn ? 'bg-white/18' : 'bg-white/8'
-      }`}
-    >
-      <div className="flex">
-        <span className={`w-[4px] ${isOwn ? 'bg-white/85' : 'bg-[#b599ff]'}`} />
-        <div className="min-w-0 px-[10px] py-[7px]">
-          <div className={`truncate text-[15px] font-[700] leading-none ${isOwn ? 'text-white' : 'text-[#c0a7ff]'}`}>
-            {replyPreview.author}
-          </div>
-          <div className={`mt-[4px] line-clamp-1 text-[15px] leading-none ${isOwn ? 'text-white/78' : 'text-white/66'}`}>
-            {replyPreview.text}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
 }
 
 function VideoLinkPreviewCard({
@@ -1900,6 +1934,19 @@ function ChatMessageRow({
     message.messageType === 'circle'
       ? attachments.find((attachment) => isVideoContentType(attachment.contentType)) || fallbackAttachment
       : undefined;
+  const imageAttachments =
+    message.messageType === 'image' || message.messageType === 'images'
+      ? attachments.filter((attachment) => {
+          const resolvedUrl = resolveAttachmentUrl(attachment);
+          if (!resolvedUrl) return false;
+          const contentType = (attachment.contentType || '').toLowerCase();
+          return (
+            attachment.isImage ||
+            contentType.startsWith('image/') ||
+            IMAGE_FILE_PATTERN.test(resolvedUrl)
+          );
+        })
+      : [];
   const groupServiceMessageType = toGroupServiceMessageType(message.messageType);
   const isCircleMessage = message.messageType === 'circle' && !!circleAttachment;
   const mediaId = `${message.messageType}-${String(message.messageId)}`;
@@ -1927,6 +1974,9 @@ function ChatMessageRow({
 
   const voiceUrl = voiceAttachment ? resolveAttachmentUrl(voiceAttachment) : '';
   const circleUrl = circleAttachment ? resolveAttachmentUrl(circleAttachment) : '';
+  const imageUrls = imageAttachments
+    .map((attachment) => resolveAttachmentUrl(attachment))
+    .filter((value): value is string => value.length > 0);
   const replyPreview: ReplyPreview | undefined = message.replyToMessage
     ? {
         author:
@@ -1993,6 +2043,32 @@ function ChatMessageRow({
             onToggleMuted={onToggleCircleMuted}
             onMediaError={onCircleMediaError}
             onPlaybackStateChange={onPlaybackStateChange}
+          />
+        ) : imageUrls.length > 1 ? (
+          <MultiImageBubble
+            imageUrls={imageUrls}
+            caption={hasTextContent ? renderContent : ''}
+            captionEntities={hasTextContent ? renderEntities : undefined}
+            bubbleMaxWidthPx={bubbleMaxWidthPx}
+            time={time}
+            isOwn={isOwn}
+            isRead={isRead}
+            isEdited={isEdited}
+            replyPreview={replyPreview}
+            hideTail={hideTail}
+          />
+        ) : imageUrls.length === 1 ? (
+          <SingleImageBubble
+            imageUrl={imageUrls[0]}
+            caption={hasTextContent ? renderContent : ''}
+            captionEntities={hasTextContent ? renderEntities : undefined}
+            bubbleMaxWidthPx={bubbleMaxWidthPx}
+            time={time}
+            isOwn={isOwn}
+            isRead={isRead}
+            isEdited={isEdited}
+            replyPreview={replyPreview}
+            hideTail={hideTail}
           />
         ) : (
           <MessageTextBubble

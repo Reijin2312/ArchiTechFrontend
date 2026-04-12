@@ -13,6 +13,7 @@ export type AttachedImage = {
   file: File;
   preview?: string;
   isImage?: boolean;
+  groupWithOthers?: boolean;
   forcedMessageType?: 'voice' | 'circle';
   contentType?: string;
   sizeBytes?: number;
@@ -24,6 +25,14 @@ export type AttachImageOptions = {
   forcedMessageType?: 'voice' | 'circle';
   preview?: string;
   sendAsFile?: boolean;
+  groupWithOthers?: boolean;
+};
+
+export type SendImagesOptions = {
+  attachments?: AttachedImage[];
+  clearComposerDraft?: boolean;
+  replyToMessageId?: number;
+  resetReplyTo?: boolean;
 };
 
 export type SocialFloatingActionsContext = {
@@ -98,7 +107,11 @@ export type SocialChatActions = {
     imageKeyVersion?: number,
   ) => Promise<void>;
   sendChatMessage: () => Promise<void>;
-  sendMessagesWithImages: (chatId: number, textContent: string) => Promise<void>;
+  sendMessagesWithImages: (
+    chatId: number,
+    textContent: string,
+    options?: SendImagesOptions
+  ) => Promise<void>;
   attachImage: (file: File, options?: AttachImageOptions) => Promise<void>;
   removeAttachedImage: (id: string) => void;
   editMessage: (messageId: number | string, newContent: string) => Promise<void>;

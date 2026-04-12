@@ -65,6 +65,7 @@ export function useSocialFloatingModel(options: SocialFloatingModelOptions = {})
     file: File;
     preview?: string;
     isImage?: boolean;
+    groupWithOthers?: boolean;
     forcedMessageType?: 'voice' | 'circle';
     contentType?: string;
     sizeBytes?: number;

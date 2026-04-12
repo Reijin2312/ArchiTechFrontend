@@ -53,6 +53,7 @@ friendsStatus: (userId: string) => `/api/v1/friends/status/${userId}`,
 
 chatList: '/api/v1/chat/chats',
 chatCreate: '/api/v1/chat/create',
+  chatAddMembers: (chatId: number) => `/api/v1/chat/${chatId}/members`,
   chatUpdateGroup: (chatId: number) => `/api/v1/chat/${chatId}/group`,
   chatDelete: (chatId: number) => `/api/v1/chat/${chatId}/delete`,
   chatMessages: (chatId: number, before?: number, limit = 50) => `/api/v1/chat/${chatId}/messages${before ? `?before=${before}&limit=${limit}` : `?limit=${limit}`}`,

@@ -137,6 +137,8 @@ export interface ChatMessage {
     | 'group_created'
     | 'group_title_updated'
     | 'group_avatar_updated'
+    | 'group_member_added'
+    | 'group_members_added'
   entities?: ChatMessageEntity[]
   imagePath?: string
   imageUrl?: string
@@ -240,6 +242,7 @@ export interface CreateChatResponse {
 export interface UpdateGroupChatRequest {
   title?: string
   avatarPath?: string
+  participantIds?: string[]
 }
 
 export interface UpdateGroupChatResponse {
