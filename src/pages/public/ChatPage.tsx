@@ -2,7 +2,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { http } from '@/shared/api/http';
 import { endpoints } from '@/shared/api/endpoints';
-import type { ChatLinkItem, ChatLinksResponse, UserSearchResponse } from '@/shared/api/types';
+import type {
+  ChatLinkItem,
+  ChatLinksResponse,
+  ChatPresenceState,
+  UserSearchResponse,
+} from '@/shared/api/types';
+import { formatPresenceStatus } from '@/shared/utils/presenceStatus';
 import { Seo } from '@/shared/seo/seo';
 import { routesMeta } from '@/shared/seo/routesMeta';
 import { useSocialFloatingModel } from '@/shared/ui/button/social/useSocialFloatingModel';
@@ -33,10 +39,29 @@ const SIDEBAR_MIN_WIDTH = 92;
 const GROUP_INFO_PANEL_WIDTH = 360;
 const COMPOSER_TRACK_MAX_WIDTH = 960;
 const COMPOSER_ACTION_BUTTON_SIZE = 58;
-const COMPOSER_TRACK_GAP = 100;
+const COMPOSER_ACTION_GAP = 10;
+const MESSAGE_COLUMN_RIGHT_EDGE_SHIFT_PX = -30;
+const MESSAGE_COLUMN_BASE_MAX_WIDTH =
+  COMPOSER_TRACK_MAX_WIDTH - COMPOSER_ACTION_BUTTON_SIZE - COMPOSER_ACTION_GAP;
+const MESSAGE_COLUMN_MIN_MAX_WIDTH = 480;
 const MESSAGE_COLUMN_MAX_WIDTH =
-  COMPOSER_TRACK_MAX_WIDTH - COMPOSER_ACTION_BUTTON_SIZE - COMPOSER_TRACK_GAP;
+  Math.max(
+    MESSAGE_COLUMN_MIN_MAX_WIDTH,
+    Math.min(
+      COMPOSER_TRACK_MAX_WIDTH,
+      MESSAGE_COLUMN_BASE_MAX_WIDTH + MESSAGE_COLUMN_RIGHT_EDGE_SHIFT_PX
+    )
+  );
+const MESSAGE_BUBBLE_MAX_WIDTH = Math.floor(MESSAGE_COLUMN_MAX_WIDTH / 2);
 const GROUP_INFO_LINKS_PAGE_SIZE = 24;
+
+type CurrentUserProfile = {
+  username?: string;
+  displayName?: string;
+  avatarUrl?: string;
+};
+
+const PRESENCE_VISUAL_IDLE_TIMEOUT_MS = 60_000;
 
 const resolveChatAvatarUrl = (avatarPath?: string) => {
   if (!avatarPath) return undefined;
@@ -157,6 +182,12 @@ export default function ChatPage() {
   const [groupInfoLinksCursor, setGroupInfoLinksCursor] = useState<number | null>(null);
   const [groupInfoLinksHasMore, setGroupInfoLinksHasMore] = useState(true);
   const [groupInfoLinksLoading, setGroupInfoLinksLoading] = useState(false);
+  const [presenceNowMs, setPresenceNowMs] = useState(() => Date.now());
+  const [isDocumentVisible, setIsDocumentVisible] = useState(
+    () => typeof document === 'undefined' || document.visibilityState === 'visible'
+  );
+  const [statusDots, setStatusDots] = useState(0);
+  const [currentUserProfile, setCurrentUserProfile] = useState<CurrentUserProfile | null>(null);
   const [sidebarWidth, setSidebarWidth] = useState(SIDEBAR_MAX_WIDTH);
   const [isSidebarResizing, setIsSidebarResizing] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
@@ -217,6 +248,65 @@ export default function ChatPage() {
     return () => document.removeEventListener('mousedown', onPointerDown);
   }, [menuOpen]);
 
+  useEffect(() => {
+    let disposed = false;
+
+    if (!model.userId) {
+      setCurrentUserProfile(null);
+      return () => {
+        disposed = true;
+      };
+    }
+
+    void (async () => {
+      try {
+        const { data } = await http.get<CurrentUserProfile>(endpoints.profileMe);
+        if (!disposed) {
+          setCurrentUserProfile(data && typeof data === 'object' ? data : null);
+        }
+      } catch {
+        if (!disposed) {
+          setCurrentUserProfile(null);
+        }
+      }
+    })();
+
+    return () => {
+      disposed = true;
+    };
+  }, [model.userId]);
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      setIsDocumentVisible(document.visibilityState === 'visible');
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
+
+  useEffect(() => {
+    const timerId = window.setInterval(() => {
+      setPresenceNowMs(Date.now());
+    }, 1_000);
+
+    return () => {
+      window.clearInterval(timerId);
+    };
+  }, []);
+
+  useEffect(() => {
+    const timerId = window.setInterval(() => {
+      setStatusDots((prev) => (prev + 1) % 4);
+    }, 260);
+
+    return () => {
+      window.clearInterval(timerId);
+    };
+  }, []);
+
   const stopSidebarResize = useCallback(() => {
     setIsSidebarResizing(false);
     sidebarResizeRef.current = null;
@@ -257,6 +347,37 @@ export default function ChatPage() {
     [stopSidebarResize]
   );
 
+  const animatedDots = '.'.repeat(statusDots);
+  const searchStatusLabel = model.isWsConnecting
+    ? `соединение${animatedDots}`
+    : model.isChatsRefreshing
+      ? `обновление${animatedDots}`
+      : null;
+  const searchPlaceholder = 'Search';
+  const loadingPresenceLabel = `обновление${animatedDots}`;
+  const isPresenceGateOpen =
+    model.isOpen &&
+    model.activeTab === 'chat' &&
+    isDocumentVisible &&
+    presenceNowMs - model.lastActivityTime <= PRESENCE_VISUAL_IDLE_TIMEOUT_MS;
+  const currentUserVisualPresence = useMemo<ChatPresenceState>(
+    () => ({
+      online: isPresenceGateOpen,
+      lastSeenAt: new Date(model.lastActivityTime).toISOString(),
+      resolved: true,
+    }),
+    [isPresenceGateOpen, model.lastActivityTime]
+  );
+  const formatPresenceLabel = useCallback(
+    (presence?: ChatPresenceState) => {
+      if (!presence?.resolved) {
+        return loadingPresenceLabel;
+      }
+      return formatPresenceStatus(presence, presenceNowMs);
+    },
+    [loadingPresenceLabel, presenceNowMs]
+  );
+
   const privateChatContacts = useMemo<ChatSidebarContact[]>(() => {
     const unique = new Set<string>();
     return [...model.chats]
@@ -280,7 +401,7 @@ export default function ChatPage() {
           model.searchResults.find((item) => item.userId === participantId);
 
         const name = meta?.displayName || meta?.username || participantId.slice(0, 8);
-        const online = model.presenceByUser[participantId];
+        const presence = model.presenceByUser[participantId];
 
         return [
           {
@@ -289,7 +410,7 @@ export default function ChatPage() {
             avatarUrl: meta?.avatarUrl,
             avatarText: initialOf(name),
             avatarBg: hashColor(participantId),
-            statusText: online ? 'online' : 'last seen recently',
+            statusText: formatPresenceLabel(presence),
           },
         ];
       });
@@ -300,6 +421,7 @@ export default function ChatPage() {
     model.outgoingRequests,
     model.searchResults,
     model.presenceByUser,
+    formatPresenceLabel,
   ]);
 
   const searchPrivateUsers = useCallback(
@@ -346,6 +468,8 @@ export default function ChatPage() {
             model.outgoingRequests.find((item) => item.userId === participantId) ||
             model.searchResults.find((item) => item.userId === participantId)
           : undefined;
+      const privatePresence =
+        !isGroup && participantId ? model.presenceByUser[participantId] : undefined;
       const name = isGroup
         ? chat.title?.trim() || `Group #${chat.chatId}`
         : meta?.displayName || meta?.username || participantId?.slice(0, 8) || 'Private chat';
@@ -385,11 +509,13 @@ export default function ChatPage() {
         chatType: chat.chatType,
         participantId,
         participantIds: chat.participantIds,
+        ownerId: chat.ownerId,
         memberCount: chat.memberCount,
         name,
         avatarUrl: isGroup ? resolveChatAvatarUrl(chat.avatarPath) : meta?.avatarUrl,
         avatarText: initialOf(name),
         avatarBg: hashColor(isGroup ? `group:${chat.chatId}` : participantId || `chat:${chat.chatId}`),
+        isOnline: !isGroup ? !!privatePresence?.online : false,
         preview,
         time: formatChatTime(chat.lastMessage?.createdAt || chat.createdAt),
         selected: chat.chatId === model.selectedChat,
@@ -405,6 +531,7 @@ export default function ChatPage() {
       model.friends,
       model.incomingRequests,
       model.outgoingRequests,
+      model.presenceByUser,
       model.searchResults,
       model.selectedChat,
       model.userId,
@@ -453,23 +580,45 @@ export default function ChatPage() {
     selectedChat.chatType === 'PRIVATE' &&
     !!selectedChat.participantId &&
     selectedTypingUsers.includes(selectedChat.participantId);
-  const selectedOnline =
+  const selectedPresence =
     selectedChat?.chatType === 'PRIVATE' && selectedChat.participantId
       ? model.presenceByUser[selectedChat.participantId]
       : undefined;
   const selectedMemberCount =
     selectedChat?.memberCount ?? (selectedChat?.participantIds?.length || 1);
+  const selectedGroupOnlineCount = useMemo(() => {
+    if (!selectedChat || selectedChat.chatType !== 'GROUP') {
+      return 0;
+    }
+
+    const uniqueParticipantIds = new Set((selectedChat.participantIds || []).filter(Boolean));
+    if (model.userId) {
+      uniqueParticipantIds.add(model.userId);
+    }
+
+    let onlineCount = 0;
+    uniqueParticipantIds.forEach((id) => {
+      if ((id === model.userId && isPresenceGateOpen) || model.presenceByUser[id]?.online) {
+        onlineCount += 1;
+      }
+    });
+
+    return onlineCount;
+  }, [isPresenceGateOpen, model.presenceByUser, model.userId, selectedChat]);
+  const selectedMembersStatusLabel = `${selectedMemberCount} ${
+    selectedMemberCount === 1 ? 'member' : 'members'
+  }`;
   const selectedStatus = !selectedChat
     ? 'No active chat'
     : selectedChat.chatType === 'GROUP'
       ? selectedGroupTypingCount > 0
-        ? `${selectedGroupTypingCount} typing...`
-        : `${selectedMemberCount} ${selectedMemberCount === 1 ? 'member' : 'members'}`
+        ? `${selectedGroupTypingCount} typing`
+        : selectedGroupOnlineCount > 0
+          ? `${selectedMembersStatusLabel}, ${selectedGroupOnlineCount} online`
+          : selectedMembersStatusLabel
       : selectedIsPrivateTyping
-        ? 'typing...'
-        : selectedOnline
-          ? 'online'
-          : 'last seen recently';
+        ? 'typing'
+        : formatPresenceLabel(selectedPresence);
   const selectedGroupChat = selectedChat?.chatType === 'GROUP' ? selectedChat : undefined;
   const isGroupInfoVisible = isGroupInfoOpen && !!selectedGroupChat;
 
@@ -519,6 +668,37 @@ export default function ChatPage() {
     [model.friends, model.incomingRequests, model.outgoingRequests, model.searchResults]
   );
 
+  const resolveMessageUserName = useCallback(
+    (id: string) => {
+      if (id === model.userId) return 'You';
+      const meta = resolveUserMeta(id);
+
+      if (selectedChat?.chatType === 'PRIVATE' && selectedChat.participantId === id) {
+        return selectedChat.name;
+      }
+
+      return meta?.displayName || meta?.username || id.slice(0, 8);
+    },
+    [model.userId, resolveUserMeta, selectedChat]
+  );
+
+  const resolveMessageUserAvatar = useCallback(
+    (id: string) => {
+      if (!id) return undefined;
+      if (id === model.userId) {
+        return currentUserProfile?.avatarUrl || (model.user as { avatarUrl?: string } | null)?.avatarUrl;
+      }
+
+      const meta = resolveUserMeta(id);
+      if (selectedChat?.chatType === 'PRIVATE' && selectedChat.participantId === id) {
+        return selectedChat.avatarUrl || meta?.avatarUrl;
+      }
+
+      return meta?.avatarUrl;
+    },
+    [currentUserProfile?.avatarUrl, model.user, model.userId, resolveUserMeta, selectedChat]
+  );
+
   const groupInfoMembers = useMemo<GroupInfoMember[]>(() => {
     if (!selectedChat || selectedChat.chatType !== 'GROUP') {
       return [];
@@ -528,27 +708,44 @@ export default function ChatPage() {
     if (model.userId && !participantIds.includes(model.userId)) {
       participantIds.unshift(model.userId);
     }
+
     const uniqueParticipantIds = Array.from(new Set(participantIds.filter(Boolean)));
+    const ownerId =
+      selectedChat.ownerId ||
+      selectedChat.participantIds?.[0] ||
+      undefined;
+    const currentUserName =
+      currentUserProfile?.displayName?.trim() ||
+      currentUserProfile?.username?.trim() ||
+      (model.user as { displayName?: string } | null)?.displayName?.trim?.() ||
+      model.user?.username?.trim?.() ||
+      model.userId.slice(0, 8);
+    const currentUserAvatarUrl =
+      currentUserProfile?.avatarUrl ||
+      (model.user as { avatarUrl?: string } | null)?.avatarUrl;
 
     return uniqueParticipantIds.map((id) => {
       const isCurrentUser = id === model.userId;
       const userMeta = resolveUserMeta(id);
-      const userName = isCurrentUser
-        ? 'You'
-        : userMeta?.displayName || userMeta?.username || id.slice(0, 8);
-      const isOnline = isCurrentUser ? true : !!model.presenceByUser[id];
+      const presence = isCurrentUser ? currentUserVisualPresence : model.presenceByUser[id];
+      const userName =
+        isCurrentUser
+          ? currentUserName
+          : userMeta?.displayName || userMeta?.username || id.slice(0, 8);
+      const isOnline = !!presence?.online;
 
       return {
         userId: id,
         name: userName,
-        avatarUrl: userMeta?.avatarUrl,
+        avatarUrl: isCurrentUser ? currentUserAvatarUrl || userMeta?.avatarUrl : userMeta?.avatarUrl,
         avatarBg: hashColor(id),
         avatarText: initialOf(userName),
-        statusText: isOnline ? 'online' : 'last seen recently',
+        statusText: formatPresenceLabel(presence),
         isOnline,
+        isOwner: !!ownerId && id === ownerId,
       };
     });
-  }, [model.presenceByUser, model.userId, resolveUserMeta, selectedChat]);
+  }, [currentUserProfile, currentUserVisualPresence, formatPresenceLabel, model.presenceByUser, model.user, model.userId, resolveUserMeta, selectedChat]);
   const groupInfoMemberCount =
     selectedChat?.chatType === 'GROUP'
       ? Math.max(selectedMemberCount, groupInfoMembers.length)
@@ -751,11 +948,19 @@ export default function ChatPage() {
       <div className="h-dvh min-h-dvh w-full overflow-hidden bg-[#0f1115] text-white antialiased">
         <style>{chatPageStyles}</style>
 
-        <div className="tg-app flex h-full w-full">
+        <div
+          className="tg-app flex h-full w-full"
+          style={{ '--tg-message-bubble-max-width': `${MESSAGE_BUBBLE_MAX_WIDTH}px` } as Record<
+            string,
+            string
+          >}
+        >
           <div className="relative hidden h-full lg:block" style={{ width: sidebarWidth }}>
             <ChatSidebar
               width={sidebarWidth}
               query={query}
+              searchPlaceholder={searchPlaceholder}
+              searchStatusLabel={searchStatusLabel}
               onQueryChange={setQuery}
               chats={sidebarChats}
               contacts={privateChatContacts}
@@ -924,39 +1129,30 @@ export default function ChatPage() {
               <div className="min-w-0 flex-1">
                 <div
                   className="tg-scroll relative h-full overflow-y-auto"
+                  data-chat-scroll-container="true"
                   style={{
                     backgroundColor: '#07070d',
                     backgroundImage: `url("data:image/svg+xml,${chatWallpaperSvg}")`,
                     backgroundSize: '256px 256px',
                   }}
                 >
-                  <div className="mx-auto flex min-h-full w-full max-w-[1290px] flex-col px-[18px] pb-[110px] pt-[12px]">
-                    <div className="mx-auto w-full" style={{ maxWidth: MESSAGE_COLUMN_MAX_WIDTH }}>
+                  <div
+                    className="mx-auto flex min-h-full w-full flex-col px-[18px] pb-[110px] pt-[12px]"
+                    style={{ maxWidth: COMPOSER_TRACK_MAX_WIDTH }}
+                  >
+                    <div className="w-full" style={{ maxWidth: MESSAGE_COLUMN_MAX_WIDTH }}>
                       <ChatMessageList
                         messages={model.messages}
                         userId={model.userId}
                         hasSelectedChat={model.selectedChat !== null}
+                        messageBubbleMaxWidthPx={MESSAGE_BUBBLE_MAX_WIDTH}
                         messagesEndRef={model.messagesEndRef}
                         matchedMessageIds={isMessageSearchOpen ? messageSearchMatches : []}
                         activeMatchedMessageId={activeMessageSearchId}
                         onCircleMediaError={refreshSignedMediaUrls}
                         onPlaybackStateChange={handlePlaybackStateChange}
-                        resolveUserName={(id) => {
-                          if (id === model.userId) return 'You';
-                          const meta =
-                            model.friends.find((item) => item.userId === id) ||
-                            model.incomingRequests.find((item) => item.userId === id) ||
-                            model.outgoingRequests.find((item) => item.userId === id) ||
-                            model.searchResults.find((item) => item.userId === id);
-
-                          if (
-                            selectedChat?.chatType === 'PRIVATE' &&
-                            selectedChat.participantId === id
-                          ) {
-                            return selectedChat.name;
-                          }
-                          return meta?.displayName || meta?.username || id.slice(0, 8);
-                        }}
+                        resolveUserName={resolveMessageUserName}
+                        resolveUserAvatar={resolveMessageUserAvatar}
                         onReplyMessage={(message) => {
                           model.setEditingMessage(null);
                           model.setReplyingTo(message);
@@ -1048,6 +1244,7 @@ export default function ChatPage() {
               className={`absolute bottom-0 left-0 right-0 transition-[right] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
                 isGroupInfoVisible ? 'lg:right-[360px]' : 'lg:right-0'
               }`}
+              data-chat-composer-container="true"
             >
               <ChatComposer model={model} />
             </div>

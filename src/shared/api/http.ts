@@ -9,6 +9,7 @@ http.interceptors.response.use((res) => {
   try {
     res.data = repairObjectStrings(res.data)
   } catch {}
+
   return res
 })
 

@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent, type RefObject } from 'react';
 import type { ChatMessage } from '@/shared/api/types';
+import { http } from '@/shared/api/http';
+import { endpoints } from '@/shared/api/endpoints';
 import {
   buildMessageTextAndEntities,
   extractMessageLinks,
@@ -15,6 +17,8 @@ import {
   formatFileSize,
   formatMessageTime,
   getMessageAttachments,
+  hashColor,
+  initialOf,
   isAudioContentType,
   isMessageRead,
   isVideoContentType,
@@ -28,11 +32,13 @@ type ChatMessageListProps = {
   messages: ChatMessage[];
   userId: string;
   hasSelectedChat: boolean;
+  messageBubbleMaxWidthPx?: number;
   messagesEndRef: RefObject<HTMLDivElement | null>;
   matchedMessageIds: string[];
   activeMatchedMessageId: string | null;
   onCircleMediaError?: () => void;
   resolveUserName: (userId: string) => string;
+  resolveUserAvatar?: (userId: string) => string | undefined;
   onPlaybackStateChange?: (state: ChatPlaybackState | null) => void;
   onReplyMessage: (message: ChatMessage) => void;
   onEditMessage: (message: ChatMessage) => void;
@@ -49,11 +55,13 @@ type MessageTextBubbleProps = {
   content: string;
   entities?: ChatMessage['entities'];
   videoPreview: VideoLinkPreview | null;
+  bubbleMaxWidthPx: number;
   time: string;
   isOwn: boolean;
   isRead: boolean;
   isEdited: boolean;
   replyPreview?: ReplyPreview;
+  hideTail?: boolean;
 };
 
 type VideoLinkPreview = {
@@ -78,6 +86,7 @@ type VoiceMessageBubbleProps = {
   isRead: boolean;
   isOwn: boolean;
   isEdited: boolean;
+  hideTail?: boolean;
   onPlaybackStateChange?: (state: ChatPlaybackState) => void;
 };
 
@@ -97,6 +106,148 @@ type CircleMessageBubbleProps = {
   onPlaybackStateChange?: (state: ChatPlaybackState) => void;
 };
 
+type GroupServiceMessageType =
+  | 'group_created'
+  | 'group_title_updated'
+  | 'group_avatar_updated';
+
+const IMAGE_FILE_PATTERN = /\.(png|jpe?g|gif|webp|avif|bmp|svg)(?:$|[?#])/i;
+const BUBBLE_CHAIN_WINDOW_MS = 5 * 60 * 1000;
+const MESSAGE_ROW_BASE_GAP_PX = 4;
+const MESSAGE_ROW_EXPANDED_GAP_PX = MESSAGE_ROW_BASE_GAP_PX * 2;
+
+function toGroupServiceMessageType(value?: string): GroupServiceMessageType | null {
+  switch ((value || '').toLowerCase()) {
+    case 'group_created':
+      return 'group_created';
+    case 'group_title_updated':
+      return 'group_title_updated';
+    case 'group_avatar_updated':
+      return 'group_avatar_updated';
+    default:
+      return null;
+  }
+}
+
+function parseSystemPayload(content: string): { title?: string; avatarUrl?: string } {
+  const trimmed = content.trim();
+  if (!trimmed.startsWith('{') || !trimmed.endsWith('}')) {
+    return {};
+  }
+
+  try {
+    const parsed = JSON.parse(trimmed) as {
+      title?: unknown;
+      groupTitle?: unknown;
+      avatarUrl?: unknown;
+      avatarPath?: unknown;
+    };
+    const title =
+      typeof parsed.title === 'string' && parsed.title.trim().length > 0
+        ? parsed.title.trim()
+        : typeof parsed.groupTitle === 'string' && parsed.groupTitle.trim().length > 0
+          ? parsed.groupTitle.trim()
+          : undefined;
+    const avatarUrl =
+      typeof parsed.avatarUrl === 'string' && parsed.avatarUrl.trim().length > 0
+        ? parsed.avatarUrl.trim()
+        : typeof parsed.avatarPath === 'string' && parsed.avatarPath.trim().length > 0
+          ? parsed.avatarPath.trim()
+          : undefined;
+
+    return { title, avatarUrl };
+  } catch {
+    return {};
+  }
+}
+
+function resolveGroupServiceAvatarUrl(
+  message: ChatMessage,
+  attachments: ReturnType<typeof getMessageAttachments>
+): string | undefined {
+  for (const attachment of attachments) {
+    const url = resolveAttachmentUrl(attachment);
+    if (!url) continue;
+
+    const contentType = (attachment.contentType || '').toLowerCase();
+    const isImageAttachment = attachment.isImage || contentType.startsWith('image/');
+    if (isImageAttachment || IMAGE_FILE_PATTERN.test(url)) {
+      return url;
+    }
+  }
+
+  const payload = parseSystemPayload(message.content || '');
+  const payloadUrl = payload.avatarUrl?.trim();
+  if (payloadUrl) {
+    if (payloadUrl.startsWith('/media/')) {
+      return payloadUrl;
+    }
+    if (
+      payloadUrl.startsWith('http://') ||
+      payloadUrl.startsWith('https://') ||
+      payloadUrl.startsWith('data:') ||
+      payloadUrl.startsWith('blob:')
+    ) {
+      return payloadUrl;
+    }
+  }
+
+  const rawContent = (message.content || '').trim();
+  if (!rawContent) return undefined;
+  if (
+    rawContent.startsWith('/media/') ||
+    rawContent.startsWith('http://') ||
+    rawContent.startsWith('https://') ||
+    rawContent.startsWith('data:') ||
+    rawContent.startsWith('blob:')
+  ) {
+    return rawContent;
+  }
+
+  return undefined;
+}
+
+function GroupServiceMessageBubble({
+  message,
+  messageType,
+  actorName,
+  attachments,
+}: {
+  message: ChatMessage;
+  messageType: GroupServiceMessageType;
+  actorName: string;
+  attachments: ReturnType<typeof getMessageAttachments>;
+}) {
+  const payload = parseSystemPayload(message.content || '');
+  const contentTitle = (payload.title || message.content || '').trim();
+  const safeTitle = contentTitle || 'Без названия';
+
+  const text =
+    messageType === 'group_created'
+      ? `${actorName} создал(а) группу «${safeTitle}»`
+      : messageType === 'group_title_updated'
+        ? `${actorName} изменил(а) название группы на «${safeTitle}»`
+        : `${actorName} обновил(а) фотографию группы`;
+
+  const avatarUrl =
+    messageType === 'group_avatar_updated'
+      ? resolveGroupServiceAvatarUrl(message, attachments)
+      : undefined;
+
+  return (
+    <div className="my-[7px] flex flex-col items-center gap-[8px]">
+      <div className="max-w-[90%] rounded-[14px] bg-[#4c285c]/86 px-[10px] py-[5px] text-center text-[15px] font-[600] leading-[1.15] text-white shadow-[0_6px_18px_rgba(0,0,0,0.28)] backdrop-blur-sm">
+        {text}
+      </div>
+      {avatarUrl ? (
+        <div className="h-[128px] w-[128px] overflow-hidden rounded-full shadow-[0_16px_34px_rgba(0,0,0,0.34)]">
+          <img src={avatarUrl} alt="Group avatar updated" className="h-full w-full object-cover" />
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function DateDivider({ label }: { label: string }) {
   return (
     <div className="my-[7px] flex justify-center">
@@ -110,10 +261,51 @@ function DateDivider({ label }: { label: string }) {
 const toMessageDomId = (messageId: string | number) =>
   `chat-message-${String(messageId).replace(/[^a-zA-Z0-9_-]/g, '_')}`;
 
+const isTailBubbleMessage = (message: ChatMessage) =>
+  toGroupServiceMessageType(message.messageType) === null && message.messageType !== 'circle';
+
+const messageTimestamp = (value: string): number | null => {
+  const timestamp = Date.parse(value);
+  return Number.isFinite(timestamp) ? timestamp : null;
+};
+
+const areBubblesGrouped = (left?: ChatMessage, right?: ChatMessage) => {
+  if (!left || !right) return false;
+  if (!isTailBubbleMessage(left) || !isTailBubbleMessage(right)) return false;
+  if (left.senderId !== right.senderId) return false;
+
+  const leftTimestamp = messageTimestamp(left.createdAt);
+  const rightTimestamp = messageTimestamp(right.createdAt);
+  if (leftTimestamp == null || rightTimestamp == null) return false;
+
+  const diffMs = rightTimestamp - leftTimestamp;
+  return diffMs >= 0 && diffMs <= BUBBLE_CHAIN_WINDOW_MS;
+};
+
+const getMessageRowBottomGapPx = (current: ChatMessage, next?: ChatMessage) => {
+  if (!next) return MESSAGE_ROW_BASE_GAP_PX;
+  if (current.senderId !== next.senderId) return MESSAGE_ROW_EXPANDED_GAP_PX;
+
+  const currentTimestamp = messageTimestamp(current.createdAt);
+  const nextTimestamp = messageTimestamp(next.createdAt);
+  if (currentTimestamp == null || nextTimestamp == null) {
+    return MESSAGE_ROW_BASE_GAP_PX;
+  }
+
+  const diffMs = nextTimestamp - currentTimestamp;
+  if (diffMs > BUBBLE_CHAIN_WINDOW_MS) {
+    return MESSAGE_ROW_EXPANDED_GAP_PX;
+  }
+
+  return MESSAGE_ROW_BASE_GAP_PX;
+};
+
 const VIDEO_FILE_PATTERN = /\.(mp4|webm|mov|m4v|ogv|m3u8)(?:$|[?#])/i;
 const VIDEO_HINT_PATTERN =
   /(\/(watch|video|videos|clip|clips|reel|reels|short|shorts|player|embed|stream|live)\b|[?&](v|video|vid|id)=)/i;
 const VIDEO_META_CACHE = new Map<string, VideoPreviewMeta | null>();
+const VIDEO_META_CACHE_VERSION = '2';
+const DEFAULT_MESSAGE_BUBBLE_MAX_WIDTH_PX = 760;
 
 type VideoPreviewMeta = {
   providerName?: string;
@@ -122,7 +314,106 @@ type VideoPreviewMeta = {
   authorName?: string;
   thumbnailUrl?: string;
   durationLabel?: string;
+  embedUrl?: string;
+  embedWidth?: number;
+  embedHeight?: number;
 };
+
+type BackendLinkPreviewMeta = {
+  providerName?: string;
+  title?: string;
+  description?: string;
+  thumbnailUrl?: string;
+  embedUrl?: string;
+  durationSeconds?: number;
+  embedWidth?: number;
+  embedHeight?: number;
+};
+
+function toPositiveNumber(value: unknown): number | undefined {
+  if (typeof value === 'number' && Number.isFinite(value) && value > 0) {
+    return value;
+  }
+  if (typeof value === 'string') {
+    const parsed = Number(value.trim());
+    if (Number.isFinite(parsed) && parsed > 0) {
+      return parsed;
+    }
+  }
+  return undefined;
+}
+
+function extractIframeSrc(html?: string): string | undefined {
+  if (!html) return undefined;
+  const match = html.match(/<iframe[^>]*\s+src=['"]([^'"]+)['"]/i);
+  const src = match?.[1]?.trim();
+  return src || undefined;
+}
+
+function toHighResSpotifyThumbnail(url?: string): string | undefined {
+  if (!url) return undefined;
+  return url.replace(
+    /(ab67616d|ab676563)[0-9a-f]{8}/i,
+    '$10000b273'
+  );
+}
+
+function getVideoMetaCacheKey(url: string): string {
+  return `${VIDEO_META_CACHE_VERSION}:${url}`;
+}
+
+type SpotifyEntityKind =
+  | 'track'
+  | 'episode'
+  | 'album'
+  | 'playlist'
+  | 'show'
+  | 'artist'
+  | 'unknown';
+
+function getSpotifyEntityKindFromUrl(url?: string): SpotifyEntityKind | undefined {
+  if (!url) return undefined;
+
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return undefined;
+  }
+
+  const host = parsed.hostname.toLowerCase();
+  if (!host.includes('spotify.com')) return undefined;
+
+  const parts = parsed.pathname.split('/').filter(Boolean).map((part) => part.toLowerCase());
+  const knownKinds = new Set<SpotifyEntityKind>(['track', 'episode', 'album', 'playlist', 'show', 'artist']);
+
+  if (parts[0] === 'embed' && parts[1] && knownKinds.has(parts[1] as SpotifyEntityKind)) {
+    return parts[1] as SpotifyEntityKind;
+  }
+  if (parts[0] && knownKinds.has(parts[0] as SpotifyEntityKind)) {
+    return parts[0] as SpotifyEntityKind;
+  }
+
+  const uri = parsed.searchParams.get('uri');
+  if (uri) {
+    const uriParts = uri.split(':');
+    if (uriParts.length >= 2) {
+      const kind = uriParts[1]?.toLowerCase();
+      if (kind && knownKinds.has(kind as SpotifyEntityKind)) {
+        return kind as SpotifyEntityKind;
+      }
+    }
+  }
+
+  return 'unknown';
+}
+
+function getSpotifyInlineEmbedAspectRatio(kind?: SpotifyEntityKind): number {
+  if (kind === 'track' || kind === 'episode') {
+    return 456 / 397;
+  }
+  return 456 / 352;
+}
 
 function buildOEmbedEndpoints(preview: VideoLinkPreview): string[] {
   const encodedUrl = encodeURIComponent(preview.url);
@@ -137,15 +428,70 @@ function buildOEmbedEndpoints(preview: VideoLinkPreview): string[] {
     endpoints.push(`https://www.dailymotion.com/services/oembed?url=${encodedUrl}`);
   } else if (normalizedSource === 'rutube') {
     endpoints.push(`https://rutube.ru/api/oembed/?url=${encodedUrl}`);
+  } else if (normalizedSource === 'spotify') {
+    endpoints.push(`https://open.spotify.com/oembed?url=${encodedUrl}`);
   }
 
   endpoints.push(`https://noembed.com/embed?url=${encodedUrl}`);
   return endpoints;
 }
 
+async function fetchBackendVideoPreviewMeta(previewUrl: string): Promise<VideoPreviewMeta | null> {
+  try {
+    const response = await http.get<BackendLinkPreviewMeta | null>(endpoints.chatLinkPreview(previewUrl));
+    const payload = response.data;
+    if (!payload || typeof payload !== 'object') {
+      return null;
+    }
+
+    const durationLabel =
+      typeof payload.durationSeconds === 'number' && payload.durationSeconds > 0
+        ? formatDuration(payload.durationSeconds)
+        : undefined;
+
+    const meta: VideoPreviewMeta = {
+      providerName: payload.providerName?.trim() || undefined,
+      title: payload.title?.trim() || undefined,
+      description: payload.description?.trim() || undefined,
+      thumbnailUrl: payload.thumbnailUrl?.trim() || undefined,
+      embedUrl: payload.embedUrl?.trim() || undefined,
+      durationLabel,
+      embedWidth: toPositiveNumber(payload.embedWidth),
+      embedHeight: toPositiveNumber(payload.embedHeight),
+    };
+
+    if (
+      !meta.providerName &&
+      !meta.title &&
+      !meta.description &&
+      !meta.thumbnailUrl &&
+      !meta.embedUrl &&
+      !meta.durationLabel
+    ) {
+      return null;
+    }
+
+    return meta;
+  } catch {
+    return null;
+  }
+}
+
 async function fetchVideoPreviewMeta(preview: VideoLinkPreview): Promise<VideoPreviewMeta | null> {
-  const endpoints = buildOEmbedEndpoints(preview);
-  for (const endpoint of endpoints) {
+  const backendMeta = await fetchBackendVideoPreviewMeta(preview.url);
+  const backendHasEmbedDimensions =
+    !!backendMeta &&
+    typeof backendMeta.embedWidth === 'number' &&
+    backendMeta.embedWidth > 0 &&
+    typeof backendMeta.embedHeight === 'number' &&
+    backendMeta.embedHeight > 0;
+
+  if (backendMeta && backendHasEmbedDimensions) {
+    return backendMeta;
+  }
+
+  const oembedEndpoints = buildOEmbedEndpoints(preview);
+  for (const endpoint of oembedEndpoints) {
     try {
       const response = await fetch(endpoint, {
         method: 'GET',
@@ -162,6 +508,10 @@ async function fetchVideoPreviewMeta(preview: VideoLinkPreview): Promise<VideoPr
         thumbnail_url?: string;
         description?: string;
         duration?: number;
+        iframe_url?: string;
+        html?: string;
+        width?: number | string;
+        height?: number | string;
       };
       if (!payload) continue;
 
@@ -173,6 +523,8 @@ async function fetchVideoPreviewMeta(preview: VideoLinkPreview): Promise<VideoPr
         payload.description?.trim() ||
         (payload.author_name ? `by ${payload.author_name}` : undefined);
 
+      const embedUrl = payload.iframe_url?.trim() || extractIframeSrc(payload.html);
+
       const meta: VideoPreviewMeta = {
         providerName: payload.provider_name?.trim(),
         title: payload.title?.trim(),
@@ -180,15 +532,34 @@ async function fetchVideoPreviewMeta(preview: VideoLinkPreview): Promise<VideoPr
         authorName: payload.author_name?.trim(),
         thumbnailUrl: payload.thumbnail_url?.trim(),
         durationLabel,
+        embedUrl,
+        embedWidth: toPositiveNumber(payload.width),
+        embedHeight: toPositiveNumber(payload.height),
       };
 
-      return meta;
+      if (!backendMeta) {
+        return meta;
+      }
+
+      return {
+        ...backendMeta,
+        ...meta,
+        providerName: backendMeta.providerName || meta.providerName,
+        title: backendMeta.title || meta.title,
+        description: backendMeta.description || meta.description,
+        thumbnailUrl: backendMeta.thumbnailUrl || meta.thumbnailUrl,
+        // Keep embed URL and dimensions from the same source to avoid iframe viewport mismatch.
+        embedUrl: meta.embedUrl || backendMeta.embedUrl,
+        durationLabel: backendMeta.durationLabel || meta.durationLabel,
+        embedWidth: backendMeta.embedWidth || meta.embedWidth,
+        embedHeight: backendMeta.embedHeight || meta.embedHeight,
+      };
     } catch {
       continue;
     }
   }
 
-  return null;
+  return backendMeta;
 }
 
 function getPrimaryVideoPreview(
@@ -247,6 +618,17 @@ function toVideoLinkPreview(link: ChatResolvedLink): VideoLinkPreview | null {
       description: 'Watch on Dailymotion',
       url: parsed.toString(),
       embedUrl: `https://www.dailymotion.com/embed/video/${dailymotionId}?autoplay=1`,
+    };
+  }
+
+  const spotifyEntity = getSpotifyEntity(parsed, host);
+  if (spotifyEntity) {
+    return {
+      sourceLabel: 'Spotify',
+      title: decodeLinkTitle(spotifyEntity.id),
+      description: 'Listen on Spotify',
+      url: parsed.toString(),
+      embedUrl: `https://open.spotify.com/embed/${spotifyEntity.kind}/${spotifyEntity.id}?utm_source=chat_preview`,
     };
   }
 
@@ -326,13 +708,59 @@ function getDailymotionVideoId(url: URL, host: string): string | null {
   return null;
 }
 
+function getSpotifyEntity(
+  url: URL,
+  host: string
+): { kind: 'track' | 'album' | 'playlist' | 'episode' | 'show'; id: string } | null {
+  if (!host.includes('spotify.com')) return null;
+
+  const parts = url.pathname.split('/').filter(Boolean);
+  if (parts.length < 2) return null;
+
+  const kindRaw = parts[0]?.toLowerCase();
+  const id = parts[1];
+  if (!id) return null;
+
+  const supportedKinds = new Set(['track', 'album', 'playlist', 'episode', 'show']);
+  if (!kindRaw || !supportedKinds.has(kindRaw)) return null;
+
+  return {
+    kind: kindRaw as 'track' | 'album' | 'playlist' | 'episode' | 'show',
+    id,
+  };
+}
+
+function isRutubeVideoId(value?: string): boolean {
+  if (!value) return false;
+  return /^[0-9a-f]{32}$/i.test(value);
+}
+
 function getRutubeVideoId(url: URL, host: string): string | null {
   if (!host.includes('rutube.ru')) return null;
   const parts = url.pathname.split('/').filter(Boolean);
+
   const idx = parts.indexOf('video');
-  if (idx >= 0 && parts[idx + 1]) {
-    return parts[idx + 1];
+  if (idx >= 0) {
+    const next = parts[idx + 1];
+    if (next?.toLowerCase() === 'private' && isRutubeVideoId(parts[idx + 2])) {
+      return parts[idx + 2];
+    }
+    if (isRutubeVideoId(next)) {
+      return next;
+    }
   }
+
+  const embedIdx = parts.indexOf('embed');
+  if (embedIdx > 0 && parts[embedIdx - 1] === 'play' && isRutubeVideoId(parts[embedIdx + 1])) {
+    return parts[embedIdx + 1];
+  }
+
+  for (let i = parts.length - 1; i >= 0; i -= 1) {
+    if (isRutubeVideoId(parts[i])) {
+      return parts[i];
+    }
+  }
+
   return null;
 }
 
@@ -377,23 +805,49 @@ function ReplyPreviewBlock({
 function VideoLinkPreviewCard({
   preview,
   isOwn,
+  maxWidthPx,
 }: {
   preview: VideoLinkPreview;
   isOwn: boolean;
+  maxWidthPx: number;
 }) {
   const [isPlayingInline, setIsPlayingInline] = useState(false);
   const [meta, setMeta] = useState<VideoPreviewMeta | null>(null);
-  const canInlinePlay = !!preview.directVideoUrl || !!preview.embedUrl;
+  const resolvedEmbedUrl = meta?.embedUrl || preview.embedUrl;
+  const canInlinePlay = !!preview.directVideoUrl || !!resolvedEmbedUrl;
   const resolvedSource = meta?.providerName || preview.sourceLabel;
+  const isSpotifyCard = resolvedSource.trim().toLowerCase() === 'spotify';
   const resolvedTitle = meta?.title || preview.title;
   const resolvedDescription = meta?.description || preview.description;
-  const resolvedPosterUrl = meta?.thumbnailUrl || preview.posterUrl;
+  const resolvedPosterUrlRaw = meta?.thumbnailUrl || preview.posterUrl;
+  const resolvedPosterUrl = isSpotifyCard
+    ? toHighResSpotifyThumbnail(resolvedPosterUrlRaw)
+    : resolvedPosterUrlRaw;
   const resolvedDuration = preview.durationLabel || meta?.durationLabel;
+  const resolvedEmbedWidth = meta?.embedWidth;
+  const resolvedEmbedHeight = meta?.embedHeight;
+  const spotifyEntityKind =
+    getSpotifyEntityKindFromUrl(resolvedEmbedUrl) ||
+    getSpotifyEntityKindFromUrl(preview.embedUrl) ||
+    getSpotifyEntityKindFromUrl(preview.url);
+  const spotifyInlineAspectRatio = getSpotifyInlineEmbedAspectRatio(spotifyEntityKind);
+  const embedAspectRatio =
+    typeof resolvedEmbedWidth === 'number' &&
+    resolvedEmbedWidth > 0 &&
+    typeof resolvedEmbedHeight === 'number' &&
+    resolvedEmbedHeight > 0
+      ? resolvedEmbedWidth / resolvedEmbedHeight
+      : undefined;
+  const mediaAspectRatio = isPlayingInline
+    ? (isSpotifyCard ? spotifyInlineAspectRatio : embedAspectRatio || 16 / 9)
+    : (isSpotifyCard ? 1 : 16 / 9);
+  const mediaPaddingTop = `${100 / mediaAspectRatio}%`;
 
   useEffect(() => {
     let disposed = false;
+    const cacheKey = getVideoMetaCacheKey(preview.url);
 
-    const cached = VIDEO_META_CACHE.get(preview.url);
+    const cached = VIDEO_META_CACHE.get(cacheKey);
     if (cached !== undefined) {
       setMeta(cached);
       return () => {
@@ -403,7 +857,7 @@ function VideoLinkPreviewCard({
 
     void (async () => {
       const loadedMeta = await fetchVideoPreviewMeta(preview);
-      VIDEO_META_CACHE.set(preview.url, loadedMeta);
+      VIDEO_META_CACHE.set(cacheKey, loadedMeta);
       if (!disposed) {
         setMeta(loadedMeta);
       }
@@ -427,6 +881,7 @@ function VideoLinkPreviewCard({
       className={`mt-[9px] overflow-hidden rounded-[13px] border ${
         isOwn ? 'border-white/26 bg-white/10' : 'border-white/12 bg-black/16'
       }`}
+      style={{ width: '100%', maxWidth: maxWidthPx }}
     >
       <div className={`border-l-[4px] px-3 py-2.5 ${isOwn ? 'border-white/70 bg-white/8' : 'border-[#af93ff] bg-white/[0.03]'}`}>
         <div className={`text-[13px] font-[700] ${isOwn ? 'text-white/88' : 'text-[#d2c2ff]'}`}>
@@ -445,28 +900,31 @@ function VideoLinkPreviewCard({
         ) : null}
       </div>
 
-      <div className="relative aspect-video overflow-hidden bg-[#6557b7]/66">
+      <div
+        className="relative w-full overflow-hidden bg-[#6557b7]/66 transition-[padding] duration-150 ease-out"
+        style={{ paddingTop: mediaPaddingTop }}
+      >
         {isPlayingInline && preview.directVideoUrl ? (
           <video
             src={preview.directVideoUrl}
             controls
             autoPlay
             playsInline
-            className="h-full w-full object-cover"
+            className="absolute inset-0 h-full w-full object-cover"
           />
-        ) : isPlayingInline && preview.embedUrl ? (
+        ) : isPlayingInline && resolvedEmbedUrl ? (
           <iframe
-            src={preview.embedUrl}
+            src={resolvedEmbedUrl}
             title={resolvedTitle}
             allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
             allowFullScreen
-            className="h-full w-full border-0"
+            className="absolute inset-0 h-full w-full border-0"
           />
         ) : (
           <button
             type="button"
             onClick={handlePlay}
-            className="group relative h-full w-full"
+            className="group absolute inset-0 h-full w-full"
             aria-label={`Play video from ${resolvedSource}`}
           >
             {resolvedPosterUrl ? (
@@ -487,12 +945,17 @@ function MessageTextBubble({
   content,
   entities,
   videoPreview,
+  bubbleMaxWidthPx,
   time,
   isOwn,
   isRead,
   isEdited,
   replyPreview,
+  hideTail = false,
 }: MessageTextBubbleProps) {
+  const bubbleWidthStyle = videoPreview
+    ? { width: `min(100%, ${bubbleMaxWidthPx}px)` }
+    : undefined;
   const textPaddingClass = videoPreview
     ? ''
     : isEdited
@@ -520,12 +983,17 @@ function MessageTextBubble({
   );
 
   return (
-    <div className={`tg-bubble relative ${isOwn ? 'tg-right bg-[#967ef0] text-white' : 'tg-left bg-[#222327] text-white/95'}`}>
+    <div
+      className={`tg-bubble relative ${isOwn ? 'tg-right bg-[#967ef0] text-white' : 'tg-left bg-[#222327] text-white/95'} ${hideTail ? 'tg-tail-none' : ''}`}
+      style={bubbleWidthStyle}
+    >
       {replyPreview ? <ReplyPreviewBlock replyPreview={replyPreview} isOwn={isOwn} /> : null}
-      <div className={`whitespace-pre-line text-[18px] leading-[1.22] tracking-[0.05px] ${textPaddingClass}`}>
+      <div className={`whitespace-pre-line break-words text-[18px] leading-[1.22] tracking-[0.05px] ${textPaddingClass}`}>
         {renderMessageContent(content, entities)}
       </div>
-      {videoPreview ? <VideoLinkPreviewCard preview={videoPreview} isOwn={isOwn} /> : null}
+      {videoPreview ? (
+        <VideoLinkPreviewCard preview={videoPreview} isOwn={isOwn} maxWidthPx={bubbleMaxWidthPx} />
+      ) : null}
       {videoPreview ? (
         <div className={`mt-[6px] flex items-center justify-end gap-[2px] pr-[2px] text-[14px] ${isOwn ? 'text-white/72' : 'text-white/48'}`}>
           {statusLine}
@@ -550,6 +1018,7 @@ function VoiceMessageBubble({
   isRead,
   isOwn,
   isEdited,
+  hideTail = false,
   onPlaybackStateChange,
 }: VoiceMessageBubbleProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -862,7 +1331,7 @@ function VoiceMessageBubble({
     : 'mt-2 rounded-[10px] bg-[#4a2e3e]/82 px-3 py-2 text-[12px] leading-[1.25] text-[#ffcbda]';
 
   return (
-    <div className={`tg-bubble relative ${bubbleClass}`}>
+    <div className={`tg-bubble relative ${bubbleClass} ${hideTail ? 'tg-tail-none' : ''}`}>
       {fileUrl ? (
         <audio ref={audioRef} preload="metadata">
           <source src={fileUrl} type={contentType || 'audio/webm'} />
@@ -1382,23 +1851,33 @@ function CircleMessageBubble({
 function ChatMessageRow({
   message,
   userId,
+  bubbleMaxWidthPx,
   onCircleMediaError,
   isCircleMuted,
   onToggleCircleMuted,
   resolveUserName,
+  resolveUserAvatar,
   onPlaybackStateChange,
   isSearchMatch,
   isSearchActive,
+  hideTail,
+  showEdgeAvatar,
+  rowBottomGapPx,
 }: {
   message: ChatMessage;
   userId: string;
+  bubbleMaxWidthPx: number;
   onCircleMediaError?: () => void;
   isCircleMuted: boolean;
   onToggleCircleMuted: () => void;
   resolveUserName: (userId: string) => string;
+  resolveUserAvatar?: (userId: string) => string | undefined;
   onPlaybackStateChange?: (state: ChatPlaybackState) => void;
   isSearchMatch: boolean;
   isSearchActive: boolean;
+  hideTail: boolean;
+  showEdgeAvatar: boolean;
+  rowBottomGapPx: number;
 }) {
   const isOwn = message.senderId === userId;
   const isEdited = !!message.edited;
@@ -1421,9 +1900,30 @@ function ChatMessageRow({
     message.messageType === 'circle'
       ? attachments.find((attachment) => isVideoContentType(attachment.contentType)) || fallbackAttachment
       : undefined;
+  const groupServiceMessageType = toGroupServiceMessageType(message.messageType);
   const isCircleMessage = message.messageType === 'circle' && !!circleAttachment;
   const mediaId = `${message.messageType}-${String(message.messageId)}`;
   const author = isOwn ? 'You' : resolveUserName(message.senderId);
+  const edgeAvatarName =
+    message.senderDisplayName?.trim() ||
+    message.senderUsername?.trim() ||
+    resolveUserName(message.senderId) ||
+    message.senderId.slice(0, 8);
+  const edgeAvatarUrl = resolveUserAvatar?.(message.senderId);
+  const edgeAvatarText = initialOf(edgeAvatarName);
+  const edgeAvatarStyle = edgeAvatarUrl ? undefined : { background: hashColor(message.senderId) };
+  const serviceActorName =
+    message.senderDisplayName?.trim() ||
+    message.senderUsername?.trim() ||
+    resolveUserName(message.senderId) ||
+    message.senderId.slice(0, 8);
+  const rowHighlightClass = `rounded-[22px] transition-shadow ${
+    isSearchActive
+      ? 'shadow-[0_0_0_2px_rgba(179,156,255,0.95),0_8px_24px_rgba(108,78,204,0.35)]'
+      : isSearchMatch
+        ? 'shadow-[0_0_0_1px_rgba(179,156,255,0.5)]'
+        : ''
+  }`;
 
   const voiceUrl = voiceAttachment ? resolveAttachmentUrl(voiceAttachment) : '';
   const circleUrl = circleAttachment ? resolveAttachmentUrl(circleAttachment) : '';
@@ -1437,20 +1937,31 @@ function ChatMessageRow({
       }
     : undefined;
 
+  if (groupServiceMessageType) {
+    return (
+      <div className="mb-[2px] flex justify-center">
+        <div className={rowHighlightClass} style={{ maxWidth: bubbleMaxWidthPx }}>
+          <GroupServiceMessageBubble
+            message={message}
+            messageType={groupServiceMessageType}
+            actorName={serviceActorName}
+            attachments={attachments}
+          />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
-      className={`${isCircleMessage ? 'my-[20px]' : 'mb-[4px]'} flex ${
+      className={`${isCircleMessage ? 'my-[20px]' : ''} flex ${
         isOwn ? 'justify-end' : 'justify-start'
       }`}
+      style={isCircleMessage ? undefined : { marginBottom: rowBottomGapPx }}
     >
       <div
-        className={`max-w-[820px] rounded-[22px] transition-shadow ${
-          isSearchActive
-            ? 'shadow-[0_0_0_2px_rgba(179,156,255,0.95),0_8px_24px_rgba(108,78,204,0.35)]'
-            : isSearchMatch
-              ? 'shadow-[0_0_0_1px_rgba(179,156,255,0.5)]'
-              : ''
-        }`}
+        className={`${rowHighlightClass} relative`}
+        style={{ maxWidth: bubbleMaxWidthPx }}
       >
         {message.messageType === 'voice' && voiceAttachment ? (
           <VoiceMessageBubble
@@ -1464,6 +1975,7 @@ function ChatMessageRow({
             isRead={isRead}
             isOwn={isOwn}
             isEdited={isEdited}
+            hideTail={hideTail}
             onPlaybackStateChange={onPlaybackStateChange}
           />
         ) : message.messageType === 'circle' && circleAttachment ? (
@@ -1487,11 +1999,13 @@ function ChatMessageRow({
             content={hasTextContent ? renderContent : messagePreviewText(message)}
             entities={hasTextContent ? renderEntities : undefined}
             videoPreview={videoPreview}
+            bubbleMaxWidthPx={bubbleMaxWidthPx}
             time={time}
             isOwn={isOwn}
             isRead={isRead}
             isEdited={isEdited}
             replyPreview={replyPreview}
+            hideTail={hideTail}
           />
         )}
 
@@ -1502,8 +2016,28 @@ function ChatMessageRow({
             }`}
           >
             {renderMessageContent(renderContent, renderEntities)}
-            {videoPreview ? <VideoLinkPreviewCard preview={videoPreview} isOwn={isOwn} /> : null}
+            {videoPreview ? (
+              <VideoLinkPreviewCard
+                preview={videoPreview}
+                isOwn={isOwn}
+                maxWidthPx={bubbleMaxWidthPx}
+              />
+            ) : null}
           </div>
+        ) : null}
+        {showEdgeAvatar ? (
+          <span
+            className={`pointer-events-none absolute bottom-[-2px] z-10 grid h-[42px] w-[42px] place-items-center overflow-hidden rounded-full border border-black/35 text-[11px] font-[700] text-white shadow-[0_6px_12px_rgba(0,0,0,0.4)] ${
+              isOwn ? '-right-[50px]' : '-left-[50px]'
+            }`}
+            style={edgeAvatarStyle}
+          >
+            {edgeAvatarUrl ? (
+              <img src={edgeAvatarUrl} alt={edgeAvatarName} className="h-full w-full object-cover" />
+            ) : (
+              edgeAvatarText
+            )}
+          </span>
         ) : null}
       </div>
     </div>
@@ -1514,11 +2048,13 @@ export function ChatMessageList({
   messages,
   userId,
   hasSelectedChat,
+  messageBubbleMaxWidthPx = DEFAULT_MESSAGE_BUBBLE_MAX_WIDTH_PX,
   messagesEndRef,
   matchedMessageIds,
   activeMatchedMessageId,
   onCircleMediaError,
   resolveUserName,
+  resolveUserAvatar,
   onPlaybackStateChange,
   onReplyMessage,
   onEditMessage,
@@ -1528,6 +2064,9 @@ export function ChatMessageList({
   const [isCircleMuted, setIsCircleMuted] = useState(true);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; message: ChatMessage } | null>(null);
   const contextMenuRef = useRef<HTMLDivElement | null>(null);
+  const hasInitializedMessagesRef = useRef(false);
+  const previousMessageIdsRef = useRef<Set<string>>(new Set());
+  const [enteringMessageIds, setEnteringMessageIds] = useState<Set<string>>(new Set());
   const matchedMessageIdSet = useMemo(() => new Set(matchedMessageIds), [matchedMessageIds]);
 
   const rows = useMemo<MessageRow[]>(() => {
@@ -1553,6 +2092,38 @@ export function ChatMessageList({
     }
 
     return output;
+  }, [messages]);
+
+  const bubbleVisualStateByMessageId = useMemo(() => {
+    const visualStateById = new Map<string, { hideTail: boolean; showEdgeAvatar: boolean }>();
+    const bubbleMessages = messages.filter((message) => isTailBubbleMessage(message));
+
+    for (let index = 0; index < bubbleMessages.length; index += 1) {
+      const current = bubbleMessages[index];
+      const previous = index > 0 ? bubbleMessages[index - 1] : undefined;
+      const next = index < bubbleMessages.length - 1 ? bubbleMessages[index + 1] : undefined;
+      const groupedWithPrevious = areBubblesGrouped(previous, current);
+      const groupedWithNext = areBubblesGrouped(current, next);
+
+      visualStateById.set(String(current.messageId), {
+        hideTail: groupedWithNext,
+        showEdgeAvatar: !groupedWithNext,
+      });
+    }
+
+    return visualStateById;
+  }, [messages]);
+
+  const messageRowBottomGapByMessageId = useMemo(() => {
+    const gapById = new Map<string, number>();
+
+    for (let index = 0; index < messages.length; index += 1) {
+      const current = messages[index];
+      const next = index < messages.length - 1 ? messages[index + 1] : undefined;
+      gapById.set(String(current.messageId), getMessageRowBottomGapPx(current, next));
+    }
+
+    return gapById;
   }, [messages]);
 
   useEffect(() => {
@@ -1593,6 +2164,42 @@ export function ChatMessageList({
     };
   }, [contextMenu]);
 
+  useEffect(() => {
+    const currentMessageIds = new Set(messages.map((message) => String(message.messageId)));
+
+    if (!hasInitializedMessagesRef.current) {
+      hasInitializedMessagesRef.current = true;
+      previousMessageIdsRef.current = currentMessageIds;
+      return;
+    }
+
+    const newlyAddedIds = [...currentMessageIds].filter((id) => !previousMessageIdsRef.current.has(id));
+    previousMessageIdsRef.current = currentMessageIds;
+
+    if (newlyAddedIds.length === 0) {
+      return;
+    }
+
+    setEnteringMessageIds((prev) => {
+      const next = new Set(prev);
+      newlyAddedIds.forEach((id) => next.add(id));
+      return next;
+    });
+
+    const timerId = window.setTimeout(() => {
+      setEnteringMessageIds((prev) => {
+        if (prev.size === 0) return prev;
+        const next = new Set(prev);
+        newlyAddedIds.forEach((id) => next.delete(id));
+        return next;
+      });
+    }, 170);
+
+    return () => {
+      window.clearTimeout(timerId);
+    };
+  }, [messages]);
+
   const safeMenuLeft = contextMenu ? Math.min(contextMenu.x, window.innerWidth - 220) : 0;
   const safeMenuTop = contextMenu ? Math.min(contextMenu.y, window.innerHeight - 232) : 0;
   const canEdit =
@@ -1603,12 +2210,24 @@ export function ChatMessageList({
     !!contextMenu &&
     contextMenu.message.senderId === userId &&
     typeof contextMenu.message.messageId === 'number';
+  const contextIsGroupServiceMessage =
+    !!contextMenu && toGroupServiceMessageType(contextMenu.message.messageType) !== null;
   const menuCopyText = contextMenu
     ? (contextMenu.message.content || '').trim() || messagePreviewText(contextMenu.message)
     : '';
 
   return (
     <>
+      <style>{`
+        @keyframes chatMessageEnterQuick {
+          from { opacity: 0; transform: translate3d(0, 10px, 0); }
+          to { opacity: 1; transform: translate3d(0, 0, 0); }
+        }
+        .chat-message-enter-quick {
+          animation: chatMessageEnterQuick 170ms cubic-bezier(0.18, 0.8, 0.2, 1);
+          will-change: opacity, transform;
+        }
+      `}</style>
       {!hasSelectedChat ? (
         <div className="py-10 text-center text-white/50">Select a chat on the left</div>
       ) : rows.length === 0 ? (
@@ -1617,28 +2236,41 @@ export function ChatMessageList({
         rows.map((row) =>
           row.type === 'divider' ? (
             <DateDivider key={row.key} label={row.label} />
-          ) : (
-            <div
-              key={row.key}
-              id={toMessageDomId(row.message.messageId)}
-              onContextMenu={(event) => {
-                event.preventDefault();
-                setContextMenu({ x: event.clientX, y: event.clientY, message: row.message });
-              }}
-            >
-              <ChatMessageRow
-                message={row.message}
-                userId={userId}
-                onCircleMediaError={onCircleMediaError}
-                isCircleMuted={isCircleMuted}
-                onToggleCircleMuted={() => setIsCircleMuted((prev) => !prev)}
-                resolveUserName={resolveUserName}
-                onPlaybackStateChange={onPlaybackStateChange || undefined}
-                isSearchMatch={matchedMessageIdSet.has(String(row.message.messageId))}
-                isSearchActive={String(row.message.messageId) === activeMatchedMessageId}
-              />
-            </div>
-          )
+          ) : (() => {
+              const messageId = String(row.message.messageId);
+              const bubbleVisualState = bubbleVisualStateByMessageId.get(messageId);
+              return (
+                <div
+                  key={row.key}
+                  id={toMessageDomId(row.message.messageId)}
+                  className={enteringMessageIds.has(messageId) ? 'chat-message-enter-quick' : undefined}
+                  onContextMenu={(event) => {
+                    event.preventDefault();
+                    setContextMenu({ x: event.clientX, y: event.clientY, message: row.message });
+                  }}
+                >
+                  <ChatMessageRow
+                    message={row.message}
+                    userId={userId}
+                    bubbleMaxWidthPx={messageBubbleMaxWidthPx}
+                    onCircleMediaError={onCircleMediaError}
+                    isCircleMuted={isCircleMuted}
+                    onToggleCircleMuted={() => setIsCircleMuted((prev) => !prev)}
+                    resolveUserName={resolveUserName}
+                    resolveUserAvatar={resolveUserAvatar}
+                    onPlaybackStateChange={onPlaybackStateChange || undefined}
+                    isSearchMatch={matchedMessageIdSet.has(messageId)}
+                    isSearchActive={messageId === activeMatchedMessageId}
+                    hideTail={bubbleVisualState?.hideTail ?? false}
+                    showEdgeAvatar={bubbleVisualState?.showEdgeAvatar ?? false}
+                    rowBottomGapPx={
+                      messageRowBottomGapByMessageId.get(messageId) ??
+                      MESSAGE_ROW_BASE_GAP_PX
+                    }
+                  />
+                </div>
+              );
+            })()
         )
       )}
       <div ref={messagesEndRef} />
@@ -1649,42 +2281,46 @@ export function ChatMessageList({
           className="fixed z-[80] min-w-[210px] overflow-hidden rounded-2xl border border-white/12 bg-[#201d28]/98 p-1.5 shadow-[0_20px_44px_rgba(0,0,0,0.5)] backdrop-blur-md"
           style={{ left: safeMenuLeft, top: safeMenuTop }}
         >
-          <button
-            type="button"
-            onClick={() => {
-              onReplyMessage(contextMenu.message);
-              setContextMenu(null);
-            }}
-            className="flex w-full items-center rounded-xl px-3 py-2 text-left text-sm text-white/92 transition-colors hover:bg-white/10"
-          >
-            Reply
-          </button>
+          {!contextIsGroupServiceMessage ? (
+            <>
+              <button
+                type="button"
+                onClick={() => {
+                  onReplyMessage(contextMenu.message);
+                  setContextMenu(null);
+                }}
+                className="flex w-full items-center rounded-xl px-3 py-2 text-left text-sm text-white/92 transition-colors hover:bg-white/10"
+              >
+                Reply
+              </button>
 
-          <button
-            type="button"
-            onClick={() => {
-              onCopyMessage(menuCopyText);
-              setContextMenu(null);
-            }}
-            className="flex w-full items-center rounded-xl px-3 py-2 text-left text-sm text-white/92 transition-colors hover:bg-white/10"
-          >
-            Copy text
-          </button>
+              <button
+                type="button"
+                onClick={() => {
+                  onCopyMessage(menuCopyText);
+                  setContextMenu(null);
+                }}
+                className="flex w-full items-center rounded-xl px-3 py-2 text-left text-sm text-white/92 transition-colors hover:bg-white/10"
+              >
+                Copy text
+              </button>
 
-          <button
-            type="button"
-            onClick={() => {
-              if (!canEdit) return;
-              onEditMessage(contextMenu.message);
-              setContextMenu(null);
-            }}
-            disabled={!canEdit}
-            className={`flex w-full items-center rounded-xl px-3 py-2 text-left text-sm transition-colors ${
-              canEdit ? 'text-white/92 hover:bg-white/10' : 'cursor-not-allowed text-white/35'
-            }`}
-          >
-            Edit
-          </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (!canEdit) return;
+                  onEditMessage(contextMenu.message);
+                  setContextMenu(null);
+                }}
+                disabled={!canEdit}
+                className={`flex w-full items-center rounded-xl px-3 py-2 text-left text-sm transition-colors ${
+                  canEdit ? 'text-white/92 hover:bg-white/10' : 'cursor-not-allowed text-white/35'
+                }`}
+              >
+                Edit
+              </button>
+            </>
+          ) : null}
 
           <button
             type="button"

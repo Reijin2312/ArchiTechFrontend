@@ -637,7 +637,7 @@ export function ChatComposer({ model }: ChatComposerProps) {
   };
 
   return (
-    <div className="flex-none border-t border-slate-800/80 bg-slate-900/95 p-3">
+    <div className="flex-none border-t border-slate-800/80 bg-slate-900/95 p-3" data-chat-composer-container="true">
       {editingMessage && (
         <div className="mb-2 flex items-start gap-2 rounded-lg border border-sky-700/50 bg-sky-900/25 px-3 py-2">
           <div className="flex-1 min-w-0">

@@ -36,8 +36,8 @@ export type SocialFloatingActionsContext = {
   attachedImages: AttachedImage[];
   editingMessage: ChatMessage | null;
   replyingTo: ChatMessage | null;
-  lastActivityTime: number;
   markReadTimeoutRef: MutableRefObject<NodeJS.Timeout | null>;
+  markReadTargetRef: MutableRefObject<{ chatId: number; lastId: number } | null>;
   sendInFlightRef: MutableRefObject<boolean>;
   sendCooldownUntilRef: MutableRefObject<number>;
   lastProtocolSeqRef: MutableRefObject<number>;
@@ -59,6 +59,8 @@ export type SocialFloatingActionsContext = {
   setAttachedImages: Dispatch<SetStateAction<AttachedImage[]>>;
   setEditingMessage: Dispatch<SetStateAction<ChatMessage | null>>;
   setUploadingImages: Dispatch<SetStateAction<Map<string, { progress: number; file: File }>>>;
+  setAutoScrollLocked: Dispatch<SetStateAction<boolean>>;
+  setIsChatsRefreshing: Dispatch<SetStateAction<boolean>>;
   scrollToBottom: (smooth?: boolean) => void;
 };
 

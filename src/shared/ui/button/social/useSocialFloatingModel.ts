@@ -1,4 +1,4 @@
-﻿import { useState, useRef } from 'react';
+import { useState, useRef, type Dispatch, type SetStateAction } from 'react';
 import { authStore } from '@/shared/store/auth';
 import { logger } from '@/shared/lib/logger';
 import { useSocialFloatingEffects } from './useSocialFloatingEffects';
@@ -9,6 +9,7 @@ import type {
   UserSearchResult,
   PrivateChat,
   ChatMessage,
+  ChatPresenceState,
   UploadImageResponse
 } from '@/shared/api/types';
 
@@ -46,8 +47,11 @@ export function useSocialFloatingModel(options: SocialFloatingModelOptions = {})
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [messageInput, setMessageInput] = useState('');
   const [typingUsersByChat, setTypingUsersByChat] = useState<Record<number, string[]>>({});
-  const [presenceByUser, setPresenceByUser] = useState<Record<string, boolean>>({});
+  const [presenceByUser, setPresenceByUser] = useState<Record<string, ChatPresenceState>>({});
+  const [isWsConnecting, setIsWsConnecting] = useState(false);
+  const [isChatsRefreshing, setIsChatsRefreshing] = useState(false);
   const [lastActivityTime, setLastActivityTime] = useState(Date.now());
+  const [autoScrollLocked, setAutoScrollLockedState] = useState(false);
   const [replyingTo, setReplyingTo] = useState<ChatMessage | null>(null);
   const [editingMessage, setEditingMessage] = useState<ChatMessage | null>(null);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; message: ChatMessage } | null>(null);
@@ -70,6 +74,7 @@ export function useSocialFloatingModel(options: SocialFloatingModelOptions = {})
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const markReadTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const markReadTargetRef = useRef<{ chatId: number; lastId: number } | null>(null);
   const sendInFlightRef = useRef<boolean>(false);
   const sendCooldownUntilRef = useRef<number>(0);
   const lastProtocolSeqRef = useRef<number>(0);
@@ -79,9 +84,18 @@ export function useSocialFloatingModel(options: SocialFloatingModelOptions = {})
     new Map(),
   );
   const isFirstLoadRef = useRef<boolean>(true);
-  const observerRef = useRef<IntersectionObserver | null>(null);
-  const observedMessagesRef = useRef<Set<string>>(new Set());
   const processedMessageIds = useRef<Set<number | string>>(new Set());
+  const autoScrollLockedRef = useRef(false);
+
+  const setAutoScrollLocked: Dispatch<SetStateAction<boolean>> = (value) => {
+    setAutoScrollLockedState((prev) => {
+      const next = typeof value === 'function'
+        ? (value as (previous: boolean) => boolean)(prev)
+        : value;
+      autoScrollLockedRef.current = next;
+      return next;
+    });
+  };
   
   const selectedChatRef = useRef(selectedChat);
   const userRef = useRef(user);
@@ -141,6 +155,9 @@ export function useSocialFloatingModel(options: SocialFloatingModelOptions = {})
   };
 
   const scrollToBottom = (smooth = true) => {
+    if (autoScrollLockedRef.current) {
+      return;
+    }
     messagesEndRef.current?.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto' });
   };
 
@@ -278,7 +295,6 @@ export function useSocialFloatingModel(options: SocialFloatingModelOptions = {})
     attachedImages,
     editingMessage,
     replyingTo,
-    lastActivityTime,
     markReadTimeoutRef,
     sendInFlightRef,
     sendCooldownUntilRef,
@@ -287,6 +303,7 @@ export function useSocialFloatingModel(options: SocialFloatingModelOptions = {})
     typingThrottleRef,
     isFirstLoadRef,
     messagesEndRef,
+    markReadTargetRef,
     setFriends,
     setIncomingRequests,
     setOutgoingRequests,
@@ -301,6 +318,8 @@ export function useSocialFloatingModel(options: SocialFloatingModelOptions = {})
     setAttachedImages,
     setEditingMessage,
     setUploadingImages,
+    setAutoScrollLocked,
+    setIsChatsRefreshing,
     scrollToBottom,
   });
 
@@ -318,8 +337,6 @@ export function useSocialFloatingModel(options: SocialFloatingModelOptions = {})
     chats,
     setLastActivityTime,
     lastActivityTime,
-    observerRef,
-    observedMessagesRef,
     messages,
     userId,
     markChatRead,
@@ -338,6 +355,7 @@ export function useSocialFloatingModel(options: SocialFloatingModelOptions = {})
     typingUsersByChat,
     setTypingUsersByChat,
     typingTimeoutsRef,
+    presenceByUser,
     setPresenceByUser,
     setContextMenu,
     contextMenu,
@@ -347,6 +365,8 @@ export function useSocialFloatingModel(options: SocialFloatingModelOptions = {})
     setSearchResults,
     searchUsers,
     disableBodyScrollLock: isPageMode,
+    setAutoScrollLocked,
+    setIsWsConnecting,
   });
 
 
@@ -383,8 +403,14 @@ export function useSocialFloatingModel(options: SocialFloatingModelOptions = {})
     setTypingUsersByChat,
     presenceByUser,
     setPresenceByUser,
+    isWsConnecting,
+    setIsWsConnecting,
+    isChatsRefreshing,
+    setIsChatsRefreshing,
     lastActivityTime,
     setLastActivityTime,
+    autoScrollLocked,
+    setAutoScrollLocked,
     replyingTo,
     setReplyingTo,
     editingMessage,
@@ -405,11 +431,10 @@ export function useSocialFloatingModel(options: SocialFloatingModelOptions = {})
     userId,
     messagesEndRef,
     markReadTimeoutRef,
+    markReadTargetRef,
     typingTimeoutsRef,
     typingThrottleRef,
     isFirstLoadRef,
-    observerRef,
-    observedMessagesRef,
     processedMessageIds,
     selectedChatRef,
     userRef,
@@ -452,4 +477,7 @@ export function useSocialFloatingModel(options: SocialFloatingModelOptions = {})
 }
 
 export type SocialFloatingModel = ReturnType<typeof useSocialFloatingModel>;
+
+
+
 

@@ -639,7 +639,11 @@ export function ChatComposer({ model }: ChatComposerProps) {
         </div>
       ) : null}
 
-      <div ref={composerRootRef} className="px-[18px] pb-[10px]">
+      <div
+        ref={composerRootRef}
+        className="px-[18px] pb-[10px]"
+        data-chat-composer-container="true"
+      >
         <div className="relative mx-auto flex w-full max-w-[960px] items-end gap-[10px]">
           {recorder.isRecording && !isRecordingLocked ? (
             <div

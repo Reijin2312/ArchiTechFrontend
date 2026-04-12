@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { CheckCheckIcon, CloseIcon, MenuIcon, PenSquareIcon, SearchIcon } from '../icons';
 import type { SidebarChat } from '../types';
 import { Avatar } from './Avatar';
@@ -16,6 +16,8 @@ export type ChatSidebarContact = {
 type ChatSidebarProps = {
   width: number;
   query: string;
+  searchPlaceholder?: string;
+  searchStatusLabel?: string | null;
   onQueryChange: (value: string) => void;
   chats: SidebarChat[];
   contacts: ChatSidebarContact[];
@@ -166,6 +168,7 @@ function ChatRow({
   onClick: () => void;
 }) {
   if (compact) {
+    const showOnlineDot = item.chatType === 'PRIVATE' && !!item.isOnline;
     return (
       <button
         type="button"
@@ -175,7 +178,13 @@ function ChatRow({
         }`}
         title={item.name}
       >
-        <Avatar size={48} avatarBg={item.avatarBg} avatarText={item.avatarText} avatarUrl={item.avatarUrl} />
+        <Avatar
+          size={48}
+          avatarBg={item.avatarBg}
+          avatarText={item.avatarText}
+          avatarUrl={item.avatarUrl}
+          online={showOnlineDot}
+        />
       </button>
     );
   }
@@ -204,7 +213,13 @@ function ChatRow({
       }`}
       style={item.selected ? { boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06)' } : undefined}
     >
-      <Avatar size={48} avatarBg={item.avatarBg} avatarText={item.avatarText} avatarUrl={item.avatarUrl} />
+      <Avatar
+        size={48}
+        avatarBg={item.avatarBg}
+        avatarText={item.avatarText}
+        avatarUrl={item.avatarUrl}
+        online={item.chatType === 'PRIVATE' && !!item.isOnline}
+      />
 
       <div className="min-w-0 flex-1 pt-[1px]">
         <div className="flex items-center gap-2">
@@ -347,6 +362,8 @@ async function fileToAvatarDataUrl(file: File): Promise<string> {
 export function ChatSidebar({
   width,
   query,
+  searchPlaceholder = 'Search',
+  searchStatusLabel = null,
   onQueryChange,
   chats,
   contacts,
@@ -373,6 +390,7 @@ export function ChatSidebar({
   const [privateSearchResults, setPrivateSearchResults] = useState<ChatSidebarContact[]>([]);
   const [isPrivateSearching, setIsPrivateSearching] = useState(false);
   const [privateSearchError, setPrivateSearchError] = useState<string | null>(null);
+  const [displayedSearchStatus, setDisplayedSearchStatus] = useState('');
 
   const composePanelRef = useRef<HTMLDivElement | null>(null);
   const groupAvatarInputRef = useRef<HTMLInputElement | null>(null);
@@ -408,6 +426,21 @@ export function ChatSidebar({
   }, [composeMenuOpen]);
 
   useEffect(() => {
+    if (searchStatusLabel && searchStatusLabel.trim().length > 0) {
+      setDisplayedSearchStatus(searchStatusLabel);
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setDisplayedSearchStatus('');
+    }, 280);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [searchStatusLabel]);
+
+  useEffect(() => {
     if (isCreatingFlowOpen) {
       setComposeMenuOpen(false);
     }
@@ -425,6 +458,7 @@ export function ChatSidebar({
   };
 
   const canSubmitGroup = groupTitle.trim().length > 0 && !isCreatingGroup;
+  const isSearchStatusVisible = !!searchStatusLabel && query.trim().length === 0;
 
   const filteredGroupContacts = useMemo(() => {
     const normalized = memberQuery.trim().toLowerCase();
@@ -746,13 +780,24 @@ export function ChatSidebar({
         {!isSearchHidden ? (
           <div className="flex h-[42px] flex-1 items-center gap-[10px] rounded-full bg-[#111216] px-[18px] text-white/45 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)]">
             <SearchIcon size={20} strokeWidth={2.4} />
-            <input
-              type="text"
-              value={query}
-              onChange={(event) => onQueryChange(event.target.value)}
-              placeholder="Search"
-              className="w-full bg-transparent text-[17px] font-[450] text-white/90 placeholder:text-white/45 focus:outline-none"
-            />
+            <div className="relative min-w-0 flex-1">
+              <input
+                type="text"
+                value={query}
+                onChange={(event) => onQueryChange(event.target.value)}
+                placeholder={searchPlaceholder}
+                className="w-full bg-transparent text-[17px] font-[450] text-white/90 placeholder:text-white/45 focus:outline-none"
+              />
+              {displayedSearchStatus ? (
+                <span
+                  className={`pointer-events-none absolute inset-y-0 left-0 flex items-center text-[17px] font-[450] text-white/50 transition-opacity duration-300 ${
+                    isSearchStatusVisible ? 'opacity-100' : 'opacity-0'
+                  }`}
+                >
+                  {displayedSearchStatus}
+                </span>
+              ) : null}
+            </div>
           </div>
         ) : (
           <button
@@ -778,14 +823,25 @@ export function ChatSidebar({
         <div className="px-[12px] pb-[8px]">
           <div className="flex h-[38px] items-center gap-2 rounded-full bg-[#111216] px-[12px] text-white/55 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)]">
             <SearchIcon size={17} strokeWidth={2.4} />
-            <input
-              ref={compactSearchInputRef}
-              type="text"
-              value={query}
-              onChange={(event) => onQueryChange(event.target.value)}
-              placeholder="Search"
-              className="w-full bg-transparent text-[14px] text-white/90 placeholder:text-white/42 focus:outline-none"
-            />
+            <div className="relative min-w-0 flex-1">
+              <input
+                ref={compactSearchInputRef}
+                type="text"
+                value={query}
+                onChange={(event) => onQueryChange(event.target.value)}
+                placeholder={searchPlaceholder}
+                className="w-full bg-transparent text-[14px] text-white/90 placeholder:text-white/42 focus:outline-none"
+              />
+              {displayedSearchStatus ? (
+                <span
+                  className={`pointer-events-none absolute inset-y-0 left-0 flex items-center text-[14px] text-white/45 transition-opacity duration-300 ${
+                    isSearchStatusVisible ? 'opacity-100' : 'opacity-0'
+                  }`}
+                >
+                  {displayedSearchStatus}
+                </span>
+              ) : null}
+            </div>
           </div>
         </div>
       ) : null}

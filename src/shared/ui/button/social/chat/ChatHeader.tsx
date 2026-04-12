@@ -1,6 +1,8 @@
+import { useEffect, useState } from 'react';
 import { http } from '@/shared/api/http';
 import { endpoints } from '@/shared/api/endpoints';
 import type { Friend, PrivateChat } from '@/shared/api/types';
+import { formatPresenceStatus } from '@/shared/utils/presenceStatus';
 import type { SocialFloatingModel } from '../useSocialFloatingModel';
 
 type ChatHeaderProps = {
@@ -40,31 +42,70 @@ export function ChatHeader({
   showBackButton,
 }: ChatHeaderProps) {
   const { user, setSelectedChat, setMessages, setChats, typingUsersByChat, presenceByUser } = model;
+  const [typingDots, setTypingDots] = useState(0);
+  const [statusDots, setStatusDots] = useState(0);
+  const [presenceNowMs, setPresenceNowMs] = useState(() => Date.now());
 
   const chatTypingUsers = typingUsersByChat[selectedChat] ?? [];
   const isGroupChat = chat?.chatType === 'GROUP';
   const memberCount =
     chat?.memberCount ?? (Array.isArray(chat?.participantIds) ? chat?.participantIds.length : undefined);
   const isFriendTyping = !!friend && chatTypingUsers.includes(friend.userId);
-  const isFriendOnline = friend ? presenceByUser[friend.userId] : undefined;
+  const friendPresence = friend ? presenceByUser[friend.userId] : undefined;
   const groupTypingCount = chatTypingUsers.filter((id) => id !== user?.id).length;
+  const typingSuffix = '.'.repeat(typingDots);
+  const statusSuffix = '.'.repeat(statusDots);
   const groupStatus =
     groupTypingCount > 0
-      ? `${groupTypingCount} typing...`
+      ? `${groupTypingCount} typing${typingSuffix}`
       : `${memberCount ?? 1} ${(memberCount ?? 1) === 1 ? 'member' : 'members'}`;
   const chatAvatarUrl = isGroupChat ? resolveAvatarUrl(chat?.avatarPath) : friend?.avatarUrl;
+  const isPresencePending = !isGroupChat && !isFriendTyping && !friendPresence?.resolved;
 
   const statusText = isGroupChat
     ? groupStatus
     : isFriendTyping
-      ? 'typing...'
-      : isFriendOnline === undefined
-        ? friend?.username && friend.displayName
-          ? `@${friend.username}`
-          : 'recently active'
-        : isFriendOnline
-          ? 'online'
-          : 'last seen recently';
+      ? `typing${typingSuffix}`
+      : isPresencePending
+        ? `обновление${statusSuffix}`
+        : formatPresenceStatus(friendPresence, presenceNowMs);
+
+  const hasTyping = isGroupChat ? groupTypingCount > 0 : isFriendTyping;
+
+  useEffect(() => {
+    if (!hasTyping) {
+      setTypingDots(0);
+      return;
+    }
+
+    const timerId = window.setInterval(() => {
+      setTypingDots((prev) => (prev + 1) % 4);
+    }, 240);
+
+    return () => {
+      window.clearInterval(timerId);
+    };
+  }, [hasTyping]);
+
+  useEffect(() => {
+    const timerId = window.setInterval(() => {
+      setStatusDots((prev) => (prev + 1) % 4);
+    }, 260);
+
+    return () => {
+      window.clearInterval(timerId);
+    };
+  }, []);
+
+  useEffect(() => {
+    const timerId = window.setInterval(() => {
+      setPresenceNowMs(Date.now());
+    }, 30_000);
+
+    return () => {
+      window.clearInterval(timerId);
+    };
+  }, []);
 
   return (
     <div className="flex-none border-b border-slate-800/80 bg-slate-900/95 px-3 py-2.5 sm:px-4">

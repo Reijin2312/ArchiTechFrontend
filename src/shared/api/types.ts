@@ -134,6 +134,9 @@ export interface ChatMessage {
     | 'files'
     | 'voice'
     | 'circle'
+    | 'group_created'
+    | 'group_title_updated'
+    | 'group_avatar_updated'
   entities?: ChatMessageEntity[]
   imagePath?: string
   imageUrl?: string
@@ -166,6 +169,7 @@ export interface ChatConversation {
   participantId?: string
   title?: string
   avatarPath?: string
+  ownerId?: string
   memberCount?: number
   participantIds?: string[]
   lastMessage?: ChatMessage
@@ -228,6 +232,23 @@ export interface CreateChatResponse {
   participantId?: string
   title?: string
   avatarPath?: string
+  ownerId?: string
+  memberCount?: number
+  participantIds?: string[]
+}
+
+export interface UpdateGroupChatRequest {
+  title?: string
+  avatarPath?: string
+}
+
+export interface UpdateGroupChatResponse {
+  chatId: number
+  chatType: ChatType
+  participantId?: string
+  title?: string
+  avatarPath?: string
+  ownerId?: string
   memberCount?: number
   participantIds?: string[]
 }
@@ -254,6 +275,13 @@ export interface MarkReadRequest {
 export interface ChatPresenceResponse {
   userId: string
   online: boolean
+  lastSeenAt?: string | null
+}
+
+export interface ChatPresenceState {
+  online: boolean
+  lastSeenAt?: string | null
+  resolved?: boolean
 }
 
 export interface PublicKeyRequest {

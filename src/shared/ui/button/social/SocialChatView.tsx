@@ -95,7 +95,9 @@ export function SocialChatView({ model, showBackButton = true }: SocialChatViewP
         <ChatMessages model={model} />
         {isRecordingCircle && <CircleRecordingOverlay stream={recordingCircleStream} />}
       </div>
-      <ChatComposer model={model} />
+      <div data-chat-composer-container="true">
+        <ChatComposer model={model} />
+      </div>
     </div>
   );
 }

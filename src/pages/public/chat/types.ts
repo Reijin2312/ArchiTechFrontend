@@ -5,11 +5,13 @@ export type SidebarChat = {
   chatType: ChatType;
   participantId?: string;
   participantIds?: string[];
+  ownerId?: string;
   memberCount?: number;
   name: string;
   avatarUrl?: string;
   avatarText: string;
   avatarBg: string;
+  isOnline?: boolean;
   preview: string;
   time: string;
   selected: boolean;

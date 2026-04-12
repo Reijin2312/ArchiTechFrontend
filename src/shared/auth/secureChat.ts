@@ -40,6 +40,7 @@ export interface WebSocketEvent {
     | 'friend_accept'
     | 'friend_reject'
     | 'friend_removed'
+    | 'chat_list_changed'
     | 'message_read'
     | 'message_edited'
     | 'message_deleted'
@@ -52,6 +53,7 @@ export interface WebSocketEvent {
   userId?: string
   typing?: boolean
   online?: boolean
+  lastSeenAt?: string
   displayName?: string
   username?: string
   requestId?: number
@@ -421,6 +423,14 @@ export class CloudChatClient {
       return
     }
 
+    if (type === 'chat_list_changed') {
+      this.notifyHandlers({
+        type: 'chat_list_changed',
+        chatId: parsed.chatId as number | undefined,
+      })
+      return
+    }
+
     if (type === 'message_read') {
       this.notifyHandlers({
         type: 'message_read',
@@ -468,10 +478,17 @@ export class CloudChatClient {
     }
 
     if (type === 'presence_changed') {
+      const parsedLastSeenAt =
+        typeof parsed.lastSeenAt === 'string'
+          ? parsed.lastSeenAt
+          : typeof parsed.last_seen_at === 'string'
+            ? parsed.last_seen_at
+            : undefined
       this.notifyHandlers({
         type: 'presence_changed',
         userId: parsed.userId as string | undefined,
         online: !!parsed.online,
+        lastSeenAt: parsedLastSeenAt,
       })
       return
     }
@@ -654,6 +671,20 @@ export class CloudChatClient {
       messageType: message.messageType || 'text',
       replyToId: message.replyToId,
       imagePath: message.imagePath,
+    }
+
+    this.ws.send(JSON.stringify(protocolMessage))
+  }
+
+  async setPresenceState(online: boolean): Promise<void> {
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+      throw new Error('WebSocket not connected')
+    }
+
+    const protocolMessage = {
+      type: 'presence_state',
+      online: !!online,
+      ts: Date.now(),
     }
 
     this.ws.send(JSON.stringify(protocolMessage))

@@ -17,6 +17,8 @@ export type ChatResolvedLink = {
   length: number
 }
 
+const LINK_WRAP_SEPARATOR_PATTERN = /([/?#&=._-])/g
+
 const MAX_ENTITIES = 128
 const AUTOLINK_PATTERN =
   /(?:https?:\/\/)?(?:www\.)?(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}(?::\d{2,5})?(?:\/[^\s<]*)?/gi
@@ -271,21 +273,41 @@ function wrapEntityNode(node: ReactNode, entity: ChatMessageEntity, key: string)
     case 'LINK': {
       const href = entity.url
       if (!href) return <>{node}</>
+      const renderedLinkNode =
+        typeof node === 'string' ? renderLinkTextWithSoftWrap(node, key) : node
       return (
         <a
           key={key}
           href={href}
           target="_blank"
           rel="noopener noreferrer"
-          className="underline decoration-1 underline-offset-2 text-indigo-300 hover:text-indigo-200"
+          className="inline max-w-full whitespace-normal underline decoration-1 underline-offset-2 text-indigo-300 hover:text-indigo-200 break-normal [overflow-wrap:normal]"
         >
-          {node}
+          {renderedLinkNode}
         </a>
       )
     }
     default:
       return node
   }
+}
+
+function renderLinkTextWithSoftWrap(text: string, keyPrefix: string): ReactNode[] {
+  const parts = text.split(LINK_WRAP_SEPARATOR_PATTERN)
+  if (parts.length <= 1) {
+    return [text]
+  }
+
+  return parts.map((part, index) => {
+    if (!part) return null
+    const isSeparator = part.length === 1 && '/?#&=._-'.includes(part)
+    return (
+      <span key={`${keyPrefix}-${index}`}>
+        {part}
+        {isSeparator ? <wbr /> : null}
+      </span>
+    )
+  })
 }
 
 function detectAutoLinkEntities(

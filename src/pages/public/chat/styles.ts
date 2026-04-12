@@ -142,7 +142,7 @@ export const chatPageStyles = `
   .tg-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,.14); border-radius: 999px; }
   .tg-scroll::-webkit-scrollbar-track { background: transparent; }
   .tg-bubble {
-    max-width: 760px;
+    max-width: min(100%, var(--tg-message-bubble-max-width, 760px));
     position: relative;
     padding: 8px 12px 10px 12px;
     border-radius: 18px;
@@ -150,6 +150,8 @@ export const chatPageStyles = `
   }
   .tg-right { border-bottom-right-radius: 8px; }
   .tg-left { border-bottom-left-radius: 8px; }
+  .tg-right.tg-tail-none { border-bottom-right-radius: 18px; }
+  .tg-left.tg-tail-none { border-bottom-left-radius: 18px; }
   .tg-right::after,
   .tg-left::after {
     content: "";
@@ -168,4 +170,5 @@ export const chatPageStyles = `
     background: #222327;
     clip-path: polygon(100% 0, 100% 100%, 0 100%);
   }
+  .tg-tail-none::after { display: none; }
 `;

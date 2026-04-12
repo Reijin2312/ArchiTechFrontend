@@ -1,11 +1,13 @@
-﻿import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { http } from '@/shared/api/http';
 import { endpoints } from '@/shared/api/endpoints';
 import { secureChatClient } from '@/shared/auth/secureChat';
 import { logger } from '@/shared/lib/logger';
+import { useChatReadTracking } from './useChatReadTracking';
 import type { Dispatch, MutableRefObject, SetStateAction } from 'react';
 import type {
   ChatPresenceResponse,
+  ChatPresenceState,
   ChatMessage,
   Friend,
   FriendRequest,
@@ -27,8 +29,7 @@ type SocialFloatingEffectsContext = {
   chats: PrivateChat[];
   setLastActivityTime: Dispatch<SetStateAction<number>>;
   lastActivityTime: number;
-  observerRef: MutableRefObject<IntersectionObserver | null>;
-  observedMessagesRef: MutableRefObject<Set<string>>;
+  setAutoScrollLocked: Dispatch<SetStateAction<boolean>>;
   messages: ChatMessage[];
   userId: string;
   markChatRead: (chatId: number, lastId: number) => Promise<void>;
@@ -47,7 +48,8 @@ type SocialFloatingEffectsContext = {
   typingUsersByChat: Record<number, string[]>;
   setTypingUsersByChat: Dispatch<SetStateAction<Record<number, string[]>>>;
   typingTimeoutsRef: MutableRefObject<Map<string, number>>;
-  setPresenceByUser: Dispatch<SetStateAction<Record<string, boolean>>>;
+  presenceByUser: Record<string, ChatPresenceState>;
+  setPresenceByUser: Dispatch<SetStateAction<Record<string, ChatPresenceState>>>;
   setContextMenu: Dispatch<SetStateAction<{ x: number; y: number; message: ChatMessage } | null>>;
   contextMenu: { x: number; y: number; message: ChatMessage } | null;
   activeTab: string;
@@ -55,6 +57,7 @@ type SocialFloatingEffectsContext = {
   searchQuery: string;
   setSearchResults: Dispatch<SetStateAction<UserSearchResult[]>>;
   searchUsers: () => Promise<void>;
+  setIsWsConnecting: Dispatch<SetStateAction<boolean>>;
   disableBodyScrollLock?: boolean;
 };
 
@@ -72,8 +75,7 @@ export function useSocialFloatingEffects(ctx: SocialFloatingEffectsContext) {
     chats,
     setLastActivityTime,
     lastActivityTime,
-    observerRef,
-    observedMessagesRef,
+    setAutoScrollLocked,
     messages,
     userId,
     markChatRead,
@@ -92,6 +94,7 @@ export function useSocialFloatingEffects(ctx: SocialFloatingEffectsContext) {
     typingUsersByChat,
     setTypingUsersByChat,
     typingTimeoutsRef,
+    presenceByUser,
     setPresenceByUser,
     setContextMenu,
     contextMenu,
@@ -100,8 +103,69 @@ export function useSocialFloatingEffects(ctx: SocialFloatingEffectsContext) {
     searchQuery,
     setSearchResults,
     searchUsers,
+    setIsWsConnecting,
     disableBodyScrollLock,
   } = ctx;
+
+  const AUTO_SCROLL_IDLE_LOCK_MS = 60_000;
+  const PRESENCE_SYNC_INTERVAL_MS = 20_000;
+  const lastSentPresenceGateRef = useRef<boolean | null>(null);
+  const lastPresenceSyncAtRef = useRef(0);
+
+  const parsePresenceTimestamp = (value?: string | null): number | null => {
+    if (!value) return null;
+    const parsed = Date.parse(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  };
+
+  const mergeHttpPresenceState = (
+    previous: ChatPresenceState | undefined,
+    response: ChatPresenceResponse
+  ): ChatPresenceState => {
+    const nextOnline = !!response.online;
+    const incomingLastSeenAt = response.lastSeenAt ?? null;
+
+    if (nextOnline) {
+      return {
+        online: true,
+        lastSeenAt: previous?.lastSeenAt ?? incomingLastSeenAt ?? null,
+        resolved: true,
+      };
+    }
+
+    if (!previous?.resolved || previous?.online) {
+      return {
+        online: false,
+        lastSeenAt: incomingLastSeenAt ?? previous?.lastSeenAt ?? null,
+        resolved: true,
+      };
+    }
+
+    const previousTs = parsePresenceTimestamp(previous.lastSeenAt ?? null);
+    const incomingTs = parsePresenceTimestamp(incomingLastSeenAt);
+
+    if (previousTs == null) {
+      return {
+        online: false,
+        lastSeenAt: incomingLastSeenAt ?? null,
+        resolved: true,
+      };
+    }
+
+    if (incomingTs != null && incomingTs <= previousTs) {
+      return {
+        online: false,
+        lastSeenAt: incomingLastSeenAt,
+        resolved: true,
+      };
+    }
+
+    return {
+      online: false,
+      lastSeenAt: previous.lastSeenAt ?? incomingLastSeenAt ?? null,
+      resolved: true,
+    };
+  };
 
   useEffect(() => {
     selectedChatRef.current = selectedChat;
@@ -114,6 +178,140 @@ export function useSocialFloatingEffects(ctx: SocialFloatingEffectsContext) {
   useEffect(() => {
     isOpenRef.current = isOpen;
   }, [isOpen]);
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState !== 'visible') {
+        setAutoScrollLocked(true);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [setAutoScrollLocked]);
+
+  useEffect(() => {
+    if (!user || !isOpen || activeTab !== 'chat' || !selectedChat) {
+      return;
+    }
+
+    const elapsed = Date.now() - lastActivityTime;
+    if (elapsed >= AUTO_SCROLL_IDLE_LOCK_MS) {
+      setAutoScrollLocked(true);
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setAutoScrollLocked(true);
+    }, AUTO_SCROLL_IDLE_LOCK_MS - elapsed + 40);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [user, isOpen, activeTab, selectedChat, lastActivityTime, setAutoScrollLocked]);
+
+  useEffect(() => {
+    if (!user || !isOpen || activeTab !== 'chat' || !selectedChat) {
+      return;
+    }
+
+    const unlockAutoScroll = (event: Event) => {
+      const target = event.target;
+      if (!(target instanceof Element)) {
+        return;
+      }
+
+      const inChatScrollContainer = target.closest('[data-chat-scroll-container="true"]');
+      if (!inChatScrollContainer) {
+        return;
+      }
+
+      setAutoScrollLocked(false);
+    };
+
+    document.addEventListener('wheel', unlockAutoScroll, { capture: true, passive: true });
+    document.addEventListener('touchmove', unlockAutoScroll, { capture: true, passive: true });
+
+    return () => {
+      document.removeEventListener('wheel', unlockAutoScroll, true);
+      document.removeEventListener('touchmove', unlockAutoScroll, true);
+    };
+  }, [user, isOpen, activeTab, selectedChat, setAutoScrollLocked]);
+
+  useEffect(() => {
+    if (!user) {
+      lastSentPresenceGateRef.current = null;
+      lastPresenceSyncAtRef.current = 0;
+      return;
+    }
+
+    const resolvePresenceGateOpen = () => {
+      if (!selectedChatRef.current) {
+        return false;
+      }
+      if (!isOpenRef.current) {
+        return false;
+      }
+      if (activeTab !== 'chat') {
+        return false;
+      }
+      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') {
+        return false;
+      }
+      const idleMs = Date.now() - lastActivityTime;
+      return idleMs <= AUTO_SCROLL_IDLE_LOCK_MS;
+    };
+
+    const syncPresenceGate = async (force = false) => {
+      const shouldBeOnline = resolvePresenceGateOpen();
+      const now = Date.now();
+      const shouldResync = now - lastPresenceSyncAtRef.current >= PRESENCE_SYNC_INTERVAL_MS;
+      if (!force && !shouldResync && lastSentPresenceGateRef.current === shouldBeOnline) {
+        return;
+      }
+
+      try {
+        await secureChatClient.setPresenceState(shouldBeOnline);
+        lastSentPresenceGateRef.current = shouldBeOnline;
+        lastPresenceSyncAtRef.current = now;
+      } catch {
+        // ignore transient WS state and retry on next tick
+      }
+    };
+
+    void syncPresenceGate(true);
+    const intervalId = window.setInterval(() => {
+      void syncPresenceGate(false);
+    }, 1_000);
+
+    const handleVisibilityOrFocus = () => {
+      void syncPresenceGate(true);
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityOrFocus);
+    window.addEventListener('focus', handleVisibilityOrFocus);
+
+    return () => {
+      window.clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', handleVisibilityOrFocus);
+      window.removeEventListener('focus', handleVisibilityOrFocus);
+    };
+  }, [user, activeTab, isOpen, selectedChat, lastActivityTime]);
+
+  useChatReadTracking({
+    selectedChatRef,
+    selectedChat,
+    userRef,
+    user,
+    isOpenRef,
+    activeTab,
+    messages,
+    lastActivityTime,
+    setLastActivityTime,
+    markChatRead,
+  });
 
   useEffect(() => {
     if (!isOpen || disableBodyScrollLock) return;
@@ -147,105 +345,35 @@ export function useSocialFloatingEffects(ctx: SocialFloatingEffectsContext) {
   }, [chats]);
 
   useEffect(() => {
-    if (!user) return;
-    
-    logger.chat('СЂСџвЂќРЉ', 'Connecting WebSocket for user:', userId);
-    secureChatClient.connect().catch(err => console.error('Failed to connect:', err));
-    
-    return () => {
-      logger.chat('СЂСџвЂќРЉ', 'Disconnecting WebSocket');
-      secureChatClient.disconnect();
-      logger.chat('рџ—‘пёЏ', 'WebSocket disconnected');
-    };
-  }, [user]);
-
-  useEffect(() => {
-    if (!user) return;
-
-    const handleVisibilityChange = async () => {
-      if (document.visibilityState === 'visible') {
-        logger.chat('рџ‘ЃпёЏ', 'Tab became visible');
-        logger.chat('вњ…', 'Ready to receive messages from server');
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, [user, selectedChat, isOpen]);
-
-  useEffect(() => {
-    const updateActivity = () => setLastActivityTime(Date.now());
-    
-    window.addEventListener('mousemove', updateActivity);
-    window.addEventListener('keydown', updateActivity);
-    window.addEventListener('click', updateActivity);
-    window.addEventListener('scroll', updateActivity);
-    
-    return () => {
-      window.removeEventListener('mousemove', updateActivity);
-      window.removeEventListener('keydown', updateActivity);
-      window.removeEventListener('click', updateActivity);
-      window.removeEventListener('scroll', updateActivity);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!selectedChat || !user) return;
-
-    const inactiveTime = Date.now() - lastActivityTime;
-    if (inactiveTime > 300000) {
-      console.log('вљ пёЏ User inactive, observer paused');
+    if (!user) {
+      setIsWsConnecting(false);
       return;
     }
 
-    if (!observerRef.current) {
-      observerRef.current = new IntersectionObserver(
-        (entries) => {
-          entries.forEach((entry) => {
-            if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
-              const messageEl = entry.target as HTMLElement;
-              const messageId = messageEl.dataset.messageId;
-              const senderId = messageEl.dataset.senderId;
-              
-              if (messageId && senderId && senderId !== userId && selectedChatRef.current) {
-                console.log('рџ‘Ђ Message', messageId, 'is visible, marking as read');
-                markChatRead(selectedChatRef.current, parseInt(messageId)).catch(() => {});
-              }
-            }
-          });
-        },
-        {
-          root: null,
-          rootMargin: '0px',
-          threshold: 0.5
-        }
-      );
-    }
+    let cancelled = false;
+    setIsWsConnecting(true);
 
-    const messageElements = document.querySelectorAll('.message-item');
-    messageElements.forEach(el => {
-      const htmlEl = el as HTMLElement;
-      const messageId = htmlEl.dataset.messageId;
-      if (messageId && !observedMessagesRef.current.has(messageId)) {
-        observerRef.current?.observe(el);
-        observedMessagesRef.current.add(messageId);
-      }
-    });
+    logger.chat('[chat_ws]', 'Connecting WebSocket for user:', userId);
+    secureChatClient
+      .connect()
+      .catch((err) => console.error('Failed to connect:', err))
+      .finally(() => {
+        if (!cancelled) {
+          setIsWsConnecting(false);
+        }
+      });
 
     return () => {
-      if (selectedChatRef.current !== selectedChat) {
-        observerRef.current?.disconnect();
-        observerRef.current = null;
-        observedMessagesRef.current.clear();
-      }
+      cancelled = true;
+      setIsWsConnecting(false);
+      logger.chat('[chat_ws]', 'Disconnecting WebSocket');
+      secureChatClient.disconnect();
+      logger.chat('[chat_ws]', 'WebSocket disconnected');
     };
-  }, [selectedChat, user, messages.length, lastActivityTime]); // в†ђ Р—Р°РІРёСЃРёС‚ РѕС‚ С‡Р°С‚Р°, СЋР·РµСЂР°, РЅРѕРІС‹С… СЃРѕРѕР±С‰РµРЅРёР№ Рё Р°РєС‚РёРІРЅРѕСЃС‚Рё
+  }, [user, userId, setIsWsConnecting]);
 
   useEffect(() => {
-    logger.chat('СЂСџвЂќРЉ', 'Setting up WebSocket subscription (ONCE on mount)');
+    logger.chat('РЎР‚РЎСџРІР‚СњР Р‰', 'Setting up WebSocket subscription (ONCE on mount)');
 
     const unsubscribe = secureChatClient.onMessage(async (wsMessage) => {
       const currentUser = userRef.current;
@@ -330,6 +458,12 @@ export function useSocialFloatingEffects(ctx: SocialFloatingEffectsContext) {
         return;
       }
 
+      if (wsMessage.type === 'chat_list_changed') {
+        logger.chat('[chat_list_changed]', 'Refreshing chat list for chat:', wsMessage.chatId);
+        loadChats();
+        return;
+      }
+
       if (wsMessage.type === 'typing_state' && wsMessage.chatId && wsMessage.userId) {
         if (wsMessage.userId === currentUser.id) {
           return;
@@ -383,12 +517,25 @@ export function useSocialFloatingEffects(ctx: SocialFloatingEffectsContext) {
       }
 
       if (wsMessage.type === 'presence_changed' && wsMessage.userId) {
-        setPresenceByUser((prev) => ({ ...prev, [wsMessage.userId!]: !!wsMessage.online }));
+        setPresenceByUser((prev) => {
+          const previous = prev[wsMessage.userId!];
+          const nextLastSeenAt = wsMessage.online
+            ? previous?.lastSeenAt ?? null
+            : wsMessage.lastSeenAt ?? previous?.lastSeenAt ?? null;
+          return {
+            ...prev,
+            [wsMessage.userId!]: {
+              online: !!wsMessage.online,
+              lastSeenAt: nextLastSeenAt,
+              resolved: true,
+            },
+          };
+        });
         return;
       }
 
       if (wsMessage.type === 'message_read' && wsMessage.chatId && wsMessage.lastReadMessageId) {
-        console.log('вњ… Received message_read event for chat', wsMessage.chatId, 'up to message', wsMessage.lastReadMessageId);
+        console.log('РІСљвЂ¦ Received message_read event for chat', wsMessage.chatId, 'up to message', wsMessage.lastReadMessageId);
         setChats(prev => prev.map(c => {
           if (c.chatId !== wsMessage.chatId || !c.lastMessage) return c;
           if (c.lastMessage.senderId !== currentUser.id) return c;
@@ -406,7 +553,7 @@ export function useSocialFloatingEffects(ctx: SocialFloatingEffectsContext) {
       }
 
       if (wsMessage.type === 'message_edited' && wsMessage.chatId && wsMessage.messageId) {
-        console.log('вњЏпёЏ Received message_edited event for chat', wsMessage.chatId, 'message', wsMessage.messageId);
+        console.log('РІСљРЏРїС‘РЏ Received message_edited event for chat', wsMessage.chatId, 'message', wsMessage.messageId);
         
         loadChats();
 
@@ -430,7 +577,7 @@ export function useSocialFloatingEffects(ctx: SocialFloatingEffectsContext) {
       }
 
       if (wsMessage.type === 'message_deleted' && wsMessage.chatId && wsMessage.messageId) {
-        console.log('рџ—‘пёЏ Received message_deleted event for chat', wsMessage.chatId, 'message', wsMessage.messageId);
+        console.log('СЂСџвЂ”вЂРїС‘РЏ Received message_deleted event for chat', wsMessage.chatId, 'message', wsMessage.messageId);
         if (selectedChatRef.current === wsMessage.chatId) {
           setMessages(prev => prev.filter(m => m.messageId !== wsMessage.messageId));
         }
@@ -515,7 +662,7 @@ export function useSocialFloatingEffects(ctx: SocialFloatingEffectsContext) {
         return images.find((img: any) => !!img?.imageUrl)?.imageUrl;
       };
 
-      logger.chat('рџ“Ё', 'WebSocket message received:', wsMessage);
+      logger.chat('СЂСџвЂњРЃ', 'WebSocket message received:', wsMessage);
 
       if (
         (
@@ -529,9 +676,9 @@ export function useSocialFloatingEffects(ctx: SocialFloatingEffectsContext) {
         (msg.imageUrl || (msg.images && msg.images.length)) &&
         processedMessageIds.current.has(msg.messageId)
       ) {
-        console.log('рџ”„ Updating existing image message with imageUrl:', msg.messageId);
+        console.log('СЂСџвЂќвЂћ Updating existing image message with imageUrl:', msg.messageId);
         
-        // РћР±РЅРѕРІР»СЏРµРј РІ СЃРїРёСЃРєРµ С‡Р°С‚РѕРІ
+        // Р С›Р В±Р Р…Р С•Р Р†Р В»РЎРЏР ВµР С Р Р† РЎРѓР С—Р С‘РЎРѓР С”Р Вµ РЎвЂЎР В°РЎвЂљР С•Р Р†
         setChats(prev => prev.map(c => {
           if (c.chatId !== msg.chatId || !c.lastMessage || c.lastMessage.messageId !== msg.messageId) return c;
           const mergedImages = mergeMediaImages(msg.images, c.lastMessage.images as any[] | undefined);
@@ -545,7 +692,7 @@ export function useSocialFloatingEffects(ctx: SocialFloatingEffectsContext) {
           };
         }));
         
-        // РћР±РЅРѕРІР»СЏРµРј РІ СЃРїРёСЃРєРµ СЃРѕРѕР±С‰РµРЅРёР№
+        // Р С›Р В±Р Р…Р С•Р Р†Р В»РЎРЏР ВµР С Р Р† РЎРѓР С—Р С‘РЎРѓР С”Р Вµ РЎРѓР С•Р С•Р В±РЎвЂ°Р ВµР Р…Р С‘Р в„–
         if (currentChatId === msg.chatId) {
           setMessages(prev =>
             prev.map(m => {
@@ -564,7 +711,7 @@ export function useSocialFloatingEffects(ctx: SocialFloatingEffectsContext) {
       }
 
       if (processedMessageIds.current.has(msg.messageId)) {
-        logger.chat('вљ пёЏ', 'Message already processed, skipping:', msg.messageId);
+        logger.chat('РІС™В РїС‘РЏ', 'Message already processed, skipping:', msg.messageId);
         return;
       }
       processedMessageIds.current.add(msg.messageId);
@@ -731,7 +878,7 @@ export function useSocialFloatingEffects(ctx: SocialFloatingEffectsContext) {
             }
           }
 
-          // Р•СЃР»Рё СЌС‚Рѕ РЅРѕРІРѕРµ СЃРѕРѕР±С‰РµРЅРёРµ (РЅРµ РѕС‚ РЅР°СЃ РёР»Рё РЅРµС‚ РІСЂРµРјРµРЅРЅРѕРіРѕ), РґРѕР±Р°РІР»СЏРµРј
+          // Р вЂўРЎРѓР В»Р С‘ РЎРЊРЎвЂљР С• Р Р…Р С•Р Р†Р С•Р Вµ РЎРѓР С•Р С•Р В±РЎвЂ°Р ВµР Р…Р С‘Р Вµ (Р Р…Р Вµ Р С•РЎвЂљ Р Р…Р В°РЎРѓ Р С‘Р В»Р С‘ Р Р…Р ВµРЎвЂљ Р Р†РЎР‚Р ВµР СР ВµР Р…Р Р…Р С•Р С–Р С•), Р Т‘Р С•Р В±Р В°Р Р†Р В»РЎРЏР ВµР С
           let replyToMessage = msg.replyToMessage as ChatMessage | undefined;
           if (!replyToMessage && msg.replyToId) {
             replyToMessage = prev.find(m => m.messageId === msg.replyToId);
@@ -749,26 +896,18 @@ export function useSocialFloatingEffects(ctx: SocialFloatingEffectsContext) {
             imageUrl: resolvePrimaryImageUrl(msg.imageUrl, msg.images),
             images: msg.images,
             createdAt: msg.createdAt,
-            isRead: msg.isRead, // вЃпёЏ Р”РѕРІРµСЂСЏРµРј СЃРµСЂРІРµСЂСѓ - РѕРЅ Р·РЅР°РµС‚ РїСЂР°РІРёР»СЊРЅС‹Р№ СЃС‚Р°С‚СѓСЃ
+            isRead: msg.isRead, // РІВРѓРїС‘РЏ Р вЂќР С•Р Р†Р ВµРЎР‚РЎРЏР ВµР С РЎРѓР ВµРЎР‚Р Р†Р ВµРЎР‚РЎС“ - Р С•Р Р… Р В·Р Р…Р В°Р ВµРЎвЂљ Р С—РЎР‚Р В°Р Р†Р С‘Р В»РЎРЉР Р…РЎвЂ№Р в„– РЎРѓРЎвЂљР В°РЎвЂљРЎС“РЎРѓ
             replyToId: msg.replyToId,
             replyToMessage,
           } as ChatMessage];
         });
        
-        if (
-          msg.senderId !== currentUser.id &&
-          isOpenRef.current &&
-          currentChatId === msg.chatId &&
-          document.visibilityState === 'visible'
-        ) {
-          markChatRead(msg.chatId, msg.messageId).catch(() => {});
-        }
       }
 
     });
 
     return () => {
-      logger.chat('рџ”Њ', 'Unsubscribing from WebSocket');
+      logger.chat('СЂСџвЂќРЉ', 'Unsubscribing from WebSocket');
       unsubscribe();
     };
   }, []);
@@ -777,7 +916,7 @@ export function useSocialFloatingEffects(ctx: SocialFloatingEffectsContext) {
     if (!user) return;
     loadIncomingRequests();
     loadOutgoingRequests();
-    logger.chat('СЂСџвЂњР‰', 'Loading initial friend requests for badge counts');
+    logger.chat('РЎР‚РЎСџРІР‚СљР вЂ°', 'Loading initial friend requests for badge counts');
   }, [user]);
 
   useEffect(() => {
@@ -805,26 +944,117 @@ export function useSocialFloatingEffects(ctx: SocialFloatingEffectsContext) {
   useEffect(() => {
     if (!selectedChat || !user) return;
     const chat = chats.find((item) => item.chatId === selectedChat);
-    if (!chat || chat.chatType !== 'PRIVATE') return;
-    const participantId = chat.participantId;
-    if (!participantId) return;
+    if (!chat || chat.chatType !== 'GROUP') return;
+
+    const participantIds = chat.participantIds ?? [];
+    const uniqueParticipantIds = Array.from(
+      new Set(
+        participantIds.filter(
+          (id): id is string => !!id && id !== userId
+        )
+      )
+    );
+    const unresolvedParticipantIds = uniqueParticipantIds.filter(
+      (id) => !presenceByUser[id]?.resolved
+    );
+    if (unresolvedParticipantIds.length === 0) return;
 
     let cancelled = false;
     (async () => {
-      try {
-        const { data } = await http.get<ChatPresenceResponse>(endpoints.chatPresence(participantId));
-        if (!cancelled) {
-          setPresenceByUser((prev) => ({ ...prev, [participantId]: !!data.online }));
+      const loadedStates = await Promise.all(
+        unresolvedParticipantIds.map(async (targetUserId) => {
+          try {
+            const { data } = await http.get<ChatPresenceResponse>(endpoints.chatPresence(targetUserId));
+            return { targetUserId, data };
+          } catch (err) {
+            logger.warn('Failed to load chat presence', { targetUserId, err });
+            return null;
+          }
+        })
+      );
+
+      if (cancelled) return;
+
+        setPresenceByUser((prev) => {
+          let changed = false;
+          const next = { ...prev };
+
+          for (const loadedState of loadedStates) {
+            if (!loadedState) continue;
+            const { targetUserId, data } = loadedState;
+            const previous = prev[targetUserId];
+            const nextState = mergeHttpPresenceState(previous, data);
+
+            if (
+              previous?.online !== nextState.online
+              || (previous?.lastSeenAt ?? null) !== (nextState.lastSeenAt ?? null)
+              || previous?.resolved !== true
+          ) {
+            next[targetUserId] = nextState;
+            changed = true;
+          }
         }
-      } catch (err) {
-        logger.warn('Failed to load chat presence', err);
-      }
+
+        return changed ? next : prev;
+      });
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [selectedChat, user, chats]);
+  }, [selectedChat, user, userId, chats, presenceByUser, setPresenceByUser]);
+
+  useEffect(() => {
+    if (!selectedChat || !user || !isOpen || activeTab !== 'chat') return;
+    const chat = chats.find((item) => item.chatId === selectedChat);
+    if (!chat || chat.chatType !== 'PRIVATE') return;
+    const participantId = chat.participantId;
+    if (!participantId || participantId === userId) return;
+
+    let cancelled = false;
+
+    const refreshPresence = async () => {
+      try {
+        const { data } = await http.get<ChatPresenceResponse>(endpoints.chatPresence(participantId));
+        if (cancelled) return;
+
+        setPresenceByUser((prev) => {
+          const previous = prev[participantId];
+          const nextState = mergeHttpPresenceState(previous, data);
+
+          if (
+            previous?.online === nextState.online
+            && (previous?.lastSeenAt ?? null) === (nextState.lastSeenAt ?? null)
+            && previous?.resolved === true
+          ) {
+            return prev;
+          }
+
+          return { ...prev, [participantId]: nextState };
+        });
+      } catch (err) {
+        logger.warn('Failed to refresh private chat presence', { participantId, err });
+      }
+    };
+
+    void refreshPresence();
+    const intervalId = window.setInterval(() => {
+      void refreshPresence();
+    }, 20_000);
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        void refreshPresence();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [selectedChat, user, userId, chats, isOpen, activeTab, setPresenceByUser]);
 
   useEffect(() => {
     if (!selectedChat || !isOpen || activeTab !== 'chat') return;
@@ -852,4 +1082,6 @@ export function useSocialFloatingEffects(ctx: SocialFloatingEffectsContext) {
   }, []);
 
 }
+
+
 

@@ -22,8 +22,8 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
     attachedImages,
     editingMessage,
     replyingTo,
-    lastActivityTime,
     markReadTimeoutRef,
+    markReadTargetRef,
     sendInFlightRef,
     sendCooldownUntilRef,
     lastProtocolSeqRef,
@@ -40,6 +40,8 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
     setAttachedImages,
     setEditingMessage,
     setUploadingImages,
+    setAutoScrollLocked,
+    setIsChatsRefreshing,
     scrollToBottom,
   } = ctx;
 
@@ -170,33 +172,97 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
   };
 
   const markChatRead = async (chatId: number, lastId: number) => {
-    const inactiveTime = Date.now() - lastActivityTime;
-    if (inactiveTime > 300000) {
-      console.log('⚠️ User inactive, not marking as read');
+    if (chatId <= 0 || !Number.isFinite(lastId) || lastId <= 0) {
       return;
     }
-    
+
+    const pending = markReadTargetRef.current;
+    if (
+      pending
+      && pending.chatId === chatId
+      && lastId <= pending.lastId
+      && markReadTimeoutRef.current
+    ) {
+      return;
+    }
+
+    if (!pending || pending.chatId !== chatId || lastId > pending.lastId) {
+      markReadTargetRef.current = { chatId, lastId };
+    }
+
     if (markReadTimeoutRef.current) {
       clearTimeout(markReadTimeoutRef.current);
     }
-    
+
     markReadTimeoutRef.current = setTimeout(async () => {
+      const target = markReadTargetRef.current;
+      markReadTargetRef.current = null;
+      markReadTimeoutRef.current = null;
+
+      if (!target) {
+        return;
+      }
+
       try {
-        console.log('✅ Marking message', lastId, 'in chat', chatId, 'as read');
-        await http.post(endpoints.chatRead, { chatId, lastReadMessageId: lastId });
-        
-        setMessages(prev => prev.map(m => 
-          typeof m.messageId === 'number' && m.messageId <= lastId && m.senderId !== user?.id
+        await http.post(endpoints.chatRead, {
+          chatId: target.chatId,
+          lastReadMessageId: target.lastId,
+        });
+
+        setMessages(prev => prev.map(m =>
+          typeof m.messageId === 'number' && m.messageId <= target.lastId && m.senderId !== user?.id
             ? { ...m, isRead: true }
             : m
         ));
       } catch (err) {
         logger.warn('Failed to mark chat read', err);
       }
-    }, 500);
+    }, 220);
   };
 
+  const toMessageDomId = (messageId: number | string) =>
+    `chat-message-${String(messageId).replace(/[^a-zA-Z0-9_-]/g, '_')}`;
+
+  const resolveMessageElement = (messageId: number): HTMLElement | null => {
+    if (typeof document === 'undefined') {
+      return null;
+    }
+
+    const byData = document.querySelector<HTMLElement>(`.message-item[data-message-id="${messageId}"]`);
+    if (byData) {
+      return byData;
+    }
+
+    return document.getElementById(toMessageDomId(messageId));
+  };
+
+  const resolveMessageScrollContainer = (): HTMLElement | null => {
+    const end = messagesEndRef.current;
+    if (!end || typeof window === 'undefined') {
+      return null;
+    }
+
+    const tgScroll = end.closest('.tg-scroll');
+    if (tgScroll instanceof HTMLElement) {
+      return tgScroll;
+    }
+
+    let current: HTMLElement | null = end.parentElement;
+    while (current) {
+      const style = window.getComputedStyle(current);
+      const scrollableY = style.overflowY === 'auto' || style.overflowY === 'scroll';
+      if (scrollableY && current.scrollHeight > current.clientHeight + 2) {
+        return current;
+      }
+      current = current.parentElement;
+    }
+
+    return null;
+  };
+
+
   const loadChats = async () => {
+    setIsChatsRefreshing(true);
     try {
       const { data } = await http.get<ChatListResponse>(endpoints.chatList);
       
@@ -218,37 +284,125 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
       setChats(chatsWithDecrypted);
     } catch (err) {
       console.error('Failed to load chats:', err);
+    } finally {
+      setIsChatsRefreshing(false);
     }
   };
 
   const loadMessages = async (chatId: number, append = false) => {
     try {
       const { data } = await http.get<ChatMessagesResponse>(endpoints.chatMessages(chatId));
-      
+
       const messagesWithContent = data.messages;
-      
+
       if (!append) {
         setMessages(messagesWithContent);
       } else {
         setMessages(prev => [...prev, ...messagesWithContent]);
       }
-    
+
+      const unreadIncomingMessageIds = !append
+        ? messagesWithContent.reduce<number[]>((acc, message) => {
+            if (
+              message.senderId === user?.id
+              || message.isRead
+              || typeof message.messageId !== 'number'
+            ) {
+              return acc;
+            }
+
+            acc.push(message.messageId);
+            return acc;
+          }, [])
+        : [];
+
+      const sortedUnreadIncomingMessageIds = unreadIncomingMessageIds.length > 0
+        ? [...unreadIncomingMessageIds].sort((a, b) => a - b)
+        : [];
+      const firstUnreadIncomingMessageId = sortedUnreadIncomingMessageIds.length > 0
+        ? sortedUnreadIncomingMessageIds[0]
+        : 0;
+      const lastUnreadIncomingMessageId = sortedUnreadIncomingMessageIds.length > 0
+        ? sortedUnreadIncomingMessageIds[sortedUnreadIncomingMessageIds.length - 1]
+        : 0;
+
       if (!append) {
         isFirstLoadRef.current = true;
         setTimeout(() => {
-          console.log('🔄 Attempting scroll to bottom, ref exists:', !!messagesEndRef.current);
-          if (messagesEndRef.current) {
-            messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
-            console.log('✅ Scrolled to bottom');
-          } else {
-            console.warn('⚠️ messagesEndRef is null, retrying...');
-            setTimeout(() => {
-              if (messagesEndRef.current) {
-                messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
-                console.log('✅ Scrolled to bottom (retry)');
-              }
-            }, 100);
+          const scrollContainer = resolveMessageScrollContainer();
+          const firstUnreadElement = firstUnreadIncomingMessageId > 0
+            ? resolveMessageElement(firstUnreadIncomingMessageId)
+            : null;
+          const lastUnreadElement = lastUnreadIncomingMessageId > 0
+            ? resolveMessageElement(lastUnreadIncomingMessageId)
+            : null;
+
+          const epsilon = 2;
+          let shouldPinFirstUnreadToTop = false;
+          if (firstUnreadElement && lastUnreadElement && scrollContainer) {
+            const firstRect = firstUnreadElement.getBoundingClientRect();
+            const lastRect = lastUnreadElement.getBoundingClientRect();
+            const unreadChunkHeight = Math.max(0, lastRect.bottom - firstRect.top);
+            shouldPinFirstUnreadToTop = unreadChunkHeight > scrollContainer.clientHeight + epsilon;
           }
+
+          if (
+            firstUnreadIncomingMessageId > 0
+            && shouldPinFirstUnreadToTop
+            && firstUnreadElement
+          ) {
+            if (scrollContainer) {
+              const messageRect = firstUnreadElement.getBoundingClientRect();
+              const containerRect = scrollContainer.getBoundingClientRect();
+              scrollContainer.scrollTop += messageRect.top - containerRect.top;
+            } else {
+              firstUnreadElement.scrollIntoView({ behavior: 'auto', block: 'start' });
+            }
+          } else if (messagesEndRef.current) {
+            messagesEndRef.current.scrollIntoView({ behavior: 'auto' });
+          }
+
+          const tryMarkReadOnOpen = () => {
+            if (sortedUnreadIncomingMessageIds.length === 0) {
+              return;
+            }
+
+            const scrollContainer = resolveMessageScrollContainer();
+            if (!scrollContainer) {
+              return;
+            }
+
+            const containerRect = scrollContainer.getBoundingClientRect();
+            const epsilon = 2;
+            let lastVisibleUnreadIncomingMessageId = 0;
+
+            for (const messageId of sortedUnreadIncomingMessageIds) {
+              const element = resolveMessageElement(messageId);
+              if (!element) {
+                continue;
+              }
+
+              const rect = element.getBoundingClientRect();
+              const visibleTop = Math.max(rect.top, containerRect.top + epsilon);
+              const visibleBottom = Math.min(rect.bottom, containerRect.bottom - epsilon);
+              const visibleHeight = Math.max(0, visibleBottom - visibleTop);
+              if (visibleHeight < 1) {
+                continue;
+              }
+
+              if (messageId > lastVisibleUnreadIncomingMessageId) {
+                lastVisibleUnreadIncomingMessageId = messageId;
+              }
+            }
+
+            if (lastVisibleUnreadIncomingMessageId > 0) {
+              void markChatRead(chatId, lastVisibleUnreadIncomingMessageId);
+            }
+          };
+
+          tryMarkReadOnOpen();
+          setTimeout(tryMarkReadOnOpen, 140);
+
           isFirstLoadRef.current = false;
         }, 100);
       }
@@ -256,8 +410,8 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
       console.error('Failed to load messages:', err);
     }
   };
-    
-    const findPrivateChatByParticipant = (participantId: string) =>
+
+  const findPrivateChatByParticipant = (participantId: string) =>
     chats.find((chat) => chat.chatType === 'PRIVATE' && chat.participantId === participantId);
 
   const openChatWith = async (participantId: string) => {
@@ -405,7 +559,7 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
     } catch (e) {
       console.error('Failed to send message', e);
       setMessages((prev) => prev.filter((m) => m.localId !== localId && m.messageId !== localId));
-      alert(e instanceof Error ? e.message : '������ �������� ���������');
+      alert(e instanceof Error ? e.message : 'Ошибка отправки сообщения');
     }
   };
 
@@ -469,6 +623,10 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
       return;
     }
 
+    if (selectedChat) {
+      setAutoScrollLocked(false);
+    }
+
     sendInFlightRef.current = true;
     sendCooldownUntilRef.current = now + 700;
 
@@ -498,7 +656,7 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
     }
   };
 
-  // 🖼️ Отправка сообщений с прикрепленными изображениями
+  // рџ–јпёЏ РћС‚РїСЂР°РІРєР° СЃРѕРѕР±С‰РµРЅРёР№ СЃ РїСЂРёРєСЂРµРїР»РµРЅРЅС‹РјРё РёР·РѕР±СЂР°Р¶РµРЅРёСЏРјРё
   const sendMessagesWithImages = async (chatId: number, textContent: string) => {
     const attachmentsToSend = attachedImages.slice(0, MAX_ATTACHMENTS);
     if (attachmentsToSend.length === 0) return;
@@ -709,7 +867,7 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
         });
         return next;
       });
-      alert(e instanceof Error ? e.message : 'Ошибка отправки сообщения');
+      alert(e instanceof Error ? e.message : 'РћС€РёР±РєР° РѕС‚РїСЂР°РІРєРё СЃРѕРѕР±С‰РµРЅРёСЏ');
     }
   };
 
@@ -751,7 +909,7 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
     }
   };
 
-  // 🖼️ Удаление прикрепленного изображения
+  // рџ–јпёЏ РЈРґР°Р»РµРЅРёРµ РїСЂРёРєСЂРµРїР»РµРЅРЅРѕРіРѕ РёР·РѕР±СЂР°Р¶РµРЅРёСЏ
   const removeAttachedImage = (id: string) => {
     setAttachedImages(prev => prev.filter(img => img.id !== id));
   };
@@ -778,14 +936,14 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
       ));
     } catch (e) {
       console.error('Failed to edit message', e);
-      alert(e instanceof Error ? e.message : 'Ошибка редактирования сообщения');
+      alert(e instanceof Error ? e.message : 'РћС€РёР±РєР° СЂРµРґР°РєС‚РёСЂРѕРІР°РЅРёСЏ СЃРѕРѕР±С‰РµРЅРёСЏ');
     }
   };
 
   const deleteMessage = async (messageId: number | string) => {
     if (!selectedChat || typeof messageId === 'string') return;
     
-    if (!confirm('Удалить сообщение?')) return;
+    if (!confirm('РЈРґР°Р»РёС‚СЊ СЃРѕРѕР±С‰РµРЅРёРµ?')) return;
     
     try {
       await http.delete(endpoints.chatMessageDelete(messageId));
@@ -803,7 +961,7 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
       }
     } catch (e) {
       console.error('Failed to delete message', e);
-      alert(e instanceof Error ? e.message : 'Ошибка удаления сообщения');
+      alert(e instanceof Error ? e.message : 'РћС€РёР±РєР° СѓРґР°Р»РµРЅРёСЏ СЃРѕРѕР±С‰РµРЅРёСЏ');
     }
   };
 
@@ -837,7 +995,7 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
         : undefined;
     
     try {
-      // Создаем временное сообщение с индикатором загрузки
+      // РЎРѕР·РґР°РµРј РІСЂРµРјРµРЅРЅРѕРµ СЃРѕРѕР±С‰РµРЅРёРµ СЃ РёРЅРґРёРєР°С‚РѕСЂРѕРј Р·Р°РіСЂСѓР·РєРё
       const tempMessage: ChatMessage = {
         localId,
         messageId: localId,
@@ -865,7 +1023,7 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
       const form = new FormData();
       form.append('file', file);
       
-      console.log('📤 Uploading attachment:', {
+      console.log('рџ“¤ Uploading attachment:', {
         chatId: selectedChat,
         fileName: file.name,
         fileSize: file.size,
@@ -888,14 +1046,14 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
         }
       );
       
-      console.log('✅ Attachment uploaded successfully:', data);
+      console.log('вњ… Attachment uploaded successfully:', data);
       setUploadingImages(prev => {
         const next = new Map(prev);
         next.set(localId, { file, progress: 100 });
         return next;
       });
       
-      // Отправляем реальное сообщение с изображением, остаемся на том же объекте
+      // РћС‚РїСЂР°РІР»СЏРµРј СЂРµР°Р»СЊРЅРѕРµ СЃРѕРѕР±С‰РµРЅРёРµ СЃ РёР·РѕР±СЂР°Р¶РµРЅРёРµРј, РѕСЃС‚Р°РµРјСЃСЏ РЅР° С‚РѕРј Р¶Рµ РѕР±СЉРµРєС‚Рµ
       const { msgId, seqNo, timestamp } = nextProtocolEnvelope();
       
       const { data: sendRes } = await http.post<SendMessageResponse>(endpoints.chatSend, {
@@ -967,14 +1125,14 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
           : c
       ));
     } catch (e) {
-      console.error('❌ Failed to upload attachment:', {
+      console.error('вќЊ Failed to upload attachment:', {
         error: e,
         response: (e as any).response?.data,
         status: (e as any).response?.status,
         chatId: selectedChat,
         file: file.name
       });
-      // Удаляем временное сообщение при ошибке
+      // РЈРґР°Р»СЏРµРј РІСЂРµРјРµРЅРЅРѕРµ СЃРѕРѕР±С‰РµРЅРёРµ РїСЂРё РѕС€РёР±РєРµ
       setMessages(prev => prev.filter(m => m.localId !== localId && m.messageId !== localId));
       if (localPreviewUrl) {
         URL.revokeObjectURL(localPreviewUrl);
@@ -984,7 +1142,7 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
         next.delete(localId);
         return next;
       });
-      alert('Не удалось загрузить файл');
+      alert('РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РіСЂСѓР·РёС‚СЊ С„Р°Р№Р»');
     }
   };
 
@@ -1006,4 +1164,6 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
     uploadImage,
   };
 }
+
+
 

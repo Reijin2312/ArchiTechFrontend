@@ -621,6 +621,9 @@ export function ChatMessages({ model }: ChatMessagesProps) {
     messagesEndRef,
   } = model;
   const lastCircleReloadAtRef = useRef(0);
+  const hasInitializedMessagesRef = useRef(false);
+  const previousMessageIdsRef = useRef<Set<string>>(new Set());
+  const [enteringMessageIds, setEnteringMessageIds] = useState<Set<string>>(new Set());
 
   const formatFileSize = (size?: number) => {
     if (!size || size <= 0) return '';
@@ -659,9 +662,46 @@ export function ChatMessages({ model }: ChatMessagesProps) {
     return normalized;
   };
 
+  useEffect(() => {
+    const currentMessageIds = new Set(messages.map((message) => String(message.messageId)));
+
+    if (!hasInitializedMessagesRef.current) {
+      hasInitializedMessagesRef.current = true;
+      previousMessageIdsRef.current = currentMessageIds;
+      return;
+    }
+
+    const newlyAddedIds = [...currentMessageIds].filter((id) => !previousMessageIdsRef.current.has(id));
+    previousMessageIdsRef.current = currentMessageIds;
+
+    if (newlyAddedIds.length === 0) {
+      return;
+    }
+
+    setEnteringMessageIds((prev) => {
+      const next = new Set(prev);
+      newlyAddedIds.forEach((id) => next.add(id));
+      return next;
+    });
+
+    const timerId = window.setTimeout(() => {
+      setEnteringMessageIds((prev) => {
+        if (prev.size === 0) return prev;
+        const next = new Set(prev);
+        newlyAddedIds.forEach((id) => next.delete(id));
+        return next;
+      });
+    }, 170);
+
+    return () => {
+      window.clearTimeout(timerId);
+    };
+  }, [messages]);
+
   return (
     <div
       className="h-full space-y-3 overflow-y-auto px-4 py-4 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-slate-700"
+      data-chat-scroll-container="true"
       style={{
         backgroundColor: '#070b14',
         backgroundImage:
@@ -669,6 +709,16 @@ export function ChatMessages({ model }: ChatMessagesProps) {
         backgroundSize: '100% 100%, 100% 100%, 26px 26px, 26px 26px',
       }}
     >
+      <style>{`
+        @keyframes socialMessageEnterQuick {
+          from { opacity: 0; transform: translate3d(0, 8px, 0); }
+          to { opacity: 1; transform: translate3d(0, 0, 0); }
+        }
+        .social-message-enter-quick {
+          animation: socialMessageEnterQuick 170ms cubic-bezier(0.18, 0.8, 0.2, 1);
+          will-change: opacity, transform;
+        }
+      `}</style>
       {messages.length === 0 ? (
         <div className="flex items-center justify-center h-full">
           <div className="text-center space-y-2">
@@ -710,7 +760,9 @@ export function ChatMessages({ model }: ChatMessagesProps) {
               key={m.localId ?? m.messageId}
               data-message-id={m.messageId}
               data-sender-id={m.senderId}
-              className={`message-item flex ${m.senderId === userId ? 'justify-end' : 'justify-start'} group`}
+              className={`message-item flex ${m.senderId === userId ? 'justify-end' : 'justify-start'} group ${
+                enteringMessageIds.has(String(m.messageId)) ? 'social-message-enter-quick' : ''
+              }`}
               onContextMenu={(e) => {
                 e.preventDefault();
                 setContextMenu({ x: e.clientX, y: e.clientY, message: m });

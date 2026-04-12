@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type UIEvent } from 'react';
+import { http } from '@/shared/api/http';
+import { endpoints } from '@/shared/api/endpoints';
 import type { SidebarChat } from '../types';
 import { CloseIcon, PenSquareIcon } from '../icons';
 import { Avatar } from './Avatar';
@@ -13,6 +15,7 @@ export type GroupInfoMember = {
   avatarText: string;
   statusText: string;
   isOnline: boolean;
+  isOwner?: boolean;
 };
 
 export type GroupInfoLinkItem = {
@@ -44,6 +47,13 @@ type GroupInfoPanelProps = {
 
 type LinkPreviewMeta = {
   sourceLabel?: string;
+  title?: string;
+  description?: string;
+  thumbnailUrl?: string;
+};
+
+type BackendLinkPreviewMeta = {
+  providerName?: string;
   title?: string;
   description?: string;
   thumbnailUrl?: string;
@@ -86,6 +96,8 @@ function buildOEmbedEndpoints(href: string): string[] {
     endpoints.push(`https://www.dailymotion.com/services/oembed?url=${encodedUrl}`);
   } else if (host.includes('rutube.ru')) {
     endpoints.push(`https://rutube.ru/api/oembed/?url=${encodedUrl}`);
+  } else if (host.includes('spotify.com')) {
+    endpoints.push(`https://open.spotify.com/oembed?url=${encodedUrl}`);
   }
 
   endpoints.push(`https://noembed.com/embed?url=${encodedUrl}`);
@@ -93,12 +105,35 @@ function buildOEmbedEndpoints(href: string): string[] {
 }
 
 async function fetchLinkPreviewMeta(href: string): Promise<LinkPreviewMeta | null> {
-  const endpoints = buildOEmbedEndpoints(href);
-  if (endpoints.length === 0) {
+  try {
+    const response = await http.get<BackendLinkPreviewMeta | null>(endpoints.chatLinkPreview(href));
+    const payload = response.data;
+    if (payload && typeof payload === 'object') {
+      const backendMeta: LinkPreviewMeta = {
+        sourceLabel: payload.providerName?.trim() || undefined,
+        title: payload.title?.trim() || undefined,
+        description: payload.description?.trim() || undefined,
+        thumbnailUrl: payload.thumbnailUrl?.trim() || undefined,
+      };
+      if (
+        backendMeta.sourceLabel ||
+        backendMeta.title ||
+        backendMeta.description ||
+        backendMeta.thumbnailUrl
+      ) {
+        return backendMeta;
+      }
+    }
+  } catch {
+    // fall through to direct oEmbed/noembed as a secondary fallback.
+  }
+
+  const oembedEndpoints = buildOEmbedEndpoints(href);
+  if (oembedEndpoints.length === 0) {
     return null;
   }
 
-  for (const endpoint of endpoints) {
+  for (const endpoint of oembedEndpoints) {
     try {
       const response = await fetch(endpoint, {
         method: 'GET',
@@ -401,14 +436,16 @@ export function GroupInfoPanel({
                 {members.map((member) => (
                   <div
                     key={member.userId}
-                    className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-white/[0.045]"
+                    className="flex items-start gap-3 px-4 py-3 transition-colors hover:bg-white/[0.045]"
                   >
-                    <Avatar
-                      size={55}
-                      avatarBg={member.avatarBg}
-                      avatarText={member.avatarText}
-                      avatarUrl={member.avatarUrl}
-                    />
+                    <div className="pt-[1px]">
+                      <Avatar
+                        size={55}
+                        avatarBg={member.avatarBg}
+                        avatarText={member.avatarText}
+                        avatarUrl={member.avatarUrl}
+                      />
+                    </div>
                     <div className="min-w-0 flex-1">
                       <div className="truncate text-[17px] font-[500] leading-tight text-white/95">
                         {member.name}
@@ -421,6 +458,9 @@ export function GroupInfoPanel({
                         {member.statusText}
                       </div>
                     </div>
+                    {member.isOwner ? (
+                      <div className="mt-[2px] shrink-0 text-[14px] font-[500] text-white/56">owner</div>
+                    ) : null}
                   </div>
                 ))}
               </div>

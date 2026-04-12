@@ -1,4 +1,4 @@
-import { useEffect, useRef, type RefObject } from 'react';
+import { useEffect, useRef, useState, type RefObject } from 'react';
 import { CloseIcon, MoreVerticalIcon, PhoneIcon, SearchIcon } from '../icons';
 import type { SidebarChat } from '../types';
 import { Avatar } from './Avatar';
@@ -59,11 +59,29 @@ export function ChatHeader({
   onNavigateHome,
 }: ChatHeaderProps) {
   const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const [typingDots, setTypingDots] = useState(0);
+  const isTypingStatus = /\btyping$/i.test(selectedStatus);
+  const renderedStatus = isTypingStatus ? `${selectedStatus}${'.'.repeat(typingDots)}` : selectedStatus;
 
   useEffect(() => {
     if (!isMessageSearchOpen) return;
     searchInputRef.current?.focus();
   }, [isMessageSearchOpen]);
+
+  useEffect(() => {
+    if (!isTypingStatus) {
+      setTypingDots(0);
+      return;
+    }
+
+    const timerId = window.setInterval(() => {
+      setTypingDots((prev) => (prev + 1) % 4);
+    }, 240);
+
+    return () => {
+      window.clearInterval(timerId);
+    };
+  }, [isTypingStatus]);
 
   const searchCounter = messageSearchMatchesCount > 0 ? `${messageSearchCurrentIndex + 1}/${messageSearchMatchesCount}` : '0/0';
   const canToggleGroupInfo = !isMessageSearchOpen && selectedChat?.chatType === 'GROUP';
@@ -131,7 +149,7 @@ export function ChatHeader({
                 </span>
               </div>
               <div className="mt-[5px] text-[14px] leading-none text-white/58">
-                {selectedStatus}
+                {renderedStatus}
               </div>
             </button>
           ) : (
@@ -140,7 +158,7 @@ export function ChatHeader({
                 {selectedChat?.name || 'Select chat'}
               </div>
               <div className="mt-[5px] text-[14px] leading-none text-white/58">
-                {selectedChat ? selectedStatus : 'No active chat'}
+                {selectedChat ? renderedStatus : 'No active chat'}
               </div>
             </div>
           )
