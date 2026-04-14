@@ -18,6 +18,11 @@ import {
   type ReplyPreview,
 } from './messageTypes/ImageMessageBubbles';
 import { MediaViewerModal, type MediaViewerItem } from './messageTypes/MediaViewerModal';
+import {
+  ensureVideoPosterMeta,
+  getCachedVideoAspectRatio,
+  getCachedVideoPosterUrl,
+} from './messageTypes/videoPoster';
 import { isManagedMediaSourceUrl, useManagedMediaDownload } from '../hooks/useManagedMediaDownload';
 import { useViewportPresence } from '../hooks/useViewportPresence';
 import {
@@ -112,7 +117,10 @@ type CircleMessageBubbleProps = {
   mediaId: string;
   author: string;
   fileUrl?: string;
+  previewUrl?: string;
+  strippedPreviewUrl?: string;
   contentType?: string;
+  sizeBytes?: number;
   createdAt: string;
   isRead: boolean;
   isEdited: boolean;
@@ -425,6 +433,21 @@ type FileAttachmentItem = {
   strippedPreviewUrl?: string;
 };
 
+const resolveAttachmentPreviewUrl = (value?: string) => {
+  const normalized = resolveMediaUrl(value);
+  if (!normalized) return '';
+  if (
+    normalized.startsWith('http://') ||
+    normalized.startsWith('https://') ||
+    normalized.startsWith('blob:') ||
+    normalized.startsWith('data:') ||
+    normalized.startsWith('/')
+  ) {
+    return normalized;
+  }
+  return resolveMediaUrl(`/media/${normalized}`);
+};
+
 const toVisualMediaAttachmentItems = (
   messageType: ChatMessage['messageType'],
   attachments: MessageAttachmentItem[]
@@ -458,11 +481,11 @@ const toVisualMediaAttachmentItems = (
 
     const previewUrl =
       typeof attachment.thumbnailUrl === 'string'
-        ? resolveMediaUrl(attachment.thumbnailUrl)
+        ? resolveAttachmentPreviewUrl(attachment.thumbnailUrl)
         : undefined;
     const strippedPreviewUrl =
       typeof attachment.strippedThumbnailUrl === 'string'
-        ? resolveMediaUrl(attachment.strippedThumbnailUrl)
+        ? resolveAttachmentPreviewUrl(attachment.strippedThumbnailUrl)
         : undefined;
 
     const mediaItem: ImageBubbleMediaItem = {
@@ -532,11 +555,11 @@ const toFileAttachmentItems = (
 
     const previewUrl =
       isImage && typeof attachment.thumbnailUrl === 'string'
-        ? resolveMediaUrl(attachment.thumbnailUrl)
+        ? resolveAttachmentPreviewUrl(attachment.thumbnailUrl)
         : undefined;
     const strippedPreviewUrl =
       isImage && typeof attachment.strippedThumbnailUrl === 'string'
-        ? resolveMediaUrl(attachment.strippedThumbnailUrl)
+        ? resolveAttachmentPreviewUrl(attachment.strippedThumbnailUrl)
         : undefined;
 
     return [
@@ -1939,7 +1962,10 @@ function CircleMessageBubble({
   mediaId,
   author,
   fileUrl,
+  previewUrl,
+  strippedPreviewUrl,
   contentType,
+  sizeBytes,
   createdAt,
   isRead,
   isEdited,
@@ -1958,6 +1984,9 @@ function CircleMessageBubble({
   const [durationSec, setDurationSec] = useState(0);
   const [currentSec, setCurrentSec] = useState(0);
   const [hasPlaybackError, setHasPlaybackError] = useState(false);
+  const [generatedPosterUrl, setGeneratedPosterUrl] = useState<string | undefined>(undefined);
+  const [posterAspectRatio, setPosterAspectRatio] = useState<number | undefined>(undefined);
+  const [posterFailed, setPosterFailed] = useState(false);
   const hasUploadState = !!uploadState;
   const shouldManageCircleMedia =
     !hasUploadState && !isOwn && isManagedMediaSourceUrl(fileUrl);
@@ -1968,6 +1997,7 @@ function CircleMessageBubble({
   const circleDownload = useManagedMediaDownload({
     url: fileUrl,
     kind: 'video',
+    sizeBytes,
     priority: isInViewport ? 78 : 10,
     autoStart: true,
     managed: shouldManageCircleMedia,
@@ -1975,6 +2005,14 @@ function CircleMessageBubble({
   });
   const resolvedFileUrl =
     (shouldManageCircleMedia ? circleDownload.resolvedUrl : fileUrl) || null;
+  const mediaSourceForPoster = resolvedFileUrl || fileUrl || '';
+  const cachedPosterUrl = getCachedVideoPosterUrl(mediaSourceForPoster);
+  const resolvedPosterUrl =
+    previewUrl || strippedPreviewUrl || generatedPosterUrl || cachedPosterUrl;
+  const resolvedCircleAspectRatio =
+    getCachedVideoAspectRatio(mediaSourceForPoster) ||
+    posterAspectRatio ||
+    1;
   const mediaPhase: 'processing' | 'ready' | 'error' = hasUploadState
     ? 'processing'
     : hasPlaybackError || circleDownload.phase === 'error'
@@ -1994,6 +2032,69 @@ function CircleMessageBubble({
   const hasRingProgress = ringProgress > 0;
   const dashOffset = circumference * (1 - ringProgress);
   const ringColor = isOwn ? 'rgb(214, 202, 255)' : 'rgb(196, 203, 223)';
+
+  useEffect(() => {
+    setPosterFailed(false);
+    if (previewUrl || strippedPreviewUrl) {
+      setGeneratedPosterUrl(undefined);
+      setPosterAspectRatio(undefined);
+      return;
+    }
+    if (!mediaSourceForPoster) {
+      setGeneratedPosterUrl(undefined);
+      setPosterAspectRatio(undefined);
+      return;
+    }
+
+    const cached = getCachedVideoPosterUrl(mediaSourceForPoster);
+    const cachedAspectRatio = getCachedVideoAspectRatio(mediaSourceForPoster);
+    if (cachedAspectRatio) {
+      setPosterAspectRatio(cachedAspectRatio);
+    }
+    if (cached) {
+      setGeneratedPosterUrl(cached);
+      return;
+    }
+
+    setGeneratedPosterUrl(undefined);
+  }, [mediaSourceForPoster, previewUrl, strippedPreviewUrl]);
+
+  useEffect(() => {
+    if (previewUrl || strippedPreviewUrl || !mediaSourceForPoster) {
+      return;
+    }
+    if (shouldManageCircleMedia && !resolvedFileUrl) {
+      return;
+    }
+
+    const cached = getCachedVideoPosterUrl(mediaSourceForPoster);
+    if (cached) {
+      setGeneratedPosterUrl(cached);
+      const cachedAspectRatio = getCachedVideoAspectRatio(mediaSourceForPoster);
+      if (cachedAspectRatio) {
+        setPosterAspectRatio(cachedAspectRatio);
+      }
+      return;
+    }
+
+    let cancelled = false;
+    void (async () => {
+      const meta = await ensureVideoPosterMeta(mediaSourceForPoster);
+      if (cancelled || !meta) return;
+      setGeneratedPosterUrl(meta.posterDataUrl);
+      setPosterAspectRatio(meta.aspectRatio);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    mediaSourceForPoster,
+    previewUrl,
+    strippedPreviewUrl,
+    shouldManageCircleMedia,
+    resolvedFileUrl,
+  ]);
 
   const getDuration = () => {
     const video = videoRef.current;
@@ -2260,6 +2361,7 @@ function CircleMessageBubble({
         : shouldManageCircleMedia
           ? `Loading ${circleDownload.indeterminate ? '...' : `${circleDownload.progress}%`}`
           : 'Preparing';
+  const showVideoLayer = isPlaying || !resolvedPosterUrl || posterFailed;
 
   return (
     <div
@@ -2286,15 +2388,36 @@ function CircleMessageBubble({
           <video
             ref={videoRef}
             src={resolvedFileUrl}
-            preload="metadata"
+            preload={resolvedPosterUrl ? 'metadata' : 'auto'}
             playsInline
             muted={isMuted}
-            className="h-full w-full rounded-full object-cover"
+            poster={resolvedPosterUrl}
+            className={`h-full w-full rounded-full object-cover transition-opacity duration-200 ${
+              showVideoLayer ? 'opacity-100' : 'opacity-0'
+            }`}
           >
             <source src={resolvedFileUrl} type={contentType || 'video/webm'} />
           </video>
+        ) : null}
+        {resolvedPosterUrl && !posterFailed ? (
+          <img
+            src={resolvedPosterUrl}
+            alt="Video note preview"
+            className={`pointer-events-none absolute inset-0 h-full w-full rounded-full object-cover transition-opacity duration-200 ${
+              mediaPhase === 'ready' && showVideoLayer ? 'opacity-0' : 'opacity-100'
+            }`}
+            loading="lazy"
+            decoding="async"
+            draggable={false}
+            onError={() => setPosterFailed(true)}
+          />
         ) : (
-          <div className="relative h-full w-full overflow-hidden rounded-full bg-[#222327]">
+          <div
+            className={`pointer-events-none absolute inset-0 rounded-full bg-[#222327] transition-opacity duration-200 ${
+              mediaPhase === 'ready' && showVideoLayer ? 'opacity-0' : 'opacity-100'
+            }`}
+            style={{ aspectRatio: resolvedCircleAspectRatio }}
+          >
             <div className="absolute inset-0 animate-pulse bg-[radial-gradient(circle_at_25%_20%,rgba(151,132,226,0.30),transparent_58%)]" />
             <div
               className="absolute inset-0 animate-pulse bg-[radial-gradient(circle_at_78%_74%,rgba(75,64,125,0.55),transparent_62%)]"
@@ -2528,6 +2651,14 @@ function ChatMessageRow({
 
   const voiceUrl = voiceAttachment ? resolveAttachmentUrl(voiceAttachment) : '';
   const circleUrl = circleAttachmentItem?.resolvedUrl || '';
+  const circlePreviewUrl =
+    circleAttachment && typeof circleAttachment.thumbnailUrl === 'string'
+      ? resolveAttachmentPreviewUrl(circleAttachment.thumbnailUrl) || undefined
+      : undefined;
+  const circleStrippedPreviewUrl =
+    circleAttachment && typeof circleAttachment.strippedThumbnailUrl === 'string'
+      ? resolveAttachmentPreviewUrl(circleAttachment.strippedThumbnailUrl) || undefined
+      : undefined;
   const mediaItems = mediaAttachmentItems.map((item) => item.mediaItem);
   const messageLocalId =
     message.localId || (typeof message.messageId === 'string' ? message.messageId : undefined);
@@ -2603,7 +2734,10 @@ function ChatMessageRow({
             mediaId={mediaId}
             author={author}
             fileUrl={circleUrl || undefined}
+            previewUrl={circlePreviewUrl}
+            strippedPreviewUrl={circleStrippedPreviewUrl}
             contentType={circleAttachment.contentType}
+            sizeBytes={circleAttachment.sizeBytes}
             createdAt={message.createdAt}
             isRead={isRead}
             isEdited={isEdited}

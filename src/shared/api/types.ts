@@ -219,6 +219,8 @@ export interface SendMessageResponse {
   imageUrls?: Array<{
     imagePath: string
     imageUrl: string
+    thumbnailUrl?: string
+    strippedThumbnailUrl?: string
   }>
 }
 
@@ -262,6 +264,8 @@ export interface UploadImageResponse {
   success: boolean
   imagePath: string
   imageUrl: string
+  thumbnailUrl?: string
+  strippedThumbnailUrl?: string
   fileName?: string
   contentType?: string
   sizeBytes?: number

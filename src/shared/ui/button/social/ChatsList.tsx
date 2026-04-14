@@ -70,6 +70,60 @@ export function ChatsList({
     }
   };
 
+  const resolveLastMessagePreview = (lastMsg: PrivateChat['lastMessage']) => {
+    if (!lastMsg) return '';
+    const text = (lastMsg.content || '').trim();
+    if (text) return lastMsg.content;
+
+    const attachments = Array.isArray(lastMsg.images) ? lastMsg.images : [];
+    const topLevelMediaUrl = (
+      (lastMsg.imageUrl || '') ||
+      (lastMsg.imagePath ? `/media/${lastMsg.imagePath}` : '')
+    ).toLowerCase();
+    const hasVideoAttachment = attachments.some((attachment) => {
+      const legacy = attachment as unknown as Record<string, unknown>;
+      const contentType =
+        (attachment.contentType ||
+          (typeof legacy.content_type === 'string' ? legacy.content_type : '')).toLowerCase();
+      if (contentType.startsWith('video/')) return true;
+      const url = (
+        attachment.imageUrl ||
+        (typeof legacy.image_url === 'string' ? legacy.image_url : '') ||
+        attachment.imagePath ||
+        (typeof legacy.image_path === 'string' ? legacy.image_path : '')
+      ).toLowerCase();
+      return /\.(mp4|webm|mov|m4v|ogv|m3u8|mkv|avi)(?:$|[?#])/.test(url);
+    });
+    const hasImageAttachment = attachments.some((attachment) => {
+      const legacy = attachment as unknown as Record<string, unknown>;
+      const contentType =
+        (attachment.contentType ||
+          (typeof legacy.content_type === 'string' ? legacy.content_type : '')).toLowerCase();
+      const isImage =
+        attachment.isImage ??
+        (typeof legacy.is_image === 'boolean' ? legacy.is_image : false);
+      const url = (
+        attachment.imageUrl ||
+        (typeof legacy.image_url === 'string' ? legacy.image_url : '') ||
+        attachment.imagePath ||
+        (typeof legacy.image_path === 'string' ? legacy.image_path : '')
+      ).toLowerCase();
+      return isImage || contentType.startsWith('image/') || /\.(png|jpe?g|gif|webp|avif|bmp|svg)(?:$|[?#])/.test(url);
+    });
+
+    const topLevelLooksVideo = /\.(mp4|webm|mov|m4v|ogv|m3u8|mkv|avi)(?:$|[?#])/.test(
+      topLevelMediaUrl
+    );
+    if (hasVideoAttachment || topLevelLooksVideo) return 'Video message';
+    if (hasImageAttachment) return 'Photo';
+
+    if (lastMsg.messageType === 'image' || lastMsg.messageType === 'images') return 'Photo';
+    if (lastMsg.messageType === 'file' || lastMsg.messageType === 'files') return 'File';
+    if (lastMsg.messageType === 'voice') return 'Voice message';
+    if (lastMsg.messageType === 'circle') return 'Video message';
+    return 'Message';
+  };
+
   return (
     <div className="space-y-1.5">
       {chats.map((chat) => {
@@ -123,20 +177,7 @@ export function ChatsList({
                 senderFriend?.username ||
                 (!isGroupChat && lastMsg.senderId === privateParticipantId ? displayName : undefined) ||
                 lastMsg.senderId.slice(0, 8);
-        const previewText =
-          !lastMsg
-            ? ''
-            : lastMsg.content?.trim()
-              ? lastMsg.content
-              : lastMsg.messageType === 'image' || lastMsg.messageType === 'images'
-                ? 'Photo'
-                : lastMsg.messageType === 'file' || lastMsg.messageType === 'files'
-                  ? 'File'
-                  : lastMsg.messageType === 'voice'
-                    ? 'Voice message'
-                    : lastMsg.messageType === 'circle'
-                      ? 'Video message'
-                      : 'Message';
+        const previewText = resolveLastMessagePreview(lastMsg);
         const preview = lastMsg && senderName ? `${senderName}: ${previewText}` : previewText;
 
         return (

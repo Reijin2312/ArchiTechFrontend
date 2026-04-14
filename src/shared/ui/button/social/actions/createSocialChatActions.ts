@@ -98,6 +98,80 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
 
     return existingUrl;
   };
+  type LooseAttachmentPayload = {
+    imagePath?: string;
+    image_path?: string;
+    imageUrl?: string;
+    image_url?: string;
+    thumbnailUrl?: string;
+    thumbnail_url?: string;
+    strippedThumbnailUrl?: string;
+    stripped_thumbnail_url?: string;
+    fileName?: string;
+    file_name?: string;
+    contentType?: string;
+    content_type?: string;
+    sizeBytes?: number;
+    size_bytes?: number;
+    isImage?: boolean;
+    is_image?: boolean;
+    imageKeyVersion?: number;
+    image_key_version?: number;
+  };
+  const pickStringValue = (...candidates: unknown[]): string | undefined => {
+    for (const candidate of candidates) {
+      if (typeof candidate === 'string' && candidate.trim().length > 0) {
+        return candidate;
+      }
+    }
+    return undefined;
+  };
+  const pickNumberValue = (...candidates: unknown[]): number | undefined => {
+    for (const candidate of candidates) {
+      if (typeof candidate === 'number' && Number.isFinite(candidate)) {
+        return candidate;
+      }
+    }
+    return undefined;
+  };
+  const pickBooleanValue = (...candidates: unknown[]): boolean | undefined => {
+    for (const candidate of candidates) {
+      if (typeof candidate === 'boolean') {
+        return candidate;
+      }
+    }
+    return undefined;
+  };
+  const normalizeAttachmentPayload = (payload?: LooseAttachmentPayload) => {
+    if (!payload) {
+      return {
+        imagePath: undefined,
+        imageUrl: undefined,
+        thumbnailUrl: undefined,
+        strippedThumbnailUrl: undefined,
+        fileName: undefined,
+        contentType: undefined,
+        sizeBytes: undefined,
+        isImage: undefined,
+        imageKeyVersion: undefined,
+      };
+    }
+
+    return {
+      imagePath: pickStringValue(payload.imagePath, payload.image_path),
+      imageUrl: pickStringValue(payload.imageUrl, payload.image_url),
+      thumbnailUrl: pickStringValue(payload.thumbnailUrl, payload.thumbnail_url),
+      strippedThumbnailUrl: pickStringValue(
+        payload.strippedThumbnailUrl,
+        payload.stripped_thumbnail_url
+      ),
+      fileName: pickStringValue(payload.fileName, payload.file_name),
+      contentType: pickStringValue(payload.contentType, payload.content_type),
+      sizeBytes: pickNumberValue(payload.sizeBytes, payload.size_bytes),
+      isImage: pickBooleanValue(payload.isImage, payload.is_image),
+      imageKeyVersion: pickNumberValue(payload.imageKeyVersion, payload.image_key_version),
+    };
+  };
   type MediaPrefetchKind = 'image' | 'video' | 'audio' | 'file';
 
   const resolveMediaPrefetchKind = (
@@ -1040,6 +1114,8 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
     type UploadedAttachmentPayload = {
       image_path: string;
       image_url?: string;
+      thumbnail_url?: string;
+      stripped_thumbnail_url?: string;
       image_encrypted?: boolean;
       image_encryption_iv?: string;
       image_key_version?: number;
@@ -1235,9 +1311,14 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
             responseSizeBytes: data.sizeBytes,
           });
 
+          const normalizedUploadAttachment = normalizeAttachmentPayload(
+            data as unknown as LooseAttachmentPayload
+          );
           const uploadedAttachment: UploadedAttachmentPayload = {
             image_path: data.imagePath,
             image_url: data.imageUrl,
+            thumbnail_url: normalizedUploadAttachment.thumbnailUrl,
+            stripped_thumbnail_url: normalizedUploadAttachment.strippedThumbnailUrl,
             image_encrypted: data.imageEncrypted,
             image_encryption_iv: data.imageEncryptionIv,
             image_key_version: data.imageKeyVersion,
@@ -1272,6 +1353,12 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
                           ? {
                               imagePath: data.imagePath,
                               imageUrl: image.imageUrl || data.imageUrl,
+                              thumbnailUrl:
+                                normalizedUploadAttachment.thumbnailUrl ||
+                                image.thumbnailUrl,
+                              strippedThumbnailUrl:
+                                normalizedUploadAttachment.strippedThumbnailUrl ||
+                                image.strippedThumbnailUrl,
                               fileName: data.fileName || attachment.file.name,
                               contentType:
                                 data.contentType ||
@@ -1391,23 +1478,28 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
               `/media/${uploadedAttachments[0].image_path}`
             ),
             images: uploadedAttachments.map((item, index) => {
-              const fromResponse = data.imageUrls?.[index];
+              const fromResponse = normalizeAttachmentPayload(
+                data.imageUrls?.[index] as LooseAttachmentPayload | undefined
+              );
               const singleAttachmentUrl = uploadedAttachments.length === 1 ? data.imageUrl : undefined;
               const previousImage = message.images?.[uploadedIndexes[index]];
               return {
-                imagePath: fromResponse?.imagePath || item.image_path,
+                imagePath: fromResponse.imagePath || item.image_path,
                 imageUrl: pickStableMediaUrl(
                   previousImage?.imageUrl,
-                  fromResponse?.imageUrl,
+                  fromResponse.imageUrl,
                   singleAttachmentUrl,
                   item.image_url,
                   `/media/${item.image_path}`
                 ),
-                fileName: item.file_name,
-                contentType: item.content_type,
-                sizeBytes: item.size_bytes,
-                isImage: item.is_image,
-                imageKeyVersion: item.image_key_version,
+                thumbnailUrl: fromResponse.thumbnailUrl || item.thumbnail_url,
+                strippedThumbnailUrl:
+                  fromResponse.strippedThumbnailUrl || item.stripped_thumbnail_url,
+                fileName: fromResponse.fileName || item.file_name,
+                contentType: fromResponse.contentType || item.content_type,
+                sizeBytes: fromResponse.sizeBytes ?? item.size_bytes,
+                isImage: fromResponse.isImage ?? item.is_image,
+                imageKeyVersion: fromResponse.imageKeyVersion ?? item.image_key_version,
               };
             }),
             createdAt: new Date().toISOString(),
@@ -1431,6 +1523,33 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
                   entities: normalizedEntities,
                   messageType,
                   imagePath: uploadedAttachments[0].image_path,
+                  imageUrl:
+                    normalizeAttachmentPayload(
+                      data.imageUrls?.[0] as LooseAttachmentPayload | undefined
+                    ).imageUrl ||
+                    data.imageUrl ||
+                    uploadedAttachments[0].image_url,
+                  images: uploadedAttachments.map((item, index) => {
+                    const responseAttachment = normalizeAttachmentPayload(
+                      data.imageUrls?.[index] as LooseAttachmentPayload | undefined
+                    );
+                    return {
+                      imagePath: responseAttachment.imagePath || item.image_path,
+                      imageUrl:
+                        responseAttachment.imageUrl ||
+                        (uploadedAttachments.length === 1 ? data.imageUrl : undefined) ||
+                        item.image_url,
+                      thumbnailUrl: responseAttachment.thumbnailUrl || item.thumbnail_url,
+                      strippedThumbnailUrl:
+                        responseAttachment.strippedThumbnailUrl || item.stripped_thumbnail_url,
+                      fileName: responseAttachment.fileName || item.file_name,
+                      contentType: responseAttachment.contentType || item.content_type,
+                      sizeBytes: responseAttachment.sizeBytes ?? item.size_bytes,
+                      isImage: responseAttachment.isImage ?? item.is_image,
+                      imageKeyVersion:
+                        responseAttachment.imageKeyVersion ?? item.image_key_version,
+                    };
+                  }),
                   createdAt: new Date().toISOString(),
                   status: 'sent',
                 } as ChatMessage,
@@ -1440,14 +1559,16 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
       );
 
       uploadedAttachments.forEach((attachment, index) => {
-        const responseAttachment = data.imageUrls?.[index];
+        const responseAttachment = normalizeAttachmentPayload(
+          data.imageUrls?.[index] as LooseAttachmentPayload | undefined
+        );
         const singleAttachmentUrl = uploadedAttachments.length === 1 ? data.imageUrl : undefined;
         const remoteUrl =
-          responseAttachment?.imageUrl ||
+          responseAttachment.imageUrl ||
           singleAttachmentUrl ||
           attachment.image_url ||
           (attachment.image_path ? `/media/${attachment.image_path}` : undefined);
-        const remotePath = responseAttachment?.imagePath || attachment.image_path;
+        const remotePath = responseAttachment.imagePath || attachment.image_path;
         const currentUrl = effectiveAttachments[index]?.preview;
 
         scheduleMediaSwapAfterPrefetch({
@@ -1792,7 +1913,27 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
         return;
       }
 
-      const resolvedRemoteUrl = sendRes.imageUrl ?? data.imageUrl;
+      const normalizedUploadAttachment = normalizeAttachmentPayload(
+        data as unknown as LooseAttachmentPayload
+      );
+      const responseAttachment = normalizeAttachmentPayload(
+        sendRes.imageUrls?.[0] as LooseAttachmentPayload | undefined
+      );
+      const resolvedRemoteUrl =
+        responseAttachment.imageUrl ?? sendRes.imageUrl ?? data.imageUrl;
+      const resolvedImagePath =
+        responseAttachment.imagePath || data.imagePath;
+      const resolvedThumbnailUrl =
+        responseAttachment.thumbnailUrl || normalizedUploadAttachment.thumbnailUrl;
+      const resolvedStrippedThumbnailUrl =
+        responseAttachment.strippedThumbnailUrl ||
+        normalizedUploadAttachment.strippedThumbnailUrl;
+      const resolvedContentType =
+        responseAttachment.contentType || data.contentType || fallbackContentType;
+      const resolvedSizeBytes = responseAttachment.sizeBytes ?? data.sizeBytes ?? file.size;
+      const resolvedIsImage = responseAttachment.isImage ?? data.isImage ?? isImage;
+      const resolvedImageKeyVersion =
+        responseAttachment.imageKeyVersion ?? data.imageKeyVersion;
       
       setMessages(prev => prev.map(m => 
         (m.localId === localId || m.messageId === localId)
@@ -1800,24 +1941,26 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
               ...m,
               messageId: sendRes.messageId,
               status: 'sent',
-              imagePath: data.imagePath || m.imagePath,
+              imagePath: resolvedImagePath || m.imagePath,
               imageUrl: pickStableMediaUrl(
                 m.imageUrl,
                 resolvedRemoteUrl,
-                data.imagePath ? `/media/${data.imagePath}` : undefined
+                resolvedImagePath ? `/media/${resolvedImagePath}` : undefined
               ),
               images: [{
-                imagePath: data.imagePath || m.imagePath || '',
+                imagePath: resolvedImagePath || m.imagePath || '',
                 imageUrl: pickStableMediaUrl(
                   m.images?.[0]?.imageUrl ?? m.imageUrl,
                   resolvedRemoteUrl,
-                  data.imagePath ? `/media/${data.imagePath}` : undefined
+                  resolvedImagePath ? `/media/${resolvedImagePath}` : undefined
                 ),
+                thumbnailUrl: resolvedThumbnailUrl,
+                strippedThumbnailUrl: resolvedStrippedThumbnailUrl,
                 fileName: data.fileName || file.name,
-                contentType: data.contentType || fallbackContentType,
-                sizeBytes: data.sizeBytes ?? file.size,
-                isImage: data.isImage ?? isImage,
-                imageKeyVersion: data.imageKeyVersion,
+                contentType: resolvedContentType,
+                sizeBytes: resolvedSizeBytes,
+                isImage: resolvedIsImage,
+                imageKeyVersion: resolvedImageKeyVersion,
               }],
               createdAt: new Date().toISOString(),
               isRead: false,
@@ -1836,7 +1979,19 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
               senderId: user?.id || '',
               content: '',
               messageType,
-              imagePath: data.imagePath,
+              imagePath: resolvedImagePath,
+              imageUrl: resolvedRemoteUrl,
+              images: [{
+                imagePath: resolvedImagePath || '',
+                imageUrl: resolvedRemoteUrl,
+                thumbnailUrl: resolvedThumbnailUrl,
+                strippedThumbnailUrl: resolvedStrippedThumbnailUrl,
+                fileName: data.fileName || file.name,
+                contentType: resolvedContentType,
+                sizeBytes: resolvedSizeBytes,
+                isImage: resolvedIsImage,
+                imageKeyVersion: resolvedImageKeyVersion,
+              }],
               createdAt: new Date().toISOString(),
               status: 'sent',
             } as ChatMessage }
@@ -1851,11 +2006,11 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
         currentUrl: localPreviewUrl,
         remoteUrl:
           resolvedRemoteUrl ||
-          (data.imagePath ? `/media/${data.imagePath}` : undefined),
-        remotePath: data.imagePath,
+          (resolvedImagePath ? `/media/${resolvedImagePath}` : undefined),
+        remotePath: resolvedImagePath,
         messageType,
-        contentType: data.contentType || fallbackContentType,
-        isImage: data.isImage ?? isImage,
+        contentType: resolvedContentType,
+        isImage: resolvedIsImage,
       });
     } catch (e) {
       const err = e as any;

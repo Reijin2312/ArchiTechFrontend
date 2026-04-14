@@ -5,6 +5,11 @@ import { CheckCheckIcon, PlayIcon } from '../../icons';
 import { isManagedMediaSourceUrl, useManagedMediaDownload } from '../../hooks/useManagedMediaDownload';
 import { useViewportPresence } from '../../hooks/useViewportPresence';
 import { buildImageGridRows } from './imageGridPattern';
+import {
+  ensureVideoPosterMeta,
+  getCachedVideoAspectRatio,
+  getCachedVideoPosterUrl,
+} from './videoPoster';
 
 export type ReplyPreview = {
   author: string;
@@ -464,18 +469,139 @@ function ProgressiveIncomingVideo({
     ? managedDownload.resolvedUrl || ''
     : src;
   const [isVideoVisible, setIsVideoVisible] = useState(!supportsProgressiveDownload);
+  const [generatedPosterUrl, setGeneratedPosterUrl] = useState<string | undefined>(undefined);
+  const [posterFailed, setPosterFailed] = useState(false);
+  const [resolvedAspectRatio, setResolvedAspectRatio] = useState<number | undefined>(undefined);
+
+  useEffect(() => {
+    if (!resolvedSrc) {
+      setGeneratedPosterUrl(undefined);
+      setResolvedAspectRatio(undefined);
+      return;
+    }
+    const cachedPoster = getCachedVideoPosterUrl(resolvedSrc);
+    const cachedAspectRatio = getCachedVideoAspectRatio(resolvedSrc);
+    setResolvedAspectRatio(cachedAspectRatio);
+    if (cachedPoster) {
+      setGeneratedPosterUrl(cachedPoster);
+      return;
+    }
+    setGeneratedPosterUrl(undefined);
+  }, [previewUrl, strippedPreviewUrl, resolvedSrc]);
+
+  useEffect(() => {
+    if (!resolvedSrc) {
+      return;
+    }
+    if (supportsProgressiveDownload && phase !== 'ready') {
+      return;
+    }
+
+    const cachedAspectRatio = getCachedVideoAspectRatio(resolvedSrc);
+    if (cachedAspectRatio) {
+      setResolvedAspectRatio(cachedAspectRatio);
+      return;
+    }
+
+    let cancelled = false;
+    const probe = document.createElement('video');
+    probe.preload = 'metadata';
+    probe.muted = true;
+    probe.playsInline = true;
+
+    const cleanup = () => {
+      probe.removeEventListener('loadedmetadata', onLoadedMetadata);
+      probe.removeEventListener('error', onError);
+      probe.removeAttribute('src');
+      probe.load();
+    };
+
+    const onLoadedMetadata = () => {
+      if (cancelled) {
+        cleanup();
+        return;
+      }
+      const width = probe.videoWidth || 0;
+      const height = probe.videoHeight || 0;
+      if (width > 0 && height > 0) {
+        setResolvedAspectRatio(width / height);
+      }
+      cleanup();
+    };
+
+    const onError = () => {
+      cleanup();
+    };
+
+    probe.addEventListener('loadedmetadata', onLoadedMetadata, { once: true });
+    probe.addEventListener('error', onError, { once: true });
+    probe.src = resolvedSrc;
+    probe.load();
+
+    return () => {
+      cancelled = true;
+      cleanup();
+    };
+  }, [resolvedSrc, supportsProgressiveDownload, phase]);
+
+  useEffect(() => {
+    if (previewUrl || strippedPreviewUrl || !resolvedSrc) {
+      return;
+    }
+    if (supportsProgressiveDownload && phase !== 'ready') {
+      return;
+    }
+
+    const cachedPoster = getCachedVideoPosterUrl(resolvedSrc);
+    const cachedAspectRatio = getCachedVideoAspectRatio(resolvedSrc);
+    if (cachedAspectRatio) {
+      setResolvedAspectRatio(cachedAspectRatio);
+    }
+    if (cachedPoster) {
+      setGeneratedPosterUrl(cachedPoster);
+      return;
+    }
+
+    let cancelled = false;
+    void (async () => {
+      const meta = await ensureVideoPosterMeta(resolvedSrc);
+      if (cancelled || !meta) {
+        return;
+      }
+      setGeneratedPosterUrl(meta.posterDataUrl);
+      setResolvedAspectRatio(meta.aspectRatio);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [previewUrl, strippedPreviewUrl, resolvedSrc, supportsProgressiveDownload, phase]);
+
+  const resolvedPosterUrl = previewUrl || strippedPreviewUrl || generatedPosterUrl;
+  useEffect(() => {
+    setPosterFailed(false);
+  }, [resolvedPosterUrl, resolvedSrc]);
+
   useEffect(() => {
     if (!resolvedSrc) {
       setIsVideoVisible(false);
       return;
     }
-    if (!supportsProgressiveDownload) {
-      setIsVideoVisible(false);
-    }
+    setIsVideoVisible(!supportsProgressiveDownload);
   }, [resolvedSrc, supportsProgressiveDownload]);
+
   const canOpen = !!onOpenMedia && (!supportsProgressiveDownload || phase === 'ready');
+  const useFallbackVideoFrame = !resolvedPosterUrl || posterFailed;
   const showPlaceholder =
     (supportsProgressiveDownload && phase !== 'ready') || !isVideoVisible;
+  const displayAspectRatio = resolvedAspectRatio || 16 / 9;
+  const effectiveVideoStyle: CSSProperties = {
+    ...videoStyle,
+    aspectRatio: displayAspectRatio,
+  };
+  const skeletonStyle: CSSProperties = {
+    ...effectiveVideoStyle,
+  };
 
   return (
     <div ref={viewportRef} className="relative h-full w-full">
@@ -521,27 +647,51 @@ function ProgressiveIncomingVideo({
           <span className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.16),transparent_52%)]" />
         </span>
         {resolvedSrc ? (
-          <video
-            src={resolvedSrc}
-            className={`${videoClassName} transition-opacity duration-300 ${
-              isVideoVisible ? 'opacity-100' : 'opacity-0'
-            }`}
-            style={videoStyle}
-            playsInline
-            preload="auto"
-            controls={false}
-            muted
-            poster={previewUrl || strippedPreviewUrl}
-            onLoadedData={() => setIsVideoVisible(true)}
-            onCanPlay={() => setIsVideoVisible(true)}
-            onLoadedMetadata={(event) => {
-              if (event.currentTarget.readyState >= 2) {
-                setIsVideoVisible(true);
-              }
-            }}
-          >
-            <source src={resolvedSrc} type={contentType || 'video/mp4'} />
-          </video>
+          useFallbackVideoFrame ? (
+            <video
+              src={resolvedSrc}
+              className={`${videoClassName} transition-opacity duration-300 ${
+                isVideoVisible ? 'opacity-100' : 'opacity-0'
+              }`}
+              style={effectiveVideoStyle}
+              playsInline
+              preload={resolvedPosterUrl ? 'metadata' : 'auto'}
+              controls={false}
+              muted
+              onLoadedData={() => setIsVideoVisible(true)}
+              onCanPlay={() => setIsVideoVisible(true)}
+              onLoadedMetadata={() => {
+                if (resolvedPosterUrl) {
+                  setIsVideoVisible(true);
+                }
+              }}
+            >
+              <source src={resolvedSrc} type={contentType || 'video/mp4'} />
+            </video>
+          ) : resolvedPosterUrl ? (
+            <img
+              src={resolvedPosterUrl}
+              alt="Video preview"
+              className={`${videoClassName} transition-opacity duration-300 ${
+                isVideoVisible ? 'opacity-100' : 'opacity-0'
+              }`}
+              style={effectiveVideoStyle}
+              loading="lazy"
+              decoding="async"
+              draggable={false}
+              onLoad={() => setIsVideoVisible(true)}
+              onError={() => {
+                setPosterFailed(true);
+                setIsVideoVisible(false);
+              }}
+            />
+          ) : (
+            <span
+              aria-hidden="true"
+              className={`${videoClassName} block bg-[#1f2129]`}
+              style={skeletonStyle}
+            />
+          )
         ) : null}
         <VideoPlayOverlay compact={compactPlayIcon} />
       </button>
@@ -701,6 +851,10 @@ export function SingleImageBubble({
   const hasCaption = normalizedCaption.length > 0;
   const useFramedBubble = hasCaption || !!replyPreview;
   const useCaptionStripLayout = hasCaption;
+  const rootContainerStyle: CSSProperties =
+    mediaItem.mediaType === 'video'
+      ? { width: bubbleMaxWidthPx, maxWidth: '100%' }
+      : { maxWidth: bubbleMaxWidthPx };
   const captionPaddingClass = isEdited
     ? (isOwn ? 'pr-[96px]' : 'pr-[82px]')
     : (isOwn ? 'pr-[56px]' : 'pr-[48px]');
@@ -710,7 +864,7 @@ export function SingleImageBubble({
 
   if (!useFramedBubble) {
     return (
-      <div className="relative inline-block" style={{ maxWidth: bubbleMaxWidthPx }}>
+      <div className="relative inline-block" style={rootContainerStyle}>
         <div className="relative">
           {mediaItem.mediaType === 'video' ? (
             <ProgressiveIncomingVideo
@@ -722,9 +876,9 @@ export function SingleImageBubble({
               isOwnMessage={isOwn}
               disableProgressive={!!uploadState}
               onOpenMedia={onOpenMedia}
-              buttonClassName="relative block"
-              videoClassName="pointer-events-none block h-auto max-h-[72vh] w-auto max-w-full rounded-[18px] bg-black object-contain"
-              videoStyle={{ maxWidth: bubbleMaxWidthPx }}
+              buttonClassName="relative block w-full"
+              videoClassName="pointer-events-none block h-auto max-h-[72vh] w-full max-w-full rounded-[18px] bg-black object-contain"
+              videoStyle={{ width: '100%', maxWidth: '100%' }}
             />
           ) : (
             <ProgressiveIncomingImage
@@ -765,7 +919,7 @@ export function SingleImageBubble({
     return (
       <div
         className="relative inline-block overflow-hidden rounded-[18px]"
-        style={{ maxWidth: bubbleMaxWidthPx }}
+        style={rootContainerStyle}
       >
         <div className="relative w-full overflow-hidden bg-black">
           {mediaItem.mediaType === 'image' ? (
@@ -809,9 +963,9 @@ export function SingleImageBubble({
                 isOwnMessage={isOwn}
                 disableProgressive={!!uploadState}
                 onOpenMedia={onOpenMedia}
-                buttonClassName="relative block"
-                videoClassName="pointer-events-none block h-auto max-h-[72vh] w-auto max-w-full bg-black object-contain"
-                videoStyle={{ maxWidth: bubbleMaxWidthPx }}
+                buttonClassName="relative block w-full"
+                videoClassName="pointer-events-none block h-auto max-h-[72vh] w-full max-w-full bg-black object-contain"
+                videoStyle={{ width: '100%', maxWidth: '100%' }}
               />
             </div>
           )}
@@ -856,7 +1010,7 @@ export function SingleImageBubble({
       className={`tg-bubble relative inline-block overflow-hidden p-0 ${
         isOwn ? 'tg-right bg-[#967ef0] text-white' : 'tg-left bg-[#222327] text-white/95'
       } ${hideTail ? 'tg-tail-none' : ''}`}
-      style={{ maxWidth: bubbleMaxWidthPx }}
+      style={rootContainerStyle}
     >
       {replyPreview ? (
         <div className="px-3 pt-2">
@@ -875,9 +1029,9 @@ export function SingleImageBubble({
             isOwnMessage={isOwn}
             disableProgressive={!!uploadState}
             onOpenMedia={onOpenMedia}
-            buttonClassName="relative block"
-            videoClassName="pointer-events-none block h-auto max-h-[72vh] w-auto max-w-full bg-black object-contain"
-            videoStyle={{ maxWidth: bubbleMaxWidthPx }}
+            buttonClassName="relative block w-full"
+            videoClassName="pointer-events-none block h-auto max-h-[72vh] w-full max-w-full bg-black object-contain"
+            videoStyle={{ width: '100%', maxWidth: '100%' }}
           />
         ) : (
           <ProgressiveIncomingImage

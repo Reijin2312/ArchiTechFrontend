@@ -13,6 +13,9 @@ export type MessageAttachment = {
   isImage?: boolean;
 };
 
+const IMAGE_FILE_PATTERN = /\.(png|jpe?g|gif|webp|avif|bmp|svg)(?:$|[?#])/i;
+const VIDEO_FILE_PATTERN = /\.(mp4|webm|mov|m4v|ogv|m3u8|mkv|avi)(?:$|[?#])/i;
+
 export const hashColor = (seed: string) => {
   let hash = 0;
   for (let i = 0; i < seed.length; i += 1) {
@@ -57,6 +60,23 @@ export const messagePreviewText = (message?: ChatMessage) => {
   if (!message) return 'No messages';
   const text = (message.content || '').trim();
   if (text) return text;
+  const attachments = getMessageAttachments(message);
+  const hasVideoAttachment = attachments.some((attachment) => {
+    const contentType = (attachment.contentType || '').toLowerCase();
+    if (isVideoContentType(contentType)) return true;
+    const resolvedUrl = resolveAttachmentUrl(attachment);
+    return VIDEO_FILE_PATTERN.test(resolvedUrl);
+  });
+  const hasImageAttachment = attachments.some((attachment) => {
+    const contentType = (attachment.contentType || '').toLowerCase();
+    if (attachment.isImage || contentType.startsWith('image/')) return true;
+    const resolvedUrl = resolveAttachmentUrl(attachment);
+    return IMAGE_FILE_PATTERN.test(resolvedUrl);
+  });
+
+  if (hasVideoAttachment) return 'Video message';
+  if (hasImageAttachment) return 'Photo';
+
   if (message.messageType === 'image' || message.messageType === 'images') return 'Photo';
   if (message.messageType === 'voice') return 'Voice message';
   if (message.messageType === 'circle') return 'Video message';
@@ -85,16 +105,47 @@ export const resolveMediaUrl = (value?: string) => {
 
 export const getMessageAttachments = (message: ChatMessage): MessageAttachment[] => {
   if (Array.isArray(message.images) && message.images.length > 0) {
-    return message.images.map((image) => ({
-      imagePath: image.imagePath,
-      imageUrl: image.imageUrl,
-      thumbnailUrl: image.thumbnailUrl,
-      strippedThumbnailUrl: image.strippedThumbnailUrl,
-      fileName: image.fileName,
-      contentType: image.contentType,
-      sizeBytes: image.sizeBytes,
-      isImage: image.isImage,
-    }));
+    return message.images.map((image) => {
+      const legacy = image as unknown as Record<string, unknown>;
+      const imagePath =
+        image.imagePath ||
+        (typeof legacy.image_path === 'string' ? legacy.image_path : '') ||
+        '';
+      const imageUrl =
+        image.imageUrl ||
+        (typeof legacy.image_url === 'string' ? legacy.image_url : undefined);
+      const thumbnailUrl =
+        image.thumbnailUrl ||
+        (typeof legacy.thumbnail_url === 'string' ? legacy.thumbnail_url : undefined);
+      const strippedThumbnailUrl =
+        image.strippedThumbnailUrl ||
+        (typeof legacy.stripped_thumbnail_url === 'string'
+          ? legacy.stripped_thumbnail_url
+          : undefined);
+      const fileName =
+        image.fileName ||
+        (typeof legacy.file_name === 'string' ? legacy.file_name : undefined);
+      const contentType =
+        image.contentType ||
+        (typeof legacy.content_type === 'string' ? legacy.content_type : undefined);
+      const sizeBytes =
+        image.sizeBytes ??
+        (typeof legacy.size_bytes === 'number' ? legacy.size_bytes : undefined);
+      const isImage =
+        image.isImage ??
+        (typeof legacy.is_image === 'boolean' ? legacy.is_image : undefined);
+
+      return {
+        imagePath,
+        imageUrl,
+        thumbnailUrl,
+        strippedThumbnailUrl,
+        fileName,
+        contentType,
+        sizeBytes,
+        isImage,
+      };
+    });
   }
 
   if (message.imagePath || message.imageUrl) {
