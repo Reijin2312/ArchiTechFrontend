@@ -35,6 +35,17 @@ export type SendImagesOptions = {
   resetReplyTo?: boolean;
 };
 
+export type UploadingImagePhase = 'queued' | 'uploading' | 'uploaded';
+
+export type UploadingImageState = {
+  localId: string;
+  attachmentIndex: number;
+  file: File;
+  progress: number;
+  phase: UploadingImagePhase;
+  cancelable: boolean;
+};
+
 export type SocialFloatingActionsContext = {
   user: any;
   searchQuery: string;
@@ -49,6 +60,7 @@ export type SocialFloatingActionsContext = {
   markReadTargetRef: MutableRefObject<{ chatId: number; lastId: number } | null>;
   sendInFlightRef: MutableRefObject<boolean>;
   sendCooldownUntilRef: MutableRefObject<number>;
+  pendingUploadCancelsRef: MutableRefObject<Map<string, () => void>>;
   lastProtocolSeqRef: MutableRefObject<number>;
   lastProtocolMsgIdRef: MutableRefObject<number>;
   typingThrottleRef: MutableRefObject<Map<number, { lastSentAt: number; lastState: boolean }>>;
@@ -67,7 +79,7 @@ export type SocialFloatingActionsContext = {
   setMessageInput: Dispatch<SetStateAction<string>>;
   setAttachedImages: Dispatch<SetStateAction<AttachedImage[]>>;
   setEditingMessage: Dispatch<SetStateAction<ChatMessage | null>>;
-  setUploadingImages: Dispatch<SetStateAction<Map<string, { progress: number; file: File }>>>;
+  setUploadingImages: Dispatch<SetStateAction<Map<string, UploadingImageState>>>;
   setAutoScrollLocked: Dispatch<SetStateAction<boolean>>;
   setIsChatsRefreshing: Dispatch<SetStateAction<boolean>>;
   scrollToBottom: (smooth?: boolean) => void;
@@ -112,6 +124,7 @@ export type SocialChatActions = {
     textContent: string,
     options?: SendImagesOptions
   ) => Promise<void>;
+  cancelPendingMediaUpload: (localId: string, attachmentIndex: number) => void;
   attachImage: (file: File, options?: AttachImageOptions) => Promise<void>;
   removeAttachedImage: (id: string) => void;
   editMessage: (messageId: number | string, newContent: string) => Promise<void>;

@@ -1241,6 +1241,7 @@ export default function ChatPage() {
                         userId={model.userId}
                         hasSelectedChat={model.selectedChat !== null}
                         messageBubbleMaxWidthPx={MESSAGE_BUBBLE_MAX_WIDTH}
+                        uploadingImages={model.uploadingImages}
                         messagesEndRef={model.messagesEndRef}
                         matchedMessageIds={isMessageSearchOpen ? messageSearchMatches : []}
                         activeMatchedMessageId={activeMessageSearchId}
@@ -1262,6 +1263,9 @@ export default function ChatPage() {
                         }}
                         onCopyMessage={(text) => {
                           model.copyMessageText(text);
+                        }}
+                        onCancelPendingUpload={(localId, attachmentIndex) => {
+                          model.cancelPendingMediaUpload(localId, attachmentIndex);
                         }}
                       />
                     </div>

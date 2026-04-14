@@ -26,6 +26,7 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
     markReadTargetRef,
     sendInFlightRef,
     sendCooldownUntilRef,
+    pendingUploadCancelsRef,
     lastProtocolSeqRef,
     lastProtocolMsgIdRef,
     typingThrottleRef,
@@ -59,6 +60,282 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
   };
 
   const MAX_ATTACHMENTS = 9;
+  const toUploadStateKey = (localId: string, attachmentIndex: number) =>
+    `${localId}-${attachmentIndex}`;
+
+  const clearUploadStatesByLocalId = (localId: string) => {
+    setUploadingImages((prev) => {
+      if (prev.size === 0) return prev;
+      const next = new Map(prev);
+      let changed = false;
+      for (const key of next.keys()) {
+        if (key.startsWith(`${localId}-`)) {
+          next.delete(key);
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  };
+  const isLocalPreviewUrl = (value?: string) => {
+    if (!value) return false;
+    return value.startsWith('blob:') || value.startsWith('data:');
+  };
+
+  const pickStableMediaUrl = (
+    existingUrl: string | undefined,
+    ...remoteCandidates: Array<string | undefined>
+  ) => {
+    if (isLocalPreviewUrl(existingUrl)) {
+      return existingUrl;
+    }
+
+    for (const candidate of remoteCandidates) {
+      if (typeof candidate === 'string' && candidate.trim().length > 0) {
+        return candidate;
+      }
+    }
+
+    return existingUrl;
+  };
+  type MediaPrefetchKind = 'image' | 'video' | 'audio' | 'file';
+
+  const resolveMediaPrefetchKind = (
+    messageType: string | undefined,
+    contentType: string | undefined,
+    isImage?: boolean
+  ): MediaPrefetchKind => {
+    const normalizedMessageType = (messageType || '').toLowerCase();
+    const normalizedContentType = (contentType || '').toLowerCase();
+    if (normalizedMessageType === 'voice' || normalizedContentType.startsWith('audio/')) {
+      return 'audio';
+    }
+    if (normalizedMessageType === 'circle' || normalizedContentType.startsWith('video/')) {
+      return 'video';
+    }
+    if (
+      isImage ||
+      normalizedMessageType === 'image' ||
+      normalizedMessageType === 'images' ||
+      normalizedContentType.startsWith('image/')
+    ) {
+      return 'image';
+    }
+    return 'file';
+  };
+
+  const mediaPrefetchCache = new Map<string, Promise<boolean>>();
+  const prefetchMediaReady = (url: string, kind: MediaPrefetchKind, timeoutMs = 20_000): Promise<boolean> => {
+    if (!url) return Promise.resolve(false);
+    if (isLocalPreviewUrl(url)) return Promise.resolve(true);
+    if (typeof window === 'undefined') return Promise.resolve(true);
+
+    const cacheKey = `${kind}:${url}`;
+    const cached = mediaPrefetchCache.get(cacheKey);
+    if (cached) return cached;
+
+    const task = new Promise<boolean>((resolve) => {
+      let settled = false;
+      let timeoutId: number | null = null;
+
+      const done = (ok: boolean) => {
+        if (settled) return;
+        settled = true;
+        if (timeoutId !== null) {
+          window.clearTimeout(timeoutId);
+        }
+        resolve(ok);
+      };
+
+      timeoutId = window.setTimeout(() => done(false), timeoutMs);
+
+      try {
+        if (kind === 'image') {
+          const img = new Image();
+          img.onload = () => done(true);
+          img.onerror = () => done(false);
+          img.src = url;
+          return;
+        }
+
+        if (kind === 'video' || kind === 'audio') {
+          const media = document.createElement(kind);
+          media.preload = 'metadata';
+          if (kind === 'video') {
+            media.muted = true;
+            (media as HTMLVideoElement).playsInline = true;
+          }
+
+          const cleanup = () => {
+            media.removeEventListener('loadedmetadata', onReady);
+            media.removeEventListener('canplay', onReady);
+            media.removeEventListener('error', onError);
+            media.removeAttribute('src');
+            media.load();
+          };
+          const onReady = () => {
+            cleanup();
+            done(true);
+          };
+          const onError = () => {
+            cleanup();
+            done(false);
+          };
+
+          media.addEventListener('loadedmetadata', onReady, { once: true });
+          media.addEventListener('canplay', onReady, { once: true });
+          media.addEventListener('error', onError, { once: true });
+          media.src = url;
+          media.load();
+          return;
+        }
+
+        void fetch(url, { method: 'HEAD', credentials: 'include' })
+          .then((response) => done(response.ok))
+          .catch(() => done(false));
+      } catch {
+        done(false);
+      }
+    });
+
+    mediaPrefetchCache.set(cacheKey, task);
+    return task;
+  };
+
+  const scheduleMediaSwapAfterPrefetch = (params: {
+    localId: string;
+    messageId: number;
+    chatId: number;
+    attachmentIndex: number;
+    currentUrl?: string;
+    remoteUrl?: string;
+    remotePath?: string;
+    messageType?: string;
+    contentType?: string;
+    isImage?: boolean;
+  }) => {
+    const {
+      localId,
+      messageId,
+      chatId,
+      attachmentIndex,
+      currentUrl,
+      remoteUrl,
+      remotePath,
+      messageType,
+      contentType,
+      isImage,
+    } = params;
+
+    if (!remoteUrl || !currentUrl) return;
+    if (!isLocalPreviewUrl(currentUrl)) return;
+    if (currentUrl === remoteUrl) return;
+
+    const kind = resolveMediaPrefetchKind(messageType, contentType, isImage);
+
+    void (async () => {
+      const ready = await prefetchMediaReady(remoteUrl, kind);
+      if (!ready) return;
+
+      setMessages((prev) => {
+        let changed = false;
+        const next = prev.map((message) => {
+          const matches =
+            message.localId === localId ||
+            message.messageId === localId ||
+            message.messageId === messageId;
+          if (!matches) {
+            return message;
+          }
+
+          let messageChanged = false;
+          let nextMessage = message;
+
+          if (Array.isArray(message.images) && message.images.length > attachmentIndex) {
+            const currentAttachment = message.images[attachmentIndex];
+            if (currentAttachment) {
+              const attachmentUrl = currentAttachment.imageUrl;
+              if (attachmentUrl === currentUrl || isLocalPreviewUrl(attachmentUrl)) {
+                const nextImages = [...message.images];
+                nextImages[attachmentIndex] = {
+                  ...currentAttachment,
+                  imageUrl: remoteUrl,
+                  imagePath: remotePath || currentAttachment.imagePath,
+                };
+                nextMessage = {
+                  ...nextMessage,
+                  images: nextImages,
+                };
+                messageChanged = true;
+              }
+            }
+          }
+
+          if (attachmentIndex === 0) {
+            const topLevelUrl = nextMessage.imageUrl;
+            if (topLevelUrl === currentUrl || isLocalPreviewUrl(topLevelUrl)) {
+              nextMessage = {
+                ...nextMessage,
+                imageUrl: remoteUrl,
+                imagePath: remotePath || nextMessage.imagePath,
+              };
+              messageChanged = true;
+            }
+          }
+
+          if (!messageChanged) {
+            return message;
+          }
+
+          changed = true;
+          return nextMessage;
+        });
+
+        return changed ? next : prev;
+      });
+
+      if (attachmentIndex === 0) {
+        setChats((prev) => {
+          let changed = false;
+          const next = prev.map((chat) => {
+            if (chat.chatId !== chatId || !chat.lastMessage) {
+              return chat;
+            }
+
+            const lastMessage = chat.lastMessage;
+            const matches =
+              lastMessage.localId === localId ||
+              lastMessage.messageId === localId ||
+              lastMessage.messageId === messageId;
+            if (!matches) {
+              return chat;
+            }
+
+            const lastUrl = lastMessage.imageUrl;
+            if (lastUrl !== currentUrl && !isLocalPreviewUrl(lastUrl)) {
+              return chat;
+            }
+
+            changed = true;
+            return {
+              ...chat,
+              lastMessage: {
+                ...lastMessage,
+                imageUrl: remoteUrl,
+                imagePath: remotePath || lastMessage.imagePath,
+              },
+            };
+          });
+
+          return changed ? next : prev;
+        });
+      }
+
+      if (currentUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(currentUrl);
+      }
+    })();
+  };
   const shouldSendAttachmentsSeparately = (attachments: AttachedImage[]) =>
     attachments.length > 1 && attachments.every((attachment) => attachment.groupWithOthers === false);
 
@@ -606,6 +883,14 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
     );
   };
 
+  const cancelPendingMediaUpload = (localId: string, attachmentIndex: number) => {
+    const key = toUploadStateKey(localId, attachmentIndex);
+    const cancel = pendingUploadCancelsRef.current.get(key);
+    if (cancel) {
+      cancel();
+    }
+  };
+
   const sendChatMessage = async () => {
     console.log('sendChatMessage called', { selectedChat, messageInput, attachedImagesCount: attachedImages.length });
     const draftText = messageInput;
@@ -690,6 +975,7 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
   ) => {
     const attachmentsToSend = (options?.attachments ?? attachedImages).slice(0, MAX_ATTACHMENTS);
     if (attachmentsToSend.length === 0) return;
+
     const clearComposerDraft = options?.clearComposerDraft ?? true;
     const resetReplyTo = options?.resetReplyTo ?? true;
     const tempMessageType = resolveAttachmentMessageType(attachmentsToSend);
@@ -724,7 +1010,119 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
       createdAt: new Date().toISOString(),
     };
 
-    setMessages(prev => [...prev, tempMessage]);
+    type UploadedAttachmentPayload = {
+      image_path: string;
+      image_url?: string;
+      image_encrypted?: boolean;
+      image_encryption_iv?: string;
+      image_key_version?: number;
+      file_name: string;
+      content_type: string;
+      size_bytes: number;
+      is_image: boolean;
+    };
+
+    const canceledIndices = new Set<number>();
+    const uploadedByIndex = new Map<number, UploadedAttachmentPayload>();
+    const controllersByIndex = new Map<number, AbortController>();
+
+    const hasActiveAttachments = () =>
+      attachmentsToSend.some((_, attachmentIndex) => !canceledIndices.has(attachmentIndex));
+
+    const removePendingCancelHandler = (attachmentIndex: number) => {
+      pendingUploadCancelsRef.current.delete(toUploadStateKey(localId, attachmentIndex));
+    };
+
+    const removeTempMessageIfAllCanceled = () => {
+      if (hasActiveAttachments()) return;
+      setMessages((prev) =>
+        prev.filter((message) => message.localId !== localId && message.messageId !== localId)
+      );
+    };
+
+    const clearCanceledImagePreview = (attachmentIndex: number) => {
+      setMessages((prev) =>
+        prev.map((message) => {
+          if (message.localId !== localId && message.messageId !== localId) {
+            return message;
+          }
+
+          const nextImages = (message.images || []).map((image, idx) =>
+            idx === attachmentIndex
+              ? {
+                  ...image,
+                  imagePath: '',
+                  imageUrl: undefined,
+                }
+              : image
+          );
+
+          const firstVisible = nextImages.find(
+            (image) =>
+              (typeof image.imageUrl === 'string' && image.imageUrl.trim().length > 0) ||
+              (typeof image.imagePath === 'string' && image.imagePath.trim().length > 0)
+          );
+
+          return {
+            ...message,
+            images: nextImages,
+            imagePath: firstVisible?.imagePath || '',
+            imageUrl: firstVisible?.imageUrl,
+          };
+        })
+      );
+    };
+
+    const requestCancelAttachment = (attachmentIndex: number) => {
+      if (canceledIndices.has(attachmentIndex)) {
+        return;
+      }
+
+      canceledIndices.add(attachmentIndex);
+      uploadedByIndex.delete(attachmentIndex);
+      removePendingCancelHandler(attachmentIndex);
+
+      const uploadKey = toUploadStateKey(localId, attachmentIndex);
+      setUploadingImages((prev) => {
+        if (!prev.has(uploadKey)) return prev;
+        const next = new Map(prev);
+        next.delete(uploadKey);
+        return next;
+      });
+
+      const controller = controllersByIndex.get(attachmentIndex);
+      if (controller && !controller.signal.aborted) {
+        controller.abort();
+      }
+      controllersByIndex.delete(attachmentIndex);
+
+      clearCanceledImagePreview(attachmentIndex);
+      removeTempMessageIfAllCanceled();
+    };
+
+    for (let attachmentIndex = 0; attachmentIndex < attachmentsToSend.length; attachmentIndex += 1) {
+      const attachment = attachmentsToSend[attachmentIndex];
+      const uploadKey = toUploadStateKey(localId, attachmentIndex);
+
+      pendingUploadCancelsRef.current.set(uploadKey, () => {
+        requestCancelAttachment(attachmentIndex);
+      });
+
+      setUploadingImages((prev) => {
+        const next = new Map(prev);
+        next.set(uploadKey, {
+          localId,
+          attachmentIndex,
+          file: attachment.file,
+          progress: 0,
+          phase: 'queued',
+          cancelable: true,
+        });
+        return next;
+      });
+    }
+
+    setMessages((prev) => [...prev, tempMessage]);
     if (clearComposerDraft) {
       setAttachedImages([]);
       setMessageInput('');
@@ -733,51 +1131,86 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
 
     try {
       const finalChatId = chatId;
-      const uploadPromises = attachmentsToSend.map((attachment, idx) => {
-        return (async () => {
-          const form = new FormData();
-          form.append('file', attachment.file);
 
-          const { data } = await http.post<UploadImageResponse>(
-            `${endpoints.chatUpload}?chatId=${finalChatId}`,
-            form,
-            {
-              onUploadProgress: (e: any) => {
-                const progress = Math.round((e.loaded / e.total) * 100);
-                setUploadingImages(prev => {
-                  const next = new Map(prev);
-                  next.set(`${localId}-${idx}`, { file: attachment.file, progress });
-                  return next;
+      for (let attachmentIndex = 0; attachmentIndex < attachmentsToSend.length; attachmentIndex += 1) {
+        if (canceledIndices.has(attachmentIndex) || !hasActiveAttachments()) {
+          continue;
+        }
+
+        const attachment = attachmentsToSend[attachmentIndex];
+        const uploadKey = toUploadStateKey(localId, attachmentIndex);
+        const form = new FormData();
+        form.append('file', attachment.file);
+
+        const isRawImageFile =
+          (attachment.file.type || '').trim().toLowerCase().startsWith('image/');
+        const uploadAsFile = isRawImageFile && !isImageAttachment(attachment);
+        const uploadUrl = `${endpoints.chatUpload}?chatId=${finalChatId}${uploadAsFile ? '&asFile=true' : ''}`;
+
+        const uploadDebugMeta = {
+          chatId: finalChatId,
+          localId,
+          uploadIndex: attachmentIndex,
+          uploadCount: attachmentsToSend.length,
+          fileName: attachment.file.name,
+          fileType: attachment.file.type,
+          fileSize: attachment.file.size,
+          attachmentContentType: attachment.contentType,
+          attachmentIsImage: isImageAttachment(attachment),
+          uploadAsFile,
+        };
+
+        logger.info('[chat.upload] start', uploadDebugMeta);
+
+        const uploadController = new AbortController();
+        controllersByIndex.set(attachmentIndex, uploadController);
+
+        setUploadingImages((prev) => {
+          const existing = prev.get(uploadKey);
+          if (!existing) return prev;
+          const next = new Map(prev);
+          next.set(uploadKey, {
+            ...existing,
+            phase: 'uploading',
+            progress: Math.max(existing.progress, 1),
+          });
+          return next;
+        });
+
+        try {
+          const { data } = await http.post<UploadImageResponse>(uploadUrl, form, {
+            signal: uploadController.signal,
+            onUploadProgress: (event: any) => {
+              const total = typeof event.total === 'number' && event.total > 0 ? event.total : 0;
+              const loaded = typeof event.loaded === 'number' ? event.loaded : 0;
+              const progress = total > 0 ? Math.round((loaded / total) * 100) : 0;
+              setUploadingImages((prev) => {
+                const existing = prev.get(uploadKey);
+                if (!existing) return prev;
+                const next = new Map(prev);
+                next.set(uploadKey, {
+                  ...existing,
+                  phase: 'uploading',
+                  progress,
                 });
-              }
-            }
-          );
+                return next;
+              });
+            },
+          });
 
-          setMessages(prev => prev.map(m =>
-            (m.localId === localId || m.messageId === localId)
-              ? {
-                  ...m,
-                  images: m.images?.map((img, i) =>
-                    i === idx
-                      ? {
-                          imagePath: data.imagePath,
-                          imageUrl: data.imageUrl,
-                          fileName: data.fileName || attachment.file.name,
-                          contentType:
-                            data.contentType ||
-                            attachment.file.type ||
-                            'application/octet-stream',
-                          sizeBytes: data.sizeBytes ?? attachment.file.size,
-                          isImage: data.isImage ?? isImageAttachment(attachment),
-                          imageKeyVersion: data.imageKeyVersion,
-                        }
-                      : img
-                  ) || []
-                }
-              : m
-          ));
+          if (canceledIndices.has(attachmentIndex)) {
+            continue;
+          }
 
-          return {
+          logger.info('[chat.upload] success', {
+            ...uploadDebugMeta,
+            responseImagePath: data.imagePath,
+            responseContentType: data.contentType,
+            responseIsImage: data.isImage,
+            responseSizeBytes: data.sizeBytes,
+          });
+
+          const uploadedAttachment: UploadedAttachmentPayload = {
             image_path: data.imagePath,
             image_url: data.imageUrl,
             image_encrypted: data.imageEncrypted,
@@ -788,26 +1221,98 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
             size_bytes: data.sizeBytes ?? attachment.file.size,
             is_image: data.isImage ?? isImageAttachment(attachment),
           };
-        })();
-      });
 
-      const uploadedAttachments = await Promise.all(uploadPromises);
+          uploadedByIndex.set(attachmentIndex, uploadedAttachment);
 
-      setUploadingImages(prev => {
-        const next = new Map(prev);
-        Array.from(next.keys()).forEach(k => {
-          if (k === localId || k.startsWith(`${localId}-`)) next.delete(k);
+          setUploadingImages((prev) => {
+            const existing = prev.get(uploadKey);
+            if (!existing) return prev;
+            const next = new Map(prev);
+            next.set(uploadKey, {
+              ...existing,
+              phase: 'uploaded',
+              progress: 100,
+            });
+            return next;
+          });
+
+          setMessages((prev) =>
+            prev.map((message) =>
+              message.localId === localId || message.messageId === localId
+                ? {
+                    ...message,
+                    images:
+                      message.images?.map((image, idx) =>
+                        idx === attachmentIndex
+                          ? {
+                              imagePath: data.imagePath,
+                              imageUrl: image.imageUrl || data.imageUrl,
+                              fileName: data.fileName || attachment.file.name,
+                              contentType:
+                                data.contentType ||
+                                attachment.file.type ||
+                                'application/octet-stream',
+                              sizeBytes: data.sizeBytes ?? attachment.file.size,
+                              isImage: data.isImage ?? isImageAttachment(attachment),
+                              imageKeyVersion: data.imageKeyVersion,
+                            }
+                          : image
+                      ) || []
+                  }
+                : message
+            )
+          );
+        } catch (uploadError) {
+          const err = uploadError as any;
+          const wasCanceled =
+            uploadController.signal.aborted ||
+            err?.code === 'ERR_CANCELED' ||
+            err?.name === 'CanceledError' ||
+            canceledIndices.has(attachmentIndex);
+
+          if (!wasCanceled) {
+            logger.error('[chat.upload] failed', {
+              ...uploadDebugMeta,
+              errorMessage: err?.message,
+              responseStatus: err?.response?.status,
+              responseData: err?.response?.data,
+              responseHeaders: err?.response?.headers,
+            });
+            throw uploadError;
+          }
+        } finally {
+          controllersByIndex.delete(attachmentIndex);
+        }
+      }
+
+      const uploadedIndexes = Array.from(uploadedByIndex.keys()).sort((a, b) => a - b);
+      if (uploadedIndexes.length === 0) {
+        clearUploadStatesByLocalId(localId);
+        removeTempMessageIfAllCanceled();
+        return;
+      }
+
+      uploadedIndexes.forEach((attachmentIndex) => {
+        removePendingCancelHandler(attachmentIndex);
+        const uploadKey = toUploadStateKey(localId, attachmentIndex);
+        setUploadingImages((prev) => {
+          const existing = prev.get(uploadKey);
+          if (!existing) return prev;
+          const next = new Map(prev);
+          next.set(uploadKey, { ...existing, cancelable: false });
+          return next;
         });
-        return next;
       });
 
-      const messageType = tempMessageType;
+      const uploadedAttachments = uploadedIndexes.map((attachmentIndex) => uploadedByIndex.get(attachmentIndex)!);
+      const effectiveAttachments = uploadedIndexes.map((attachmentIndex) => attachmentsToSend[attachmentIndex]);
+      const messageType = resolveAttachmentMessageType(effectiveAttachments);
       const { msgId, seqNo, timestamp } = nextProtocolEnvelope();
 
       const messageData: any = {
         msg_id: msgId,
         seq_no: seqNo,
-        timestamp: timestamp,
+        timestamp,
         chat_id: finalChatId,
         content_type: messageType,
         content: normalizedContent,
@@ -825,7 +1330,7 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
       };
 
       if (uploadedAttachments.length > 1) {
-        messageData.images = uploadedAttachments.map(item => ({
+        messageData.images = uploadedAttachments.map((item) => ({
           image_path: item.image_path,
           image_encrypted: item.image_encrypted,
           image_encryption_iv: item.image_encryption_iv,
@@ -839,71 +1344,142 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
 
       const { data } = await http.post<SendMessageResponse>(endpoints.chatSend, messageData);
 
-      setMessages(prev => prev.map(m => 
-        (m.localId === localId || m.messageId === localId)
-          ? {
-              ...m,
-              messageId: data.messageId,
-              status: 'sent',
-              senderId: user?.id || '',
-              content: normalizedContent,
-              entities: m.entities ?? normalizedEntities,
-              messageType,
-              imagePath: uploadedAttachments[0].image_path,
-              imageUrl: data.imageUrl ?? m.imageUrl,
-              images: uploadedAttachments.map((item, index) => {
-                const fromResponse = data.imageUrls?.[index];
-                const singleAttachmentUrl = uploadedAttachments.length === 1 ? data.imageUrl : undefined;
-                return {
-                  imagePath: fromResponse?.imagePath || item.image_path,
-                  imageUrl:
-                    fromResponse?.imageUrl ||
-                    singleAttachmentUrl ||
-                    item.image_url ||
-                    `/media/${item.image_path}`,
-                  fileName: item.file_name,
-                  contentType: item.content_type,
-                  sizeBytes: item.size_bytes,
-                  isImage: item.is_image,
-                  imageKeyVersion: item.image_key_version,
-                };
-              }),
-              createdAt: new Date().toISOString(),
-              isRead: false,
-            }
-          : m
-      ));
+      setMessages((prev) =>
+        prev.map((message) => {
+          if (message.localId !== localId && message.messageId !== localId) {
+            return message;
+          }
 
-      setChats(prev => prev.map(c =>
-        c.chatId === finalChatId
-          ? { ...c, lastMessage: {
-              localId,
-              messageId: data.messageId,
-              senderId: user?.id || '',
-              content: normalizedContent,
-              entities: normalizedEntities,
-              messageType,
-              imagePath: uploadedAttachments[0].image_path,
-              createdAt: new Date().toISOString(),
-              status: 'sent',
-            } as ChatMessage }
-          : c
-      ));
+          return {
+            ...message,
+            messageId: data.messageId,
+            status: 'sent',
+            senderId: user?.id || '',
+            content: normalizedContent,
+            entities: message.entities ?? normalizedEntities,
+            messageType,
+            imagePath: uploadedAttachments[0].image_path,
+            imageUrl: pickStableMediaUrl(
+              message.imageUrl,
+              data.imageUrl,
+              uploadedAttachments[0].image_url,
+              `/media/${uploadedAttachments[0].image_path}`
+            ),
+            images: uploadedAttachments.map((item, index) => {
+              const fromResponse = data.imageUrls?.[index];
+              const singleAttachmentUrl = uploadedAttachments.length === 1 ? data.imageUrl : undefined;
+              const previousImage = message.images?.[uploadedIndexes[index]];
+              return {
+                imagePath: fromResponse?.imagePath || item.image_path,
+                imageUrl: pickStableMediaUrl(
+                  previousImage?.imageUrl,
+                  fromResponse?.imageUrl,
+                  singleAttachmentUrl,
+                  item.image_url,
+                  `/media/${item.image_path}`
+                ),
+                fileName: item.file_name,
+                contentType: item.content_type,
+                sizeBytes: item.size_bytes,
+                isImage: item.is_image,
+                imageKeyVersion: item.image_key_version,
+              };
+            }),
+            createdAt: new Date().toISOString(),
+            isRead: false,
+          };
+        })
+      );
+
+      clearUploadStatesByLocalId(localId);
+
+      setChats((prev) =>
+        prev.map((chat) =>
+          chat.chatId === finalChatId
+            ? {
+                ...chat,
+                lastMessage: {
+                  localId,
+                  messageId: data.messageId,
+                  senderId: user?.id || '',
+                  content: normalizedContent,
+                  entities: normalizedEntities,
+                  messageType,
+                  imagePath: uploadedAttachments[0].image_path,
+                  createdAt: new Date().toISOString(),
+                  status: 'sent',
+                } as ChatMessage,
+              }
+            : chat
+        )
+      );
+
+      uploadedAttachments.forEach((attachment, index) => {
+        const responseAttachment = data.imageUrls?.[index];
+        const singleAttachmentUrl = uploadedAttachments.length === 1 ? data.imageUrl : undefined;
+        const remoteUrl =
+          responseAttachment?.imageUrl ||
+          singleAttachmentUrl ||
+          attachment.image_url ||
+          (attachment.image_path ? `/media/${attachment.image_path}` : undefined);
+        const remotePath = responseAttachment?.imagePath || attachment.image_path;
+        const currentUrl = effectiveAttachments[index]?.preview;
+
+        scheduleMediaSwapAfterPrefetch({
+          localId,
+          messageId: data.messageId,
+          chatId: finalChatId,
+          attachmentIndex: index,
+          currentUrl,
+          remoteUrl,
+          remotePath,
+          messageType,
+          contentType: attachment.content_type,
+          isImage: attachment.is_image,
+        });
+      });
 
       if (resetReplyTo) {
         setReplyingTo(null);
       }
-    } catch (e) {
-      console.error('Failed to send multi-attachment message:', e);
-      setMessages(prev => prev.filter(m => m.localId !== localId && m.messageId !== localId));
-      setUploadingImages(prev => {
-        const next = new Map(prev);
-        Array.from(next.keys()).forEach(k => {
-          if (k === localId || k.startsWith(`${localId}-`)) next.delete(k);
-        });
-        return next;
+    } catch (error) {
+      const err = error as any;
+      logger.error('[chat.upload] multi-attachment send failed', {
+        chatId,
+        localId,
+        attachments: attachmentsToSend.map((attachment, idx) => ({
+          idx,
+          fileName: attachment.file.name,
+          fileType: attachment.file.type,
+          fileSize: attachment.file.size,
+          attachmentContentType: attachment.contentType,
+          attachmentIsImage: isImageAttachment(attachment),
+        })),
+        errorMessage: err?.message,
+        responseStatus: err?.response?.status,
+        responseData: err?.response?.data,
       });
-      alert(e instanceof Error ? e.message : 'РћС€РёР±РєР° РѕС‚РїСЂР°РІРєРё СЃРѕРѕР±С‰РµРЅРёСЏ');
+      console.error('Failed to send multi-attachment message:', error);
+
+      setMessages((prev) =>
+        prev.filter((message) => message.localId !== localId && message.messageId !== localId)
+      );
+      clearUploadStatesByLocalId(localId);
+      alert(
+        error instanceof Error
+          ? error.message
+          : 'РћС€РёР±РєР° РѕС‚РїСЂР°РІРєРё СЃРѕРѕР±С‰РµРЅРёСЏ'
+      );
+    } finally {
+      for (let attachmentIndex = 0; attachmentIndex < attachmentsToSend.length; attachmentIndex += 1) {
+        removePendingCancelHandler(attachmentIndex);
+      }
+      controllersByIndex.forEach((controller) => {
+        if (!controller.signal.aborted) {
+          controller.abort();
+        }
+      });
+      controllersByIndex.clear();
     }
   };
 
@@ -1029,12 +1605,33 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
           : 'file';
     
     const localId = `local-upload-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    const uploadKey = toUploadStateKey(localId, 0);
     const createdAt = new Date().toISOString();
     const fallbackContentType = file.type || 'application/octet-stream';
     const localPreviewUrl =
-      messageType === 'voice' || messageType === 'circle'
+      messageType === 'image' || messageType === 'voice' || messageType === 'circle'
         ? URL.createObjectURL(file)
         : undefined;
+    let canceled = false;
+    const uploadController = new AbortController();
+
+    const removeTempMessage = () => {
+      setMessages(prev => prev.filter(m => m.localId !== localId && m.messageId !== localId));
+    };
+
+    const cancelUpload = () => {
+      if (canceled) return;
+      canceled = true;
+      pendingUploadCancelsRef.current.delete(uploadKey);
+      if (!uploadController.signal.aborted) {
+        uploadController.abort();
+      }
+      clearUploadStatesByLocalId(localId);
+      removeTempMessage();
+      if (localPreviewUrl) {
+        URL.revokeObjectURL(localPreviewUrl);
+      }
+    };
     
     try {
       // РЎРѕР·РґР°РµРј РІСЂРµРјРµРЅРЅРѕРµ СЃРѕРѕР±С‰РµРЅРёРµ СЃ РёРЅРґРёРєР°С‚РѕСЂРѕРј Р·Р°РіСЂСѓР·РєРё
@@ -1057,45 +1654,85 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
         createdAt,
       };
       
+      pendingUploadCancelsRef.current.set(uploadKey, cancelUpload);
       setMessages(prev => [...prev, tempMessage]);
-      setUploadingImages(prev => new Map(prev).set(localId, { progress: 0, file }));
+      setUploadingImages(prev => {
+        const next = new Map(prev);
+        next.set(uploadKey, {
+          localId,
+          attachmentIndex: 0,
+          file,
+          progress: 0,
+          phase: 'queued',
+          cancelable: true,
+        });
+        return next;
+      });
       
       setTimeout(() => scrollToBottom(), 0);
       
       const form = new FormData();
       form.append('file', file);
-      
-      console.log('рџ“¤ Uploading attachment:', {
-        chatId: selectedChat,
-        fileName: file.name,
-        fileSize: file.size,
-        fileType: file.type,
-        url: `${endpoints.chatUpload}?chatId=${selectedChat}`
+
+      setUploadingImages(prev => {
+        const existing = prev.get(uploadKey);
+        if (!existing) return prev;
+        const next = new Map(prev);
+        next.set(uploadKey, {
+          ...existing,
+          phase: 'uploading',
+          progress: Math.max(1, existing.progress),
+        });
+        return next;
       });
       
       const { data } = await http.post<UploadImageResponse>(
         `${endpoints.chatUpload}?chatId=${selectedChat}`, 
         form,
         {
+          signal: uploadController.signal,
           onUploadProgress: (e: any) => {
-            const progress = Math.round((e.loaded / e.total) * 100);
+            if (canceled) return;
+            const total = typeof e.total === 'number' && e.total > 0 ? e.total : 0;
+            const loaded = typeof e.loaded === 'number' ? e.loaded : 0;
+            const progress = total > 0 ? Math.round((loaded / total) * 100) : 0;
             setUploadingImages(prev => {
+              const existing = prev.get(uploadKey);
+              if (!existing) return prev;
               const next = new Map(prev);
-              next.set(localId, { file, progress });
+              next.set(uploadKey, {
+                ...existing,
+                progress,
+                phase: 'uploading',
+              });
               return next;
             });
           }
         }
       );
       
-      console.log('вњ… Attachment uploaded successfully:', data);
+      if (canceled) {
+        return;
+      }
+
       setUploadingImages(prev => {
+        const existing = prev.get(uploadKey);
+        if (!existing) return prev;
         const next = new Map(prev);
-        next.set(localId, { file, progress: 100 });
+        next.set(uploadKey, {
+          ...existing,
+          progress: 100,
+          phase: 'uploaded',
+          cancelable: true,
+        });
         return next;
       });
       
       // РћС‚РїСЂР°РІР»СЏРµРј СЂРµР°Р»СЊРЅРѕРµ СЃРѕРѕР±С‰РµРЅРёРµ СЃ РёР·РѕР±СЂР°Р¶РµРЅРёРµРј, РѕСЃС‚Р°РµРјСЃСЏ РЅР° С‚РѕРј Р¶Рµ РѕР±СЉРµРєС‚Рµ
+      if (canceled) {
+        return;
+      }
+
       const { msgId, seqNo, timestamp } = nextProtocolEnvelope();
       
       const { data: sendRes } = await http.post<SendMessageResponse>(endpoints.chatSend, {
@@ -1117,6 +1754,10 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
         file_is_image: data.isImage ?? isImage,
       });
 
+      if (canceled) {
+        return;
+      }
+
       const resolvedRemoteUrl = sendRes.imageUrl ?? data.imageUrl;
       
       setMessages(prev => prev.map(m => 
@@ -1126,10 +1767,18 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
               messageId: sendRes.messageId,
               status: 'sent',
               imagePath: data.imagePath || m.imagePath,
-              imageUrl: resolvedRemoteUrl ?? m.imageUrl,
+              imageUrl: pickStableMediaUrl(
+                m.imageUrl,
+                resolvedRemoteUrl,
+                data.imagePath ? `/media/${data.imagePath}` : undefined
+              ),
               images: [{
                 imagePath: data.imagePath || m.imagePath || '',
-                imageUrl: resolvedRemoteUrl ?? m.imageUrl,
+                imageUrl: pickStableMediaUrl(
+                  m.images?.[0]?.imageUrl ?? m.imageUrl,
+                  resolvedRemoteUrl,
+                  data.imagePath ? `/media/${data.imagePath}` : undefined
+                ),
                 fileName: data.fileName || file.name,
                 contentType: data.contentType || fallbackContentType,
                 sizeBytes: data.sizeBytes ?? file.size,
@@ -1142,15 +1791,8 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
           : m
       ));
 
-      if (localPreviewUrl && sendRes.imageUrl && sendRes.imageUrl !== localPreviewUrl) {
-        URL.revokeObjectURL(localPreviewUrl);
-      }
-      
-      setUploadingImages(prev => {
-        const next = new Map(prev);
-        next.delete(localId);
-        return next;
-      });
+      clearUploadStatesByLocalId(localId);
+      pendingUploadCancelsRef.current.delete(uploadKey);
       
       setChats(prev => prev.map(c => 
         c.chatId === chat!.chatId 
@@ -1166,25 +1808,59 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
             } as ChatMessage }
           : c
       ));
-    } catch (e) {
-      console.error('вќЊ Failed to upload attachment:', {
-        error: e,
-        response: (e as any).response?.data,
-        status: (e as any).response?.status,
-        chatId: selectedChat,
-        file: file.name
+
+      scheduleMediaSwapAfterPrefetch({
+        localId,
+        messageId: sendRes.messageId,
+        chatId: chat.chatId,
+        attachmentIndex: 0,
+        currentUrl: localPreviewUrl,
+        remoteUrl:
+          resolvedRemoteUrl ||
+          (data.imagePath ? `/media/${data.imagePath}` : undefined),
+        remotePath: data.imagePath,
+        messageType,
+        contentType: data.contentType || fallbackContentType,
+        isImage: data.isImage ?? isImage,
       });
-      // РЈРґР°Р»СЏРµРј РІСЂРµРјРµРЅРЅРѕРµ СЃРѕРѕР±С‰РµРЅРёРµ РїСЂРё РѕС€РёР±РєРµ
-      setMessages(prev => prev.filter(m => m.localId !== localId && m.messageId !== localId));
+    } catch (e) {
+      const err = e as any;
+      const wasCanceled =
+        canceled ||
+        uploadController.signal.aborted ||
+        err?.code === 'ERR_CANCELED' ||
+        err?.name === 'CanceledError';
+
+      if (wasCanceled) {
+        removeTempMessage();
+        if (localPreviewUrl) {
+          URL.revokeObjectURL(localPreviewUrl);
+        }
+        clearUploadStatesByLocalId(localId);
+        pendingUploadCancelsRef.current.delete(uploadKey);
+        return;
+      }
+
+      logger.error('[chat.upload] single attachment failed', {
+        chatId: selectedChat,
+        localId,
+        fileName: file.name,
+        fileType: file.type,
+        fileSize: file.size,
+        responseStatus: err?.response?.status,
+        responseData: err?.response?.data,
+        errorMessage: err?.message,
+      });
+
+      removeTempMessage();
       if (localPreviewUrl) {
         URL.revokeObjectURL(localPreviewUrl);
       }
-      setUploadingImages(prev => {
-        const next = new Map(prev);
-        next.delete(localId);
-        return next;
-      });
-      alert('РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РіСЂСѓР·РёС‚СЊ С„Р°Р№Р»');
+      clearUploadStatesByLocalId(localId);
+      pendingUploadCancelsRef.current.delete(uploadKey);
+      alert('Failed to upload attachment');
+    } finally {
+      pendingUploadCancelsRef.current.delete(uploadKey);
     }
   };
 
@@ -1198,6 +1874,7 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
     sendMessageToUser,
     sendChatMessage,
     sendMessagesWithImages,
+    cancelPendingMediaUpload,
     attachImage,
     removeAttachedImage,
     editMessage,

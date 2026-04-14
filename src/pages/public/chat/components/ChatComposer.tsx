@@ -72,7 +72,10 @@ export function ChatComposer({ model }: ChatComposerProps) {
   const activePointerIdRef = useRef<number | null>(null);
   const holdTriggeredRef = useRef(false);
   const isRecordingRef = useRef(recorder.isRecording);
+  const messagesRef = useRef(model.messages);
   const pendingPreviewUrlsRef = useRef<string[]>([]);
+  const sendingPreviewUrlsRef = useRef<string[]>([]);
+  const sendingPreviewReleaseTimersRef = useRef<Set<number>>(new Set());
   const emojiHideTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [isRecordingLocked, setIsRecordingLocked] = useState(false);
   const [isPointerInCancelZone, setIsPointerInCancelZone] = useState(false);
@@ -131,6 +134,10 @@ export function ChatComposer({ model }: ChatComposerProps) {
     }
   }, [recorder.isRecording]);
 
+  useEffect(() => {
+    messagesRef.current = model.messages;
+  }, [model.messages]);
+
   const handleSend = () => {
     if (model.selectedChat === null) return;
     if (!canSendText) return;
@@ -148,12 +155,66 @@ export function ChatComposer({ model }: ChatComposerProps) {
   const editingPreview = model.editingMessage ? resolveMessagePreview(model.editingMessage) : '';
   const hasComposerState = !!model.editingMessage || !!model.replyingTo;
 
-  const releasePendingPreviewUrls = () => {
-    if (pendingPreviewUrlsRef.current.length === 0) return;
-    pendingPreviewUrlsRef.current.forEach((previewUrl) => {
+  const revokePreviewUrls = (previewUrls: string[]) => {
+    previewUrls.forEach((previewUrl) => {
       URL.revokeObjectURL(previewUrl);
     });
+  };
+
+  const releasePendingPreviewUrls = () => {
+    if (pendingPreviewUrlsRef.current.length === 0) return;
+    revokePreviewUrls(pendingPreviewUrlsRef.current);
     pendingPreviewUrlsRef.current = [];
+  };
+
+  const reservePendingPreviewUrlsForSending = () => {
+    if (pendingPreviewUrlsRef.current.length === 0) return;
+    sendingPreviewUrlsRef.current.push(...pendingPreviewUrlsRef.current);
+    pendingPreviewUrlsRef.current = [];
+  };
+
+  const isPreviewUrlStillUsed = (previewUrl: string) => {
+    const messages = messagesRef.current;
+    return messages.some((message) => {
+      if (message.imageUrl === previewUrl) {
+        return true;
+      }
+      if (!Array.isArray(message.images) || message.images.length === 0) {
+        return false;
+      }
+      return message.images.some((image) => image?.imageUrl === previewUrl);
+    });
+  };
+
+  const releaseSendingPreviewUrls = (previewUrls: string[]) => {
+    if (previewUrls.length === 0) return [];
+    const releasable = previewUrls.filter((previewUrl) => !isPreviewUrlStillUsed(previewUrl));
+    if (releasable.length > 0) {
+      revokePreviewUrls(releasable);
+      const revoked = new Set(releasable);
+      sendingPreviewUrlsRef.current = sendingPreviewUrlsRef.current.filter(
+        (previewUrl) => !revoked.has(previewUrl)
+      );
+    }
+    return previewUrls.filter((previewUrl) => !releasable.includes(previewUrl));
+  };
+
+  const scheduleSendingPreviewUrlsRelease = (previewUrls: string[], delayMs = 45_000) => {
+    if (previewUrls.length === 0) return;
+
+    const schedule = (remainingUrls: string[], timeoutMs: number) => {
+      if (remainingUrls.length === 0) return;
+      const timerId = window.setTimeout(() => {
+        sendingPreviewReleaseTimersRef.current.delete(timerId);
+        const stillUsed = releaseSendingPreviewUrls(remainingUrls);
+        if (stillUsed.length > 0) {
+          schedule(stillUsed, 15_000);
+        }
+      }, timeoutMs);
+      sendingPreviewReleaseTimersRef.current.add(timerId);
+    };
+
+    schedule(previewUrls, delayMs);
   };
 
   const openPendingImageDraft = (files: File[], sendAsFile = false) => {
@@ -173,8 +234,12 @@ export function ChatComposer({ model }: ChatComposerProps) {
     });
   };
 
-  const closePendingImageDraft = () => {
-    releasePendingPreviewUrls();
+  const closePendingImageDraft = (options?: { preservePreviewsForSending?: boolean }) => {
+    if (options?.preservePreviewsForSending) {
+      reservePendingPreviewUrlsForSending();
+    } else {
+      releasePendingPreviewUrls();
+    }
     setPendingImageDraft(null);
     setIsPendingImageApplying(false);
   };
@@ -292,12 +357,49 @@ export function ChatComposer({ model }: ChatComposerProps) {
     }>;
   }, [pendingImageDraft]);
 
-  const applyPendingImage = (_mode: 'add' | 'send') => {
+  const applyPendingImage = (mode: 'add' | 'send') => {
     if (!pendingImageDraft || isPendingImageApplying) return;
 
     void (async () => {
       setIsPendingImageApplying(true);
       try {
+        if (mode === 'send') {
+          if (model.selectedChat === null) {
+            throw new Error('No selected chat');
+          }
+          const sendingDraft = pendingImageDraft;
+          const sendPreviewUrls = sendingDraft.items.map((item) => item.previewUrl);
+          const attachments = sendingDraft.items.map((item) => ({
+            id: item.id,
+            file: item.file,
+            preview: item.previewUrl,
+            isImage:
+              !sendingDraft.sendAsFile
+              && (item.file.type || '').toLowerCase().startsWith('image/'),
+            groupWithOthers: sendingDraft.groupImages,
+            contentType: item.file.type || 'application/octet-stream',
+            sizeBytes: item.file.size,
+            uploading: false,
+          }));
+          const replyToMessageId =
+            typeof model.replyingTo?.messageId === 'number'
+              ? model.replyingTo.messageId
+              : undefined;
+          closePendingImageDraft({ preservePreviewsForSending: true });
+          try {
+            await model.sendMessagesWithImages(model.selectedChat, sendingDraft.caption, {
+              attachments,
+              clearComposerDraft: true,
+              replyToMessageId,
+              resetReplyTo: true,
+            });
+          } finally {
+            // Keep local previews for a while to avoid visible flicker while remote media becomes renderable.
+            scheduleSendingPreviewUrlsRelease(sendPreviewUrls);
+          }
+          return;
+        }
+
         appendCaptionToInput(pendingImageDraft.caption);
         for (const item of pendingImageDraft.items) {
           await model.attachImage(item.file, {
@@ -317,6 +419,14 @@ export function ChatComposer({ model }: ChatComposerProps) {
   useEffect(
     () => () => {
       releasePendingPreviewUrls();
+      sendingPreviewReleaseTimersRef.current.forEach((timerId) => {
+        window.clearTimeout(timerId);
+      });
+      sendingPreviewReleaseTimersRef.current.clear();
+      if (sendingPreviewUrlsRef.current.length > 0) {
+        revokePreviewUrls(sendingPreviewUrlsRef.current);
+        sendingPreviewUrlsRef.current = [];
+      }
     },
     []
   );
@@ -525,7 +635,7 @@ export function ChatComposer({ model }: ChatComposerProps) {
               </h3>
               <button
                 type="button"
-                onClick={closePendingImageDraft}
+                onClick={() => closePendingImageDraft()}
                 className="grid h-8 w-8 place-items-center rounded-full text-[#b79cff]/80 transition-colors hover:bg-[#8e77ef]/18 hover:text-white"
                 aria-label="Close image preview"
                 disabled={isPendingImageApplying}
@@ -636,7 +746,7 @@ export function ChatComposer({ model }: ChatComposerProps) {
               </button>
               <button
                 type="button"
-                onClick={closePendingImageDraft}
+                onClick={() => closePendingImageDraft()}
                 className="rounded-xl px-3 py-2 text-center text-[14px] font-[500] text-[#b79cff] transition-colors hover:bg-[#8e77ef]/14"
                 disabled={isPendingImageApplying}
               >

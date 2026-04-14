@@ -78,10 +78,6 @@ export const resolveMediaUrl = (value?: string) => {
   if (normalized.startsWith('blob:') || normalized.startsWith('data:')) {
     return normalized;
   }
-  const isChatMediaUrl = /\/media\/chat_(files|images)\//.test(normalized);
-  if (isChatMediaUrl && !normalized.includes('token=')) {
-    return '';
-  }
   return normalized;
 };
 

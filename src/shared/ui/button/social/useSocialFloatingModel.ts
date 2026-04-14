@@ -12,6 +12,7 @@ import type {
   ChatPresenceState,
   UploadImageResponse
 } from '@/shared/api/types';
+import type { UploadingImageState } from './actions/types';
 
 export type Tab = 'friends' | 'search' | 'requests' | 'chat';
 export type RequestsSubTab = 'incoming' | 'outgoing';
@@ -55,7 +56,7 @@ export function useSocialFloatingModel(options: SocialFloatingModelOptions = {})
   const [replyingTo, setReplyingTo] = useState<ChatMessage | null>(null);
   const [editingMessage, setEditingMessage] = useState<ChatMessage | null>(null);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; message: ChatMessage } | null>(null);
-  const [uploadingImages, setUploadingImages] = useState<Map<string, { progress: number; file: File }>>(new Map());
+  const [uploadingImages, setUploadingImages] = useState<Map<string, UploadingImageState>>(new Map());
   const [isRecordingVoice, setIsRecordingVoice] = useState(false);
   const [isRecordingCircle, setIsRecordingCircle] = useState(false);
   const [recordingCircleStream, setRecordingCircleStream] = useState<MediaStream | null>(null);
@@ -78,6 +79,7 @@ export function useSocialFloatingModel(options: SocialFloatingModelOptions = {})
   const markReadTargetRef = useRef<{ chatId: number; lastId: number } | null>(null);
   const sendInFlightRef = useRef<boolean>(false);
   const sendCooldownUntilRef = useRef<number>(0);
+  const pendingUploadCancelsRef = useRef<Map<string, () => void>>(new Map());
   const lastProtocolSeqRef = useRef<number>(0);
   const lastProtocolMsgIdRef = useRef<number>(0);
   const typingTimeoutsRef = useRef<Map<string, number>>(new Map());
@@ -280,6 +282,7 @@ export function useSocialFloatingModel(options: SocialFloatingModelOptions = {})
     sendMessageToUser,
     sendChatMessage,
     sendMessagesWithImages,
+    cancelPendingMediaUpload,
     attachImage,
     removeAttachedImage,
     editMessage,
@@ -299,6 +302,7 @@ export function useSocialFloatingModel(options: SocialFloatingModelOptions = {})
     markReadTimeoutRef,
     sendInFlightRef,
     sendCooldownUntilRef,
+    pendingUploadCancelsRef,
     lastProtocolSeqRef,
     lastProtocolMsgIdRef,
     typingThrottleRef,
@@ -468,6 +472,7 @@ export function useSocialFloatingModel(options: SocialFloatingModelOptions = {})
     sendMessageToUser,
     sendChatMessage,
     sendMessagesWithImages,
+    cancelPendingMediaUpload,
     attachImage,
     removeAttachedImage,
     editMessage,

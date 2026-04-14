@@ -34,11 +34,21 @@ import {
   transcribeVoiceMessageFromUrl,
 } from '../utils';
 
+type PendingUploadState = {
+  localId: string;
+  attachmentIndex: number;
+  progress: number;
+  phase: 'queued' | 'uploading' | 'uploaded';
+  cancelable: boolean;
+  file: File;
+};
+
 type ChatMessageListProps = {
   messages: ChatMessage[];
   userId: string;
   hasSelectedChat: boolean;
   messageBubbleMaxWidthPx?: number;
+  uploadingImages?: Map<string, PendingUploadState>;
   messagesEndRef: RefObject<HTMLDivElement | null>;
   matchedMessageIds: string[];
   activeMatchedMessageId: string | null;
@@ -50,6 +60,7 @@ type ChatMessageListProps = {
   onEditMessage: (message: ChatMessage) => void;
   onDeleteMessage: (messageId: number | string) => void;
   onCopyMessage: (text: string) => void;
+  onCancelPendingUpload?: (localId: string, attachmentIndex: number) => void;
 };
 
 type MessageTextBubbleProps = {
@@ -106,6 +117,8 @@ type CircleMessageBubbleProps = {
   onToggleMuted: () => void;
   onMediaError?: () => void;
   onPlaybackStateChange?: (state: ChatPlaybackState) => void;
+  uploadState?: PendingUploadState;
+  onCancelUpload?: () => void;
 };
 
 type GroupServiceMessageType =
@@ -1450,6 +1463,65 @@ function VoiceMessageBubble({
   );
 }
 
+function CircleUploadOverlay({
+  uploadState,
+  onCancelUpload,
+}: {
+  uploadState: PendingUploadState;
+  onCancelUpload?: () => void;
+}) {
+  const safeProgress = Math.max(0, Math.min(100, uploadState.progress));
+  const radius = 17;
+  const circumference = 2 * Math.PI * radius;
+  const dashOffset = circumference - (safeProgress / 100) * circumference;
+  const canCancel = !!onCancelUpload && uploadState.cancelable;
+
+  return (
+    <div className="pointer-events-none absolute inset-0 z-30 grid place-items-center rounded-full bg-black/26 backdrop-blur-[1px]">
+      <button
+        type="button"
+        aria-label="Cancel upload"
+        onClick={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          if (!canCancel) return;
+          onCancelUpload();
+        }}
+        disabled={!canCancel}
+        className={`pointer-events-auto relative grid h-[44px] w-[44px] place-items-center rounded-full bg-black/64 text-white shadow-[0_10px_22px_rgba(0,0,0,0.48)] ${
+          canCancel ? 'hover:bg-black/78' : 'cursor-default'
+        }`}
+      >
+        <svg className="pointer-events-none absolute inset-0 h-full w-full -rotate-90" viewBox="0 0 44 44" aria-hidden="true">
+          <circle
+            cx="22"
+            cy="22"
+            r={radius}
+            fill="none"
+            stroke="rgba(255,255,255,0.32)"
+            strokeWidth="2.3"
+          />
+          <circle
+            cx="22"
+            cy="22"
+            r={radius}
+            fill="none"
+            stroke="rgba(255,255,255,0.96)"
+            strokeWidth="2.7"
+            strokeLinecap="round"
+            strokeDasharray={circumference}
+            strokeDashoffset={dashOffset}
+          />
+        </svg>
+        <span className="relative block h-[15px] w-[15px]">
+          <span className="absolute left-1/2 top-0 h-full w-[2px] -translate-x-1/2 rotate-45 rounded-full bg-white" />
+          <span className="absolute left-1/2 top-0 h-full w-[2px] -translate-x-1/2 -rotate-45 rounded-full bg-white" />
+        </span>
+      </button>
+    </div>
+  );
+}
+
 function CircleMessageBubble({
   mediaId,
   author,
@@ -1464,6 +1536,8 @@ function CircleMessageBubble({
   onToggleMuted,
   onMediaError,
   onPlaybackStateChange,
+  uploadState,
+  onCancelUpload,
 }: CircleMessageBubbleProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const progressRafRef = useRef<number | null>(null);
@@ -1484,6 +1558,7 @@ function CircleMessageBubble({
   const hasRingProgress = ringProgress > 0;
   const dashOffset = circumference * (1 - ringProgress);
   const ringColor = isOwn ? 'rgb(214, 202, 255)' : 'rgb(196, 203, 223)';
+  const hasUploadState = !!uploadState;
 
   const getDuration = () => {
     const video = videoRef.current;
@@ -1734,6 +1809,7 @@ function CircleMessageBubble({
   }, [isMuted]);
 
   const togglePlayback = async () => {
+    if (hasUploadState) return;
     if (mediaPhase !== 'ready') return;
     const video = videoRef.current;
     if (!video) return;
@@ -1764,7 +1840,13 @@ function CircleMessageBubble({
         type="button"
         onClick={togglePlayback}
         className="group relative h-full w-full overflow-hidden rounded-full border-2 border-white/24 bg-transparent p-0 shadow-[0_16px_36px_rgba(0,0,0,0.35)]"
-        aria-label={isPlaying ? 'Pause video note' : 'Play video note'}
+        aria-label={
+          hasUploadState
+            ? 'Uploading video note'
+            : isPlaying
+              ? 'Pause video note'
+              : 'Play video note'
+        }
       >
         {mediaPhase === 'ready' && resolvedFileUrl ? (
           <video
@@ -1815,12 +1897,18 @@ function CircleMessageBubble({
           />
         </svg>
 
-        {mediaPhase === 'ready' ? (
+        {mediaPhase === 'ready' && !hasUploadState ? (
           <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100">
             <div className="grid h-[50px] w-[50px] place-items-center rounded-full bg-black/45 text-white shadow-[0_8px_16px_rgba(0,0,0,0.35)]">
               {isPlaying ? <PauseIcon size={22} /> : <PlayIcon size={22} className="translate-x-[1px]" />}
             </div>
           </div>
+        ) : null}
+        {hasUploadState ? (
+          <CircleUploadOverlay
+            uploadState={uploadState}
+            onCancelUpload={uploadState.cancelable ? onCancelUpload : undefined}
+          />
         ) : null}
 
       </button>
@@ -1886,12 +1974,14 @@ function ChatMessageRow({
   message,
   userId,
   bubbleMaxWidthPx,
+  uploadingImages,
   onCircleMediaError,
   isCircleMuted,
   onToggleCircleMuted,
   resolveUserName,
   resolveUserAvatar,
   onPlaybackStateChange,
+  onCancelPendingUpload,
   isSearchMatch,
   isSearchActive,
   hideTail,
@@ -1901,12 +1991,14 @@ function ChatMessageRow({
   message: ChatMessage;
   userId: string;
   bubbleMaxWidthPx: number;
+  uploadingImages?: ChatMessageListProps['uploadingImages'];
   onCircleMediaError?: () => void;
   isCircleMuted: boolean;
   onToggleCircleMuted: () => void;
   resolveUserName: (userId: string) => string;
   resolveUserAvatar?: (userId: string) => string | undefined;
   onPlaybackStateChange?: (state: ChatPlaybackState) => void;
+  onCancelPendingUpload?: (localId: string, attachmentIndex: number) => void;
   isSearchMatch: boolean;
   isSearchActive: boolean;
   hideTail: boolean;
@@ -1930,22 +2022,42 @@ function ChatMessageRow({
     message.messageType === 'voice'
       ? attachments.find((attachment) => isAudioContentType(attachment.contentType)) || fallbackAttachment
       : undefined;
-  const circleAttachment =
+  const circleAttachmentItem =
     message.messageType === 'circle'
-      ? attachments.find((attachment) => isVideoContentType(attachment.contentType)) || fallbackAttachment
+      ? (() => {
+          const indexed = attachments.map((attachment, attachmentIndex) => ({
+            attachment,
+            attachmentIndex,
+            resolvedUrl: resolveAttachmentUrl(attachment),
+          }));
+          const byVideoType = indexed.find((item) => isVideoContentType(item.attachment.contentType));
+          return byVideoType ?? indexed[0];
+        })()
       : undefined;
-  const imageAttachments =
+  const circleAttachment = circleAttachmentItem?.attachment;
+  const imageAttachmentItems =
     message.messageType === 'image' || message.messageType === 'images'
-      ? attachments.filter((attachment) => {
-          const resolvedUrl = resolveAttachmentUrl(attachment);
-          if (!resolvedUrl) return false;
-          const contentType = (attachment.contentType || '').toLowerCase();
-          return (
-            attachment.isImage ||
-            contentType.startsWith('image/') ||
-            IMAGE_FILE_PATTERN.test(resolvedUrl)
-          );
-        })
+      ? attachments
+          .map((attachment, attachmentIndex) => {
+            const resolvedUrl = resolveAttachmentUrl(attachment);
+            if (!resolvedUrl) return null;
+            const contentType = (attachment.contentType || '').toLowerCase();
+            const isImage =
+              attachment.isImage ||
+              contentType.startsWith('image/') ||
+              IMAGE_FILE_PATTERN.test(resolvedUrl);
+            if (!isImage) return null;
+            return {
+              attachment,
+              attachmentIndex,
+              resolvedUrl,
+            };
+          })
+          .filter((item): item is {
+            attachment: ReturnType<typeof getMessageAttachments>[number];
+            attachmentIndex: number;
+            resolvedUrl: string;
+          } => item !== null)
       : [];
   const groupServiceMessageType = toGroupServiceMessageType(message.messageType);
   const isCircleMessage = message.messageType === 'circle' && !!circleAttachment;
@@ -1973,10 +2085,20 @@ function ChatMessageRow({
   }`;
 
   const voiceUrl = voiceAttachment ? resolveAttachmentUrl(voiceAttachment) : '';
-  const circleUrl = circleAttachment ? resolveAttachmentUrl(circleAttachment) : '';
-  const imageUrls = imageAttachments
-    .map((attachment) => resolveAttachmentUrl(attachment))
-    .filter((value): value is string => value.length > 0);
+  const circleUrl = circleAttachmentItem?.resolvedUrl || '';
+  const imageUrls = imageAttachmentItems.map((item) => item.resolvedUrl);
+  const messageLocalId =
+    message.localId || (typeof message.messageId === 'string' ? message.messageId : undefined);
+  const imageUploadStates = imageAttachmentItems.map((item) => {
+    if (!messageLocalId || !uploadingImages) {
+      return undefined;
+    }
+    return uploadingImages.get(`${messageLocalId}-${item.attachmentIndex}`);
+  });
+  const circleUploadState =
+    messageLocalId && uploadingImages && circleAttachmentItem
+      ? uploadingImages.get(`${messageLocalId}-${circleAttachmentItem.attachmentIndex}`)
+      : undefined;
   const replyPreview: ReplyPreview | undefined = message.replyToMessage
     ? {
         author:
@@ -2043,6 +2165,11 @@ function ChatMessageRow({
             onToggleMuted={onToggleCircleMuted}
             onMediaError={onCircleMediaError}
             onPlaybackStateChange={onPlaybackStateChange}
+            uploadState={circleUploadState}
+            onCancelUpload={() => {
+              if (!onCancelPendingUpload || !messageLocalId || !circleAttachmentItem) return;
+              onCancelPendingUpload(messageLocalId, circleAttachmentItem.attachmentIndex);
+            }}
           />
         ) : imageUrls.length > 1 ? (
           <MultiImageBubble
@@ -2056,6 +2183,13 @@ function ChatMessageRow({
             isEdited={isEdited}
             replyPreview={replyPreview}
             hideTail={hideTail}
+            uploadStates={imageUploadStates}
+            onCancelUploadAt={(visibleIndex) => {
+              if (!onCancelPendingUpload || !messageLocalId) return;
+              const attachmentItem = imageAttachmentItems[visibleIndex];
+              if (!attachmentItem) return;
+              onCancelPendingUpload(messageLocalId, attachmentItem.attachmentIndex);
+            }}
           />
         ) : imageUrls.length === 1 ? (
           <SingleImageBubble
@@ -2069,6 +2203,13 @@ function ChatMessageRow({
             isEdited={isEdited}
             replyPreview={replyPreview}
             hideTail={hideTail}
+            uploadState={imageUploadStates[0]}
+            onCancelUpload={() => {
+              if (!onCancelPendingUpload || !messageLocalId) return;
+              const firstItem = imageAttachmentItems[0];
+              if (!firstItem) return;
+              onCancelPendingUpload(messageLocalId, firstItem.attachmentIndex);
+            }}
           />
         ) : (
           <MessageTextBubble
@@ -2125,6 +2266,7 @@ export function ChatMessageList({
   userId,
   hasSelectedChat,
   messageBubbleMaxWidthPx = DEFAULT_MESSAGE_BUBBLE_MAX_WIDTH_PX,
+  uploadingImages,
   messagesEndRef,
   matchedMessageIds,
   activeMatchedMessageId,
@@ -2136,6 +2278,7 @@ export function ChatMessageList({
   onEditMessage,
   onDeleteMessage,
   onCopyMessage,
+  onCancelPendingUpload,
 }: ChatMessageListProps) {
   const [isCircleMuted, setIsCircleMuted] = useState(true);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; message: ChatMessage } | null>(null);
@@ -2329,12 +2472,14 @@ export function ChatMessageList({
                     message={row.message}
                     userId={userId}
                     bubbleMaxWidthPx={messageBubbleMaxWidthPx}
+                    uploadingImages={uploadingImages}
                     onCircleMediaError={onCircleMediaError}
                     isCircleMuted={isCircleMuted}
                     onToggleCircleMuted={() => setIsCircleMuted((prev) => !prev)}
                     resolveUserName={resolveUserName}
                     resolveUserAvatar={resolveUserAvatar}
                     onPlaybackStateChange={onPlaybackStateChange || undefined}
+                    onCancelPendingUpload={onCancelPendingUpload}
                     isSearchMatch={matchedMessageIdSet.has(messageId)}
                     isSearchActive={messageId === activeMatchedMessageId}
                     hideTail={bubbleVisualState?.hideTail ?? false}

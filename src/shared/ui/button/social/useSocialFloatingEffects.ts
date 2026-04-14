@@ -662,6 +662,31 @@ export function useSocialFloatingEffects(ctx: SocialFloatingEffectsContext) {
         return images.find((img: any) => !!img?.imageUrl)?.imageUrl;
       };
 
+      const shouldKeepLocalMedia = (candidate: any) => {
+        if (!candidate) return false;
+        const hasLocalPreview =
+          (typeof candidate.imageUrl === 'string'
+            && (candidate.imageUrl.startsWith('blob:') || candidate.imageUrl.startsWith('data:')))
+          || (
+            Array.isArray(candidate.images)
+            && candidate.images.some(
+              (image: any) =>
+                typeof image?.imageUrl === 'string'
+                && (image.imageUrl.startsWith('blob:') || image.imageUrl.startsWith('data:'))
+            )
+          );
+
+        return (
+          candidate.senderId === currentUser.id &&
+          (
+            hasLocalPreview ||
+            (typeof candidate.messageId === 'string' &&
+              candidate.messageId.toString().startsWith('local-')) ||
+            candidate.status === 'pending'
+          )
+        );
+      };
+
       logger.chat('СЂСџвЂњРЃ', 'WebSocket message received:', wsMessage);
 
       if (
@@ -681,12 +706,17 @@ export function useSocialFloatingEffects(ctx: SocialFloatingEffectsContext) {
         // Р С›Р В±Р Р…Р С•Р Р†Р В»РЎРЏР ВµР С Р Р† РЎРѓР С—Р С‘РЎРѓР С”Р Вµ РЎвЂЎР В°РЎвЂљР С•Р Р†
         setChats(prev => prev.map(c => {
           if (c.chatId !== msg.chatId || !c.lastMessage || c.lastMessage.messageId !== msg.messageId) return c;
-          const mergedImages = mergeMediaImages(msg.images, c.lastMessage.images as any[] | undefined);
+          const keepLocalMedia = shouldKeepLocalMedia(c.lastMessage);
+          const mergedImages = keepLocalMedia
+            ? (c.lastMessage.images as any[] | undefined)
+            : mergeMediaImages(msg.images, c.lastMessage.images as any[] | undefined);
           return {
             ...c,
             lastMessage: { 
               ...c.lastMessage, 
-              imageUrl: resolvePrimaryImageUrl(msg.imageUrl, mergedImages) || c.lastMessage.imageUrl, 
+              imageUrl: keepLocalMedia
+                ? c.lastMessage.imageUrl
+                : resolvePrimaryImageUrl(msg.imageUrl, mergedImages) || c.lastMessage.imageUrl, 
               images: mergedImages || c.lastMessage.images 
             }
           };
@@ -697,10 +727,15 @@ export function useSocialFloatingEffects(ctx: SocialFloatingEffectsContext) {
           setMessages(prev =>
             prev.map(m => {
               if (m.messageId !== msg.messageId) return m;
-              const mergedImages = mergeMediaImages(msg.images, m.images as any[] | undefined);
+              const keepLocalMedia = shouldKeepLocalMedia(m);
+              const mergedImages = keepLocalMedia
+                ? (m.images as any[] | undefined)
+                : mergeMediaImages(msg.images, m.images as any[] | undefined);
               return {
                 ...m,
-                imageUrl: resolvePrimaryImageUrl(msg.imageUrl, mergedImages) || m.imageUrl,
+                imageUrl: keepLocalMedia
+                  ? m.imageUrl
+                  : resolvePrimaryImageUrl(msg.imageUrl, mergedImages) || m.imageUrl,
                 images: mergedImages || m.images,
               };
             })
@@ -768,10 +803,15 @@ export function useSocialFloatingEffects(ctx: SocialFloatingEffectsContext) {
               msg.messageType === 'circle'
             ) {
               const updated = [...prev];
-              const mergedImages = mergeMediaImages(msg.images, existing.images as any[] | undefined);
+              const keepLocalMedia = shouldKeepLocalMedia(existing);
+              const mergedImages = keepLocalMedia
+                ? (existing.images as any[] | undefined)
+                : mergeMediaImages(msg.images, existing.images as any[] | undefined);
               updated[existingIndex] = {
                 ...existing,
-                imageUrl: resolvePrimaryImageUrl(msg.imageUrl, mergedImages) || existing.imageUrl,
+                imageUrl: keepLocalMedia
+                  ? existing.imageUrl
+                  : resolvePrimaryImageUrl(msg.imageUrl, mergedImages) || existing.imageUrl,
                 imagePath: msg.imagePath || existing.imagePath,
                 images: mergedImages || existing.images,
                 entities: msg.entities ?? existing.entities,
