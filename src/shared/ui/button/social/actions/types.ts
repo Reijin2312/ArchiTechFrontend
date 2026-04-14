@@ -130,7 +130,12 @@ export type SocialChatActions = {
   editMessage: (messageId: number | string, newContent: string) => Promise<void>;
   deleteMessage: (messageId: number | string) => Promise<void>;
   copyMessageText: (text: string) => void;
-  uploadImage: (file: File) => Promise<void>;
+  uploadImage: (
+    file: File,
+    options?: {
+      forcedMessageType?: 'voice' | 'circle';
+    }
+  ) => Promise<void>;
 };
 
 export type SocialFloatingActions = SocialFriendActions & SocialChatActions;

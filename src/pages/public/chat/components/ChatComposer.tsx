@@ -14,6 +14,7 @@ type PendingImageDraftItem = {
   id: string;
   file: File;
   previewUrl: string;
+  mediaType: 'image' | 'video';
 };
 
 type PendingImageDraft = {
@@ -61,8 +62,8 @@ const resolveMessagePreview = (message: NonNullable<SocialFloatingModel['replyin
 
 export function ChatComposer({ model }: ChatComposerProps) {
   const recorder = useChatRecorder({
-    onRecorded: async (file) => {
-      await model.uploadImage(file);
+    onRecorded: async (file, kind) => {
+      await model.uploadImage(file, { forcedMessageType: kind });
     },
   });
   const actionButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -224,6 +225,7 @@ export function ChatComposer({ model }: ChatComposerProps) {
       id: `pending-${Date.now()}-${index}-${Math.random().toString(16).slice(2)}`,
       file,
       previewUrl: URL.createObjectURL(file),
+      mediaType: ((file.type || '').toLowerCase().startsWith('video/') ? 'video' : 'image') as PendingImageDraftItem['mediaType'],
     }));
     pendingPreviewUrlsRef.current = items.map((item) => item.previewUrl);
     setPendingImageDraft({
@@ -303,19 +305,21 @@ export function ChatComposer({ model }: ChatComposerProps) {
     if (!files || files.length === 0) return;
 
     const picked = Array.from(files);
-    const imageFiles = picked.filter((file) =>
-      (file.type || '').toLowerCase().startsWith('image/')
-    );
-    const nonImageFiles = picked.filter(
-      (file) => !(file.type || '').toLowerCase().startsWith('image/')
-    );
-
-    nonImageFiles.forEach((file) => {
-      void model.attachImage(file);
+    const mediaFiles = picked.filter((file) => {
+      const contentType = (file.type || '').toLowerCase();
+      return contentType.startsWith('image/') || contentType.startsWith('video/');
+    });
+    const nonMediaFiles = picked.filter((file) => {
+      const contentType = (file.type || '').toLowerCase();
+      return !contentType.startsWith('image/') && !contentType.startsWith('video/');
     });
 
-    if (imageFiles.length === 0) return;
-    openPendingImageDraft(imageFiles);
+    nonMediaFiles.forEach((file) => {
+      void model.attachImage(file, { sendAsFile: true });
+    });
+
+    if (mediaFiles.length === 0) return;
+    openPendingImageDraft(mediaFiles);
   };
 
   const removePendingDraftItem = (itemId: string) => {
@@ -403,6 +407,7 @@ export function ChatComposer({ model }: ChatComposerProps) {
         appendCaptionToInput(pendingImageDraft.caption);
         for (const item of pendingImageDraft.items) {
           await model.attachImage(item.file, {
+            preview: item.previewUrl,
             sendAsFile: pendingImageDraft.sendAsFile,
             groupWithOthers: pendingImageDraft.groupImages,
           });
@@ -411,7 +416,7 @@ export function ChatComposer({ model }: ChatComposerProps) {
         closePendingImageDraft();
       } catch (error) {
         setIsPendingImageApplying(false);
-        alert(error instanceof Error ? error.message : 'Failed to attach image');
+        alert(error instanceof Error ? error.message : 'Failed to attach media');
       }
     })();
   };
@@ -631,13 +636,13 @@ export function ChatComposer({ model }: ChatComposerProps) {
             <div className="flex items-center justify-between px-4 pb-2 pt-3">
               <h3 className="text-[16px] font-[600] tracking-tight text-white/96">
                 Selected {pendingImageDraft.items.length}{' '}
-                {pendingImageDraft.items.length === 1 ? 'image' : 'images'}
+                {pendingImageDraft.items.length === 1 ? 'item' : 'items'}
               </h3>
               <button
                 type="button"
                 onClick={() => closePendingImageDraft()}
                 className="grid h-8 w-8 place-items-center rounded-full text-[#b79cff]/80 transition-colors hover:bg-[#8e77ef]/18 hover:text-white"
-                aria-label="Close image preview"
+                aria-label="Close media preview"
                 disabled={isPendingImageApplying}
               >
                 <CloseIcon size={18} strokeWidth={2.4} />
@@ -661,16 +666,32 @@ export function ChatComposer({ model }: ChatComposerProps) {
                               row.columns === 1 ? 'aspect-[16/10]' : 'aspect-square'
                             }`}
                           >
-                            <img
-                              src={item.previewUrl}
-                              alt={item.file.name}
-                              className="h-full w-full object-cover"
-                            />
+                            {item.mediaType === 'video' ? (
+                              <>
+                                <video
+                                  src={item.previewUrl}
+                                  className="h-full w-full object-cover"
+                                  playsInline
+                                  preload="metadata"
+                                  controls={false}
+                                  muted
+                                />
+                                <span className="pointer-events-none absolute left-2 top-2 rounded-full bg-black/48 px-2 py-[3px] text-[11px] font-[600] text-white/95">
+                                  video
+                                </span>
+                              </>
+                            ) : (
+                              <img
+                                src={item.previewUrl}
+                                alt={item.file.name}
+                                className="h-full w-full object-cover"
+                              />
+                            )}
                             <button
                               type="button"
                               onClick={() => removePendingDraftItem(item.id)}
                               className="absolute right-1.5 top-1.5 z-10 grid h-6 w-6 place-items-center rounded-full bg-black/52 text-white/92 opacity-100 transition-colors hover:bg-black/72"
-                              aria-label="Remove image from selection"
+                              aria-label="Remove media from selection"
                               disabled={isPendingImageApplying}
                             >
                               <CloseIcon size={13} strokeWidth={2.4} />
@@ -785,6 +806,15 @@ export function ChatComposer({ model }: ChatComposerProps) {
                 <div className="h-[74px] w-full overflow-hidden rounded-lg bg-black/30">
                   {attachment.isImage && attachment.preview ? (
                     <img src={attachment.preview} alt={attachment.file.name} className="h-full w-full object-cover" />
+                  ) : ((attachment.contentType || attachment.file.type || '').toLowerCase().startsWith('video/') && attachment.preview) ? (
+                    <video
+                      src={attachment.preview}
+                      className="h-full w-full object-cover"
+                      playsInline
+                      preload="metadata"
+                      controls={false}
+                      muted
+                    />
                   ) : (
                     <div className="flex h-full w-full flex-col items-center justify-center gap-1.5 text-white/70">
                       {attachment.forcedMessageType === 'circle' ? (

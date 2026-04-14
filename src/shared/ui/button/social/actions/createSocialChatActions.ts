@@ -369,13 +369,21 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
     return contentType.startsWith('audio/');
   };
 
+  const isCircleAttachment = (attachment: {
+    forcedMessageType?: 'voice' | 'circle';
+    contentType?: string;
+    file?: File;
+  }) => {
+    return attachment.forcedMessageType === 'circle';
+  };
+
   const isVideoAttachment = (attachment: {
     forcedMessageType?: 'voice' | 'circle';
     contentType?: string;
     file?: File;
   }) => {
-    if (attachment.forcedMessageType === 'circle') {
-      return true;
+    if (attachment.forcedMessageType === 'voice' || attachment.forcedMessageType === 'circle') {
+      return false;
     }
     const contentType =
       (attachment.contentType || attachment.file?.type || '').trim().toLowerCase();
@@ -390,17 +398,19 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
       file?: File;
     }
   ): 'image' | 'file' | 'voice' | 'circle' => {
-    if (attachment.forcedMessageType) {
-      return attachment.forcedMessageType;
-    }
+    if (attachment.forcedMessageType === 'voice') return 'voice';
+    if (attachment.forcedMessageType === 'circle') return 'circle';
     if (isImageAttachment(attachment)) {
       return 'image';
     }
     if (isAudioAttachment(attachment)) {
       return 'voice';
     }
-    if (isVideoAttachment(attachment)) {
+    if (isCircleAttachment(attachment)) {
       return 'circle';
+    }
+    if (isVideoAttachment(attachment)) {
+      return 'file';
     }
     return 'file';
   };
@@ -1591,18 +1601,25 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
     });
   };
 
-  const uploadImage = async (file: File) => {
+  const uploadImage = async (
+    file: File,
+    options?: { forcedMessageType?: 'voice' | 'circle' }
+  ) => {
     if (!selectedChat || !file) return;
     const chat = chats.find(c => c.chatId === selectedChat);
     if (!chat) return;
+    const forcedMessageType = options?.forcedMessageType;
     const isImage = (file.type || '').toLowerCase().startsWith('image/');
-    const messageType = isImage
-      ? 'image'
-      : (file.type || '').toLowerCase().startsWith('audio/')
+    const messageType =
+      forcedMessageType === 'voice'
         ? 'voice'
-        : (file.type || '').toLowerCase().startsWith('video/')
+        : forcedMessageType === 'circle'
           ? 'circle'
-          : 'file';
+          : isImage
+            ? 'image'
+            : (file.type || '').toLowerCase().startsWith('audio/')
+              ? 'voice'
+              : 'file';
     
     const localId = `local-upload-${Date.now()}-${Math.random().toString(16).slice(2)}`;
     const uploadKey = toUploadStateKey(localId, 0);

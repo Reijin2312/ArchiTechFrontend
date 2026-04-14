@@ -11,11 +11,13 @@ import {
 import { CheckCheckIcon, PauseIcon, PlayIcon } from '../icons';
 import type { ChatPlaybackState, MessageRow } from '../types';
 import {
+  type ImageBubbleMediaItem,
   MultiImageBubble,
   ReplyPreviewBlock,
   SingleImageBubble,
   type ReplyPreview,
 } from './messageTypes/ImageMessageBubbles';
+import { MediaViewerModal, type MediaViewerItem } from './messageTypes/MediaViewerModal';
 import {
   buildFallbackWaveform,
   formatDivider,
@@ -119,6 +121,11 @@ type CircleMessageBubbleProps = {
   onPlaybackStateChange?: (state: ChatPlaybackState) => void;
   uploadState?: PendingUploadState;
   onCancelUpload?: () => void;
+};
+
+type OpenMediaViewerPayload = {
+  messageId: string;
+  attachmentIndex: number;
 };
 
 type GroupServiceMessageType =
@@ -381,6 +388,61 @@ const VIDEO_HINT_PATTERN =
 const VIDEO_META_CACHE = new Map<string, VideoPreviewMeta | null>();
 const VIDEO_META_CACHE_VERSION = '2';
 const DEFAULT_MESSAGE_BUBBLE_MAX_WIDTH_PX = 760;
+
+type MessageAttachmentItem = ReturnType<typeof getMessageAttachments>[number];
+
+type VisualMediaAttachmentItem = {
+  attachment: MessageAttachmentItem;
+  attachmentIndex: number;
+  resolvedUrl: string;
+  mediaItem: ImageBubbleMediaItem;
+};
+
+const toVisualMediaAttachmentItems = (
+  messageType: ChatMessage['messageType'],
+  attachments: MessageAttachmentItem[]
+): VisualMediaAttachmentItem[] => {
+  if (messageType === 'voice' || messageType === 'circle') {
+    return [];
+  }
+
+  return attachments.flatMap((attachment, attachmentIndex) => {
+    const resolvedUrl = resolveAttachmentUrl(attachment);
+    if (!resolvedUrl) {
+      return [];
+    }
+
+    const contentType = (attachment.contentType || '').toLowerCase();
+    const isVideo =
+      isVideoContentType(contentType) ||
+      (!attachment.isImage && VIDEO_FILE_PATTERN.test(resolvedUrl));
+    const isImage =
+      attachment.isImage === true ||
+      contentType.startsWith('image/') ||
+      IMAGE_FILE_PATTERN.test(resolvedUrl);
+    if (!isImage && !isVideo) {
+      return [];
+    }
+
+    const mediaItem: ImageBubbleMediaItem = {
+      url: resolvedUrl,
+      mediaType: isVideo ? 'video' : 'image',
+      contentType: attachment.contentType,
+    };
+
+    return [
+      {
+        attachment,
+        attachmentIndex,
+        resolvedUrl,
+        mediaItem,
+      },
+    ];
+  });
+};
+
+const toMediaViewerAnchorId = (messageId: number | string, attachmentIndex: number) =>
+  `${String(messageId)}::${attachmentIndex}`;
 
 type VideoPreviewMeta = {
   providerName?: string;
@@ -1987,6 +2049,7 @@ function ChatMessageRow({
   hideTail,
   showEdgeAvatar,
   rowBottomGapPx,
+  onOpenMediaViewer,
 }: {
   message: ChatMessage;
   userId: string;
@@ -2004,6 +2067,7 @@ function ChatMessageRow({
   hideTail: boolean;
   showEdgeAvatar: boolean;
   rowBottomGapPx: number;
+  onOpenMediaViewer?: (payload: OpenMediaViewerPayload) => void;
 }) {
   const isOwn = message.senderId === userId;
   const isEdited = !!message.edited;
@@ -2035,30 +2099,7 @@ function ChatMessageRow({
         })()
       : undefined;
   const circleAttachment = circleAttachmentItem?.attachment;
-  const imageAttachmentItems =
-    message.messageType === 'image' || message.messageType === 'images'
-      ? attachments
-          .map((attachment, attachmentIndex) => {
-            const resolvedUrl = resolveAttachmentUrl(attachment);
-            if (!resolvedUrl) return null;
-            const contentType = (attachment.contentType || '').toLowerCase();
-            const isImage =
-              attachment.isImage ||
-              contentType.startsWith('image/') ||
-              IMAGE_FILE_PATTERN.test(resolvedUrl);
-            if (!isImage) return null;
-            return {
-              attachment,
-              attachmentIndex,
-              resolvedUrl,
-            };
-          })
-          .filter((item): item is {
-            attachment: ReturnType<typeof getMessageAttachments>[number];
-            attachmentIndex: number;
-            resolvedUrl: string;
-          } => item !== null)
-      : [];
+  const mediaAttachmentItems = toVisualMediaAttachmentItems(message.messageType, attachments);
   const groupServiceMessageType = toGroupServiceMessageType(message.messageType);
   const isCircleMessage = message.messageType === 'circle' && !!circleAttachment;
   const mediaId = `${message.messageType}-${String(message.messageId)}`;
@@ -2086,10 +2127,10 @@ function ChatMessageRow({
 
   const voiceUrl = voiceAttachment ? resolveAttachmentUrl(voiceAttachment) : '';
   const circleUrl = circleAttachmentItem?.resolvedUrl || '';
-  const imageUrls = imageAttachmentItems.map((item) => item.resolvedUrl);
+  const mediaItems = mediaAttachmentItems.map((item) => item.mediaItem);
   const messageLocalId =
     message.localId || (typeof message.messageId === 'string' ? message.messageId : undefined);
-  const imageUploadStates = imageAttachmentItems.map((item) => {
+  const imageUploadStates = mediaAttachmentItems.map((item) => {
     if (!messageLocalId || !uploadingImages) {
       return undefined;
     }
@@ -2171,9 +2212,9 @@ function ChatMessageRow({
               onCancelPendingUpload(messageLocalId, circleAttachmentItem.attachmentIndex);
             }}
           />
-        ) : imageUrls.length > 1 ? (
+        ) : mediaItems.length > 1 ? (
           <MultiImageBubble
-            imageUrls={imageUrls}
+            mediaItems={mediaItems}
             caption={hasTextContent ? renderContent : ''}
             captionEntities={hasTextContent ? renderEntities : undefined}
             bubbleMaxWidthPx={bubbleMaxWidthPx}
@@ -2186,14 +2227,23 @@ function ChatMessageRow({
             uploadStates={imageUploadStates}
             onCancelUploadAt={(visibleIndex) => {
               if (!onCancelPendingUpload || !messageLocalId) return;
-              const attachmentItem = imageAttachmentItems[visibleIndex];
+              const attachmentItem = mediaAttachmentItems[visibleIndex];
               if (!attachmentItem) return;
               onCancelPendingUpload(messageLocalId, attachmentItem.attachmentIndex);
             }}
+            onOpenMediaAt={(visibleIndex) => {
+              if (!onOpenMediaViewer) return;
+              const selected = mediaAttachmentItems[visibleIndex];
+              if (!selected) return;
+              onOpenMediaViewer({
+                messageId: String(message.messageId),
+                attachmentIndex: selected.attachmentIndex,
+              });
+            }}
           />
-        ) : imageUrls.length === 1 ? (
+        ) : mediaItems.length === 1 ? (
           <SingleImageBubble
-            imageUrl={imageUrls[0]}
+            mediaItem={mediaItems[0]}
             caption={hasTextContent ? renderContent : ''}
             captionEntities={hasTextContent ? renderEntities : undefined}
             bubbleMaxWidthPx={bubbleMaxWidthPx}
@@ -2206,9 +2256,16 @@ function ChatMessageRow({
             uploadState={imageUploadStates[0]}
             onCancelUpload={() => {
               if (!onCancelPendingUpload || !messageLocalId) return;
-              const firstItem = imageAttachmentItems[0];
+              const firstItem = mediaAttachmentItems[0];
               if (!firstItem) return;
               onCancelPendingUpload(messageLocalId, firstItem.attachmentIndex);
+            }}
+            onOpenMedia={() => {
+              if (!onOpenMediaViewer) return;
+              onOpenMediaViewer({
+                messageId: String(message.messageId),
+                attachmentIndex: mediaAttachmentItems[0].attachmentIndex,
+              });
             }}
           />
         ) : (
@@ -2282,6 +2339,7 @@ export function ChatMessageList({
 }: ChatMessageListProps) {
   const [isCircleMuted, setIsCircleMuted] = useState(true);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; message: ChatMessage } | null>(null);
+  const [mediaViewerIndex, setMediaViewerIndex] = useState<number | null>(null);
   const contextMenuRef = useRef<HTMLDivElement | null>(null);
   const hasInitializedMessagesRef = useRef(false);
   const previousMessageIdsRef = useRef<Set<string>>(new Set());
@@ -2345,11 +2403,51 @@ export function ChatMessageList({
     return gapById;
   }, [messages]);
 
+  const mediaViewerTimeline = useMemo<Array<{ id: string; item: MediaViewerItem }>>(() => {
+    const timeline: Array<{ id: string; item: MediaViewerItem }> = [];
+
+    for (const message of messages) {
+      const attachments = getMessageAttachments(message);
+      const visualAttachments = toVisualMediaAttachmentItems(message.messageType, attachments);
+      if (visualAttachments.length === 0) continue;
+
+      const senderName = message.senderId === userId ? 'You' : resolveUserName(message.senderId);
+      visualAttachments.forEach((media) => {
+        timeline.push({
+          id: toMediaViewerAnchorId(message.messageId, media.attachmentIndex),
+          item: {
+            url: media.resolvedUrl,
+            mediaType: media.mediaItem.mediaType,
+            contentType: media.attachment.contentType,
+            fileName: media.attachment.fileName,
+            sizeBytes: media.attachment.sizeBytes,
+            senderName,
+            createdAt: message.createdAt,
+          },
+        });
+      });
+    }
+
+    return timeline;
+  }, [messages, resolveUserName, userId]);
+
   useEffect(() => {
     if (!hasSelectedChat) {
       onPlaybackStateChange?.(null);
+      setMediaViewerIndex(null);
     }
   }, [hasSelectedChat, onPlaybackStateChange]);
+
+  useEffect(() => {
+    if (mediaViewerIndex === null) return;
+    if (mediaViewerTimeline.length === 0) {
+      setMediaViewerIndex(null);
+      return;
+    }
+    if (mediaViewerIndex >= mediaViewerTimeline.length) {
+      setMediaViewerIndex(mediaViewerTimeline.length - 1);
+    }
+  }, [mediaViewerIndex, mediaViewerTimeline]);
 
   useEffect(() => {
     if (!activeMatchedMessageId) return;
@@ -2488,6 +2586,13 @@ export function ChatMessageList({
                       messageRowBottomGapByMessageId.get(messageId) ??
                       MESSAGE_ROW_BASE_GAP_PX
                     }
+                    onOpenMediaViewer={(payload) => {
+                      const anchorId = toMediaViewerAnchorId(payload.messageId, payload.attachmentIndex);
+                      const index = mediaViewerTimeline.findIndex((entry) => entry.id === anchorId);
+                      if (index >= 0) {
+                        setMediaViewerIndex(index);
+                      }
+                    }}
                   />
                 </div>
               );
@@ -2558,6 +2663,15 @@ export function ChatMessageList({
             Delete
           </button>
         </div>
+      ) : null}
+
+      {mediaViewerIndex !== null && mediaViewerTimeline.length > 0 ? (
+        <MediaViewerModal
+          items={mediaViewerTimeline.map((entry) => entry.item)}
+          activeIndex={mediaViewerIndex}
+          onClose={() => setMediaViewerIndex(null)}
+          onChangeIndex={(nextIndex) => setMediaViewerIndex(nextIndex)}
+        />
       ) : null}
     </>
   );

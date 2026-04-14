@@ -1,6 +1,6 @@
 import type { ChatMessage } from '@/shared/api/types';
 import { renderMessageContent } from '@/shared/utils/chatTextEntities';
-import { CheckCheckIcon } from '../../icons';
+import { CheckCheckIcon, PlayIcon } from '../../icons';
 import { buildImageGridRows } from './imageGridPattern';
 
 export type ReplyPreview = {
@@ -14,6 +14,12 @@ export type ImageUploadState = {
   cancelable: boolean;
 };
 
+export type ImageBubbleMediaItem = {
+  url: string;
+  mediaType: 'image' | 'video';
+  contentType?: string;
+};
+
 type StatusLineProps = {
   isOwn: boolean;
   isRead: boolean;
@@ -23,7 +29,7 @@ type StatusLineProps = {
 };
 
 type SingleImageBubbleProps = {
-  imageUrl: string;
+  mediaItem: ImageBubbleMediaItem;
   caption?: string;
   captionEntities?: ChatMessage['entities'];
   bubbleMaxWidthPx: number;
@@ -35,10 +41,11 @@ type SingleImageBubbleProps = {
   hideTail?: boolean;
   uploadState?: ImageUploadState;
   onCancelUpload?: () => void;
+  onOpenMedia?: () => void;
 };
 
 type MultiImageBubbleProps = {
-  imageUrls: string[];
+  mediaItems: ImageBubbleMediaItem[];
   caption?: string;
   captionEntities?: ChatMessage['entities'];
   bubbleMaxWidthPx: number;
@@ -50,6 +57,7 @@ type MultiImageBubbleProps = {
   hideTail?: boolean;
   uploadStates?: Array<ImageUploadState | undefined>;
   onCancelUploadAt?: (visibleIndex: number) => void;
+  onOpenMediaAt?: (visibleIndex: number) => void;
 };
 
 function StatusLine({
@@ -136,17 +144,33 @@ function UploadOverlay({
   );
 }
 
+function VideoPlayOverlay({ compact = false }: { compact?: boolean }) {
+  return (
+    <span className="pointer-events-none absolute inset-0 z-[3] flex items-center justify-center">
+      <span
+        className={`grid place-items-center rounded-full bg-black/48 text-white/95 shadow-[0_8px_18px_rgba(0,0,0,0.38)] ${
+          compact ? 'h-8 w-8' : 'h-11 w-11'
+        }`}
+      >
+        <PlayIcon size={compact ? 14 : 20} className="translate-x-[1px]" />
+      </span>
+    </span>
+  );
+}
+
 function ImageGrid({
-  imageUrls,
+  mediaItems,
   uploadStates,
   onCancelUploadAt,
+  onOpenMediaAt,
 }: {
-  imageUrls: string[];
+  mediaItems: ImageBubbleMediaItem[];
   uploadStates?: Array<ImageUploadState | undefined>;
   onCancelUploadAt?: (visibleIndex: number) => void;
+  onOpenMediaAt?: (visibleIndex: number) => void;
 }) {
-  const rows = buildImageGridRows(imageUrls);
-  let visibleImageIndex = 0;
+  const rows = buildImageGridRows(mediaItems);
+  let visibleMediaIndex = 0;
   return (
     <div className="relative w-full overflow-hidden bg-black">
       <div className="flex flex-col gap-[2px]">
@@ -156,19 +180,40 @@ function ImageGrid({
             className="grid gap-[2px]"
             style={{ gridTemplateColumns: `repeat(${row.columns}, minmax(0, 1fr))` }}
           >
-            {row.items.map((imageUrl, imageIndex) => (
+            {row.items.map((mediaItem, imageIndex) => (
               (() => {
-                const currentVisibleIndex = visibleImageIndex;
-                visibleImageIndex += 1;
+                const currentVisibleIndex = visibleMediaIndex;
+                visibleMediaIndex += 1;
                 const uploadState = uploadStates?.[currentVisibleIndex];
                 return (
                   <div
-                    key={`${imageUrl}-${rowIndex}-${imageIndex}`}
+                    key={`${mediaItem.url}-${mediaItem.mediaType}-${rowIndex}-${imageIndex}`}
                     className={`relative overflow-hidden bg-black/30 ${
                       row.columns === 1 ? 'aspect-[16/10]' : 'aspect-square'
                     }`}
                   >
-                    <img src={imageUrl} alt="Image message" className="h-full w-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => onOpenMediaAt?.(currentVisibleIndex)}
+                      className={`block h-full w-full ${onOpenMediaAt ? 'cursor-zoom-in' : 'cursor-default'}`}
+                      aria-label="Open media"
+                    >
+                      {mediaItem.mediaType === 'video' ? (
+                        <>
+                          <video
+                            src={mediaItem.url}
+                            className="pointer-events-none h-full w-full object-cover"
+                            playsInline
+                            preload="metadata"
+                            controls={false}
+                            muted
+                          />
+                          <VideoPlayOverlay compact />
+                        </>
+                      ) : (
+                        <img src={mediaItem.url} alt="Image message" className="h-full w-full object-cover" />
+                      )}
+                    </button>
                     {uploadState ? (
                       <UploadOverlay
                         uploadState={uploadState}
@@ -219,7 +264,7 @@ export function ReplyPreviewBlock({
 }
 
 export function SingleImageBubble({
-  imageUrl,
+  mediaItem,
   caption,
   captionEntities,
   bubbleMaxWidthPx,
@@ -231,6 +276,7 @@ export function SingleImageBubble({
   hideTail = false,
   uploadState,
   onCancelUpload,
+  onOpenMedia,
 }: SingleImageBubbleProps) {
   const normalizedCaption = (caption || '').trim();
   const hasCaption = normalizedCaption.length > 0;
@@ -247,12 +293,39 @@ export function SingleImageBubble({
     return (
       <div className="relative inline-block" style={{ maxWidth: bubbleMaxWidthPx }}>
         <div className="relative">
-          <img
-            src={imageUrl}
-            alt="Image message"
-            className="block h-auto max-h-[72vh] w-auto max-w-full rounded-[18px] object-cover"
-            style={{ maxWidth: bubbleMaxWidthPx }}
-          />
+          {mediaItem.mediaType === 'video' ? (
+            <button
+              type="button"
+              onClick={onOpenMedia}
+              className={`relative block ${onOpenMedia ? 'cursor-zoom-in' : 'cursor-default'}`}
+              aria-label="Open media"
+            >
+              <video
+                src={mediaItem.url}
+                controls={false}
+                playsInline
+                preload="metadata"
+                muted
+                className="pointer-events-none block h-auto max-h-[72vh] w-auto max-w-full rounded-[18px] bg-black object-contain"
+                style={{ maxWidth: bubbleMaxWidthPx }}
+              />
+              <VideoPlayOverlay />
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={onOpenMedia}
+              className={`block ${onOpenMedia ? 'cursor-zoom-in' : 'cursor-default'}`}
+              aria-label="Open media"
+            >
+              <img
+                src={mediaItem.url}
+                alt="Image message"
+                className="block h-auto max-h-[72vh] w-auto max-w-full rounded-[18px] object-cover"
+                style={{ maxWidth: bubbleMaxWidthPx }}
+              />
+            </button>
+          )}
           {uploadState ? (
             <UploadOverlay
               uploadState={uploadState}
@@ -280,20 +353,51 @@ export function SingleImageBubble({
         style={{ maxWidth: bubbleMaxWidthPx }}
       >
         <div className="relative w-full overflow-hidden bg-black">
-          <img
-            src={imageUrl}
-            alt=""
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-0 h-full w-full scale-[1.16] object-cover blur-2xl brightness-[0.88]"
-          />
-          <div className="relative flex w-full justify-center">
-            <img
-              src={imageUrl}
-              alt="Image message"
-              className="block h-auto max-h-[72vh] w-auto max-w-full object-contain"
-              style={{ maxWidth: bubbleMaxWidthPx }}
-            />
-          </div>
+          {mediaItem.mediaType === 'image' ? (
+            <>
+              <img
+                src={mediaItem.url}
+                alt=""
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-0 h-full w-full scale-[1.16] object-cover blur-2xl brightness-[0.88]"
+              />
+              <div className="relative flex w-full justify-center">
+                <button
+                  type="button"
+                  onClick={onOpenMedia}
+                  className={`block ${onOpenMedia ? 'cursor-zoom-in' : 'cursor-default'}`}
+                  aria-label="Open media"
+                >
+                  <img
+                    src={mediaItem.url}
+                    alt="Image message"
+                    className="block h-auto max-h-[72vh] w-auto max-w-full object-contain"
+                    style={{ maxWidth: bubbleMaxWidthPx }}
+                  />
+                </button>
+              </div>
+            </>
+          ) : (
+            <div className="relative flex w-full justify-center">
+              <button
+                type="button"
+                onClick={onOpenMedia}
+                className={`relative block ${onOpenMedia ? 'cursor-zoom-in' : 'cursor-default'}`}
+                aria-label="Open media"
+              >
+                <video
+                  src={mediaItem.url}
+                  controls={false}
+                  playsInline
+                  preload="metadata"
+                  muted
+                  className="pointer-events-none block h-auto max-h-[72vh] w-auto max-w-full bg-black object-contain"
+                  style={{ maxWidth: bubbleMaxWidthPx }}
+                />
+                <VideoPlayOverlay />
+              </button>
+            </div>
+          )}
           {uploadState ? (
             <UploadOverlay
               uploadState={uploadState}
@@ -344,12 +448,39 @@ export function SingleImageBubble({
       ) : null}
 
       <div className="relative">
-        <img
-          src={imageUrl}
-          alt="Image message"
-          className="block h-auto max-h-[72vh] w-auto max-w-full object-cover"
-          style={{ maxWidth: bubbleMaxWidthPx }}
-        />
+        {mediaItem.mediaType === 'video' ? (
+          <button
+            type="button"
+            onClick={onOpenMedia}
+            className={`relative block ${onOpenMedia ? 'cursor-zoom-in' : 'cursor-default'}`}
+            aria-label="Open media"
+          >
+            <video
+              src={mediaItem.url}
+              controls={false}
+              playsInline
+              preload="metadata"
+              muted
+              className="pointer-events-none block h-auto max-h-[72vh] w-auto max-w-full bg-black object-contain"
+              style={{ maxWidth: bubbleMaxWidthPx }}
+            />
+            <VideoPlayOverlay />
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={onOpenMedia}
+            className={`block ${onOpenMedia ? 'cursor-zoom-in' : 'cursor-default'}`}
+            aria-label="Open media"
+          >
+            <img
+              src={mediaItem.url}
+              alt="Image message"
+              className="block h-auto max-h-[72vh] w-auto max-w-full object-cover"
+              style={{ maxWidth: bubbleMaxWidthPx }}
+            />
+          </button>
+        )}
         {uploadState ? (
           <UploadOverlay
             uploadState={uploadState}
@@ -372,7 +503,7 @@ export function SingleImageBubble({
 }
 
 export function MultiImageBubble({
-  imageUrls,
+  mediaItems,
   caption,
   captionEntities,
   bubbleMaxWidthPx,
@@ -384,8 +515,9 @@ export function MultiImageBubble({
   hideTail = false,
   uploadStates,
   onCancelUploadAt,
+  onOpenMediaAt,
 }: MultiImageBubbleProps) {
-  if (imageUrls.length === 0) {
+  if (mediaItems.length === 0) {
     return null;
   }
 
@@ -407,9 +539,10 @@ export function MultiImageBubble({
         style={{ maxWidth: bubbleMaxWidthPx }}
       >
         <ImageGrid
-          imageUrls={imageUrls}
+          mediaItems={mediaItems}
           uploadStates={uploadStates}
           onCancelUploadAt={onCancelUploadAt}
+          onOpenMediaAt={onOpenMediaAt}
         />
         <div className="absolute bottom-[8px] right-[10px] flex items-center gap-[2px] rounded-full bg-black/48 px-[7px] py-[3px] text-[14px] text-white/92 backdrop-blur-sm">
           <StatusLine
@@ -431,9 +564,10 @@ export function MultiImageBubble({
         style={{ maxWidth: bubbleMaxWidthPx }}
       >
         <ImageGrid
-          imageUrls={imageUrls}
+          mediaItems={mediaItems}
           uploadStates={uploadStates}
           onCancelUploadAt={onCancelUploadAt}
+          onOpenMediaAt={onOpenMediaAt}
         />
         <div
           className={`relative px-3 pb-2 pt-2 ${
@@ -477,9 +611,10 @@ export function MultiImageBubble({
         </div>
       ) : null}
       <ImageGrid
-        imageUrls={imageUrls}
+        mediaItems={mediaItems}
         uploadStates={uploadStates}
         onCancelUploadAt={onCancelUploadAt}
+        onOpenMediaAt={onOpenMediaAt}
       />
       <div className="absolute bottom-[8px] right-[10px] flex items-center gap-[2px] rounded-full bg-black/48 px-[7px] py-[3px] text-[14px] text-white/92 backdrop-blur-sm">
         <StatusLine
