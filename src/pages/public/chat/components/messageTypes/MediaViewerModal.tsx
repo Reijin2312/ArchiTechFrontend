@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { CloseIcon, PlayIcon } from '../../icons';
 import { formatFileSize } from '../../utils';
@@ -19,6 +19,10 @@ type MediaViewerModalProps = {
   onClose: () => void;
   onChangeIndex: (nextIndex: number) => void;
 };
+
+const VIEWER_ENTER_DURATION_CLASS = 'duration-[220ms]';
+const VIEWER_EXIT_DURATION_CLASS = 'duration-[260ms]';
+const VIEWER_CLOSE_DELAY_MS = 260;
 
 const formatViewerTimestamp = (value: string) => {
   const date = new Date(value);
@@ -45,6 +49,10 @@ export function MediaViewerModal({
   onChangeIndex,
 }: MediaViewerModalProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const closeTimerRef = useRef<number | null>(null);
+  const [isVisible, setIsVisible] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
+
   const safeIndex = Math.max(0, Math.min(items.length - 1, activeIndex));
   const activeItem = items[safeIndex];
   const hasMany = items.length > 1;
@@ -53,17 +61,47 @@ export function MediaViewerModal({
     if (!activeItem) return '';
     const size = formatFileSize(activeItem.sizeBytes);
     const type = buildTypeLabel(activeItem);
-    return size ? `${type} • ${size}` : type;
+    return size ? `${type} | ${size}` : type;
   }, [activeItem]);
+
+  const clearCloseTimer = useCallback(() => {
+    if (closeTimerRef.current !== null) {
+      window.clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
+    }
+  }, []);
+
+  const beginClose = useCallback(() => {
+    if (isClosing) return;
+    setIsClosing(true);
+    clearCloseTimer();
+    closeTimerRef.current = window.setTimeout(() => {
+      onClose();
+    }, VIEWER_CLOSE_DELAY_MS);
+  }, [clearCloseTimer, isClosing, onClose]);
+
+  useEffect(() => {
+    const frameId = window.requestAnimationFrame(() => {
+      setIsVisible(true);
+    });
+    return () => window.cancelAnimationFrame(frameId);
+  }, []);
+
+  useEffect(
+    () => () => {
+      clearCloseTimer();
+    },
+    [clearCloseTimer]
+  );
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         event.preventDefault();
-        onClose();
+        beginClose();
         return;
       }
-      if (!hasMany) return;
+      if (isClosing || !hasMany) return;
       if (event.key === 'ArrowLeft') {
         event.preventDefault();
         onChangeIndex((safeIndex - 1 + items.length) % items.length);
@@ -80,23 +118,53 @@ export function MediaViewerModal({
       document.body.style.overflow = prevOverflow;
       window.removeEventListener('keydown', onKeyDown);
     };
-  }, [hasMany, items.length, onChangeIndex, onClose, safeIndex]);
+  }, [beginClose, hasMany, isClosing, items.length, onChangeIndex, safeIndex]);
 
   if (!activeItem) {
     return null;
   }
 
+  const transitionDurationClass = isClosing
+    ? VIEWER_EXIT_DURATION_CLASS
+    : VIEWER_ENTER_DURATION_CLASS;
+
+  const overlayMotionClass = isClosing
+    ? 'opacity-0 pointer-events-none'
+    : isVisible
+      ? 'opacity-100'
+      : 'opacity-0';
+
+  const stageMotionClass = isClosing
+    ? 'opacity-0 translate-y-3 scale-[0.955] blur-[1px]'
+    : isVisible
+      ? 'opacity-100 translate-y-0 scale-100 blur-0'
+      : 'opacity-0 translate-y-2 scale-[0.985] blur-[0.3px]';
+
+  const topChromeMotionClass = isClosing
+    ? 'opacity-0 -translate-y-2'
+    : isVisible
+      ? 'opacity-100 translate-y-0'
+      : 'opacity-0 -translate-y-1';
+
+  const bottomChromeMotionClass = isClosing
+    ? 'opacity-0 translate-y-2'
+    : isVisible
+      ? 'opacity-100 translate-y-0'
+      : 'opacity-0 translate-y-1';
+
   const content = (
     <div
-      className="fixed inset-0 z-[1000] bg-black/95"
+      className={`fixed inset-0 z-[1000] bg-black/95 transition-opacity ${transitionDurationClass} ease-[cubic-bezier(0.22,1,0.36,1)] ${overlayMotionClass}`}
       onClick={(event) => {
         if (event.target === containerRef.current) {
-          onClose();
+          beginClose();
         }
       }}
       ref={containerRef}
     >
-      <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-start justify-end px-4 pb-3 pt-3 sm:px-6">
+      <div
+        className={`pointer-events-none absolute inset-x-0 top-0 z-20 flex items-start justify-end px-4 pb-3 pt-3 transition-[opacity,transform] ${transitionDurationClass} ease-[cubic-bezier(0.22,1,0.36,1)] sm:px-6 ${topChromeMotionClass}`}
+      >
         <div className="pointer-events-auto flex items-center gap-2">
           <div className="rounded-full bg-black/58 px-3 py-1 text-[12px] font-[600] text-white/82">
             {safeIndex + 1} / {items.length}
@@ -112,8 +180,9 @@ export function MediaViewerModal({
           </a>
           <button
             type="button"
-            onClick={onClose}
-            className="grid h-10 w-10 place-items-center rounded-full bg-black/58 text-white/92 transition-colors hover:bg-black/74"
+            onClick={beginClose}
+            disabled={isClosing}
+            className="grid h-10 w-10 place-items-center rounded-full bg-black/58 text-white/92 transition-colors hover:bg-black/74 disabled:cursor-default disabled:opacity-70"
             aria-label="Close media viewer"
           >
             <CloseIcon size={18} strokeWidth={2.4} />
@@ -126,27 +195,43 @@ export function MediaViewerModal({
           <button
             type="button"
             onClick={() => onChangeIndex((safeIndex - 1 + items.length) % items.length)}
-            className="absolute left-4 top-1/2 z-20 grid h-12 w-12 -translate-y-1/2 place-items-center rounded-full bg-black/58 text-white/90 transition-colors hover:bg-black/74"
+            disabled={isClosing}
+            className="absolute left-4 top-1/2 z-20 grid h-12 w-12 -translate-y-1/2 place-items-center rounded-full bg-black/58 text-white/90 transition-colors hover:bg-black/74 disabled:cursor-default disabled:opacity-70"
             aria-label="Previous media"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-              <path d="M14.5 5 8 12l6.5 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+              <path
+                d="M14.5 5 8 12l6.5 7"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
             </svg>
           </button>
           <button
             type="button"
             onClick={() => onChangeIndex((safeIndex + 1) % items.length)}
-            className="absolute right-4 top-1/2 z-20 grid h-12 w-12 -translate-y-1/2 place-items-center rounded-full bg-black/58 text-white/90 transition-colors hover:bg-black/74"
+            disabled={isClosing}
+            className="absolute right-4 top-1/2 z-20 grid h-12 w-12 -translate-y-1/2 place-items-center rounded-full bg-black/58 text-white/90 transition-colors hover:bg-black/74 disabled:cursor-default disabled:opacity-70"
             aria-label="Next media"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-              <path d="m9.5 5 6.5 7-6.5 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+              <path
+                d="m9.5 5 6.5 7-6.5 7"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
             </svg>
           </button>
         </>
       ) : null}
 
-      <div className="absolute inset-0 flex items-center justify-center px-4 py-16 sm:px-12 sm:py-20">
+      <div
+        className={`absolute inset-0 flex items-center justify-center px-4 py-16 transition-[opacity,transform,filter] ${transitionDurationClass} ease-[cubic-bezier(0.22,1,0.36,1)] sm:px-12 sm:py-20 ${stageMotionClass}`}
+      >
         {activeItem.mediaType === 'video' ? (
           <video
             key={activeItem.url}
@@ -166,9 +251,13 @@ export function MediaViewerModal({
         )}
       </div>
 
-      <div className="pointer-events-none absolute bottom-4 left-4 z-20 max-w-[min(70vw,560px)] rounded-xl bg-black/58 px-4 py-3 text-white shadow-[0_14px_36px_rgba(0,0,0,0.45)] sm:bottom-6 sm:left-6">
+      <div
+        className={`pointer-events-none absolute bottom-4 left-4 z-20 max-w-[min(70vw,560px)] rounded-xl bg-black/58 px-4 py-3 text-white shadow-[0_14px_36px_rgba(0,0,0,0.45)] transition-[opacity,transform] ${transitionDurationClass} ease-[cubic-bezier(0.22,1,0.36,1)] sm:bottom-6 sm:left-6 ${bottomChromeMotionClass}`}
+      >
         <div className="truncate text-[16px] font-[700] text-white">{activeItem.senderName}</div>
-        <div className="truncate text-[13px] text-white/78">{formatViewerTimestamp(activeItem.createdAt)}</div>
+        <div className="truncate text-[13px] text-white/78">
+          {formatViewerTimestamp(activeItem.createdAt)}
+        </div>
         <div className="mt-[2px] truncate text-[12px] text-white/68">{metaLine}</div>
         {activeItem.mediaType === 'video' ? (
           <div className="mt-1 inline-flex items-center gap-1 text-[12px] text-white/62">
