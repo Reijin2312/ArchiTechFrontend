@@ -341,6 +341,7 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
 
   const isImageAttachment = (attachment: {
     isImage?: boolean;
+    sendAsFile?: boolean;
     forcedMessageType?: 'voice' | 'circle';
     contentType?: string;
     file?: File;
@@ -357,6 +358,7 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
   };
 
   const isAudioAttachment = (attachment: {
+    sendAsFile?: boolean;
     forcedMessageType?: 'voice' | 'circle';
     contentType?: string;
     file?: File;
@@ -370,6 +372,7 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
   };
 
   const isCircleAttachment = (attachment: {
+    sendAsFile?: boolean;
     forcedMessageType?: 'voice' | 'circle';
     contentType?: string;
     file?: File;
@@ -378,6 +381,7 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
   };
 
   const isVideoAttachment = (attachment: {
+    sendAsFile?: boolean;
     forcedMessageType?: 'voice' | 'circle';
     contentType?: string;
     file?: File;
@@ -385,14 +389,26 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
     if (attachment.forcedMessageType === 'voice' || attachment.forcedMessageType === 'circle') {
       return false;
     }
+    if (attachment.sendAsFile) {
+      return false;
+    }
     const contentType =
       (attachment.contentType || attachment.file?.type || '').trim().toLowerCase();
     return contentType.startsWith('video/');
   };
 
+  const isVisualMediaAttachment = (attachment: {
+    isImage?: boolean;
+    sendAsFile?: boolean;
+    forcedMessageType?: 'voice' | 'circle';
+    contentType?: string;
+    file?: File;
+  }) => isImageAttachment(attachment) || isVideoAttachment(attachment);
+
   const resolveSingleAttachmentMessageType = (
     attachment: {
       isImage?: boolean;
+      sendAsFile?: boolean;
       forcedMessageType?: 'voice' | 'circle';
       contentType?: string;
       file?: File;
@@ -410,7 +426,7 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
       return 'circle';
     }
     if (isVideoAttachment(attachment)) {
-      return 'file';
+      return 'image';
     }
     return 'file';
   };
@@ -418,6 +434,7 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
   const resolveAttachmentMessageType = (
     attachments: Array<{
       isImage?: boolean;
+      sendAsFile?: boolean;
       forcedMessageType?: 'voice' | 'circle';
       contentType?: string;
       file?: File;
@@ -426,8 +443,8 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
     if (attachments.length === 1) {
       return resolveSingleAttachmentMessageType(attachments[0]);
     }
-    const allImages = attachments.length > 0 && attachments.every(isImageAttachment);
-    if (allImages) {
+    const allVisualMedia = attachments.length > 0 && attachments.every(isVisualMediaAttachment);
+    if (allVisualMedia) {
       return 'images';
     }
     return 'files';
@@ -1152,9 +1169,7 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
         const form = new FormData();
         form.append('file', attachment.file);
 
-        const isRawImageFile =
-          (attachment.file.type || '').trim().toLowerCase().startsWith('image/');
-        const uploadAsFile = isRawImageFile && !isImageAttachment(attachment);
+        const uploadAsFile = !!attachment.sendAsFile && !attachment.forcedMessageType;
         const uploadUrl = `${endpoints.chatUpload}?chatId=${finalChatId}${uploadAsFile ? '&asFile=true' : ''}`;
 
         const uploadDebugMeta = {
@@ -1508,7 +1523,8 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
     const fileType = (file.type || '').toLowerCase();
     const forcedMessageType = options?.forcedMessageType;
     const isRawImage = fileType.startsWith('image/');
-    const isImage = !forcedMessageType && !options?.sendAsFile && isRawImage;
+    const sendAsFile = !forcedMessageType && !!options?.sendAsFile;
+    const isImage = !sendAsFile && isRawImage;
     let preview: string | undefined = options?.preview;
 
     if (!preview && isRawImage) {
@@ -1524,6 +1540,7 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
       file,
       preview,
       isImage,
+      sendAsFile,
       groupWithOthers: options?.groupWithOthers ?? true,
       forcedMessageType,
       contentType: file.type || 'application/octet-stream',

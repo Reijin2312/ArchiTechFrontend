@@ -13,6 +13,7 @@ export type AttachedImage = {
   file: File;
   preview?: string;
   isImage?: boolean;
+  sendAsFile?: boolean;
   groupWithOthers?: boolean;
   forcedMessageType?: 'voice' | 'circle';
   contentType?: string;

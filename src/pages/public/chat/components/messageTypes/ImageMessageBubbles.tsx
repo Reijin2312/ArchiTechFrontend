@@ -1,6 +1,9 @@
+import { useEffect, useState, type CSSProperties } from 'react';
 import type { ChatMessage } from '@/shared/api/types';
 import { renderMessageContent } from '@/shared/utils/chatTextEntities';
 import { CheckCheckIcon, PlayIcon } from '../../icons';
+import { isManagedMediaSourceUrl, useManagedMediaDownload } from '../../hooks/useManagedMediaDownload';
+import { useViewportPresence } from '../../hooks/useViewportPresence';
 import { buildImageGridRows } from './imageGridPattern';
 
 export type ReplyPreview = {
@@ -16,9 +19,14 @@ export type ImageUploadState = {
 
 export type ImageBubbleMediaItem = {
   url: string;
+  strippedPreviewUrl?: string;
+  previewUrl?: string;
   mediaType: 'image' | 'video';
   contentType?: string;
+  sizeBytes?: number;
 };
+
+type IncomingImageLoadPhase = 'loading' | 'ready' | 'canceled' | 'error';
 
 type StatusLineProps = {
   isOwn: boolean;
@@ -158,13 +166,414 @@ function VideoPlayOverlay({ compact = false }: { compact?: boolean }) {
   );
 }
 
+function IncomingDownloadOverlay({
+  phase,
+  progress,
+  indeterminate,
+  onCancel,
+  onRetry,
+}: {
+  phase: IncomingImageLoadPhase;
+  progress: number;
+  indeterminate: boolean;
+  onCancel: () => void;
+  onRetry: () => void;
+}) {
+  const safeProgress = Math.max(0, Math.min(100, progress));
+  const radius = 17;
+  const circumference = 2 * Math.PI * radius;
+  const dashOffset = circumference - (safeProgress / 100) * circumference;
+  const loading = phase === 'loading';
+  const actionLabel = loading ? 'Cancel media loading' : 'Retry media loading';
+
+  return (
+    <div className="pointer-events-none absolute inset-0 z-[6] flex items-center justify-center bg-black/26 backdrop-blur-[1px]">
+      <button
+        type="button"
+        aria-label={actionLabel}
+        onClick={(event) => {
+          event.stopPropagation();
+          if (loading) {
+            onCancel();
+          } else {
+            onRetry();
+          }
+        }}
+        className="pointer-events-auto relative grid h-[42px] w-[42px] place-items-center rounded-full bg-black/62 text-white shadow-[0_8px_18px_rgba(0,0,0,0.42)] transition-colors hover:bg-black/76"
+      >
+        <svg
+          className={`pointer-events-none absolute inset-0 h-full w-full -rotate-90 ${loading && indeterminate ? 'animate-spin' : ''}`}
+          viewBox="0 0 42 42"
+          aria-hidden="true"
+        >
+          <circle
+            cx="21"
+            cy="21"
+            r={radius}
+            fill="none"
+            stroke="rgba(255,255,255,0.28)"
+            strokeWidth="2.2"
+          />
+          {loading ? (
+            indeterminate ? (
+              <circle
+                cx="21"
+                cy="21"
+                r={radius}
+                fill="none"
+                stroke="rgba(255,255,255,0.95)"
+                strokeWidth="2.6"
+                strokeLinecap="round"
+                strokeDasharray={`${circumference * 0.3} ${circumference}`}
+              />
+            ) : (
+              <circle
+                cx="21"
+                cy="21"
+                r={radius}
+                fill="none"
+                stroke="rgba(255,255,255,0.95)"
+                strokeWidth="2.6"
+                strokeLinecap="round"
+                strokeDasharray={circumference}
+                strokeDashoffset={dashOffset}
+              />
+            )
+          ) : null}
+        </svg>
+        {loading ? (
+          <span className="relative block h-[14px] w-[14px]">
+            <span className="absolute left-1/2 top-0 h-full w-[2px] -translate-x-1/2 rotate-45 rounded-full bg-white" />
+            <span className="absolute left-1/2 top-0 h-full w-[2px] -translate-x-1/2 -rotate-45 rounded-full bg-white" />
+          </span>
+        ) : (
+          <span className="relative block h-[14px] w-[14px]">
+            <span className="absolute left-1/2 top-[1px] h-[7px] w-[2px] -translate-x-1/2 rounded-full bg-white" />
+            <span className="absolute left-1/2 top-[5px] h-[7px] w-[7px] -translate-x-1/2 rotate-45 border-b-[2px] border-r-[2px] border-white" />
+          </span>
+        )}
+      </button>
+    </div>
+  );
+}
+
+function toIncomingLoadPhase(phase: string): IncomingImageLoadPhase {
+  if (phase === 'ready') return 'ready';
+  if (phase === 'error') return 'error';
+  if (phase === 'canceled' || phase === 'paused') return 'canceled';
+  return 'loading';
+}
+
+function ProgressiveIncomingImage({
+  src,
+  strippedPreviewUrl,
+  previewUrl,
+  sizeBytes,
+  alt,
+  isOwnMessage,
+  disableProgressive = false,
+  onOpenMedia,
+  buttonClassName,
+  imageClassName,
+  imageStyle,
+  ariaLabel = 'Open media',
+}: {
+  src: string;
+  strippedPreviewUrl?: string;
+  previewUrl?: string;
+  sizeBytes?: number;
+  alt: string;
+  isOwnMessage: boolean;
+  disableProgressive?: boolean;
+  onOpenMedia?: () => void;
+  buttonClassName: string;
+  imageClassName: string;
+  imageStyle?: CSSProperties;
+  ariaLabel?: string;
+}) {
+  const supportsProgressiveDownload =
+    !disableProgressive && !isOwnMessage && isManagedMediaSourceUrl(src);
+  const { ref: viewportRef, isInViewport } = useViewportPresence<HTMLDivElement>({
+    disabled: !supportsProgressiveDownload,
+  });
+  const managedDownload = useManagedMediaDownload({
+    url: src,
+    kind: 'image',
+    sizeBytes,
+    priority: isInViewport ? 96 : 16,
+    autoStart: true,
+    managed: supportsProgressiveDownload,
+    inViewport: isInViewport,
+  });
+  const phase: IncomingImageLoadPhase = supportsProgressiveDownload
+    ? toIncomingLoadPhase(managedDownload.phase)
+    : 'ready';
+  const progress = supportsProgressiveDownload ? managedDownload.progress : 100;
+  const indeterminate = supportsProgressiveDownload
+    ? managedDownload.indeterminate
+    : false;
+  const resolvedSrc = supportsProgressiveDownload
+    ? managedDownload.resolvedUrl || ''
+    : src;
+  const [isImageVisible, setIsImageVisible] = useState(!supportsProgressiveDownload);
+  useEffect(() => {
+    if (!supportsProgressiveDownload) {
+      setIsImageVisible(true);
+      return;
+    }
+    if (!resolvedSrc) {
+      setIsImageVisible(false);
+      return;
+    }
+    setIsImageVisible(false);
+  }, [resolvedSrc, supportsProgressiveDownload]);
+
+  const canOpen = !!onOpenMedia && (!supportsProgressiveDownload || phase === 'ready');
+  const shouldShowPlaceholder =
+    supportsProgressiveDownload && (phase !== 'ready' || !isImageVisible);
+
+  return (
+    <div ref={viewportRef} className="relative h-full w-full">
+      <button
+        type="button"
+        onClick={() => {
+          if (!canOpen) return;
+          onOpenMedia?.();
+        }}
+        className={`${buttonClassName} ${canOpen ? 'cursor-zoom-in' : 'cursor-default'}`}
+        aria-label={ariaLabel}
+      >
+        <span
+          aria-hidden="true"
+          className={`pointer-events-none absolute inset-0 transition-opacity duration-300 ${
+            shouldShowPlaceholder ? 'opacity-100' : 'opacity-0'
+          }`}
+        >
+          {strippedPreviewUrl ? (
+            <span
+              className="absolute inset-0"
+              style={{
+                backgroundImage: `url(${strippedPreviewUrl})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                filter: 'blur(16px)',
+                transform: 'scale(1.08)',
+              }}
+            />
+          ) : null}
+          <span
+            className="absolute inset-0 bg-gradient-to-br from-[#5d6480]/65 via-[#2f3345]/80 to-[#1d1f2c]/92"
+            style={
+              previewUrl
+                ? {
+                    backgroundImage: `linear-gradient(135deg, rgba(93,100,128,0.35), rgba(29,31,44,0.68)), url(${previewUrl})`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                  }
+                : undefined
+            }
+          />
+          <span className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.16),transparent_52%)]" />
+        </span>
+        {resolvedSrc ? (
+          <img
+            src={resolvedSrc}
+            alt={alt}
+            className={`${imageClassName} transition-[opacity,filter,transform] duration-300 ${
+              isImageVisible ? 'opacity-100 blur-0 scale-100' : 'opacity-0 blur-2xl scale-[1.05]'
+            }`}
+            style={imageStyle}
+            onLoad={() => setIsImageVisible(true)}
+            loading="lazy"
+            decoding="async"
+            draggable={false}
+          />
+        ) : null}
+      </button>
+
+      {supportsProgressiveDownload && phase !== 'ready' ? (
+        <IncomingDownloadOverlay
+          phase={phase}
+          progress={progress}
+          indeterminate={indeterminate}
+          onCancel={() => managedDownload.cancel()}
+          onRetry={() => {
+            if (managedDownload.phase === 'error') {
+              managedDownload.retry();
+            } else {
+              managedDownload.start();
+            }
+          }}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+function ProgressiveIncomingVideo({
+  src,
+  strippedPreviewUrl,
+  previewUrl,
+  contentType,
+  sizeBytes,
+  isOwnMessage,
+  disableProgressive = false,
+  onOpenMedia,
+  buttonClassName,
+  videoClassName,
+  videoStyle,
+  compactPlayIcon = false,
+  ariaLabel = 'Open media',
+}: {
+  src: string;
+  strippedPreviewUrl?: string;
+  previewUrl?: string;
+  contentType?: string;
+  sizeBytes?: number;
+  isOwnMessage: boolean;
+  disableProgressive?: boolean;
+  onOpenMedia?: () => void;
+  buttonClassName: string;
+  videoClassName: string;
+  videoStyle?: CSSProperties;
+  compactPlayIcon?: boolean;
+  ariaLabel?: string;
+}) {
+  const supportsProgressiveDownload =
+    !disableProgressive && !isOwnMessage && isManagedMediaSourceUrl(src);
+  const { ref: viewportRef, isInViewport } = useViewportPresence<HTMLDivElement>({
+    disabled: !supportsProgressiveDownload,
+  });
+  const managedDownload = useManagedMediaDownload({
+    url: src,
+    kind: 'video',
+    sizeBytes,
+    priority: isInViewport ? 88 : 12,
+    autoStart: true,
+    managed: supportsProgressiveDownload,
+    inViewport: isInViewport,
+  });
+  const phase: IncomingImageLoadPhase = supportsProgressiveDownload
+    ? toIncomingLoadPhase(managedDownload.phase)
+    : 'ready';
+  const progress = supportsProgressiveDownload ? managedDownload.progress : 100;
+  const indeterminate = supportsProgressiveDownload
+    ? managedDownload.indeterminate
+    : false;
+  const resolvedSrc = supportsProgressiveDownload
+    ? managedDownload.resolvedUrl || ''
+    : src;
+  const [isVideoVisible, setIsVideoVisible] = useState(!supportsProgressiveDownload);
+  useEffect(() => {
+    if (!resolvedSrc) {
+      setIsVideoVisible(false);
+      return;
+    }
+    if (!supportsProgressiveDownload) {
+      setIsVideoVisible(false);
+    }
+  }, [resolvedSrc, supportsProgressiveDownload]);
+  const canOpen = !!onOpenMedia && (!supportsProgressiveDownload || phase === 'ready');
+  const showPlaceholder =
+    (supportsProgressiveDownload && phase !== 'ready') || !isVideoVisible;
+
+  return (
+    <div ref={viewportRef} className="relative h-full w-full">
+      <button
+        type="button"
+        onClick={() => {
+          if (!canOpen) return;
+          onOpenMedia?.();
+        }}
+        className={`${buttonClassName} ${canOpen ? 'cursor-zoom-in' : 'cursor-default'}`}
+        aria-label={ariaLabel}
+      >
+        <span
+          aria-hidden="true"
+          className={`pointer-events-none absolute inset-0 transition-opacity duration-300 ${
+            showPlaceholder ? 'opacity-100' : 'opacity-0'
+          }`}
+        >
+          {strippedPreviewUrl ? (
+            <span
+              className="absolute inset-0"
+              style={{
+                backgroundImage: `url(${strippedPreviewUrl})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                filter: 'blur(14px)',
+                transform: 'scale(1.08)',
+              }}
+            />
+          ) : null}
+          <span
+            className="absolute inset-0 bg-gradient-to-br from-[#5d6480]/65 via-[#2f3345]/80 to-[#1d1f2c]/92"
+            style={
+              previewUrl
+                ? {
+                    backgroundImage: `linear-gradient(135deg, rgba(93,100,128,0.35), rgba(29,31,44,0.68)), url(${previewUrl})`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                  }
+                : undefined
+            }
+          />
+          <span className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.16),transparent_52%)]" />
+        </span>
+        {resolvedSrc ? (
+          <video
+            src={resolvedSrc}
+            className={`${videoClassName} transition-opacity duration-300 ${
+              isVideoVisible ? 'opacity-100' : 'opacity-0'
+            }`}
+            style={videoStyle}
+            playsInline
+            preload="auto"
+            controls={false}
+            muted
+            poster={previewUrl || strippedPreviewUrl}
+            onLoadedData={() => setIsVideoVisible(true)}
+            onCanPlay={() => setIsVideoVisible(true)}
+            onLoadedMetadata={(event) => {
+              if (event.currentTarget.readyState >= 2) {
+                setIsVideoVisible(true);
+              }
+            }}
+          >
+            <source src={resolvedSrc} type={contentType || 'video/mp4'} />
+          </video>
+        ) : null}
+        <VideoPlayOverlay compact={compactPlayIcon} />
+      </button>
+
+      {supportsProgressiveDownload && phase !== 'ready' ? (
+        <IncomingDownloadOverlay
+          phase={phase}
+          progress={progress}
+          indeterminate={indeterminate}
+          onCancel={() => managedDownload.cancel()}
+          onRetry={() => {
+            if (managedDownload.phase === 'error') {
+              managedDownload.retry();
+            } else {
+              managedDownload.start();
+            }
+          }}
+        />
+      ) : null}
+    </div>
+  );
+}
+
 function ImageGrid({
   mediaItems,
+  isOwn,
   uploadStates,
   onCancelUploadAt,
   onOpenMediaAt,
 }: {
   mediaItems: ImageBubbleMediaItem[];
+  isOwn: boolean;
   uploadStates?: Array<ImageUploadState | undefined>;
   onCancelUploadAt?: (visibleIndex: number) => void;
   onOpenMediaAt?: (visibleIndex: number) => void;
@@ -192,28 +601,38 @@ function ImageGrid({
                       row.columns === 1 ? 'aspect-[16/10]' : 'aspect-square'
                     }`}
                   >
-                    <button
-                      type="button"
-                      onClick={() => onOpenMediaAt?.(currentVisibleIndex)}
-                      className={`block h-full w-full ${onOpenMediaAt ? 'cursor-zoom-in' : 'cursor-default'}`}
-                      aria-label="Open media"
-                    >
-                      {mediaItem.mediaType === 'video' ? (
-                        <>
-                          <video
-                            src={mediaItem.url}
-                            className="pointer-events-none h-full w-full object-cover"
-                            playsInline
-                            preload="metadata"
-                            controls={false}
-                            muted
-                          />
-                          <VideoPlayOverlay compact />
-                        </>
-                      ) : (
-                        <img src={mediaItem.url} alt="Image message" className="h-full w-full object-cover" />
-                      )}
-                    </button>
+                    {mediaItem.mediaType === 'video' ? (
+                      <ProgressiveIncomingVideo
+                        src={mediaItem.url}
+                        strippedPreviewUrl={mediaItem.strippedPreviewUrl}
+                        previewUrl={mediaItem.previewUrl}
+                        contentType={mediaItem.contentType}
+                        sizeBytes={mediaItem.sizeBytes}
+                        isOwnMessage={isOwn}
+                        disableProgressive={!!uploadState}
+                        onOpenMedia={
+                          onOpenMediaAt ? () => onOpenMediaAt(currentVisibleIndex) : undefined
+                        }
+                        buttonClassName="block h-full w-full"
+                        videoClassName="pointer-events-none h-full w-full object-cover"
+                        compactPlayIcon
+                      />
+                    ) : (
+                      <ProgressiveIncomingImage
+                        src={mediaItem.url}
+                        strippedPreviewUrl={mediaItem.strippedPreviewUrl}
+                        previewUrl={mediaItem.previewUrl}
+                        sizeBytes={mediaItem.sizeBytes}
+                        alt="Image message"
+                        isOwnMessage={isOwn}
+                        disableProgressive={!!uploadState}
+                        onOpenMedia={
+                          onOpenMediaAt ? () => onOpenMediaAt(currentVisibleIndex) : undefined
+                        }
+                        buttonClassName="block h-full w-full"
+                        imageClassName="h-full w-full object-cover"
+                      />
+                    )}
                     {uploadState ? (
                       <UploadOverlay
                         uploadState={uploadState}
@@ -294,37 +713,33 @@ export function SingleImageBubble({
       <div className="relative inline-block" style={{ maxWidth: bubbleMaxWidthPx }}>
         <div className="relative">
           {mediaItem.mediaType === 'video' ? (
-            <button
-              type="button"
-              onClick={onOpenMedia}
-              className={`relative block ${onOpenMedia ? 'cursor-zoom-in' : 'cursor-default'}`}
-              aria-label="Open media"
-            >
-              <video
-                src={mediaItem.url}
-                controls={false}
-                playsInline
-                preload="metadata"
-                muted
-                className="pointer-events-none block h-auto max-h-[72vh] w-auto max-w-full rounded-[18px] bg-black object-contain"
-                style={{ maxWidth: bubbleMaxWidthPx }}
-              />
-              <VideoPlayOverlay />
-            </button>
+            <ProgressiveIncomingVideo
+              src={mediaItem.url}
+              strippedPreviewUrl={mediaItem.strippedPreviewUrl}
+              previewUrl={mediaItem.previewUrl}
+              contentType={mediaItem.contentType}
+              sizeBytes={mediaItem.sizeBytes}
+              isOwnMessage={isOwn}
+              disableProgressive={!!uploadState}
+              onOpenMedia={onOpenMedia}
+              buttonClassName="relative block"
+              videoClassName="pointer-events-none block h-auto max-h-[72vh] w-auto max-w-full rounded-[18px] bg-black object-contain"
+              videoStyle={{ maxWidth: bubbleMaxWidthPx }}
+            />
           ) : (
-            <button
-              type="button"
-              onClick={onOpenMedia}
-              className={`block ${onOpenMedia ? 'cursor-zoom-in' : 'cursor-default'}`}
-              aria-label="Open media"
-            >
-              <img
-                src={mediaItem.url}
-                alt="Image message"
-                className="block h-auto max-h-[72vh] w-auto max-w-full rounded-[18px] object-cover"
-                style={{ maxWidth: bubbleMaxWidthPx }}
-              />
-            </button>
+            <ProgressiveIncomingImage
+              src={mediaItem.url}
+              strippedPreviewUrl={mediaItem.strippedPreviewUrl}
+              previewUrl={mediaItem.previewUrl}
+              sizeBytes={mediaItem.sizeBytes}
+              alt="Image message"
+              isOwnMessage={isOwn}
+              disableProgressive={!!uploadState}
+              onOpenMedia={onOpenMedia}
+              buttonClassName="block"
+              imageClassName="block h-auto max-h-[72vh] w-auto max-w-full rounded-[18px] object-cover"
+              imageStyle={{ maxWidth: bubbleMaxWidthPx }}
+            />
           )}
           {uploadState ? (
             <UploadOverlay
@@ -355,47 +770,49 @@ export function SingleImageBubble({
         <div className="relative w-full overflow-hidden bg-black">
           {mediaItem.mediaType === 'image' ? (
             <>
-              <img
-                src={mediaItem.url}
-                alt=""
-                aria-hidden="true"
-                className="pointer-events-none absolute inset-0 h-full w-full scale-[1.16] object-cover blur-2xl brightness-[0.88]"
-              />
+              {isOwn || uploadState ? (
+                <img
+                  src={mediaItem.url}
+                  alt=""
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-0 h-full w-full scale-[1.16] object-cover blur-2xl brightness-[0.88]"
+                />
+              ) : (
+                <span
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-0 bg-gradient-to-br from-[#5d6480]/62 via-[#2f3345]/78 to-[#1d1f2c]/90"
+                />
+              )}
               <div className="relative flex w-full justify-center">
-                <button
-                  type="button"
-                  onClick={onOpenMedia}
-                  className={`block ${onOpenMedia ? 'cursor-zoom-in' : 'cursor-default'}`}
-                  aria-label="Open media"
-                >
-                  <img
-                    src={mediaItem.url}
-                    alt="Image message"
-                    className="block h-auto max-h-[72vh] w-auto max-w-full object-contain"
-                    style={{ maxWidth: bubbleMaxWidthPx }}
-                  />
-                </button>
+                <ProgressiveIncomingImage
+                  src={mediaItem.url}
+                  strippedPreviewUrl={mediaItem.strippedPreviewUrl}
+                  previewUrl={mediaItem.previewUrl}
+                  alt="Image message"
+                  isOwnMessage={isOwn}
+                  disableProgressive={!!uploadState}
+                  onOpenMedia={onOpenMedia}
+                  buttonClassName="block"
+                  imageClassName="block h-auto max-h-[72vh] w-auto max-w-full object-contain"
+                  imageStyle={{ maxWidth: bubbleMaxWidthPx }}
+                />
               </div>
             </>
           ) : (
             <div className="relative flex w-full justify-center">
-              <button
-                type="button"
-                onClick={onOpenMedia}
-                className={`relative block ${onOpenMedia ? 'cursor-zoom-in' : 'cursor-default'}`}
-                aria-label="Open media"
-              >
-                <video
-                  src={mediaItem.url}
-                  controls={false}
-                  playsInline
-                  preload="metadata"
-                  muted
-                  className="pointer-events-none block h-auto max-h-[72vh] w-auto max-w-full bg-black object-contain"
-                  style={{ maxWidth: bubbleMaxWidthPx }}
-                />
-                <VideoPlayOverlay />
-              </button>
+              <ProgressiveIncomingVideo
+                src={mediaItem.url}
+                strippedPreviewUrl={mediaItem.strippedPreviewUrl}
+                previewUrl={mediaItem.previewUrl}
+                contentType={mediaItem.contentType}
+                sizeBytes={mediaItem.sizeBytes}
+                isOwnMessage={isOwn}
+                disableProgressive={!!uploadState}
+                onOpenMedia={onOpenMedia}
+                buttonClassName="relative block"
+                videoClassName="pointer-events-none block h-auto max-h-[72vh] w-auto max-w-full bg-black object-contain"
+                videoStyle={{ maxWidth: bubbleMaxWidthPx }}
+              />
             </div>
           )}
           {uploadState ? (
@@ -449,37 +866,33 @@ export function SingleImageBubble({
 
       <div className="relative">
         {mediaItem.mediaType === 'video' ? (
-          <button
-            type="button"
-            onClick={onOpenMedia}
-            className={`relative block ${onOpenMedia ? 'cursor-zoom-in' : 'cursor-default'}`}
-            aria-label="Open media"
-          >
-            <video
-              src={mediaItem.url}
-              controls={false}
-              playsInline
-              preload="metadata"
-              muted
-              className="pointer-events-none block h-auto max-h-[72vh] w-auto max-w-full bg-black object-contain"
-              style={{ maxWidth: bubbleMaxWidthPx }}
-            />
-            <VideoPlayOverlay />
-          </button>
+          <ProgressiveIncomingVideo
+            src={mediaItem.url}
+            strippedPreviewUrl={mediaItem.strippedPreviewUrl}
+            previewUrl={mediaItem.previewUrl}
+            contentType={mediaItem.contentType}
+            sizeBytes={mediaItem.sizeBytes}
+            isOwnMessage={isOwn}
+            disableProgressive={!!uploadState}
+            onOpenMedia={onOpenMedia}
+            buttonClassName="relative block"
+            videoClassName="pointer-events-none block h-auto max-h-[72vh] w-auto max-w-full bg-black object-contain"
+            videoStyle={{ maxWidth: bubbleMaxWidthPx }}
+          />
         ) : (
-          <button
-            type="button"
-            onClick={onOpenMedia}
-            className={`block ${onOpenMedia ? 'cursor-zoom-in' : 'cursor-default'}`}
-            aria-label="Open media"
-          >
-            <img
-              src={mediaItem.url}
-              alt="Image message"
-              className="block h-auto max-h-[72vh] w-auto max-w-full object-cover"
-              style={{ maxWidth: bubbleMaxWidthPx }}
-            />
-          </button>
+          <ProgressiveIncomingImage
+            src={mediaItem.url}
+            strippedPreviewUrl={mediaItem.strippedPreviewUrl}
+            previewUrl={mediaItem.previewUrl}
+            sizeBytes={mediaItem.sizeBytes}
+            alt="Image message"
+            isOwnMessage={isOwn}
+            disableProgressive={!!uploadState}
+            onOpenMedia={onOpenMedia}
+            buttonClassName="block"
+            imageClassName="block h-auto max-h-[72vh] w-auto max-w-full object-cover"
+            imageStyle={{ maxWidth: bubbleMaxWidthPx }}
+          />
         )}
         {uploadState ? (
           <UploadOverlay
@@ -540,6 +953,7 @@ export function MultiImageBubble({
       >
         <ImageGrid
           mediaItems={mediaItems}
+          isOwn={isOwn}
           uploadStates={uploadStates}
           onCancelUploadAt={onCancelUploadAt}
           onOpenMediaAt={onOpenMediaAt}
@@ -565,6 +979,7 @@ export function MultiImageBubble({
       >
         <ImageGrid
           mediaItems={mediaItems}
+          isOwn={isOwn}
           uploadStates={uploadStates}
           onCancelUploadAt={onCancelUploadAt}
           onOpenMediaAt={onOpenMediaAt}
@@ -612,6 +1027,7 @@ export function MultiImageBubble({
       ) : null}
       <ImageGrid
         mediaItems={mediaItems}
+        isOwn={isOwn}
         uploadStates={uploadStates}
         onCancelUploadAt={onCancelUploadAt}
         onOpenMediaAt={onOpenMediaAt}

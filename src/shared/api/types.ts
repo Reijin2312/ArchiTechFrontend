@@ -145,6 +145,8 @@ export interface ChatMessage {
   images?: Array<{
     imagePath: string
     imageUrl?: string
+    thumbnailUrl?: string
+    strippedThumbnailUrl?: string
     fileName?: string
     contentType?: string
     sizeBytes?: number

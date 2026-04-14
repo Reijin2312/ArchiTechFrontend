@@ -5,6 +5,8 @@ import { http } from '@/shared/api/http';
 export type MessageAttachment = {
   imagePath: string;
   imageUrl?: string;
+  thumbnailUrl?: string;
+  strippedThumbnailUrl?: string;
   fileName?: string;
   contentType?: string;
   sizeBytes?: number;
@@ -86,6 +88,8 @@ export const getMessageAttachments = (message: ChatMessage): MessageAttachment[]
     return message.images.map((image) => ({
       imagePath: image.imagePath,
       imageUrl: image.imageUrl,
+      thumbnailUrl: image.thumbnailUrl,
+      strippedThumbnailUrl: image.strippedThumbnailUrl,
       fileName: image.fileName,
       contentType: image.contentType,
       sizeBytes: image.sizeBytes,

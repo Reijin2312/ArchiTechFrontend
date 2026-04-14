@@ -8,7 +8,7 @@ import {
   renderMessageContent,
   type ChatResolvedLink,
 } from '@/shared/utils/chatTextEntities';
-import { CheckCheckIcon, PauseIcon, PlayIcon } from '../icons';
+import { CheckCheckIcon, DownloadIcon, FileIcon, PauseIcon, PlayIcon } from '../icons';
 import type { ChatPlaybackState, MessageRow } from '../types';
 import {
   type ImageBubbleMediaItem,
@@ -18,6 +18,8 @@ import {
   type ReplyPreview,
 } from './messageTypes/ImageMessageBubbles';
 import { MediaViewerModal, type MediaViewerItem } from './messageTypes/MediaViewerModal';
+import { isManagedMediaSourceUrl, useManagedMediaDownload } from '../hooks/useManagedMediaDownload';
+import { useViewportPresence } from '../hooks/useViewportPresence';
 import {
   buildFallbackWaveform,
   formatDivider,
@@ -33,6 +35,7 @@ import {
   loadWaveformFromAudioUrl,
   messagePreviewText,
   resolveAttachmentUrl,
+  resolveMediaUrl,
   transcribeVoiceMessageFromUrl,
 } from '../utils';
 
@@ -121,6 +124,18 @@ type CircleMessageBubbleProps = {
   onPlaybackStateChange?: (state: ChatPlaybackState) => void;
   uploadState?: PendingUploadState;
   onCancelUpload?: () => void;
+};
+
+type FileMessageBubbleProps = {
+  fileItem: FileAttachmentItem;
+  createdAt: string;
+  isRead: boolean;
+  isOwn: boolean;
+  isEdited: boolean;
+  hideTail?: boolean;
+  uploadState?: PendingUploadState;
+  onCancelUpload?: () => void;
+  onOpenMedia?: () => void;
 };
 
 type OpenMediaViewerPayload = {
@@ -398,11 +413,28 @@ type VisualMediaAttachmentItem = {
   mediaItem: ImageBubbleMediaItem;
 };
 
+type FileAttachmentItem = {
+  attachment: MessageAttachmentItem;
+  attachmentIndex: number;
+  resolvedUrl: string;
+  fileName: string;
+  sizeBytes?: number;
+  contentType?: string;
+  isImageFile: boolean;
+  previewUrl?: string;
+  strippedPreviewUrl?: string;
+};
+
 const toVisualMediaAttachmentItems = (
   messageType: ChatMessage['messageType'],
   attachments: MessageAttachmentItem[]
 ): VisualMediaAttachmentItem[] => {
-  if (messageType === 'voice' || messageType === 'circle') {
+  if (
+    messageType === 'voice' ||
+    messageType === 'circle' ||
+    messageType === 'file' ||
+    messageType === 'files'
+  ) {
     return [];
   }
 
@@ -424,10 +456,22 @@ const toVisualMediaAttachmentItems = (
       return [];
     }
 
+    const previewUrl =
+      typeof attachment.thumbnailUrl === 'string'
+        ? resolveMediaUrl(attachment.thumbnailUrl)
+        : undefined;
+    const strippedPreviewUrl =
+      typeof attachment.strippedThumbnailUrl === 'string'
+        ? resolveMediaUrl(attachment.strippedThumbnailUrl)
+        : undefined;
+
     const mediaItem: ImageBubbleMediaItem = {
       url: resolvedUrl,
+      strippedPreviewUrl: strippedPreviewUrl || undefined,
+      previewUrl: previewUrl || undefined,
       mediaType: isVideo ? 'video' : 'image',
       contentType: attachment.contentType,
+      sizeBytes: attachment.sizeBytes,
     };
 
     return [
@@ -436,6 +480,76 @@ const toVisualMediaAttachmentItems = (
         attachmentIndex,
         resolvedUrl,
         mediaItem,
+      },
+    ];
+  });
+};
+
+const toFileAttachmentItems = (
+  messageType: ChatMessage['messageType'],
+  attachments: MessageAttachmentItem[]
+): FileAttachmentItem[] => {
+  if (messageType === 'voice' || messageType === 'circle') {
+    return [];
+  }
+  const forceFilePresentation = messageType === 'file' || messageType === 'files';
+
+  return attachments.flatMap((attachment, attachmentIndex) => {
+    const resolvedUrl = resolveAttachmentUrl(attachment);
+    if (!resolvedUrl) {
+      return [];
+    }
+
+    const contentType = (attachment.contentType || '').toLowerCase();
+    const isVideo =
+      isVideoContentType(contentType) ||
+      (!attachment.isImage && VIDEO_FILE_PATTERN.test(resolvedUrl));
+    const isImage =
+      attachment.isImage === true ||
+      contentType.startsWith('image/') ||
+      IMAGE_FILE_PATTERN.test(resolvedUrl);
+    const isAudio = isAudioContentType(contentType);
+
+    if (!forceFilePresentation && (isVideo || isAudio || isImage)) {
+      return [];
+    }
+
+    const fileName =
+      attachment.fileName?.trim() ||
+      (() => {
+        const baseOrigin =
+          typeof window !== 'undefined' ? window.location.origin : 'http://localhost';
+        try {
+          const parsed = new URL(resolvedUrl, baseOrigin);
+          const segments = parsed.pathname.split('/').filter(Boolean);
+          return segments[segments.length - 1] || 'file';
+        } catch {
+          const normalized = resolvedUrl.split('?')[0];
+          const segments = normalized.split('/').filter(Boolean);
+          return segments[segments.length - 1] || 'file';
+        }
+      })();
+
+    const previewUrl =
+      isImage && typeof attachment.thumbnailUrl === 'string'
+        ? resolveMediaUrl(attachment.thumbnailUrl)
+        : undefined;
+    const strippedPreviewUrl =
+      isImage && typeof attachment.strippedThumbnailUrl === 'string'
+        ? resolveMediaUrl(attachment.strippedThumbnailUrl)
+        : undefined;
+
+    return [
+      {
+        attachment,
+        attachmentIndex,
+        resolvedUrl,
+        fileName,
+        sizeBytes: attachment.sizeBytes,
+        contentType: attachment.contentType,
+        isImageFile: isImage,
+        previewUrl: previewUrl || undefined,
+        strippedPreviewUrl: strippedPreviewUrl || undefined,
       },
     ];
   });
@@ -1116,6 +1230,194 @@ function MessageTextBubble({
   );
 }
 
+function FileMessageBubble({
+  fileItem,
+  createdAt,
+  isRead,
+  isOwn,
+  isEdited,
+  hideTail = false,
+  uploadState,
+  onCancelUpload,
+  onOpenMedia,
+}: FileMessageBubbleProps) {
+  const shouldManageFileMedia =
+    !isOwn &&
+    !uploadState &&
+    isManagedMediaSourceUrl(fileItem.resolvedUrl);
+  const { ref: viewportRef, isInViewport } = useViewportPresence<HTMLDivElement>({
+    disabled: !shouldManageFileMedia,
+    rootMargin: '260px',
+  });
+
+  const fileDownload = useManagedMediaDownload({
+    url: fileItem.resolvedUrl,
+    kind: 'file',
+    sizeBytes: fileItem.sizeBytes,
+    priority: isInViewport ? 74 : 10,
+    autoStart: true,
+    managed: shouldManageFileMedia,
+    inViewport: isInViewport,
+  });
+
+  const resolvedFileUrl =
+    (shouldManageFileMedia ? fileDownload.resolvedUrl : fileItem.resolvedUrl) || '';
+  const downloadPhase = fileDownload.phase;
+  const isDownloadReady = !uploadState && !!resolvedFileUrl && downloadPhase === 'ready';
+  const isDownloadLoading =
+    !uploadState &&
+    shouldManageFileMedia &&
+    (downloadPhase === 'queued' || downloadPhase === 'downloading');
+  const isDownloadRetryable =
+    !uploadState &&
+    shouldManageFileMedia &&
+    (downloadPhase === 'error' || downloadPhase === 'canceled' || downloadPhase === 'paused');
+
+  const timeText = formatMessageTime(createdAt);
+  const sizeText = formatFileSize(fileItem.sizeBytes);
+  const bubbleClass = isOwn
+    ? 'tg-right bg-[#8b79e8] text-white'
+    : 'tg-left bg-[#335f88] text-white/95';
+  const statusText = uploadState
+    ? `${Math.max(0, Math.min(100, Math.round(uploadState.progress)))}%`
+    : isDownloadLoading
+      ? fileDownload.indeterminate
+        ? 'loading'
+        : `${Math.max(0, Math.min(100, Math.round(fileDownload.progress)))}%`
+      : isDownloadRetryable
+        ? 'tap to retry'
+        : '';
+
+  const handleOpenResolved = () => {
+    if (!resolvedFileUrl) return;
+    if (onOpenMedia) {
+      onOpenMedia();
+      return;
+    }
+    const link = document.createElement('a');
+    link.href = resolvedFileUrl;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    if (fileItem.fileName) {
+      link.download = fileItem.fileName;
+    }
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  };
+
+  const handleAction = () => {
+    if (uploadState) {
+      onCancelUpload?.();
+      return;
+    }
+    if (isDownloadReady || !shouldManageFileMedia) {
+      handleOpenResolved();
+      return;
+    }
+    if (isDownloadRetryable) {
+      if (downloadPhase === 'error') {
+        fileDownload.retry();
+      } else {
+        fileDownload.start();
+      }
+      return;
+    }
+    if (isDownloadLoading) {
+      fileDownload.cancel();
+    }
+  };
+
+  const actionLabel = uploadState
+    ? 'Cancel upload'
+    : isDownloadLoading
+      ? 'Cancel download'
+      : isDownloadRetryable
+        ? 'Retry download'
+        : 'Open file';
+
+  const previewUrl = fileItem.previewUrl || fileItem.strippedPreviewUrl;
+  const previewVisible = fileItem.isImageFile && (previewUrl || isDownloadReady);
+  const previewSrc = isDownloadReady ? resolvedFileUrl : previewUrl || '';
+
+  return (
+    <div ref={viewportRef}>
+      <div className={`tg-bubble relative ${bubbleClass} ${hideTail ? 'tg-tail-none' : ''}`}>
+        <button
+          type="button"
+          onClick={handleAction}
+          className="group flex min-w-[290px] max-w-[560px] items-center gap-3 rounded-[16px] p-[10px] text-left transition-transform duration-150 hover:scale-[1.01]"
+          aria-label={actionLabel}
+        >
+          <div className="relative h-[72px] w-[72px] shrink-0 overflow-hidden rounded-[14px] bg-black/24">
+            {previewVisible && previewSrc ? (
+              <img
+                src={previewSrc}
+                alt={fileItem.fileName}
+                className={`h-full w-full object-cover transition-[filter,opacity] duration-300 ${
+                  isDownloadReady ? 'opacity-100 blur-0' : 'opacity-90 blur-[2px]'
+                }`}
+                loading="lazy"
+                decoding="async"
+                draggable={false}
+              />
+            ) : (
+              <div className="grid h-full w-full place-items-center">
+                <span className="grid h-[42px] w-[42px] place-items-center rounded-full bg-[#5ba1df] text-white">
+                  <FileIcon size={20} />
+                </span>
+              </div>
+            )}
+          </div>
+
+          <div className="min-w-0 flex-1">
+            <div className="truncate pr-2 text-[16px] font-[700] leading-[1.12]">
+              {fileItem.fileName}
+            </div>
+            <div className={`mt-1 text-[15px] ${isOwn ? 'text-white/82' : 'text-white/72'}`}>
+              {sizeText || 'file'}
+              {statusText ? ` • ${statusText}` : ''}
+            </div>
+          </div>
+
+          <span
+            className={`grid h-[34px] w-[34px] shrink-0 place-items-center rounded-full ${
+              isOwn ? 'bg-white/20 text-white' : 'bg-black/18 text-white/95'
+            }`}
+          >
+            {isDownloadLoading || uploadState ? (
+              <span className="relative block h-[14px] w-[14px]">
+                <span className="absolute left-1/2 top-0 h-full w-[2px] -translate-x-1/2 rotate-45 rounded-full bg-current" />
+                <span className="absolute left-1/2 top-0 h-full w-[2px] -translate-x-1/2 -rotate-45 rounded-full bg-current" />
+              </span>
+            ) : (
+              <DownloadIcon size={16} strokeWidth={2.3} />
+            )}
+          </span>
+        </button>
+
+        <div
+          className={`pointer-events-none absolute bottom-[7px] right-[10px] flex items-center gap-[2px] text-[14px] ${
+            isOwn ? 'text-white/74' : 'text-white/55'
+          }`}
+        >
+          {isEdited ? <span className="italic">edited</span> : null}
+          <span>{timeText}</span>
+          {isOwn ? (
+            <span className="ml-[4px] inline-flex h-[12px] w-[12px] items-center justify-center">
+              <CheckCheckIcon
+                size={14}
+                strokeWidth={2.25}
+                className={`origin-center scale-[1.85] ${isRead ? 'text-[#d8fff0]' : 'text-white/72'}`}
+              />
+            </span>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function VoiceMessageBubble({
   mediaId,
   author,
@@ -1132,6 +1434,22 @@ function VoiceMessageBubble({
 }: VoiceMessageBubbleProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const transcribeAbortRef = useRef<AbortController | null>(null);
+  const shouldManageVoiceMedia = !isOwn && isManagedMediaSourceUrl(fileUrl);
+  const { ref: viewportRef, isInViewport } = useViewportPresence<HTMLDivElement>({
+    disabled: !shouldManageVoiceMedia,
+    rootMargin: '280px',
+  });
+  const voiceDownload = useManagedMediaDownload({
+    url: fileUrl,
+    kind: 'audio',
+    sizeBytes,
+    priority: isInViewport ? 72 : 8,
+    autoStart: true,
+    managed: shouldManageVoiceMedia,
+    inViewport: isInViewport,
+  });
+  const playbackFileUrl =
+    (shouldManageVoiceMedia ? voiceDownload.resolvedUrl : fileUrl) || '';
   const [isPlaying, setIsPlaying] = useState(false);
   const [durationSec, setDurationSec] = useState(0);
   const [currentSec, setCurrentSec] = useState(0);
@@ -1299,14 +1617,14 @@ function VoiceMessageBubble({
       audio.removeEventListener('pause', onPause);
       audio.removeEventListener('ended', onEnded);
     };
-  }, [author, createdAt, durationSec, fileUrl, mediaId, onPlaybackStateChange]);
+  }, [author, createdAt, durationSec, mediaId, onPlaybackStateChange, playbackFileUrl]);
 
   useEffect(() => {
     setWaveform(fallbackWaveform);
     setCurrentSec(0);
     setDurationSec(0);
     setIsPlaying(false);
-  }, [fallbackWaveform, fileUrl]);
+  }, [fallbackWaveform, playbackFileUrl]);
 
   useEffect(() => {
     transcribeAbortRef.current?.abort();
@@ -1325,7 +1643,7 @@ function VoiceMessageBubble({
   );
 
   useEffect(() => {
-    if (!fileUrl) return;
+    if (!playbackFileUrl) return;
 
     let cancelled = false;
     const abortController = new AbortController();
@@ -1333,7 +1651,7 @@ function VoiceMessageBubble({
     const buildRealWaveform = async () => {
       try {
         const result = await loadWaveformFromAudioUrl({
-          fileUrl,
+          fileUrl: playbackFileUrl,
           bars: fallbackWaveform.length,
           signal: abortController.signal,
         });
@@ -1356,7 +1674,7 @@ function VoiceMessageBubble({
       cancelled = true;
       abortController.abort();
     };
-  }, [fallbackWaveform.length, fileUrl]);
+  }, [fallbackWaveform.length, playbackFileUrl]);
 
   const playbackProgress = durationSec > 0 ? Math.min(1, Math.max(0, currentSec / durationSec)) : 0;
   const activeBars = Math.round(playbackProgress * waveform.length);
@@ -1365,7 +1683,7 @@ function VoiceMessageBubble({
   const sizeText = formatFileSize(sizeBytes);
 
   const togglePlayback = async () => {
-    if (!fileUrl) return;
+    if (!playbackFileUrl) return;
     const audio = audioRef.current;
     if (!audio) return;
 
@@ -1381,7 +1699,7 @@ function VoiceMessageBubble({
   };
 
   const handleTranscribe = async () => {
-    if (!fileUrl || isTranscribing) return;
+    if (!playbackFileUrl || isTranscribing) return;
 
     transcribeAbortRef.current?.abort();
     const abortController = new AbortController();
@@ -1392,7 +1710,7 @@ function VoiceMessageBubble({
 
     try {
       const transcriptText = await transcribeVoiceMessageFromUrl({
-        fileUrl,
+        fileUrl: playbackFileUrl,
         fileName,
         contentType,
         signal: abortController.signal,
@@ -1440,10 +1758,10 @@ function VoiceMessageBubble({
     : 'mt-2 rounded-[10px] bg-[#4a2e3e]/82 px-3 py-2 text-[12px] leading-[1.25] text-[#ffcbda]';
 
   return (
-    <div className={`tg-bubble relative ${bubbleClass} ${hideTail ? 'tg-tail-none' : ''}`}>
-      {fileUrl ? (
+    <div ref={viewportRef} className={`tg-bubble relative ${bubbleClass} ${hideTail ? 'tg-tail-none' : ''}`}>
+      {playbackFileUrl ? (
         <audio ref={audioRef} preload="metadata">
-          <source src={fileUrl} type={contentType || 'audio/webm'} />
+          <source src={playbackFileUrl} type={contentType || 'audio/webm'} />
         </audio>
       ) : null}
 
@@ -1452,7 +1770,7 @@ function VoiceMessageBubble({
           type="button"
           onClick={togglePlayback}
           className={playButtonClass}
-          disabled={!fileUrl}
+          disabled={!playbackFileUrl}
           aria-label={isPlaying ? 'Pause voice message' : 'Play voice message'}
         >
           {isPlaying ? <PauseIcon size={19} /> : <PlayIcon size={19} className="translate-x-[1px]" />}
@@ -1460,9 +1778,9 @@ function VoiceMessageBubble({
 
         <div className="min-w-0 flex-1">
           <div
-            className={`flex h-4 items-end gap-[2px] ${fileUrl ? 'cursor-pointer' : 'cursor-default'}`}
-            onClick={fileUrl ? seek : undefined}
-            role={fileUrl ? 'slider' : undefined}
+            className={`flex h-4 items-end gap-[2px] ${playbackFileUrl ? 'cursor-pointer' : 'cursor-default'}`}
+            onClick={playbackFileUrl ? seek : undefined}
+            role={playbackFileUrl ? 'slider' : undefined}
             aria-label="Voice playback position"
           >
             {waveform.map((value, index) => {
@@ -1480,7 +1798,11 @@ function VoiceMessageBubble({
 
           <div className={`mt-[5px] flex items-center justify-between text-[12px] ${isOwn ? 'text-white/78' : 'text-white/62'}`}>
             <span>
-              {fileUrl ? durationText : 'Preparing'}
+              {playbackFileUrl
+                ? durationText
+                : shouldManageVoiceMedia
+                  ? 'Loading'
+                  : 'Preparing'}
               {sizeText ? ` | ${sizeText}` : ''}
             </span>
             <span className="inline-flex items-center gap-1">
@@ -1506,7 +1828,7 @@ function VoiceMessageBubble({
         <button
           type="button"
           onClick={handleTranscribe}
-          disabled={!fileUrl || isTranscribing}
+          disabled={!playbackFileUrl || isTranscribing}
           className={transcribeButtonClass}
           title="Transcribe voice to text"
           aria-label="Transcribe voice to text"
@@ -1518,6 +1840,35 @@ function VoiceMessageBubble({
           )}
         </button>
       </div>
+
+      {shouldManageVoiceMedia && !playbackFileUrl ? (
+        <div className={`mt-2 flex items-center justify-between text-[12px] ${isOwn ? 'text-white/72' : 'text-white/58'}`}>
+          <span>
+            {voiceDownload.phase === 'error'
+              ? 'Download error'
+              : voiceDownload.phase === 'canceled' || voiceDownload.phase === 'paused'
+                ? 'Download paused'
+                : `Loading ${voiceDownload.indeterminate ? '...' : `${voiceDownload.progress}%`}`}
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              if (voiceDownload.phase === 'error') {
+                voiceDownload.retry();
+              } else if (voiceDownload.phase === 'canceled' || voiceDownload.phase === 'paused') {
+                voiceDownload.start();
+              } else {
+                voiceDownload.cancel();
+              }
+            }}
+            className={`rounded-[8px] px-2 py-[2px] text-[11px] font-[600] ${isOwn ? 'bg-white/18 text-white hover:bg-white/26' : 'bg-white/12 text-white/90 hover:bg-white/18'}`}
+          >
+            {voiceDownload.phase === 'error' || voiceDownload.phase === 'canceled' || voiceDownload.phase === 'paused'
+              ? 'Retry'
+              : 'Cancel'}
+          </button>
+        </div>
+      ) : null}
 
       {transcript ? <div className={transcriptClass}>{transcript}</div> : null}
       {!transcript && transcriptionError ? <div className={transcriptErrorClass}>{transcriptionError}</div> : null}
@@ -1606,8 +1957,31 @@ function CircleMessageBubble({
   const [isPlaying, setIsPlaying] = useState(false);
   const [durationSec, setDurationSec] = useState(0);
   const [currentSec, setCurrentSec] = useState(0);
-  const [mediaPhase, setMediaPhase] = useState<'processing' | 'ready' | 'error'>('processing');
-  const [resolvedFileUrl, setResolvedFileUrl] = useState<string | null>(null);
+  const [hasPlaybackError, setHasPlaybackError] = useState(false);
+  const hasUploadState = !!uploadState;
+  const shouldManageCircleMedia =
+    !hasUploadState && !isOwn && isManagedMediaSourceUrl(fileUrl);
+  const { ref: viewportRef, isInViewport } = useViewportPresence<HTMLDivElement>({
+    disabled: !shouldManageCircleMedia,
+    rootMargin: '300px',
+  });
+  const circleDownload = useManagedMediaDownload({
+    url: fileUrl,
+    kind: 'video',
+    priority: isInViewport ? 78 : 10,
+    autoStart: true,
+    managed: shouldManageCircleMedia,
+    inViewport: isInViewport,
+  });
+  const resolvedFileUrl =
+    (shouldManageCircleMedia ? circleDownload.resolvedUrl : fileUrl) || null;
+  const mediaPhase: 'processing' | 'ready' | 'error' = hasUploadState
+    ? 'processing'
+    : hasPlaybackError || circleDownload.phase === 'error'
+      ? 'error'
+      : resolvedFileUrl
+        ? 'ready'
+        : 'processing';
   const circleDisplaySize = 'min(36vw, 280px)';
   const circleSize = 176;
   const ringStrokeWidth = 4;
@@ -1620,7 +1994,6 @@ function CircleMessageBubble({
   const hasRingProgress = ringProgress > 0;
   const dashOffset = circumference * (1 - ringProgress);
   const ringColor = isOwn ? 'rgb(214, 202, 255)' : 'rgb(196, 203, 223)';
-  const hasUploadState = !!uploadState;
 
   const getDuration = () => {
     const video = videoRef.current;
@@ -1689,17 +2062,8 @@ function CircleMessageBubble({
     setIsPlaying(false);
     setDurationSec(0);
     setCurrentSec(0);
-    setResolvedFileUrl(null);
-    setMediaPhase('processing');
-
-    if (!fileUrl) {
-      setMediaPhase('processing');
-      return;
-    }
-
-    setResolvedFileUrl(fileUrl);
-    setMediaPhase('ready');
-  }, [fileUrl]);
+    setHasPlaybackError(false);
+  }, [resolvedFileUrl]);
 
   useEffect(() => {
     if (mediaPhase !== 'ready' || !isPlaying) {
@@ -1828,7 +2192,7 @@ function CircleMessageBubble({
       });
     };
     const onError = () => {
-      setMediaPhase('error');
+      setHasPlaybackError(true);
       setIsPlaying(false);
       onMediaError?.();
       onPlaybackStateChange?.({
@@ -1888,10 +2252,18 @@ function CircleMessageBubble({
 
   const messageTime = formatMessageTime(createdAt);
   const duration = formatDuration(isPlaying ? currentSec : durationSec);
-  const metaDuration = mediaPhase === 'ready' ? duration : mediaPhase === 'error' ? 'Not ready' : 'Preparing';
+  const metaDuration =
+    mediaPhase === 'ready'
+      ? duration
+      : mediaPhase === 'error'
+        ? 'Not ready'
+        : shouldManageCircleMedia
+          ? `Loading ${circleDownload.indeterminate ? '...' : `${circleDownload.progress}%`}`
+          : 'Preparing';
 
   return (
     <div
+      ref={viewportRef}
       className="relative inline-flex max-w-full overflow-visible"
       style={{
         width: circleDisplaySize,
@@ -1971,6 +2343,34 @@ function CircleMessageBubble({
             uploadState={uploadState}
             onCancelUpload={uploadState.cancelable ? onCancelUpload : undefined}
           />
+        ) : null}
+        {!hasUploadState && shouldManageCircleMedia && !resolvedFileUrl ? (
+          <div className="absolute inset-0 z-30 grid place-items-center">
+            <button
+              type="button"
+              onClick={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                if (circleDownload.phase === 'error') {
+                  circleDownload.retry();
+                } else if (
+                  circleDownload.phase === 'canceled' ||
+                  circleDownload.phase === 'paused'
+                ) {
+                  circleDownload.start();
+                } else {
+                  circleDownload.cancel();
+                }
+              }}
+              className="rounded-full bg-black/62 px-3 py-1.5 text-[12px] font-[700] text-white shadow-[0_8px_16px_rgba(0,0,0,0.35)] transition-colors hover:bg-black/76"
+            >
+              {circleDownload.phase === 'error' ||
+              circleDownload.phase === 'canceled' ||
+              circleDownload.phase === 'paused'
+                ? 'Retry'
+                : 'Cancel'}
+            </button>
+          </div>
         ) : null}
 
       </button>
@@ -2100,6 +2500,7 @@ function ChatMessageRow({
       : undefined;
   const circleAttachment = circleAttachmentItem?.attachment;
   const mediaAttachmentItems = toVisualMediaAttachmentItems(message.messageType, attachments);
+  const fileAttachmentItems = toFileAttachmentItems(message.messageType, attachments);
   const groupServiceMessageType = toGroupServiceMessageType(message.messageType);
   const isCircleMessage = message.messageType === 'circle' && !!circleAttachment;
   const mediaId = `${message.messageType}-${String(message.messageId)}`;
@@ -2140,6 +2541,12 @@ function ChatMessageRow({
     messageLocalId && uploadingImages && circleAttachmentItem
       ? uploadingImages.get(`${messageLocalId}-${circleAttachmentItem.attachmentIndex}`)
       : undefined;
+  const fileUploadStates = fileAttachmentItems.map((item) => {
+    if (!messageLocalId || !uploadingImages) {
+      return undefined;
+    }
+    return uploadingImages.get(`${messageLocalId}-${item.attachmentIndex}`);
+  });
   const replyPreview: ReplyPreview | undefined = message.replyToMessage
     ? {
         author:
@@ -2212,6 +2619,25 @@ function ChatMessageRow({
               onCancelPendingUpload(messageLocalId, circleAttachmentItem.attachmentIndex);
             }}
           />
+        ) : fileAttachmentItems.length > 0 ? (
+          <div className="flex flex-col gap-2">
+            {fileAttachmentItems.map((fileItem, index) => (
+              <FileMessageBubble
+                key={`${String(message.messageId)}-file-${fileItem.attachmentIndex}`}
+                fileItem={fileItem}
+                createdAt={message.createdAt}
+                isRead={isRead}
+                isOwn={isOwn}
+                isEdited={isEdited}
+                hideTail={hideTail && index === fileAttachmentItems.length - 1}
+                uploadState={fileUploadStates[index]}
+                onCancelUpload={() => {
+                  if (!onCancelPendingUpload || !messageLocalId) return;
+                  onCancelPendingUpload(messageLocalId, fileItem.attachmentIndex);
+                }}
+              />
+            ))}
+          </div>
         ) : mediaItems.length > 1 ? (
           <MultiImageBubble
             mediaItems={mediaItems}
@@ -2283,7 +2709,11 @@ function ChatMessageRow({
           />
         )}
 
-        {(message.messageType === 'voice' || message.messageType === 'circle') && hasTextContent ? (
+        {(
+          message.messageType === 'voice' ||
+          message.messageType === 'circle' ||
+          fileAttachmentItems.length > 0
+        ) && hasTextContent ? (
           <div
             className={`mt-1 px-2 text-[15px] leading-[1.2] ${
               isOwn ? 'text-white/88 text-right' : 'text-white/75 text-left'

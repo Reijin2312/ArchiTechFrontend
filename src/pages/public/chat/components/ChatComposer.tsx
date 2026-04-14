@@ -377,6 +377,7 @@ export function ChatComposer({ model }: ChatComposerProps) {
             id: item.id,
             file: item.file,
             preview: item.previewUrl,
+            sendAsFile: sendingDraft.sendAsFile,
             isImage:
               !sendingDraft.sendAsFile
               && (item.file.type || '').toLowerCase().startsWith('image/'),
