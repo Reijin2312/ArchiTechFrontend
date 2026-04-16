@@ -11,28 +11,39 @@ import type {
   UploadImageResponse,
 } from '@/shared/api/types';
 import type { AttachedImage, SocialChatActions, SocialFloatingActionsContext } from './types';
+import { getMessageMediaAttachments } from '../chat/mediaAttachments';
+import { buildLocalMediaPreviewMeta } from '../chat/localMediaPreview';
+import {
+  mergeHistoryWithPendingInStore,
+  patchMessagesInStore,
+  removeMessageFromStore,
+  upsertMessageInStore,
+  upsertMessagesInStore,
+} from './messageReconcile';
 
 export function createSocialChatActions(ctx: SocialFloatingActionsContext): SocialChatActions {
   const {
     user,
     selectedChat,
     chats,
-    messages,
+    messageStore,
     messageInput,
     attachedImages,
     editingMessage,
     replyingTo,
     markReadTimeoutRef,
     markReadTargetRef,
-    sendInFlightRef,
-    sendCooldownUntilRef,
+    sendQueueRef,
     pendingUploadCancelsRef,
+    historyBeforeByChatRef,
+    historyHasMoreByChatRef,
+    historyLoadingByChatRef,
     lastProtocolSeqRef,
     lastProtocolMsgIdRef,
     typingThrottleRef,
     isFirstLoadRef,
     messagesEndRef,
-    setMessages,
+    setMessageStore,
     setChats,
     setSelectedChat,
     setActiveTab,
@@ -46,22 +57,81 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
     scrollToBottom,
   } = ctx;
 
-  const nextProtocolEnvelope = () => {
+  const nextClientMessageId = () => {
     const timestamp = Date.now();
-    const nextSeqNo = Math.max(timestamp, lastProtocolSeqRef.current + 1);
-    lastProtocolSeqRef.current = nextSeqNo;
-
     const randomSuffix = Math.floor(Math.random() * 1024);
     const candidateMsgId = timestamp * 1024 + randomSuffix;
     const nextMsgId = Math.max(candidateMsgId, lastProtocolMsgIdRef.current + 1);
     lastProtocolMsgIdRef.current = nextMsgId;
+    return nextMsgId;
+  };
 
-    return { msgId: nextMsgId, seqNo: nextSeqNo, timestamp };
+  const nextProtocolEnvelope = (clientMessageId?: number) => {
+    const timestamp = Date.now();
+    const nextSeqNo = Math.max(timestamp, lastProtocolSeqRef.current + 1);
+    lastProtocolSeqRef.current = nextSeqNo;
+
+    return { msgId: clientMessageId ?? nextClientMessageId(), seqNo: nextSeqNo, timestamp };
+  };
+
+  const enqueueByChat = async (chatId: number, task: () => Promise<void>) => {
+    const queue = sendQueueRef.current;
+    const previous = queue.get(chatId) ?? Promise.resolve();
+    const run = previous.catch(() => undefined).then(task);
+    queue.set(chatId, run);
+    try {
+      await run;
+    } finally {
+      if (queue.get(chatId) === run) {
+        queue.delete(chatId);
+      }
+    }
   };
 
   const MAX_ATTACHMENTS = 9;
+  const MAX_TEXT_CHUNK_LENGTH = 4096;
   const toUploadStateKey = (localId: string, attachmentIndex: number) =>
     `${localId}-${attachmentIndex}`;
+
+  const splitTextForSend = (text: string, limit = MAX_TEXT_CHUNK_LENGTH) => {
+    if (!text || text.length <= limit) {
+      return [text];
+    }
+
+    const chunks: string[] = [];
+    let remaining = text;
+    while (remaining.length > limit) {
+      let splitIndex = remaining.lastIndexOf('\n', limit);
+      if (splitIndex < Math.floor(limit * 0.7)) {
+        splitIndex = remaining.lastIndexOf(' ', limit);
+      }
+      if (splitIndex <= 0) {
+        splitIndex = limit;
+      }
+
+      chunks.push(remaining.slice(0, splitIndex).trimEnd());
+      remaining = remaining.slice(splitIndex).trimStart();
+    }
+
+    if (remaining.length > 0) {
+      chunks.push(remaining);
+    }
+    return chunks.filter((chunk) => chunk.length > 0);
+  };
+
+  const normalizeHistoryMessage = (chatId: number, message: ChatMessage): ChatMessage => ({
+    ...message,
+    chatId: message.chatId ?? chatId,
+    replyToMessage: message.replyToMessage
+      ? {
+          ...message.replyToMessage,
+          chatId: message.replyToMessage.chatId ?? chatId,
+        }
+      : message.replyToMessage,
+  });
+
+  const normalizeHistoryBatch = (chatId: number, messages: ChatMessage[]) =>
+    messages.map((message) => normalizeHistoryMessage(chatId, message));
 
   const clearUploadStatesByLocalId = (localId: string) => {
     setUploadingImages((prev) => {
@@ -77,70 +147,65 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
       return changed ? next : prev;
     });
   };
-  const isLocalPreviewUrl = (value?: string) => {
-    if (!value) return false;
-    return value.startsWith('blob:') || value.startsWith('data:');
+
+  const INITIAL_HISTORY_PAGE_LIMIT = 50;
+
+  const getOldestServerMessageIdForChat = (chatId: number) => {
+    let oldest = Number.MAX_SAFE_INTEGER;
+    for (const key of messageStore.orderedIds) {
+      const message = messageStore.byId[key];
+      if (!message || message.chatId !== chatId) continue;
+      if (typeof message.messageId !== 'number' || !Number.isFinite(message.messageId)) {
+        continue;
+      }
+      if (message.messageId < oldest) {
+        oldest = message.messageId;
+      }
+    }
+    return oldest === Number.MAX_SAFE_INTEGER ? 0 : oldest;
   };
 
-  const pickStableMediaUrl = (
-    existingUrl: string | undefined,
-    ...remoteCandidates: Array<string | undefined>
+  const setHistoryCursorFromBatch = (
+    chatId: number,
+    batch: ChatMessage[],
+    limit = INITIAL_HISTORY_PAGE_LIMIT
   ) => {
-    if (isLocalPreviewUrl(existingUrl)) {
-      return existingUrl;
-    }
+    const oldestInBatch = batch.reduce((oldest, message) => {
+      if (typeof message.messageId !== 'number' || !Number.isFinite(message.messageId)) {
+        return oldest;
+      }
+      return oldest === 0 || message.messageId < oldest ? message.messageId : oldest;
+    }, 0);
 
-    for (const candidate of remoteCandidates) {
-      if (typeof candidate === 'string' && candidate.trim().length > 0) {
-        return candidate;
+    if (oldestInBatch > 0) {
+      const previousOldest = historyBeforeByChatRef.current.get(chatId) ?? 0;
+      if (previousOldest <= 0 || oldestInBatch < previousOldest) {
+        historyBeforeByChatRef.current.set(chatId, oldestInBatch);
       }
     }
 
-    return existingUrl;
+    if (batch.length < limit) {
+      historyHasMoreByChatRef.current.set(chatId, false);
+      return;
+    }
+
+    if (!historyHasMoreByChatRef.current.has(chatId)) {
+      historyHasMoreByChatRef.current.set(chatId, true);
+    }
   };
   type LooseAttachmentPayload = {
     imagePath?: string;
-    image_path?: string;
     imageUrl?: string;
-    image_url?: string;
     thumbnailUrl?: string;
-    thumbnail_url?: string;
     strippedThumbnailUrl?: string;
-    stripped_thumbnail_url?: string;
+    width?: number;
+    height?: number;
     fileName?: string;
-    file_name?: string;
     contentType?: string;
-    content_type?: string;
     sizeBytes?: number;
-    size_bytes?: number;
     isImage?: boolean;
-    is_image?: boolean;
     imageKeyVersion?: number;
-    image_key_version?: number;
-  };
-  const pickStringValue = (...candidates: unknown[]): string | undefined => {
-    for (const candidate of candidates) {
-      if (typeof candidate === 'string' && candidate.trim().length > 0) {
-        return candidate;
-      }
-    }
-    return undefined;
-  };
-  const pickNumberValue = (...candidates: unknown[]): number | undefined => {
-    for (const candidate of candidates) {
-      if (typeof candidate === 'number' && Number.isFinite(candidate)) {
-        return candidate;
-      }
-    }
-    return undefined;
-  };
-  const pickBooleanValue = (...candidates: unknown[]): boolean | undefined => {
-    for (const candidate of candidates) {
-      if (typeof candidate === 'boolean') {
-        return candidate;
-      }
-    }
-    return undefined;
+    imageEncryptionIv?: string;
   };
   const normalizeAttachmentPayload = (payload?: LooseAttachmentPayload) => {
     if (!payload) {
@@ -149,269 +214,60 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
         imageUrl: undefined,
         thumbnailUrl: undefined,
         strippedThumbnailUrl: undefined,
+        width: undefined,
+        height: undefined,
         fileName: undefined,
         contentType: undefined,
         sizeBytes: undefined,
         isImage: undefined,
         imageKeyVersion: undefined,
+        imageEncryptionIv: undefined,
       };
     }
 
     return {
-      imagePath: pickStringValue(payload.imagePath, payload.image_path),
-      imageUrl: pickStringValue(payload.imageUrl, payload.image_url),
-      thumbnailUrl: pickStringValue(payload.thumbnailUrl, payload.thumbnail_url),
-      strippedThumbnailUrl: pickStringValue(
-        payload.strippedThumbnailUrl,
-        payload.stripped_thumbnail_url
-      ),
-      fileName: pickStringValue(payload.fileName, payload.file_name),
-      contentType: pickStringValue(payload.contentType, payload.content_type),
-      sizeBytes: pickNumberValue(payload.sizeBytes, payload.size_bytes),
-      isImage: pickBooleanValue(payload.isImage, payload.is_image),
-      imageKeyVersion: pickNumberValue(payload.imageKeyVersion, payload.image_key_version),
+      imagePath: typeof payload.imagePath === 'string' ? payload.imagePath : undefined,
+      imageUrl: typeof payload.imageUrl === 'string' ? payload.imageUrl : undefined,
+      thumbnailUrl: typeof payload.thumbnailUrl === 'string' ? payload.thumbnailUrl : undefined,
+      strippedThumbnailUrl:
+        typeof payload.strippedThumbnailUrl === 'string'
+          ? payload.strippedThumbnailUrl
+          : undefined,
+      width:
+        typeof payload.width === 'number' && Number.isFinite(payload.width) && payload.width > 0
+          ? payload.width
+          : undefined,
+      height:
+        typeof payload.height === 'number' && Number.isFinite(payload.height) && payload.height > 0
+          ? payload.height
+          : undefined,
+      fileName: typeof payload.fileName === 'string' ? payload.fileName : undefined,
+      contentType: typeof payload.contentType === 'string' ? payload.contentType : undefined,
+      sizeBytes:
+        typeof payload.sizeBytes === 'number' && Number.isFinite(payload.sizeBytes)
+          ? payload.sizeBytes
+          : undefined,
+      isImage: typeof payload.isImage === 'boolean' ? payload.isImage : undefined,
+      imageKeyVersion:
+        typeof payload.imageKeyVersion === 'number' && Number.isFinite(payload.imageKeyVersion)
+          ? payload.imageKeyVersion
+          : undefined,
+      imageEncryptionIv:
+        typeof payload.imageEncryptionIv === 'string' ? payload.imageEncryptionIv : undefined,
     };
-  };
-  type MediaPrefetchKind = 'image' | 'video' | 'audio' | 'file';
-
-  const resolveMediaPrefetchKind = (
-    messageType: string | undefined,
-    contentType: string | undefined,
-    isImage?: boolean
-  ): MediaPrefetchKind => {
-    const normalizedMessageType = (messageType || '').toLowerCase();
-    const normalizedContentType = (contentType || '').toLowerCase();
-    if (normalizedMessageType === 'voice' || normalizedContentType.startsWith('audio/')) {
-      return 'audio';
-    }
-    if (normalizedMessageType === 'circle' || normalizedContentType.startsWith('video/')) {
-      return 'video';
-    }
-    if (
-      isImage ||
-      normalizedMessageType === 'image' ||
-      normalizedMessageType === 'images' ||
-      normalizedContentType.startsWith('image/')
-    ) {
-      return 'image';
-    }
-    return 'file';
-  };
-
-  const mediaPrefetchCache = new Map<string, Promise<boolean>>();
-  const prefetchMediaReady = (url: string, kind: MediaPrefetchKind, timeoutMs = 20_000): Promise<boolean> => {
-    if (!url) return Promise.resolve(false);
-    if (isLocalPreviewUrl(url)) return Promise.resolve(true);
-    if (typeof window === 'undefined') return Promise.resolve(true);
-
-    const cacheKey = `${kind}:${url}`;
-    const cached = mediaPrefetchCache.get(cacheKey);
-    if (cached) return cached;
-
-    const task = new Promise<boolean>((resolve) => {
-      let settled = false;
-      let timeoutId: number | null = null;
-
-      const done = (ok: boolean) => {
-        if (settled) return;
-        settled = true;
-        if (timeoutId !== null) {
-          window.clearTimeout(timeoutId);
-        }
-        resolve(ok);
-      };
-
-      timeoutId = window.setTimeout(() => done(false), timeoutMs);
-
-      try {
-        if (kind === 'image') {
-          const img = new Image();
-          img.onload = () => done(true);
-          img.onerror = () => done(false);
-          img.src = url;
-          return;
-        }
-
-        if (kind === 'video' || kind === 'audio') {
-          const media = document.createElement(kind);
-          media.preload = 'metadata';
-          if (kind === 'video') {
-            media.muted = true;
-            (media as HTMLVideoElement).playsInline = true;
-          }
-
-          const cleanup = () => {
-            media.removeEventListener('loadedmetadata', onReady);
-            media.removeEventListener('canplay', onReady);
-            media.removeEventListener('error', onError);
-            media.removeAttribute('src');
-            media.load();
-          };
-          const onReady = () => {
-            cleanup();
-            done(true);
-          };
-          const onError = () => {
-            cleanup();
-            done(false);
-          };
-
-          media.addEventListener('loadedmetadata', onReady, { once: true });
-          media.addEventListener('canplay', onReady, { once: true });
-          media.addEventListener('error', onError, { once: true });
-          media.src = url;
-          media.load();
-          return;
-        }
-
-        void fetch(url, { method: 'HEAD', credentials: 'include' })
-          .then((response) => done(response.ok))
-          .catch(() => done(false));
-      } catch {
-        done(false);
-      }
-    });
-
-    mediaPrefetchCache.set(cacheKey, task);
-    return task;
-  };
-
-  const scheduleMediaSwapAfterPrefetch = (params: {
-    localId: string;
-    messageId: number;
-    chatId: number;
-    attachmentIndex: number;
-    currentUrl?: string;
-    remoteUrl?: string;
-    remotePath?: string;
-    messageType?: string;
-    contentType?: string;
-    isImage?: boolean;
-  }) => {
-    const {
-      localId,
-      messageId,
-      chatId,
-      attachmentIndex,
-      currentUrl,
-      remoteUrl,
-      remotePath,
-      messageType,
-      contentType,
-      isImage,
-    } = params;
-
-    if (!remoteUrl || !currentUrl) return;
-    if (!isLocalPreviewUrl(currentUrl)) return;
-    if (currentUrl === remoteUrl) return;
-
-    const kind = resolveMediaPrefetchKind(messageType, contentType, isImage);
-
-    void (async () => {
-      const ready = await prefetchMediaReady(remoteUrl, kind);
-      if (!ready) return;
-
-      setMessages((prev) => {
-        let changed = false;
-        const next = prev.map((message) => {
-          const matches =
-            message.localId === localId ||
-            message.messageId === localId ||
-            message.messageId === messageId;
-          if (!matches) {
-            return message;
-          }
-
-          let messageChanged = false;
-          let nextMessage = message;
-
-          if (Array.isArray(message.images) && message.images.length > attachmentIndex) {
-            const currentAttachment = message.images[attachmentIndex];
-            if (currentAttachment) {
-              const attachmentUrl = currentAttachment.imageUrl;
-              if (attachmentUrl === currentUrl || isLocalPreviewUrl(attachmentUrl)) {
-                const nextImages = [...message.images];
-                nextImages[attachmentIndex] = {
-                  ...currentAttachment,
-                  imageUrl: remoteUrl,
-                  imagePath: remotePath || currentAttachment.imagePath,
-                };
-                nextMessage = {
-                  ...nextMessage,
-                  images: nextImages,
-                };
-                messageChanged = true;
-              }
-            }
-          }
-
-          if (attachmentIndex === 0) {
-            const topLevelUrl = nextMessage.imageUrl;
-            if (topLevelUrl === currentUrl || isLocalPreviewUrl(topLevelUrl)) {
-              nextMessage = {
-                ...nextMessage,
-                imageUrl: remoteUrl,
-                imagePath: remotePath || nextMessage.imagePath,
-              };
-              messageChanged = true;
-            }
-          }
-
-          if (!messageChanged) {
-            return message;
-          }
-
-          changed = true;
-          return nextMessage;
-        });
-
-        return changed ? next : prev;
-      });
-
-      if (attachmentIndex === 0) {
-        setChats((prev) => {
-          let changed = false;
-          const next = prev.map((chat) => {
-            if (chat.chatId !== chatId || !chat.lastMessage) {
-              return chat;
-            }
-
-            const lastMessage = chat.lastMessage;
-            const matches =
-              lastMessage.localId === localId ||
-              lastMessage.messageId === localId ||
-              lastMessage.messageId === messageId;
-            if (!matches) {
-              return chat;
-            }
-
-            const lastUrl = lastMessage.imageUrl;
-            if (lastUrl !== currentUrl && !isLocalPreviewUrl(lastUrl)) {
-              return chat;
-            }
-
-            changed = true;
-            return {
-              ...chat,
-              lastMessage: {
-                ...lastMessage,
-                imageUrl: remoteUrl,
-                imagePath: remotePath || lastMessage.imagePath,
-              },
-            };
-          });
-
-          return changed ? next : prev;
-        });
-      }
-
-      if (currentUrl.startsWith('blob:')) {
-        URL.revokeObjectURL(currentUrl);
-      }
-    })();
   };
   const shouldSendAttachmentsSeparately = (attachments: AttachedImage[]) =>
     attachments.length > 1 && attachments.every((attachment) => attachment.groupWithOthers === false);
+
+  const isGroupedAlbumAttachment = (attachment: AttachedImage) =>
+    (attachment.groupWithOthers ?? true) &&
+    !attachment.sendAsFile &&
+    attachment.forcedMessageType !== 'voice' &&
+    attachment.forcedMessageType !== 'circle' &&
+    isVisualMediaAttachment(attachment);
+
+  const shouldSendAsGroupedAlbum = (attachments: AttachedImage[]) =>
+    attachments.length > 1 && attachments.every(isGroupedAlbumAttachment);
 
   const isImageAttachment = (attachment: {
     isImage?: boolean;
@@ -524,6 +380,221 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
     return 'files';
   };
 
+  const toRetryableUploadedAttachments = (message: ChatMessage) => {
+    const fallbackMediaType =
+      message.messageType === 'image' ||
+      message.messageType === 'images' ||
+      message.messageType === 'voice' ||
+      message.messageType === 'circle'
+        ? message.messageType !== 'voice' && message.messageType !== 'circle'
+        : false;
+
+    const source = getMessageMediaAttachments(message).map((attachment) => ({
+      ...attachment,
+      isImage: attachment.isImage ?? fallbackMediaType,
+      imageKeyVersion: attachment.imageKeyVersion ?? message.imageKeyVersion,
+    }));
+
+    return source
+      .map((rawAttachment, index) => {
+        const normalized = normalizeAttachmentPayload(rawAttachment as LooseAttachmentPayload);
+        const imagePath = normalized.imagePath || '';
+        if (!imagePath) return null;
+        const fallbackFileName = imagePath.split('/').pop() || `attachment-${index + 1}`;
+        return {
+          imagePath,
+          imageUrl: normalized.imageUrl || (imagePath ? `/media/${imagePath}` : undefined),
+          thumbnailUrl: normalized.thumbnailUrl,
+          strippedThumbnailUrl: normalized.strippedThumbnailUrl,
+          width: normalized.width,
+          height: normalized.height,
+          fileName: normalized.fileName || fallbackFileName,
+          contentType: normalized.contentType || 'application/octet-stream',
+          sizeBytes: normalized.sizeBytes ?? 0,
+          isImage: normalized.isImage ?? fallbackMediaType,
+          imageKeyVersion: normalized.imageKeyVersion,
+          imageEncryptionIv: normalized.imageEncryptionIv,
+          imageEncrypted: !!normalized.imageEncryptionIv,
+        };
+      })
+      .filter((attachment): attachment is NonNullable<typeof attachment> => !!attachment);
+  };
+
+  type SendAttachmentPayload = {
+    imagePath: string;
+    imageEncrypted?: boolean;
+    imageEncryptionIv?: string;
+    imageKeyVersion?: number;
+    width?: number;
+    height?: number;
+    fileName?: string;
+    contentType?: string;
+    sizeBytes?: number;
+    isImage?: boolean;
+    imageUrl?: string;
+    thumbnailUrl?: string;
+    strippedThumbnailUrl?: string;
+  };
+
+  const buildSendRequestPayload = (params: {
+    chatId: number;
+    messageType: string;
+    content: string;
+    entities?: ChatMessage['entities'];
+    replyToMessageId?: number;
+    clientMessageId: number;
+    groupingKey?: string;
+    attachments?: SendAttachmentPayload[];
+  }) => {
+    const {
+      chatId,
+      messageType,
+      content,
+      entities,
+      replyToMessageId,
+      clientMessageId,
+      groupingKey,
+      attachments = [],
+    } = params;
+
+    const { msgId, seqNo, timestamp } = nextProtocolEnvelope(clientMessageId);
+    const payload: any = {
+      msg_id: msgId,
+      seq_no: seqNo,
+      timestamp,
+      chat_id: chatId,
+      content_type: messageType,
+      content,
+      entities,
+      hmac: '',
+      reply_to_id: replyToMessageId,
+    };
+
+    if (groupingKey) {
+      payload.grouping_key = groupingKey;
+    }
+
+    if (attachments.length > 0) {
+      payload.images = attachments.map((item) => ({
+        image_path: item.imagePath,
+        image_encrypted: item.imageEncrypted,
+        image_encryption_iv: item.imageEncryptionIv,
+        image_key_version: item.imageKeyVersion,
+        file_name: item.fileName,
+        content_type: item.contentType,
+        size_bytes: item.sizeBytes,
+        is_image: item.isImage,
+      }));
+    }
+
+    return payload;
+  };
+
+  const resolveFinalizedImages = (
+    attachments: SendAttachmentPayload[],
+    response: SendMessageResponse
+  ) => {
+    const responseImages = Array.isArray(response.images) ? response.images : [];
+    const count = Math.max(
+      attachments.length,
+      responseImages.length
+    );
+    if (count === 0) {
+      return [];
+    }
+
+    const finalizedImages = new Array<NonNullable<ChatMessage['images']>[number]>();
+    for (let index = 0; index < count; index += 1) {
+      const localAttachment = attachments[index];
+      const fromResponse = normalizeAttachmentPayload(
+        responseImages[index] as LooseAttachmentPayload | undefined
+      );
+      const imagePath = fromResponse.imagePath || localAttachment?.imagePath || '';
+      const imageUrl =
+        fromResponse.imageUrl ||
+        localAttachment?.imageUrl ||
+        (imagePath ? `/media/${imagePath}` : undefined);
+
+      if (!imagePath && !imageUrl) {
+        continue;
+      }
+
+      finalizedImages.push({
+        imagePath,
+        imageUrl,
+        thumbnailUrl: fromResponse.thumbnailUrl || localAttachment?.thumbnailUrl,
+        strippedThumbnailUrl:
+          fromResponse.strippedThumbnailUrl || localAttachment?.strippedThumbnailUrl,
+        width: fromResponse.width ?? localAttachment?.width,
+        height: fromResponse.height ?? localAttachment?.height,
+        fileName: fromResponse.fileName || localAttachment?.fileName,
+        contentType: fromResponse.contentType || localAttachment?.contentType,
+        sizeBytes: fromResponse.sizeBytes ?? localAttachment?.sizeBytes,
+        isImage: fromResponse.isImage ?? localAttachment?.isImage,
+        imageKeyVersion: fromResponse.imageKeyVersion ?? localAttachment?.imageKeyVersion,
+      });
+    }
+
+    return finalizedImages;
+  };
+
+  const sendPreparedMessage = async (params: {
+    chatId: number;
+    messageType: ChatMessage['messageType'];
+    content: string;
+    entities?: ChatMessage['entities'];
+    replyToMessageId?: number;
+    clientMessageId: number;
+    groupingKey?: string;
+    attachments: SendAttachmentPayload[];
+    tempMessage: ChatMessage;
+  }) => {
+    const {
+      chatId,
+      messageType,
+      content,
+      entities,
+      replyToMessageId,
+      clientMessageId,
+      groupingKey,
+      attachments,
+      tempMessage,
+    } = params;
+
+    const payload = buildSendRequestPayload({
+      chatId,
+      messageType,
+      content,
+      entities,
+      replyToMessageId,
+      clientMessageId,
+      groupingKey,
+      attachments,
+    });
+
+    const { data } = await http.post<SendMessageResponse>(endpoints.chatSend, payload);
+    const finalizedImages = resolveFinalizedImages(attachments, data);
+
+    const acknowledgedMessage: ChatMessage = {
+      ...tempMessage,
+      messageId: data.messageId,
+      clientMessageId: data.clientMessageId ?? clientMessageId,
+      // Keep message pending until WS message_sent/new_message finalizes it.
+      status: 'pending',
+      images: finalizedImages.length > 0 ? finalizedImages : tempMessage.images,
+      groupingKey: data.groupingKey || groupingKey,
+      isRead: false,
+      sequenceNumber: data.sequenceNumber,
+      serverTimestamp: data.serverTimestamp,
+      signatureTimestamp: data.serverTimestamp,
+      messageType,
+      content,
+      entities,
+    };
+
+    return { data, acknowledgedMessage };
+  };
+
   const sendTypingState = async (chatId: number, typing: boolean, force = false) => {
     if (!chatId) return;
 
@@ -589,11 +660,17 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
           lastReadMessageId: target.lastId,
         });
 
-        setMessages(prev => prev.map(m =>
-          typeof m.messageId === 'number' && m.messageId <= target.lastId && m.senderId !== user?.id
-            ? { ...m, isRead: true }
-            : m
-        ));
+        setMessageStore((prev) =>
+          patchMessagesInStore(
+            prev,
+            (message) =>
+              typeof message.messageId === 'number' &&
+              message.messageId <= target.lastId &&
+              message.senderId !== user?.id,
+            () => ({ isRead: true }),
+            user?.id
+          )
+        );
       } catch (err) {
         logger.warn('Failed to mark chat read', err);
       }
@@ -661,7 +738,20 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
         })
       );
 
-      setChats(chatsWithDecrypted);
+      const lastMessages = chatsWithDecrypted
+        .filter((chat) => !!chat.lastMessage)
+        .map((chat) => ({
+          ...chat.lastMessage!,
+          chatId: chat.chatId,
+        }));
+
+      setMessageStore((prev) => upsertMessagesInStore(prev, lastMessages, user?.id));
+      setChats(
+        chatsWithDecrypted.map((chat) => ({
+          ...chat,
+          lastMessage: undefined,
+        }))
+      );
     } catch (err) {
       console.error('Failed to load chats:', err);
     } finally {
@@ -671,15 +761,20 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
 
   const loadMessages = async (chatId: number, append = false) => {
     try {
-      const { data } = await http.get<ChatMessagesResponse>(endpoints.chatMessages(chatId));
+      const { data } = await http.get<ChatMessagesResponse>(
+        endpoints.chatMessages(chatId, undefined, INITIAL_HISTORY_PAGE_LIMIT)
+      );
 
-      const messagesWithContent = data.messages;
+      const messagesWithContent = normalizeHistoryBatch(chatId, data.messages || []);
 
-      if (!append) {
-        setMessages(messagesWithContent);
-      } else {
-        setMessages(prev => [...prev, ...messagesWithContent]);
-      }
+      historyLoadingByChatRef.current.delete(chatId);
+      historyHasMoreByChatRef.current.set(chatId, true);
+      historyBeforeByChatRef.current.delete(chatId);
+      setHistoryCursorFromBatch(chatId, messagesWithContent, INITIAL_HISTORY_PAGE_LIMIT);
+
+      setMessageStore((prev) =>
+        mergeHistoryWithPendingInStore(prev, messagesWithContent, user?.id)
+      );
 
       const unreadIncomingMessageIds = !append
         ? messagesWithContent.reduce<number[]>((acc, message) => {
@@ -788,6 +883,113 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
       }
     } catch (err) {
       console.error('Failed to load messages:', err);
+      historyLoadingByChatRef.current.delete(chatId);
+    }
+  };
+
+  const loadMessagesAfter = async (chatId: number, afterMessageId: number, limit = 100) => {
+    if (chatId <= 0 || !Number.isFinite(afterMessageId) || afterMessageId <= 0) {
+      return;
+    }
+
+    try {
+      let cursor = afterMessageId;
+      let rounds = 0;
+      const maxRounds = 20;
+      const mergedBatch: ChatMessage[] = [];
+
+      while (rounds < maxRounds) {
+        const { data } = await http.get<ChatMessagesResponse>(
+          endpoints.chatMessages(chatId, undefined, limit, cursor)
+        );
+        const incomingMessages = normalizeHistoryBatch(chatId, data.messages || []);
+        if (incomingMessages.length === 0) {
+          break;
+        }
+
+        mergedBatch.push(...incomingMessages);
+
+        const nextCursor = incomingMessages.reduce((maxMessageId, message) => {
+          if (typeof message.messageId !== 'number') {
+            return maxMessageId;
+          }
+          return Math.max(maxMessageId, message.messageId);
+        }, cursor);
+
+        if (nextCursor <= cursor || incomingMessages.length < limit) {
+          break;
+        }
+
+        cursor = nextCursor;
+        rounds += 1;
+      }
+
+      if (mergedBatch.length === 0) {
+        return;
+      }
+
+      setHistoryCursorFromBatch(chatId, mergedBatch, limit);
+      setMessageStore((prev) => mergeHistoryWithPendingInStore(prev, mergedBatch, user?.id));
+    } catch (err) {
+      logger.warn('Failed to load missed messages after reconnect', {
+        chatId,
+        afterMessageId,
+        limit,
+        err,
+      });
+    }
+  };
+
+  const loadOlderMessages = async (chatId: number, limit = INITIAL_HISTORY_PAGE_LIMIT) => {
+    if (chatId <= 0) {
+      return;
+    }
+
+    const loadingSet = historyLoadingByChatRef.current;
+    if (loadingSet.has(chatId)) {
+      return;
+    }
+
+    const hasMore = historyHasMoreByChatRef.current.get(chatId);
+    if (hasMore === false) {
+      return;
+    }
+
+    let beforeMessageId = historyBeforeByChatRef.current.get(chatId) ?? 0;
+    if (beforeMessageId <= 0) {
+      beforeMessageId = getOldestServerMessageIdForChat(chatId);
+      if (beforeMessageId > 0) {
+        historyBeforeByChatRef.current.set(chatId, beforeMessageId);
+      }
+    }
+    if (!Number.isFinite(beforeMessageId) || beforeMessageId <= 0) {
+      historyHasMoreByChatRef.current.set(chatId, false);
+      return;
+    }
+
+    loadingSet.add(chatId);
+    try {
+      const { data } = await http.get<ChatMessagesResponse>(
+        endpoints.chatMessages(chatId, beforeMessageId, limit)
+      );
+      const batch = normalizeHistoryBatch(chatId, data.messages || []);
+
+      if (batch.length === 0) {
+        historyHasMoreByChatRef.current.set(chatId, false);
+        return;
+      }
+
+      setMessageStore((prev) => mergeHistoryWithPendingInStore(prev, batch, user?.id));
+      const previousOldest = beforeMessageId;
+      setHistoryCursorFromBatch(chatId, batch, limit);
+      const nextOldest = historyBeforeByChatRef.current.get(chatId) ?? previousOldest;
+      if (nextOldest >= previousOldest) {
+        historyHasMoreByChatRef.current.set(chatId, false);
+      }
+    } catch (err) {
+      logger.warn('Failed to load older messages', { chatId, beforeMessageId, limit, err });
+    } finally {
+      loadingSet.delete(chatId);
     }
   };
 
@@ -842,105 +1044,142 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
     setSelectedChat(data.chatId);
   };
 
-  const sendMessageToChat = async (
+  const sendTextMessageToChat = async (
     chatId: number,
     message: string,
-    messageType: 'text' | 'image' | 'images' | 'file' | 'files' | 'voice' | 'circle' = 'text',
-    imagePath?: string,
-    imageEncrypted?: boolean,
-    imageEncryptionIv?: string,
-    imageKeyVersion?: number
+    overrideReplyToId?: number,
+    options?: { useCurrentReplyTarget?: boolean }
   ) => {
+    const useCurrentReplyTarget = options?.useCurrentReplyTarget ?? true;
     const localId = `local-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    const clientMessageId = nextClientMessageId();
     const createdAt = new Date().toISOString();
     const parsed = buildMessageTextAndEntities(message);
-    const isVoiceOrCircle = messageType === 'voice' || messageType === 'circle';
-    const normalizedContent = isVoiceOrCircle ? '' : parsed.content;
-    const normalizedEntities =
-      !isVoiceOrCircle && parsed.entities.length > 0 ? parsed.entities : undefined;
+    const normalizedContent = parsed.content;
+    const normalizedEntities = parsed.entities.length > 0 ? parsed.entities : undefined;
+    const replyToMessageId =
+      overrideReplyToId ??
+      (useCurrentReplyTarget && typeof replyingTo?.messageId === 'number'
+        ? replyingTo.messageId
+        : undefined);
 
     try {
       const tempMessage: ChatMessage = {
+        chatId,
         localId,
         messageId: localId,
+        clientMessageId,
         status: 'pending',
         senderId: user?.id || '',
         content: normalizedContent,
         entities: normalizedEntities,
-        messageType,
-        imagePath,
+        messageType: 'text',
         createdAt,
-        replyToId: replyingTo?.messageId,
-        replyToMessage: replyingTo || undefined,
+        replyToId: replyToMessageId,
+        replyToMessage: useCurrentReplyTarget ? replyingTo || undefined : undefined,
       };
 
-      setMessages((prev) => [...prev, tempMessage]);
+      setMessageStore((prev) => upsertMessageInStore(prev, tempMessage, user?.id));
       setTimeout(() => scrollToBottom(), 0);
 
-      const { msgId, seqNo, timestamp } = nextProtocolEnvelope();
-      const { data } = await http.post<SendMessageResponse>(endpoints.chatSend, {
-        msg_id: msgId,
-        seq_no: seqNo,
-        timestamp,
-        chat_id: chatId,
-        content_type: messageType,
+      const { acknowledgedMessage } = await sendPreparedMessage({
+        chatId,
+        messageType: 'text',
         content: normalizedContent,
         entities: normalizedEntities,
-        hmac: '',
-        reply_to_id: replyingTo?.messageId,
-        image_path: imagePath,
-        image_encrypted: imageEncrypted,
-        image_encryption_iv: imageEncryptionIv,
-        image_key_version: imageKeyVersion,
+        replyToMessageId,
+        clientMessageId,
+        attachments: [],
+        tempMessage,
       });
 
-      setMessages((prev) =>
-        prev.map((m) => {
-          if (m.localId === localId || m.messageId === localId) {
-            return {
-              ...m,
-              messageId: data.messageId,
-              status: m.isRead ? 'read' : 'sent',
-              content: m.content || normalizedContent,
-              entities: m.entities ?? normalizedEntities,
-              imageUrl: data.imageUrl ?? m.imageUrl,
-              imagePath: imagePath ?? m.imagePath,
-              isRead: false,
-            };
-          }
-          return m;
-        })
-      );
-
-      setChats((prev) =>
-        prev.map((c) =>
-          c.chatId === chatId
-            ? {
-                ...c,
-                lastMessage: {
-                  messageId: data.messageId,
-                  senderId: user?.id || '',
-                  content: normalizedContent,
-                  entities: normalizedEntities,
-                  messageType,
-                  imagePath,
-                  imageUrl: data.imageUrl,
-                  createdAt,
-                  isRead: false,
-                  replyToId: replyingTo?.messageId,
-                  replyToMessage: replyingTo || undefined,
-                } as ChatMessage,
-              }
-            : c
+      setMessageStore((prev) =>
+        upsertMessageInStore(
+          prev,
+          {
+            ...acknowledgedMessage,
+            localId,
+          },
+          user?.id
         )
       );
 
-      setReplyingTo(null);
+      if (useCurrentReplyTarget) {
+        setReplyingTo(null);
+      }
     } catch (e) {
       console.error('Failed to send message', e);
-      setMessages((prev) => prev.filter((m) => m.localId !== localId && m.messageId !== localId));
-      alert(e instanceof Error ? e.message : 'Ошибка отправки сообщения');
+      setMessageStore((prev) =>
+        upsertMessageInStore(
+          prev,
+          {
+            chatId,
+            messageId: localId,
+            localId,
+            clientMessageId,
+            status: 'failed',
+            senderId: user?.id || '',
+            content: normalizedContent,
+            entities: normalizedEntities,
+            messageType: 'text',
+            createdAt,
+          },
+          user?.id
+        )
+      );
+      alert(e instanceof Error ? e.message : 'РћС€РёР±РєР° РѕС‚РїСЂР°РІРєРё СЃРѕРѕР±С‰РµРЅРёСЏ');
     }
+  };
+
+  const toSyntheticAttachmentFromPreuploaded = (params: {
+    imagePath: string;
+    messageType: 'text' | 'image' | 'images' | 'file' | 'files' | 'voice' | 'circle';
+    imageEncrypted?: boolean;
+    imageEncryptionIv?: string;
+    imageKeyVersion?: number;
+  }): AttachedImage => {
+    const normalizedType: ChatMessage['messageType'] =
+      params.messageType === 'images'
+        ? 'image'
+        : params.messageType === 'files'
+          ? 'file'
+          : params.messageType;
+    const normalizedContentType =
+      normalizedType === 'voice'
+        ? 'audio/ogg'
+        : normalizedType === 'circle'
+          ? 'video/mp4'
+          : normalizedType === 'file'
+            ? 'application/octet-stream'
+            : 'image/jpeg';
+    const inferredFileName = params.imagePath.split('/').pop() || `attachment-${Date.now()}`;
+
+    const uploadedData: UploadImageResponse = {
+      success: true,
+      imagePath: params.imagePath,
+      imageUrl: `/media/${params.imagePath}`,
+      fileName: inferredFileName,
+      contentType: normalizedContentType,
+      sizeBytes: 0,
+      isImage: normalizedType === 'image',
+      imageEncrypted: typeof params.imageEncrypted === 'boolean' ? params.imageEncrypted : true,
+      imageEncryptionIv: params.imageEncryptionIv,
+      imageKeyVersion: params.imageKeyVersion,
+    };
+
+    return {
+      id: `preuploaded-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+      file: new File([], inferredFileName, { type: normalizedContentType }),
+      isImage: normalizedType === 'image',
+      sendAsFile: normalizedType === 'file',
+      groupWithOthers: false,
+      forcedMessageType:
+        normalizedType === 'voice' || normalizedType === 'circle' ? normalizedType : undefined,
+      contentType: normalizedContentType,
+      sizeBytes: 0,
+      uploadedData,
+      uploading: false,
+    };
   };
 
   const sendMessageToUser = async (
@@ -973,15 +1212,34 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
       setSelectedChat(createData.chatId);
     }
 
-    await sendMessageToChat(
-      chat.chatId,
-      message,
-      messageType,
-      imagePath,
-      imageEncrypted,
-      imageEncryptionIv,
-      imageKeyVersion
-    );
+    await enqueueByChat(chat.chatId, async () => {
+      if (messageType === 'text' && !imagePath) {
+        await sendMessagesWithImages(chat!.chatId, message, {
+          attachments: [],
+          clearComposerDraft: false,
+          resetReplyTo: false,
+        });
+        return;
+      }
+
+      if (!imagePath) {
+        throw new Error('imagePath is required for media messages');
+      }
+
+      await sendMessagesWithImages(chat!.chatId, message, {
+        attachments: [
+          toSyntheticAttachmentFromPreuploaded({
+            imagePath,
+            messageType,
+            imageEncrypted,
+            imageEncryptionIv,
+            imageKeyVersion,
+          }),
+        ],
+        clearComposerDraft: false,
+        resetReplyTo: false,
+      });
+    });
   };
 
   const cancelPendingMediaUpload = (localId: string, attachmentIndex: number) => {
@@ -1002,22 +1260,9 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
       return;
     }
 
-    const now = Date.now();
-    if (sendInFlightRef.current) {
-      console.debug('Skipping duplicate send while previous request is in flight');
-      return;
-    }
-    if (now < sendCooldownUntilRef.current) {
-      console.debug('Skipping duplicate send in cooldown window');
-      return;
-    }
-
     if (selectedChat) {
       setAutoScrollLocked(false);
     }
-
-    sendInFlightRef.current = true;
-    sendCooldownUntilRef.current = now + 700;
 
     try {
       if (editingMessage) {
@@ -1026,37 +1271,61 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
         setEditingMessage(null);
         setAttachedImages([]);
       } else if (selectedChat) {
-        const replyToMessageId =
-          typeof replyingTo?.messageId === 'number' ? replyingTo.messageId : undefined;
+        const targetChatId = selectedChat;
+        await enqueueByChat(targetChatId, async () => {
+          const replyToMessageId =
+            typeof replyingTo?.messageId === 'number' ? replyingTo.messageId : undefined;
 
-        if (attachmentsToSend.length > 0) {
-          if (shouldSendAttachmentsSeparately(attachmentsToSend)) {
-            for (let index = 0; index < attachmentsToSend.length; index += 1) {
-              await sendMessagesWithImages(selectedChat, index === 0 ? draftText : '', {
-                attachments: [attachmentsToSend[index]],
-                clearComposerDraft: index === 0,
-                replyToMessageId: index === 0 ? replyToMessageId : undefined,
-                resetReplyTo: index === 0,
+          if (attachmentsToSend.length > 0) {
+            if (shouldSendAttachmentsSeparately(attachmentsToSend)) {
+              for (let index = 0; index < attachmentsToSend.length; index += 1) {
+                await sendMessagesWithImages(targetChatId, index === 0 ? draftText : '', {
+                  attachments: [attachmentsToSend[index]],
+                  clearComposerDraft: index === 0,
+                  replyToMessageId: index === 0 ? replyToMessageId : undefined,
+                  resetReplyTo: index === 0,
+                });
+              }
+            } else if (shouldSendAsGroupedAlbum(attachmentsToSend)) {
+              const groupingKey = `album-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+              for (let index = 0; index < attachmentsToSend.length; index += 1) {
+                await sendMessagesWithImages(targetChatId, index === 0 ? draftText : '', {
+                  attachments: [attachmentsToSend[index]],
+                  clearComposerDraft: false,
+                  replyToMessageId: index === 0 ? replyToMessageId : undefined,
+                  resetReplyTo: false,
+                  groupingKeyOverride: groupingKey,
+                });
+              }
+              setAttachedImages([]);
+              setMessageInput('');
+              setReplyingTo(null);
+            } else {
+              await sendMessagesWithImages(targetChatId, draftText, {
+                attachments: attachmentsToSend,
+                clearComposerDraft: true,
+                replyToMessageId,
+                resetReplyTo: true,
               });
             }
           } else {
-            await sendMessagesWithImages(selectedChat, draftText, {
-              attachments: attachmentsToSend,
-              clearComposerDraft: true,
-              replyToMessageId,
-              resetReplyTo: true,
-            });
+            const textChunks = splitTextForSend(draftText);
+            for (let chunkIndex = 0; chunkIndex < textChunks.length; chunkIndex += 1) {
+              await sendMessagesWithImages(targetChatId, textChunks[chunkIndex], {
+                attachments: [],
+                clearComposerDraft: false,
+                replyToMessageId: chunkIndex === 0 ? replyToMessageId : undefined,
+                resetReplyTo: chunkIndex === 0,
+              });
+            }
           }
-        } else {
-          await sendMessageToChat(selectedChat, draftText);
-        }
+        });
 
         setMessageInput('');
         setAttachedImages([]);
         setTimeout(() => scrollToBottom(), 100);
       }
     } finally {
-      sendInFlightRef.current = false;
       if (selectedChat) {
         await sendTypingState(selectedChat, false, true);
       }
@@ -1064,6 +1333,157 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
   };
 
   // рџ–јпёЏ РћС‚РїСЂР°РІРєР° СЃРѕРѕР±С‰РµРЅРёР№ СЃ РїСЂРёРєСЂРµРїР»РµРЅРЅС‹РјРё РёР·РѕР±СЂР°Р¶РµРЅРёСЏРјРё
+  const retryFailedMessage = async (messageId: number | string) => {
+    const failedMessage = (() => {
+      for (let i = messageStore.orderedIds.length - 1; i >= 0; i -= 1) {
+        const key = messageStore.orderedIds[i];
+        const message = messageStore.byId[key];
+        if (!message) continue;
+        if (message.messageId === messageId || message.localId === messageId) {
+          return message;
+        }
+      }
+      return undefined;
+    })();
+    if (!failedMessage) return;
+    if (failedMessage.status !== 'failed') return;
+    if (failedMessage.senderId !== (user?.id || '')) return;
+
+    const chatId = failedMessage.chatId ?? selectedChat;
+    if (!chatId) return;
+
+    const messageType = failedMessage.messageType;
+    const sendableMessageTypes = new Set([
+      'text',
+      'image',
+      'images',
+      'file',
+      'files',
+      'voice',
+      'circle',
+    ]);
+    if (!sendableMessageTypes.has(messageType)) {
+      return;
+    }
+
+    await enqueueByChat(chatId, async () => {
+      const clientMessageId = failedMessage.clientMessageId ?? nextClientMessageId();
+      const isVoiceOrCircle = messageType === 'voice' || messageType === 'circle';
+      const parsed = buildMessageTextAndEntities(failedMessage.content || '');
+      const normalizedContent = isVoiceOrCircle ? '' : failedMessage.content || parsed.content;
+      const normalizedEntities =
+        !isVoiceOrCircle
+          ? failedMessage.entities && failedMessage.entities.length > 0
+            ? failedMessage.entities
+            : parsed.entities.length > 0
+              ? parsed.entities
+              : undefined
+          : undefined;
+      const replyToMessageId =
+        typeof failedMessage.replyToId === 'number' ? failedMessage.replyToId : undefined;
+      const uploadedAttachments = toRetryableUploadedAttachments(failedMessage);
+
+      if (messageType !== 'text' && uploadedAttachments.length === 0) {
+        alert('Cannot retry media message without uploaded media path. Reattach and send again.');
+        return;
+      }
+
+      setMessageStore((prev) =>
+        upsertMessageInStore(
+          prev,
+          {
+            messageId: failedMessage.messageId,
+            localId: failedMessage.localId,
+            chatId,
+            clientMessageId,
+            status: 'pending',
+            content: normalizedContent,
+            entities: normalizedEntities,
+            messageType,
+          },
+          user?.id
+        )
+      );
+
+      try {
+        const sendAttachments = uploadedAttachments.map((attachment) => ({
+          imagePath: attachment.imagePath,
+          imageEncrypted: attachment.imageEncrypted,
+          imageEncryptionIv: attachment.imageEncryptionIv,
+          imageKeyVersion: attachment.imageKeyVersion,
+          width: attachment.width,
+          height: attachment.height,
+          fileName: attachment.fileName,
+          contentType: attachment.contentType,
+          sizeBytes: attachment.sizeBytes,
+          isImage: attachment.isImage,
+          imageUrl: attachment.imageUrl,
+          thumbnailUrl: attachment.thumbnailUrl,
+          strippedThumbnailUrl: attachment.strippedThumbnailUrl,
+        }));
+        const retryTempMessage: ChatMessage = {
+          ...failedMessage,
+          chatId,
+          localId: failedMessage.localId,
+          clientMessageId,
+          content: normalizedContent,
+          entities: normalizedEntities,
+          messageType: messageType as ChatMessage['messageType'],
+        };
+        const { acknowledgedMessage } = await sendPreparedMessage({
+          chatId,
+          messageType: messageType as ChatMessage['messageType'],
+          content: normalizedContent,
+          entities: normalizedEntities,
+          replyToMessageId,
+          clientMessageId,
+          groupingKey: failedMessage.groupingKey,
+          attachments: sendAttachments,
+          tempMessage: retryTempMessage,
+        });
+
+        setMessageStore((prev) =>
+          upsertMessageInStore(
+            prev,
+            {
+              ...acknowledgedMessage,
+              localId: failedMessage.localId,
+            },
+            user?.id
+          )
+        );
+      } catch (error) {
+        const err = error as any;
+        logger.error('[chat.send.retry] failed', {
+          chatId,
+          messageId: failedMessage.messageId,
+          clientMessageId,
+          messageType,
+          responseStatus: err?.response?.status,
+          responseData: err?.response?.data,
+          errorMessage: err?.message,
+        });
+
+        setMessageStore((prev) =>
+          upsertMessageInStore(
+            prev,
+            {
+              messageId: failedMessage.messageId,
+              localId: failedMessage.localId,
+              chatId,
+              clientMessageId,
+              status: 'failed',
+              content: normalizedContent,
+              entities: normalizedEntities,
+              messageType,
+            },
+            user?.id
+          )
+        );
+        alert(error instanceof Error ? error.message : 'Failed to retry message');
+      }
+    });
+  };
   const sendMessagesWithImages = async (
     chatId: number,
     textContent: string,
@@ -1072,10 +1492,21 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
       clearComposerDraft?: boolean;
       replyToMessageId?: number;
       resetReplyTo?: boolean;
+      groupingKeyOverride?: string;
     }
   ) => {
     const attachmentsToSend = (options?.attachments ?? attachedImages).slice(0, MAX_ATTACHMENTS);
-    if (attachmentsToSend.length === 0) return;
+    if (attachmentsToSend.length === 0) {
+      await sendTextMessageToChat(chatId, textContent, options?.replyToMessageId);
+      if (options?.clearComposerDraft ?? true) {
+        setAttachedImages([]);
+        setMessageInput('');
+      }
+      if (options?.resetReplyTo ?? true) {
+        setReplyingTo(null);
+      }
+      return;
+    }
 
     const clearComposerDraft = options?.clearComposerDraft ?? true;
     const resetReplyTo = options?.resetReplyTo ?? true;
@@ -1091,38 +1522,78 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
     }
 
     const localId = `local-img-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    const groupingKey =
+      options?.groupingKeyOverride ||
+      (attachmentsToSend.length > 1
+        ? `album-${Date.now()}-${Math.random().toString(16).slice(2)}`
+        : undefined);
+    const clientMessageId = nextClientMessageId();
+    const createdAt = new Date().toISOString();
     const tempMessage: ChatMessage = {
+      chatId,
       localId,
       messageId: localId,
+      clientMessageId,
       status: 'pending',
       senderId: user?.id || '',
       content: normalizedContent,
       entities: normalizedEntities,
       messageType: tempMessageType,
-      imagePath: '',
-      images: attachmentsToSend.map((fileRef) => ({
-        imagePath: '',
-        imageUrl: fileRef.preview,
-        fileName: fileRef.file.name,
-        contentType: fileRef.contentType || fileRef.file.type || 'application/octet-stream',
-        sizeBytes: fileRef.sizeBytes ?? fileRef.file.size,
-        isImage: isImageAttachment(fileRef),
-      })),
-      createdAt: new Date().toISOString(),
+      images: attachmentsToSend.map((fileRef) => {
+        const seededAttachment = fileRef.uploadedData
+          ? normalizeAttachmentPayload(fileRef.uploadedData as unknown as LooseAttachmentPayload)
+          : null;
+        const localPreviewUrl = fileRef.preview;
+        return {
+          imagePath: seededAttachment?.imagePath || '',
+          imageUrl: seededAttachment?.imageUrl || localPreviewUrl,
+          thumbnailUrl:
+            seededAttachment?.thumbnailUrl ||
+            fileRef.thumbnailUrl ||
+            (fileRef.isImage ? localPreviewUrl : undefined),
+          strippedThumbnailUrl:
+            seededAttachment?.strippedThumbnailUrl ||
+            fileRef.strippedThumbnailUrl,
+          width: seededAttachment?.width ?? fileRef.width,
+          height: seededAttachment?.height ?? fileRef.height,
+          fileName:
+            seededAttachment?.fileName ||
+            fileRef.file.name,
+          contentType:
+            seededAttachment?.contentType ||
+            fileRef.contentType ||
+            fileRef.file.type ||
+            'application/octet-stream',
+          sizeBytes:
+            seededAttachment?.sizeBytes ??
+            fileRef.sizeBytes ??
+            fileRef.file.size,
+          isImage:
+            seededAttachment?.isImage ??
+            isImageAttachment(fileRef),
+          imageKeyVersion: seededAttachment?.imageKeyVersion,
+          imageEncryptionIv: seededAttachment?.imageEncryptionIv,
+        };
+      }),
+      createdAt,
+      groupingKey,
+      replyToId: options?.replyToMessageId,
     };
 
     type UploadedAttachmentPayload = {
-      image_path: string;
-      image_url?: string;
-      thumbnail_url?: string;
-      stripped_thumbnail_url?: string;
-      image_encrypted?: boolean;
-      image_encryption_iv?: string;
-      image_key_version?: number;
-      file_name: string;
-      content_type: string;
-      size_bytes: number;
-      is_image: boolean;
+      imagePath: string;
+      imageUrl?: string;
+      thumbnailUrl?: string;
+      strippedThumbnailUrl?: string;
+      width?: number;
+      height?: number;
+      imageEncrypted?: boolean;
+      imageEncryptionIv?: string;
+      imageKeyVersion?: number;
+      fileName: string;
+      contentType: string;
+      sizeBytes: number;
+      isImage: boolean;
     };
 
     const canceledIndices = new Set<number>();
@@ -1132,47 +1603,121 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
     const hasActiveAttachments = () =>
       attachmentsToSend.some((_, attachmentIndex) => !canceledIndices.has(attachmentIndex));
 
+    const hydrateAttachmentLocalPreview = (attachmentIndex: number) => {
+      const attachment = attachmentsToSend[attachmentIndex];
+      if (!attachment || attachment.uploadedData) {
+        return;
+      }
+      const isCircleAttachmentForPreview = attachment.forcedMessageType === 'circle';
+      if (!isVisualMediaAttachment(attachment) && !isCircleAttachmentForPreview) {
+        return;
+      }
+
+      const hasEnoughLocalMeta =
+        !!attachment.thumbnailUrl &&
+        !!attachment.strippedThumbnailUrl &&
+        typeof attachment.width === 'number' &&
+        attachment.width > 0 &&
+        typeof attachment.height === 'number' &&
+        attachment.height > 0;
+      if (hasEnoughLocalMeta) {
+        return;
+      }
+
+      const forceMediaType =
+        isCircleAttachmentForPreview || isVideoAttachment(attachment)
+          ? 'video'
+          : 'image';
+
+      void buildLocalMediaPreviewMeta(attachment.file, {
+        preferredPreviewUrl: attachment.preview,
+        forceMediaType,
+      }).then((meta) => {
+        if (!meta || canceledIndices.has(attachmentIndex)) {
+          return;
+        }
+
+        const nextAttachment = {
+          ...attachment,
+          preview: attachment.preview || meta.previewUrl,
+          thumbnailUrl: attachment.thumbnailUrl || meta.thumbnailUrl,
+          strippedThumbnailUrl:
+            attachment.strippedThumbnailUrl || meta.strippedThumbnailUrl,
+          width: attachment.width || meta.width,
+          height: attachment.height || meta.height,
+          aspectRatio: attachment.aspectRatio || meta.aspectRatio,
+        };
+        attachmentsToSend[attachmentIndex] = nextAttachment;
+
+        setMessageStore((prev) =>
+          patchMessagesInStore(
+            prev,
+            (message) => message.localId === localId || message.messageId === localId,
+            (message) => ({
+              images:
+                message.images?.map((image, idx) =>
+                  idx === attachmentIndex
+                    ? {
+                        ...image,
+                        imageUrl:
+                          image.imageUrl ||
+                          nextAttachment.preview ||
+                          meta.previewUrl,
+                        thumbnailUrl:
+                          image.thumbnailUrl ||
+                          nextAttachment.thumbnailUrl ||
+                          meta.thumbnailUrl,
+                        strippedThumbnailUrl:
+                          image.strippedThumbnailUrl ||
+                          nextAttachment.strippedThumbnailUrl ||
+                          meta.strippedThumbnailUrl,
+                        width: image.width ?? nextAttachment.width ?? meta.width,
+                        height: image.height ?? nextAttachment.height ?? meta.height,
+                      }
+                    : image
+                ) || [],
+            }),
+            user?.id
+          )
+        );
+      });
+    };
+
     const removePendingCancelHandler = (attachmentIndex: number) => {
       pendingUploadCancelsRef.current.delete(toUploadStateKey(localId, attachmentIndex));
     };
 
     const removeTempMessageIfAllCanceled = () => {
       if (hasActiveAttachments()) return;
-      setMessages((prev) =>
-        prev.filter((message) => message.localId !== localId && message.messageId !== localId)
-      );
+      setMessageStore((prev) => removeMessageFromStore(prev, localId, user?.id));
     };
 
     const clearCanceledImagePreview = (attachmentIndex: number) => {
-      setMessages((prev) =>
-        prev.map((message) => {
-          if (message.localId !== localId && message.messageId !== localId) {
-            return message;
-          }
+      setMessageStore((prev) =>
+        patchMessagesInStore(
+          prev,
+          (message) => message.localId === localId || message.messageId === localId,
+          (message) => {
+            const nextImages = (message.images || []).map((image, idx) =>
+              idx === attachmentIndex
+                ? {
+                    ...image,
+                    imagePath: '',
+                    imageUrl: undefined,
+                    thumbnailUrl: undefined,
+                    strippedThumbnailUrl: undefined,
+                    width: undefined,
+                    height: undefined,
+                  }
+                : image
+            );
 
-          const nextImages = (message.images || []).map((image, idx) =>
-            idx === attachmentIndex
-              ? {
-                  ...image,
-                  imagePath: '',
-                  imageUrl: undefined,
-                }
-              : image
-          );
-
-          const firstVisible = nextImages.find(
-            (image) =>
-              (typeof image.imageUrl === 'string' && image.imageUrl.trim().length > 0) ||
-              (typeof image.imagePath === 'string' && image.imagePath.trim().length > 0)
-          );
-
-          return {
-            ...message,
-            images: nextImages,
-            imagePath: firstVisible?.imagePath || '',
-            imageUrl: firstVisible?.imageUrl,
-          };
-        })
+            return {
+              images: nextImages,
+            };
+          },
+          user?.id
+        )
       );
     };
 
@@ -1205,6 +1750,12 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
 
     for (let attachmentIndex = 0; attachmentIndex < attachmentsToSend.length; attachmentIndex += 1) {
       const attachment = attachmentsToSend[attachmentIndex];
+      const seededAttachment = attachment.uploadedData
+        ? normalizeAttachmentPayload(attachment.uploadedData as unknown as LooseAttachmentPayload)
+        : null;
+      if (seededAttachment?.imagePath) {
+        continue;
+      }
       const uploadKey = toUploadStateKey(localId, attachmentIndex);
 
       pendingUploadCancelsRef.current.set(uploadKey, () => {
@@ -1225,7 +1776,10 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
       });
     }
 
-    setMessages((prev) => [...prev, tempMessage]);
+    setMessageStore((prev) => upsertMessageInStore(prev, tempMessage, user?.id));
+    for (let attachmentIndex = 0; attachmentIndex < attachmentsToSend.length; attachmentIndex += 1) {
+      hydrateAttachmentLocalPreview(attachmentIndex);
+    }
     if (clearComposerDraft) {
       setAttachedImages([]);
       setMessageInput('');
@@ -1241,6 +1795,40 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
         }
 
         const attachment = attachmentsToSend[attachmentIndex];
+        const seededUpload = attachment.uploadedData;
+        const seededAttachment = seededUpload
+          ? normalizeAttachmentPayload(seededUpload as unknown as LooseAttachmentPayload)
+          : null;
+        if (seededAttachment?.imagePath) {
+          uploadedByIndex.set(attachmentIndex, {
+            imagePath: seededAttachment.imagePath,
+            imageUrl:
+              seededAttachment.imageUrl ||
+              (seededAttachment.imagePath ? `/media/${seededAttachment.imagePath}` : undefined),
+            thumbnailUrl: seededAttachment.thumbnailUrl,
+            strippedThumbnailUrl: seededAttachment.strippedThumbnailUrl,
+            width: seededAttachment.width ?? attachment.width,
+            height: seededAttachment.height ?? attachment.height,
+            imageEncrypted: seededUpload?.imageEncrypted,
+            imageEncryptionIv: seededUpload?.imageEncryptionIv || seededAttachment.imageEncryptionIv,
+            imageKeyVersion: seededUpload?.imageKeyVersion || seededAttachment.imageKeyVersion,
+            fileName:
+              seededAttachment.fileName ||
+              attachment.file.name,
+            contentType:
+              seededAttachment.contentType ||
+              attachment.file.type ||
+              'application/octet-stream',
+            sizeBytes:
+              seededAttachment.sizeBytes ??
+              attachment.file.size,
+            isImage:
+              seededAttachment.isImage ??
+              isImageAttachment(attachment),
+          });
+          removePendingCancelHandler(attachmentIndex);
+          continue;
+        }
         const uploadKey = toUploadStateKey(localId, attachmentIndex);
         const form = new FormData();
         form.append('file', attachment.file);
@@ -1315,17 +1903,19 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
             data as unknown as LooseAttachmentPayload
           );
           const uploadedAttachment: UploadedAttachmentPayload = {
-            image_path: data.imagePath,
-            image_url: data.imageUrl,
-            thumbnail_url: normalizedUploadAttachment.thumbnailUrl,
-            stripped_thumbnail_url: normalizedUploadAttachment.strippedThumbnailUrl,
-            image_encrypted: data.imageEncrypted,
-            image_encryption_iv: data.imageEncryptionIv,
-            image_key_version: data.imageKeyVersion,
-            file_name: data.fileName || attachment.file.name,
-            content_type: data.contentType || attachment.file.type || 'application/octet-stream',
-            size_bytes: data.sizeBytes ?? attachment.file.size,
-            is_image: data.isImage ?? isImageAttachment(attachment),
+            imagePath: data.imagePath,
+            imageUrl: data.imageUrl,
+            thumbnailUrl: normalizedUploadAttachment.thumbnailUrl,
+            strippedThumbnailUrl: normalizedUploadAttachment.strippedThumbnailUrl,
+            width: normalizedUploadAttachment.width ?? attachment.width,
+            height: normalizedUploadAttachment.height ?? attachment.height,
+            imageEncrypted: data.imageEncrypted,
+            imageEncryptionIv: data.imageEncryptionIv,
+            imageKeyVersion: data.imageKeyVersion,
+            fileName: data.fileName || attachment.file.name,
+            contentType: data.contentType || attachment.file.type || 'application/octet-stream',
+            sizeBytes: data.sizeBytes ?? attachment.file.size,
+            isImage: data.isImage ?? isImageAttachment(attachment),
           };
 
           uploadedByIndex.set(attachmentIndex, uploadedAttachment);
@@ -1342,36 +1932,49 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
             return next;
           });
 
-          setMessages((prev) =>
-            prev.map((message) =>
-              message.localId === localId || message.messageId === localId
-                ? {
-                    ...message,
-                    images:
-                      message.images?.map((image, idx) =>
+          setMessageStore((prev) =>
+            patchMessagesInStore(
+              prev,
+              (message) => message.localId === localId || message.messageId === localId,
+              (message) => ({
+                images:
+                  message.images?.map((image, idx) =>
                         idx === attachmentIndex
                           ? {
                               imagePath: data.imagePath,
-                              imageUrl: image.imageUrl || data.imageUrl,
+                              imageUrl:
+                                image.imageUrl &&
+                                !image.imageUrl.startsWith('blob:') &&
+                                !image.imageUrl.startsWith('data:')
+                                  ? image.imageUrl
+                                  : data.imageUrl,
                               thumbnailUrl:
                                 normalizedUploadAttachment.thumbnailUrl ||
                                 image.thumbnailUrl,
-                              strippedThumbnailUrl:
-                                normalizedUploadAttachment.strippedThumbnailUrl ||
-                                image.strippedThumbnailUrl,
-                              fileName: data.fileName || attachment.file.name,
-                              contentType:
-                                data.contentType ||
-                                attachment.file.type ||
-                                'application/octet-stream',
-                              sizeBytes: data.sizeBytes ?? attachment.file.size,
-                              isImage: data.isImage ?? isImageAttachment(attachment),
-                              imageKeyVersion: data.imageKeyVersion,
-                            }
-                          : image
-                      ) || []
-                  }
-                : message
+                          strippedThumbnailUrl:
+                            normalizedUploadAttachment.strippedThumbnailUrl ||
+                            image.strippedThumbnailUrl,
+                          width:
+                            normalizedUploadAttachment.width ??
+                            image.width ??
+                            attachment.width,
+                          height:
+                            normalizedUploadAttachment.height ??
+                            image.height ??
+                            attachment.height,
+                          fileName: data.fileName || attachment.file.name,
+                          contentType:
+                            data.contentType ||
+                            attachment.file.type ||
+                            'application/octet-stream',
+                          sizeBytes: data.sizeBytes ?? attachment.file.size,
+                          isImage: data.isImage ?? isImageAttachment(attachment),
+                          imageKeyVersion: data.imageKeyVersion,
+                        }
+                      : image
+                  ) || [],
+              }),
+              user?.id
             )
           );
         } catch (uploadError) {
@@ -1419,170 +2022,61 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
       const uploadedAttachments = uploadedIndexes.map((attachmentIndex) => uploadedByIndex.get(attachmentIndex)!);
       const effectiveAttachments = uploadedIndexes.map((attachmentIndex) => attachmentsToSend[attachmentIndex]);
       const messageType = resolveAttachmentMessageType(effectiveAttachments);
-      const { msgId, seqNo, timestamp } = nextProtocolEnvelope();
+      const sendAttachments: SendAttachmentPayload[] = uploadedAttachments.map((item) => ({
+        imagePath: item.imagePath,
+        imageEncrypted: item.imageEncrypted,
+        imageEncryptionIv: item.imageEncryptionIv,
+        imageKeyVersion: item.imageKeyVersion,
+        width: item.width,
+        height: item.height,
+        fileName: item.fileName,
+        contentType: item.contentType,
+        sizeBytes: item.sizeBytes,
+        isImage: item.isImage,
+        imageUrl: item.imageUrl || (item.imagePath ? `/media/${item.imagePath}` : undefined),
+        thumbnailUrl: item.thumbnailUrl,
+        strippedThumbnailUrl: item.strippedThumbnailUrl,
+      }));
 
-      const messageData: any = {
-        msg_id: msgId,
-        seq_no: seqNo,
-        timestamp,
-        chat_id: finalChatId,
-        content_type: messageType,
+      const mediaTempMessage: ChatMessage = {
+        ...tempMessage,
+        chatId: finalChatId,
+        senderId: user?.id || '',
         content: normalizedContent,
         entities: normalizedEntities,
-        hmac: '',
-        reply_to_id: options?.replyToMessageId,
-        image_path: uploadedAttachments[0].image_path,
-        image_encrypted: uploadedAttachments[0].image_encrypted,
-        image_encryption_iv: uploadedAttachments[0].image_encryption_iv,
-        image_key_version: uploadedAttachments[0].image_key_version,
-        file_name: uploadedAttachments[0].file_name,
-        file_content_type: uploadedAttachments[0].content_type,
-        file_size_bytes: uploadedAttachments[0].size_bytes,
-        file_is_image: uploadedAttachments[0].is_image,
+        messageType,
+        createdAt,
+        groupingKey,
       };
+      const { acknowledgedMessage } = await sendPreparedMessage({
+        chatId: finalChatId,
+        messageType,
+        content: normalizedContent,
+        entities: normalizedEntities,
+        replyToMessageId: options?.replyToMessageId,
+        clientMessageId,
+        groupingKey,
+        attachments: sendAttachments,
+        tempMessage: mediaTempMessage,
+      });
 
-      if (uploadedAttachments.length > 1) {
-        messageData.images = uploadedAttachments.map((item) => ({
-          image_path: item.image_path,
-          image_encrypted: item.image_encrypted,
-          image_encryption_iv: item.image_encryption_iv,
-          image_key_version: item.image_key_version,
-          file_name: item.file_name,
-          content_type: item.content_type,
-          size_bytes: item.size_bytes,
-          is_image: item.is_image,
-        }));
-      }
-
-      const { data } = await http.post<SendMessageResponse>(endpoints.chatSend, messageData);
-
-      setMessages((prev) =>
-        prev.map((message) => {
-          if (message.localId !== localId && message.messageId !== localId) {
-            return message;
-          }
-
-          return {
-            ...message,
-            messageId: data.messageId,
-            status: 'sent',
-            senderId: user?.id || '',
-            content: normalizedContent,
-            entities: message.entities ?? normalizedEntities,
-            messageType,
-            imagePath: uploadedAttachments[0].image_path,
-            imageUrl: pickStableMediaUrl(
-              message.imageUrl,
-              data.imageUrl,
-              uploadedAttachments[0].image_url,
-              `/media/${uploadedAttachments[0].image_path}`
-            ),
-            images: uploadedAttachments.map((item, index) => {
-              const fromResponse = normalizeAttachmentPayload(
-                data.imageUrls?.[index] as LooseAttachmentPayload | undefined
-              );
-              const singleAttachmentUrl = uploadedAttachments.length === 1 ? data.imageUrl : undefined;
-              const previousImage = message.images?.[uploadedIndexes[index]];
-              return {
-                imagePath: fromResponse.imagePath || item.image_path,
-                imageUrl: pickStableMediaUrl(
-                  previousImage?.imageUrl,
-                  fromResponse.imageUrl,
-                  singleAttachmentUrl,
-                  item.image_url,
-                  `/media/${item.image_path}`
-                ),
-                thumbnailUrl: fromResponse.thumbnailUrl || item.thumbnail_url,
-                strippedThumbnailUrl:
-                  fromResponse.strippedThumbnailUrl || item.stripped_thumbnail_url,
-                fileName: fromResponse.fileName || item.file_name,
-                contentType: fromResponse.contentType || item.content_type,
-                sizeBytes: fromResponse.sizeBytes ?? item.size_bytes,
-                isImage: fromResponse.isImage ?? item.is_image,
-                imageKeyVersion: fromResponse.imageKeyVersion ?? item.image_key_version,
-              };
-            }),
-            createdAt: new Date().toISOString(),
-            isRead: false,
-          };
-        })
-      );
-
-      clearUploadStatesByLocalId(localId);
-
-      setChats((prev) =>
-        prev.map((chat) =>
-          chat.chatId === finalChatId
-            ? {
-                ...chat,
-                lastMessage: {
-                  localId,
-                  messageId: data.messageId,
-                  senderId: user?.id || '',
-                  content: normalizedContent,
-                  entities: normalizedEntities,
-                  messageType,
-                  imagePath: uploadedAttachments[0].image_path,
-                  imageUrl:
-                    normalizeAttachmentPayload(
-                      data.imageUrls?.[0] as LooseAttachmentPayload | undefined
-                    ).imageUrl ||
-                    data.imageUrl ||
-                    uploadedAttachments[0].image_url,
-                  images: uploadedAttachments.map((item, index) => {
-                    const responseAttachment = normalizeAttachmentPayload(
-                      data.imageUrls?.[index] as LooseAttachmentPayload | undefined
-                    );
-                    return {
-                      imagePath: responseAttachment.imagePath || item.image_path,
-                      imageUrl:
-                        responseAttachment.imageUrl ||
-                        (uploadedAttachments.length === 1 ? data.imageUrl : undefined) ||
-                        item.image_url,
-                      thumbnailUrl: responseAttachment.thumbnailUrl || item.thumbnail_url,
-                      strippedThumbnailUrl:
-                        responseAttachment.strippedThumbnailUrl || item.stripped_thumbnail_url,
-                      fileName: responseAttachment.fileName || item.file_name,
-                      contentType: responseAttachment.contentType || item.content_type,
-                      sizeBytes: responseAttachment.sizeBytes ?? item.size_bytes,
-                      isImage: responseAttachment.isImage ?? item.is_image,
-                      imageKeyVersion:
-                        responseAttachment.imageKeyVersion ?? item.image_key_version,
-                    };
-                  }),
-                  createdAt: new Date().toISOString(),
-                  status: 'sent',
-                } as ChatMessage,
-              }
-            : chat
+      setMessageStore((prev) =>
+        upsertMessageInStore(
+          prev,
+          {
+            ...acknowledgedMessage,
+            localId,
+          },
+          user?.id
         )
       );
 
-      uploadedAttachments.forEach((attachment, index) => {
-        const responseAttachment = normalizeAttachmentPayload(
-          data.imageUrls?.[index] as LooseAttachmentPayload | undefined
-        );
-        const singleAttachmentUrl = uploadedAttachments.length === 1 ? data.imageUrl : undefined;
-        const remoteUrl =
-          responseAttachment.imageUrl ||
-          singleAttachmentUrl ||
-          attachment.image_url ||
-          (attachment.image_path ? `/media/${attachment.image_path}` : undefined);
-        const remotePath = responseAttachment.imagePath || attachment.image_path;
-        const currentUrl = effectiveAttachments[index]?.preview;
-
-        scheduleMediaSwapAfterPrefetch({
-          localId,
-          messageId: data.messageId,
-          chatId: finalChatId,
-          attachmentIndex: index,
-          currentUrl,
-          remoteUrl,
-          remotePath,
-          messageType,
-          contentType: attachment.content_type,
-          isImage: attachment.is_image,
-        });
+      clearUploadStatesByLocalId(localId);
+      effectiveAttachments.forEach((attachment) => {
+        const preview = attachment?.preview;
+        if (preview && preview.startsWith('blob:')) {
+          URL.revokeObjectURL(preview);
+        }
       });
 
       if (resetReplyTo) {
@@ -1607,8 +2101,23 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
       });
       console.error('Failed to send multi-attachment message:', error);
 
-      setMessages((prev) =>
-        prev.filter((message) => message.localId !== localId && message.messageId !== localId)
+      setMessageStore((prev) =>
+        upsertMessageInStore(
+          prev,
+          {
+            chatId,
+            messageId: localId,
+            localId,
+            clientMessageId,
+            status: 'failed',
+            senderId: user?.id || '',
+            content: normalizedContent,
+            entities: normalizedEntities,
+            messageType: tempMessageType,
+            createdAt,
+          },
+          user?.id
+        )
       );
       clearUploadStatesByLocalId(localId);
       alert(
@@ -1634,6 +2143,11 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
     options?: {
       forcedMessageType?: 'voice' | 'circle';
       preview?: string;
+      thumbnailUrl?: string;
+      strippedThumbnailUrl?: string;
+      width?: number;
+      height?: number;
+      aspectRatio?: number;
       sendAsFile?: boolean;
       groupWithOthers?: boolean;
     }
@@ -1644,22 +2158,43 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
     const fileType = (file.type || '').toLowerCase();
     const forcedMessageType = options?.forcedMessageType;
     const isRawImage = fileType.startsWith('image/');
+    const isRawVideo = fileType.startsWith('video/');
     const sendAsFile = !forcedMessageType && !!options?.sendAsFile;
     const isImage = !sendAsFile && isRawImage;
     let preview: string | undefined = options?.preview;
+    const shouldGenerateVisualPreview =
+      !sendAsFile &&
+      (isRawImage || isRawVideo || forcedMessageType === 'circle');
+    const generatedPreviewMeta = shouldGenerateVisualPreview
+      ? await buildLocalMediaPreviewMeta(file, {
+          preferredPreviewUrl: preview,
+          forceMediaType:
+            forcedMessageType === 'circle' || isRawVideo ? 'video' : 'image',
+        })
+      : null;
 
+    if (!preview && generatedPreviewMeta?.previewUrl) {
+      preview = generatedPreviewMeta.previewUrl;
+    }
     if (!preview && isRawImage) {
-      preview = await new Promise<string>(resolve => {
+      preview = await new Promise<string>((resolve) => {
         const reader = new FileReader();
-        reader.onload = (e) => resolve(e.target?.result as string);
+        reader.onload = (event) => resolve((event.target?.result as string) || '');
+        reader.onerror = () => resolve('');
         reader.readAsDataURL(file);
       });
     }
-    
+
     const nextAttachment = {
       id,
       file,
       preview,
+      thumbnailUrl: options?.thumbnailUrl || generatedPreviewMeta?.thumbnailUrl,
+      strippedThumbnailUrl:
+        options?.strippedThumbnailUrl || generatedPreviewMeta?.strippedThumbnailUrl,
+      width: options?.width || generatedPreviewMeta?.width,
+      height: options?.height || generatedPreviewMeta?.height,
+      aspectRatio: options?.aspectRatio || generatedPreviewMeta?.aspectRatio,
       isImage,
       sendAsFile,
       groupWithOthers: options?.groupWithOthers ?? true,
@@ -1695,11 +2230,14 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
         entities: normalizedEntities,
       });
 
-      setMessages(prev => prev.map(m => 
-        m.messageId === messageId 
-          ? { ...m, content: normalizedContent, entities: normalizedEntities, edited: true }
-          : m
-      ));
+      setMessageStore((prev) =>
+        patchMessagesInStore(
+          prev,
+          (message) => message.messageId === messageId,
+          () => ({ content: normalizedContent, entities: normalizedEntities, edited: true }),
+          user?.id
+        )
+      );
     } catch (e) {
       console.error('Failed to edit message', e);
       alert(e instanceof Error ? e.message : 'РћС€РёР±РєР° СЂРµРґР°РєС‚РёСЂРѕРІР°РЅРёСЏ СЃРѕРѕР±С‰РµРЅРёСЏ');
@@ -1713,18 +2251,8 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
     
     try {
       await http.delete(endpoints.chatMessageDelete(messageId));
-      setMessages(prev => prev.filter(m => m.messageId !== messageId));
+      setMessageStore((prev) => removeMessageFromStore(prev, messageId, user?.id));
       
-      const chat = chats.find(c => c.chatId === selectedChat);
-      if (chat?.lastMessage?.messageId === messageId) {
-        const remainingMessages = messages.filter(m => m.messageId !== messageId);
-        const newLastMessage = remainingMessages[remainingMessages.length - 1];
-        setChats(prev => prev.map(c => 
-          c.chatId === selectedChat 
-            ? { ...c, lastMessage: newLastMessage }
-            : c
-        ));
-      }
     } catch (e) {
       console.error('Failed to delete message', e);
       alert(e instanceof Error ? e.message : 'РћС€РёР±РєР° СѓРґР°Р»РµРЅРёСЏ СЃРѕРѕР±С‰РµРЅРёСЏ');
@@ -1744,324 +2272,37 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
     options?: { forcedMessageType?: 'voice' | 'circle' }
   ) => {
     if (!selectedChat || !file) return;
-    const chat = chats.find(c => c.chatId === selectedChat);
-    if (!chat) return;
-    const forcedMessageType = options?.forcedMessageType;
-    const isImage = (file.type || '').toLowerCase().startsWith('image/');
-    const messageType =
-      forcedMessageType === 'voice'
-        ? 'voice'
-        : forcedMessageType === 'circle'
-          ? 'circle'
-          : isImage
-            ? 'image'
-            : (file.type || '').toLowerCase().startsWith('audio/')
-              ? 'voice'
-              : 'file';
-    
-    const localId = `local-upload-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-    const uploadKey = toUploadStateKey(localId, 0);
-    const createdAt = new Date().toISOString();
-    const fallbackContentType = file.type || 'application/octet-stream';
-    const localPreviewUrl =
-      messageType === 'image' || messageType === 'voice' || messageType === 'circle'
-        ? URL.createObjectURL(file)
-        : undefined;
-    let canceled = false;
-    const uploadController = new AbortController();
 
-    const removeTempMessage = () => {
-      setMessages(prev => prev.filter(m => m.localId !== localId && m.messageId !== localId));
-    };
-
-    const cancelUpload = () => {
-      if (canceled) return;
-      canceled = true;
-      pendingUploadCancelsRef.current.delete(uploadKey);
-      if (!uploadController.signal.aborted) {
-        uploadController.abort();
-      }
-      clearUploadStatesByLocalId(localId);
-      removeTempMessage();
-      if (localPreviewUrl) {
-        URL.revokeObjectURL(localPreviewUrl);
-      }
-    };
-    
-    try {
-      // РЎРѕР·РґР°РµРј РІСЂРµРјРµРЅРЅРѕРµ СЃРѕРѕР±С‰РµРЅРёРµ СЃ РёРЅРґРёРєР°С‚РѕСЂРѕРј Р·Р°РіСЂСѓР·РєРё
-      const tempMessage: ChatMessage = {
-        localId,
-        messageId: localId,
-        status: 'pending',
-        senderId: user?.id || '',
-        content: '',
-        messageType,
-        imageUrl: localPreviewUrl,
-        images: [{
-          imagePath: '',
-          imageUrl: localPreviewUrl,
-          fileName: file.name,
-          contentType: fallbackContentType,
-          sizeBytes: file.size,
-          isImage,
-        }],
-        createdAt,
-      };
-      
-      pendingUploadCancelsRef.current.set(uploadKey, cancelUpload);
-      setMessages(prev => [...prev, tempMessage]);
-      setUploadingImages(prev => {
-        const next = new Map(prev);
-        next.set(uploadKey, {
-          localId,
-          attachmentIndex: 0,
-          file,
-          progress: 0,
-          phase: 'queued',
-          cancelable: true,
-        });
-        return next;
-      });
-      
-      setTimeout(() => scrollToBottom(), 0);
-      
-      const form = new FormData();
-      form.append('file', file);
-
-      setUploadingImages(prev => {
-        const existing = prev.get(uploadKey);
-        if (!existing) return prev;
-        const next = new Map(prev);
-        next.set(uploadKey, {
-          ...existing,
-          phase: 'uploading',
-          progress: Math.max(1, existing.progress),
-        });
-        return next;
-      });
-      
-      const { data } = await http.post<UploadImageResponse>(
-        `${endpoints.chatUpload}?chatId=${selectedChat}`, 
-        form,
+    await sendMessagesWithImages(selectedChat, '', {
+      attachments: [
         {
-          signal: uploadController.signal,
-          onUploadProgress: (e: any) => {
-            if (canceled) return;
-            const total = typeof e.total === 'number' && e.total > 0 ? e.total : 0;
-            const loaded = typeof e.loaded === 'number' ? e.loaded : 0;
-            const progress = total > 0 ? Math.round((loaded / total) * 100) : 0;
-            setUploadingImages(prev => {
-              const existing = prev.get(uploadKey);
-              if (!existing) return prev;
-              const next = new Map(prev);
-              next.set(uploadKey, {
-                ...existing,
-                progress,
-                phase: 'uploading',
-              });
-              return next;
-            });
-          }
-        }
-      );
-      
-      if (canceled) {
-        return;
-      }
-
-      setUploadingImages(prev => {
-        const existing = prev.get(uploadKey);
-        if (!existing) return prev;
-        const next = new Map(prev);
-        next.set(uploadKey, {
-          ...existing,
-          progress: 100,
-          phase: 'uploaded',
-          cancelable: true,
-        });
-        return next;
-      });
-      
-      // РћС‚РїСЂР°РІР»СЏРµРј СЂРµР°Р»СЊРЅРѕРµ СЃРѕРѕР±С‰РµРЅРёРµ СЃ РёР·РѕР±СЂР°Р¶РµРЅРёРµРј, РѕСЃС‚Р°РµРјСЃСЏ РЅР° С‚РѕРј Р¶Рµ РѕР±СЉРµРєС‚Рµ
-      if (canceled) {
-        return;
-      }
-
-      const { msgId, seqNo, timestamp } = nextProtocolEnvelope();
-      
-      const { data: sendRes } = await http.post<SendMessageResponse>(endpoints.chatSend, {
-        msg_id: msgId,
-        seq_no: seqNo,
-        timestamp,
-        chat_id: chat!.chatId,
-        content_type: messageType,
-        content: '',
-        hmac: '',
-        reply_to_id: replyingTo?.messageId,
-        image_path: data.imagePath,
-        image_encrypted: data.imageEncrypted,
-        image_encryption_iv: data.imageEncryptionIv,
-        image_key_version: data.imageKeyVersion,
-        file_name: data.fileName || file.name,
-        file_content_type: data.contentType || file.type || 'application/octet-stream',
-        file_size_bytes: data.sizeBytes ?? file.size,
-        file_is_image: data.isImage ?? isImage,
-      });
-
-      if (canceled) {
-        return;
-      }
-
-      const normalizedUploadAttachment = normalizeAttachmentPayload(
-        data as unknown as LooseAttachmentPayload
-      );
-      const responseAttachment = normalizeAttachmentPayload(
-        sendRes.imageUrls?.[0] as LooseAttachmentPayload | undefined
-      );
-      const resolvedRemoteUrl =
-        responseAttachment.imageUrl ?? sendRes.imageUrl ?? data.imageUrl;
-      const resolvedImagePath =
-        responseAttachment.imagePath || data.imagePath;
-      const resolvedThumbnailUrl =
-        responseAttachment.thumbnailUrl || normalizedUploadAttachment.thumbnailUrl;
-      const resolvedStrippedThumbnailUrl =
-        responseAttachment.strippedThumbnailUrl ||
-        normalizedUploadAttachment.strippedThumbnailUrl;
-      const resolvedContentType =
-        responseAttachment.contentType || data.contentType || fallbackContentType;
-      const resolvedSizeBytes = responseAttachment.sizeBytes ?? data.sizeBytes ?? file.size;
-      const resolvedIsImage = responseAttachment.isImage ?? data.isImage ?? isImage;
-      const resolvedImageKeyVersion =
-        responseAttachment.imageKeyVersion ?? data.imageKeyVersion;
-      
-      setMessages(prev => prev.map(m => 
-        (m.localId === localId || m.messageId === localId)
-          ? {
-              ...m,
-              messageId: sendRes.messageId,
-              status: 'sent',
-              imagePath: resolvedImagePath || m.imagePath,
-              imageUrl: pickStableMediaUrl(
-                m.imageUrl,
-                resolvedRemoteUrl,
-                resolvedImagePath ? `/media/${resolvedImagePath}` : undefined
-              ),
-              images: [{
-                imagePath: resolvedImagePath || m.imagePath || '',
-                imageUrl: pickStableMediaUrl(
-                  m.images?.[0]?.imageUrl ?? m.imageUrl,
-                  resolvedRemoteUrl,
-                  resolvedImagePath ? `/media/${resolvedImagePath}` : undefined
-                ),
-                thumbnailUrl: resolvedThumbnailUrl,
-                strippedThumbnailUrl: resolvedStrippedThumbnailUrl,
-                fileName: data.fileName || file.name,
-                contentType: resolvedContentType,
-                sizeBytes: resolvedSizeBytes,
-                isImage: resolvedIsImage,
-                imageKeyVersion: resolvedImageKeyVersion,
-              }],
-              createdAt: new Date().toISOString(),
-              isRead: false,
-            }
-          : m
-      ));
-
-      clearUploadStatesByLocalId(localId);
-      pendingUploadCancelsRef.current.delete(uploadKey);
-      
-      setChats(prev => prev.map(c => 
-        c.chatId === chat!.chatId 
-          ? { ...c, lastMessage: {
-              localId,
-              messageId: sendRes.messageId,
-              senderId: user?.id || '',
-              content: '',
-              messageType,
-              imagePath: resolvedImagePath,
-              imageUrl: resolvedRemoteUrl,
-              images: [{
-                imagePath: resolvedImagePath || '',
-                imageUrl: resolvedRemoteUrl,
-                thumbnailUrl: resolvedThumbnailUrl,
-                strippedThumbnailUrl: resolvedStrippedThumbnailUrl,
-                fileName: data.fileName || file.name,
-                contentType: resolvedContentType,
-                sizeBytes: resolvedSizeBytes,
-                isImage: resolvedIsImage,
-                imageKeyVersion: resolvedImageKeyVersion,
-              }],
-              createdAt: new Date().toISOString(),
-              status: 'sent',
-            } as ChatMessage }
-          : c
-      ));
-
-      scheduleMediaSwapAfterPrefetch({
-        localId,
-        messageId: sendRes.messageId,
-        chatId: chat.chatId,
-        attachmentIndex: 0,
-        currentUrl: localPreviewUrl,
-        remoteUrl:
-          resolvedRemoteUrl ||
-          (resolvedImagePath ? `/media/${resolvedImagePath}` : undefined),
-        remotePath: resolvedImagePath,
-        messageType,
-        contentType: resolvedContentType,
-        isImage: resolvedIsImage,
-      });
-    } catch (e) {
-      const err = e as any;
-      const wasCanceled =
-        canceled ||
-        uploadController.signal.aborted ||
-        err?.code === 'ERR_CANCELED' ||
-        err?.name === 'CanceledError';
-
-      if (wasCanceled) {
-        removeTempMessage();
-        if (localPreviewUrl) {
-          URL.revokeObjectURL(localPreviewUrl);
-        }
-        clearUploadStatesByLocalId(localId);
-        pendingUploadCancelsRef.current.delete(uploadKey);
-        return;
-      }
-
-      logger.error('[chat.upload] single attachment failed', {
-        chatId: selectedChat,
-        localId,
-        fileName: file.name,
-        fileType: file.type,
-        fileSize: file.size,
-        responseStatus: err?.response?.status,
-        responseData: err?.response?.data,
-        errorMessage: err?.message,
-      });
-
-      removeTempMessage();
-      if (localPreviewUrl) {
-        URL.revokeObjectURL(localPreviewUrl);
-      }
-      clearUploadStatesByLocalId(localId);
-      pendingUploadCancelsRef.current.delete(uploadKey);
-      alert('Failed to upload attachment');
-    } finally {
-      pendingUploadCancelsRef.current.delete(uploadKey);
-    }
+          id: `direct-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+          file,
+          forcedMessageType: options?.forcedMessageType,
+          isImage: !options?.forcedMessageType && (file.type || '').toLowerCase().startsWith('image/'),
+          sendAsFile: !options?.forcedMessageType && !(file.type || '').toLowerCase().startsWith('image/'),
+          contentType: file.type || 'application/octet-stream',
+          sizeBytes: file.size,
+          groupWithOthers: false,
+        },
+      ],
+      clearComposerDraft: false,
+      replyToMessageId: typeof replyingTo?.messageId === 'number' ? replyingTo.messageId : undefined,
+      resetReplyTo: true,
+    });
   };
-
   return {
     markChatRead,
     loadChats,
     loadMessages,
+    loadMessagesAfter,
+    loadOlderMessages,
     openChatWith,
     createGroupChat,
     sendTypingState,
     sendMessageToUser,
     sendChatMessage,
+    retryFailedMessage,
     sendMessagesWithImages,
     cancelPendingMediaUpload,
     attachImage,
@@ -2072,6 +2313,8 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
     uploadImage,
   };
 }
+
+
 
 
 

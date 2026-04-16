@@ -1,17 +1,12 @@
 import type { ChatMessage } from '@/shared/api/types';
 import { endpoints } from '@/shared/api/endpoints';
 import { http } from '@/shared/api/http';
+import {
+  getMessageMediaAttachments,
+  type ChatMediaAttachment,
+} from '@/shared/ui/button/social/chat/mediaAttachments';
 
-export type MessageAttachment = {
-  imagePath: string;
-  imageUrl?: string;
-  thumbnailUrl?: string;
-  strippedThumbnailUrl?: string;
-  fileName?: string;
-  contentType?: string;
-  sizeBytes?: number;
-  isImage?: boolean;
-};
+export type MessageAttachment = ChatMediaAttachment;
 
 const IMAGE_FILE_PATTERN = /\.(png|jpe?g|gif|webp|avif|bmp|svg)(?:$|[?#])/i;
 const VIDEO_FILE_PATTERN = /\.(mp4|webm|mov|m4v|ogv|m3u8|mkv|avi)(?:$|[?#])/i;
@@ -104,60 +99,7 @@ export const resolveMediaUrl = (value?: string) => {
 };
 
 export const getMessageAttachments = (message: ChatMessage): MessageAttachment[] => {
-  if (Array.isArray(message.images) && message.images.length > 0) {
-    return message.images.map((image) => {
-      const legacy = image as unknown as Record<string, unknown>;
-      const imagePath =
-        image.imagePath ||
-        (typeof legacy.image_path === 'string' ? legacy.image_path : '') ||
-        '';
-      const imageUrl =
-        image.imageUrl ||
-        (typeof legacy.image_url === 'string' ? legacy.image_url : undefined);
-      const thumbnailUrl =
-        image.thumbnailUrl ||
-        (typeof legacy.thumbnail_url === 'string' ? legacy.thumbnail_url : undefined);
-      const strippedThumbnailUrl =
-        image.strippedThumbnailUrl ||
-        (typeof legacy.stripped_thumbnail_url === 'string'
-          ? legacy.stripped_thumbnail_url
-          : undefined);
-      const fileName =
-        image.fileName ||
-        (typeof legacy.file_name === 'string' ? legacy.file_name : undefined);
-      const contentType =
-        image.contentType ||
-        (typeof legacy.content_type === 'string' ? legacy.content_type : undefined);
-      const sizeBytes =
-        image.sizeBytes ??
-        (typeof legacy.size_bytes === 'number' ? legacy.size_bytes : undefined);
-      const isImage =
-        image.isImage ??
-        (typeof legacy.is_image === 'boolean' ? legacy.is_image : undefined);
-
-      return {
-        imagePath,
-        imageUrl,
-        thumbnailUrl,
-        strippedThumbnailUrl,
-        fileName,
-        contentType,
-        sizeBytes,
-        isImage,
-      };
-    });
-  }
-
-  if (message.imagePath || message.imageUrl) {
-    return [
-      {
-        imagePath: message.imagePath || '',
-        imageUrl: message.imageUrl,
-      },
-    ];
-  }
-
-  return [];
+  return getMessageMediaAttachments(message);
 };
 
 export const resolveAttachmentUrl = (attachment: MessageAttachment) => {

@@ -347,7 +347,7 @@ export function ChatComposer({ model }: ChatComposerProps) {
           !shouldSendImmediately && recordedKind === 'circle' ? URL.createObjectURL(blob) : undefined;
         if (recordedKind && !shouldDiscard) {
           if (shouldSendImmediately) {
-            void uploadImage(file);
+            void uploadImage(file, { forcedMessageType: recordedKind });
           } else {
             void attachImage(file, { forcedMessageType: recordedKind, preview });
           }

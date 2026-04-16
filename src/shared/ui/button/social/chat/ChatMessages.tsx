@@ -2,6 +2,7 @@ import { ImageWithLoader, UploadProgress } from '@/shared/ui/image';
 import { buildMessageTextAndEntities, renderMessageContent } from '@/shared/utils/chatTextEntities';
 import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react';
 import type { SocialFloatingModel } from '../useSocialFloatingModel';
+import { getMessageMediaAttachments } from './mediaAttachments';
 
 type ChatMessagesProps = {
   model: SocialFloatingModel;
@@ -742,11 +743,7 @@ export function ChatMessages({ model }: ChatMessagesProps) {
           const renderContent = m.entities && m.entities.length > 0 ? (m.content || '') : fallbackParsed.content;
           const renderEntities = m.entities && m.entities.length > 0 ? m.entities : fallbackParsed.entities;
 
-          const attachments = m.images && m.images.length > 0
-            ? m.images
-            : (m.imagePath || m.imageUrl)
-              ? [{ imagePath: m.imagePath || '', imageUrl: m.imageUrl, isImage: isImageMessage }]
-              : [];
+          const attachments = getMessageMediaAttachments(m);
           const isVoiceOnlyMessage =
             m.messageType === 'voice' &&
             attachments.length > 0 &&
@@ -929,10 +926,10 @@ export function ChatMessages({ model }: ChatMessagesProps) {
                 {isFileMessage && attachments.length > 0 ? (
                   <div className={isCircleOnlyMessage ? 'p-0' : `${hasCaption ? 'px-3 pt-3 pb-1' : 'p-3'} space-y-2`}>
                     {attachments.map((file, idx) => {
-                      const attachmentLevelUrl = resolveMediaUrl(file.imageUrl);
-                      const singleAttachmentMessageUrl =
-                        attachments.length === 1 ? resolveMediaUrl(m.imageUrl) : '';
-                      const fileUrl = attachmentLevelUrl || singleAttachmentMessageUrl;
+                      const attachmentLevelUrl = resolveMediaUrl(
+                        file.imageUrl || (file.imagePath ? `/media/${file.imagePath}` : undefined)
+                      );
+                      const fileUrl = attachmentLevelUrl;
                       const fileName = resolveFileName(file.imagePath, file.fileName);
                       const sizeLabel = formatFileSize(file.sizeBytes);
                       const contentType = file.contentType || 'application/octet-stream';

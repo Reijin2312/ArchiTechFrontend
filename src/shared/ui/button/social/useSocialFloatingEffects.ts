@@ -4,6 +4,13 @@ import { endpoints } from '@/shared/api/endpoints';
 import { secureChatClient } from '@/shared/auth/secureChat';
 import { logger } from '@/shared/lib/logger';
 import { useChatReadTracking } from './useChatReadTracking';
+import {
+  patchMediaMetadataInStore,
+  patchMessagesInStore,
+  removeMessageFromStore,
+  upsertMessageInStore,
+  type ChatMessageStore,
+} from './actions/messageReconcile';
 import type { Dispatch, MutableRefObject, SetStateAction } from 'react';
 import type {
   ChatPresenceResponse,
@@ -37,15 +44,13 @@ type SocialFloatingEffectsContext = {
   setOutgoingRequests: Dispatch<SetStateAction<FriendRequest[]>>;
   setFriends: Dispatch<SetStateAction<Friend[]>>;
   setChats: Dispatch<SetStateAction<PrivateChat[]>>;
-  setMessages: Dispatch<SetStateAction<ChatMessage[]>>;
+  setMessageStore: Dispatch<SetStateAction<ChatMessageStore>>;
   loadFriends: () => Promise<void>;
   loadIncomingRequests: () => Promise<void>;
   loadOutgoingRequests: () => Promise<void>;
   refreshSearchIfNeeded: () => void;
   loadChats: () => Promise<void>;
   showDesktopNotification: (msg: any, currentUserId: string) => void;
-  processedMessageIds: MutableRefObject<Set<number | string>>;
-  typingUsersByChat: Record<number, string[]>;
   setTypingUsersByChat: Dispatch<SetStateAction<Record<number, string[]>>>;
   typingTimeoutsRef: MutableRefObject<Map<string, number>>;
   presenceByUser: Record<string, ChatPresenceState>;
@@ -54,6 +59,7 @@ type SocialFloatingEffectsContext = {
   contextMenu: { x: number; y: number; message: ChatMessage } | null;
   activeTab: string;
   loadMessages: (chatId: number, append?: boolean) => Promise<void>;
+  loadMessagesAfter: (chatId: number, afterMessageId: number, limit?: number) => Promise<void>;
   searchQuery: string;
   setSearchResults: Dispatch<SetStateAction<UserSearchResult[]>>;
   searchUsers: () => Promise<void>;
@@ -83,15 +89,13 @@ export function useSocialFloatingEffects(ctx: SocialFloatingEffectsContext) {
     setOutgoingRequests,
     setFriends,
     setChats,
-    setMessages,
+    setMessageStore,
     loadFriends,
     loadIncomingRequests,
     loadOutgoingRequests,
     refreshSearchIfNeeded,
     loadChats,
     showDesktopNotification,
-    processedMessageIds,
-    typingUsersByChat,
     setTypingUsersByChat,
     typingTimeoutsRef,
     presenceByUser,
@@ -100,6 +104,7 @@ export function useSocialFloatingEffects(ctx: SocialFloatingEffectsContext) {
     contextMenu,
     activeTab,
     loadMessages,
+    loadMessagesAfter,
     searchQuery,
     setSearchResults,
     searchUsers,
@@ -109,8 +114,121 @@ export function useSocialFloatingEffects(ctx: SocialFloatingEffectsContext) {
 
   const AUTO_SCROLL_IDLE_LOCK_MS = 60_000;
   const PRESENCE_SYNC_INTERVAL_MS = 20_000;
+  const STICKY_BOTTOM_THRESHOLD_PX = 96;
   const lastSentPresenceGateRef = useRef<boolean | null>(null);
   const lastPresenceSyncAtRef = useRef(0);
+  const messagesRef = useRef<ChatMessage[]>(messages);
+  const reconnectSyncCursorByChatRef = useRef<Map<number, number>>(new Map());
+  const chatScrollSyncRef = useRef<{
+    chatId: number | null;
+    firstServerMessageId: number;
+    lastMessageIdentity: string;
+    scrollHeight: number;
+    nearBottom: boolean;
+  }>({
+    chatId: null,
+    firstServerMessageId: 0,
+    lastMessageIdentity: '',
+    scrollHeight: 0,
+    nearBottom: true,
+  });
+  const chatScrollAnchorRef = useRef<{
+    chatId: number | null;
+    messageDomId: string;
+    offsetTop: number;
+  }>({
+    chatId: null,
+    messageDomId: '',
+    offsetTop: 0,
+  });
+
+  const resolveActiveChatScrollContainer = (): HTMLElement | null =>
+    document.querySelector<HTMLElement>('[data-chat-scroll-container="true"]');
+
+  const resolveActiveChatScrollContent = (container: HTMLElement): HTMLElement | null =>
+    container.querySelector<HTMLElement>('[data-chat-scroll-content="true"]') ??
+    (container.firstElementChild instanceof HTMLElement ? container.firstElementChild : null);
+
+  const resolveViewportAnchor = (container: HTMLElement) => {
+    const containerRect = container.getBoundingClientRect();
+    const rowElements = container.querySelectorAll<HTMLElement>('[data-chat-message-row="true"]');
+
+    for (const rowElement of rowElements) {
+      const rowId = rowElement.getAttribute('id');
+      if (!rowId) {
+        continue;
+      }
+
+      const rowRect = rowElement.getBoundingClientRect();
+      if (rowRect.bottom <= containerRect.top + 1) {
+        continue;
+      }
+      if (rowRect.top >= containerRect.bottom - 1) {
+        break;
+      }
+
+      return {
+        messageDomId: rowId,
+        offsetTop: rowRect.top - containerRect.top,
+      };
+    }
+
+    return null;
+  };
+
+  const updateScrollAnchorSnapshot = (
+    container: HTMLElement,
+    chatId: number,
+    nearBottom: boolean
+  ) => {
+    if (nearBottom) {
+      chatScrollAnchorRef.current = {
+        chatId,
+        messageDomId: '',
+        offsetTop: 0,
+      };
+      return;
+    }
+
+    const anchor = resolveViewportAnchor(container);
+    if (!anchor) {
+      return;
+    }
+
+    chatScrollAnchorRef.current = {
+      chatId,
+      messageDomId: anchor.messageDomId,
+      offsetTop: anchor.offsetTop,
+    };
+  };
+
+  const isNearBottom = (element: HTMLElement, thresholdPx = STICKY_BOTTOM_THRESHOLD_PX) => {
+    const distanceToBottom = element.scrollHeight - (element.scrollTop + element.clientHeight);
+    return distanceToBottom <= thresholdPx;
+  };
+
+  const getChatMessageEdgeState = (chatId: number) => {
+    let firstServerMessageId = 0;
+    let lastMessageIdentity = '';
+
+    for (const message of messagesRef.current) {
+      if (message.chatId !== chatId) continue;
+
+      if (typeof message.messageId === 'number' && Number.isFinite(message.messageId)) {
+        if (firstServerMessageId === 0 || message.messageId < firstServerMessageId) {
+          firstServerMessageId = message.messageId;
+        }
+      }
+
+      lastMessageIdentity = [
+        String(message.messageId),
+        typeof message.clientMessageId === 'number' ? String(message.clientMessageId) : '',
+        String(message.serverTimestamp ?? message.signatureTimestamp ?? ''),
+      ].join('|');
+    }
+
+    return { firstServerMessageId, lastMessageIdentity };
+  };
 
   const parsePresenceTimestamp = (value?: string | null): number | null => {
     if (!value) return null;
@@ -345,6 +463,200 @@ export function useSocialFloatingEffects(ctx: SocialFloatingEffectsContext) {
   }, [chats]);
 
   useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
+
+  useEffect(() => {
+    if (!selectedChat || !isOpen || activeTab !== 'chat') {
+      chatScrollSyncRef.current.chatId = selectedChat ?? null;
+      chatScrollAnchorRef.current = {
+        chatId: selectedChat ?? null,
+        messageDomId: '',
+        offsetTop: 0,
+      };
+      return;
+    }
+
+    const scrollContainer = resolveActiveChatScrollContainer();
+    if (!scrollContainer) {
+      return;
+    }
+
+    const syncNearBottomState = () => {
+      const nearBottom = isNearBottom(scrollContainer);
+      chatScrollSyncRef.current.nearBottom = nearBottom;
+      chatScrollSyncRef.current.scrollHeight = scrollContainer.scrollHeight;
+      updateScrollAnchorSnapshot(scrollContainer, selectedChat, nearBottom);
+    };
+
+    syncNearBottomState();
+    scrollContainer.addEventListener('scroll', syncNearBottomState, { passive: true });
+    window.addEventListener('resize', syncNearBottomState, { passive: true });
+
+    return () => {
+      scrollContainer.removeEventListener('scroll', syncNearBottomState);
+      window.removeEventListener('resize', syncNearBottomState);
+    };
+  }, [selectedChat, isOpen, activeTab]);
+
+  useEffect(() => {
+    if (!selectedChat || !isOpen || activeTab !== 'chat') {
+      return;
+    }
+
+    const scrollContainer = resolveActiveChatScrollContainer();
+    if (!scrollContainer) {
+      return;
+    }
+
+    const scrollContent = resolveActiveChatScrollContent(scrollContainer);
+    let rafId: number | null = null;
+
+    const syncAfterLayoutShift = () => {
+      rafId = null;
+      const previous = chatScrollSyncRef.current;
+      const currentScrollHeight = scrollContainer.scrollHeight;
+      const currentNearBottom = isNearBottom(scrollContainer);
+
+      if (previous.chatId !== selectedChat) {
+        chatScrollSyncRef.current = {
+          ...previous,
+          chatId: selectedChat,
+          scrollHeight: currentScrollHeight,
+          nearBottom: currentNearBottom,
+        };
+        return;
+      }
+
+      const heightDelta = currentScrollHeight - previous.scrollHeight;
+      if (Math.abs(heightDelta) < 1) {
+        chatScrollSyncRef.current = {
+          ...previous,
+          scrollHeight: currentScrollHeight,
+          nearBottom: currentNearBottom,
+        };
+        updateScrollAnchorSnapshot(scrollContainer, selectedChat, currentNearBottom);
+        return;
+      }
+
+      if (previous.nearBottom || currentNearBottom) {
+        // Telegram-like behavior: keep bottom pinned while media resolves and changes row heights.
+        scrollContainer.scrollTop = scrollContainer.scrollHeight;
+      } else {
+        const anchorSnapshot = chatScrollAnchorRef.current;
+        const canUseAnchor =
+          anchorSnapshot.chatId === selectedChat && anchorSnapshot.messageDomId.length > 0;
+        if (canUseAnchor) {
+          const anchorElement = document.getElementById(anchorSnapshot.messageDomId);
+          if (anchorElement) {
+            const containerRect = scrollContainer.getBoundingClientRect();
+            const anchorRect = anchorElement.getBoundingClientRect();
+            const nextOffsetTop = anchorRect.top - containerRect.top;
+            const anchorDrift = nextOffsetTop - anchorSnapshot.offsetTop;
+            if (Math.abs(anchorDrift) >= 1) {
+              scrollContainer.scrollTop += anchorDrift;
+            }
+          } else {
+            scrollContainer.scrollTop += heightDelta;
+          }
+        } else {
+          scrollContainer.scrollTop += heightDelta;
+        }
+      }
+
+      const nearBottomAfterSync = isNearBottom(scrollContainer);
+      chatScrollSyncRef.current = {
+        ...previous,
+        scrollHeight: scrollContainer.scrollHeight,
+        nearBottom: nearBottomAfterSync,
+      };
+      updateScrollAnchorSnapshot(scrollContainer, selectedChat, nearBottomAfterSync);
+    };
+
+    const queueSync = () => {
+      if (rafId !== null) {
+        return;
+      }
+      rafId = window.requestAnimationFrame(syncAfterLayoutShift);
+    };
+
+    const resizeObserver =
+      typeof ResizeObserver !== 'undefined' ? new ResizeObserver(queueSync) : null;
+    if (resizeObserver) {
+      resizeObserver.observe(scrollContainer);
+      if (scrollContent) {
+        resizeObserver.observe(scrollContent);
+      }
+    }
+
+    const onMediaSettled = (event: Event) => {
+      const target = event.target;
+      if (target instanceof HTMLImageElement || target instanceof HTMLVideoElement) {
+        queueSync();
+      }
+    };
+
+    queueSync();
+    scrollContainer.addEventListener('load', onMediaSettled, true);
+    scrollContainer.addEventListener('loadedmetadata', onMediaSettled, true);
+
+    return () => {
+      if (rafId !== null) {
+        window.cancelAnimationFrame(rafId);
+      }
+      resizeObserver?.disconnect();
+      scrollContainer.removeEventListener('load', onMediaSettled, true);
+      scrollContainer.removeEventListener('loadedmetadata', onMediaSettled, true);
+    };
+  }, [selectedChat, isOpen, activeTab]);
+
+  useEffect(() => {
+    if (!selectedChat || !isOpen || activeTab !== 'chat') {
+      return;
+    }
+
+    const scrollContainer = resolveActiveChatScrollContainer();
+    if (!scrollContainer) {
+      return;
+    }
+
+    const chatId = selectedChat;
+    const previous = chatScrollSyncRef.current;
+    const nextState = getChatMessageEdgeState(chatId);
+    const currentScrollHeight = scrollContainer.scrollHeight;
+    const currentNearBottom = isNearBottom(scrollContainer);
+    let nearBottomAfterSync = currentNearBottom;
+
+    if (previous.chatId === chatId) {
+      const heightDelta = currentScrollHeight - previous.scrollHeight;
+      const prependedHistory =
+        previous.firstServerMessageId > 0 &&
+        nextState.firstServerMessageId > 0 &&
+        nextState.firstServerMessageId < previous.firstServerMessageId;
+      const appendedMessages =
+        nextState.lastMessageIdentity.length > 0 &&
+        nextState.lastMessageIdentity !== previous.lastMessageIdentity &&
+        !prependedHistory;
+
+      if (prependedHistory && heightDelta > 0 && !previous.nearBottom) {
+        scrollContainer.scrollTop += heightDelta;
+      } else if (appendedMessages && previous.nearBottom) {
+        scrollContainer.scrollTop = scrollContainer.scrollHeight;
+      }
+      nearBottomAfterSync = isNearBottom(scrollContainer);
+    }
+
+    chatScrollSyncRef.current = {
+      chatId,
+      firstServerMessageId: nextState.firstServerMessageId,
+      lastMessageIdentity: nextState.lastMessageIdentity,
+      scrollHeight: scrollContainer.scrollHeight,
+      nearBottom: nearBottomAfterSync,
+    };
+    updateScrollAnchorSnapshot(scrollContainer, chatId, nearBottomAfterSync);
+  }, [messages, selectedChat, isOpen, activeTab]);
+
+  useEffect(() => {
     if (!user) {
       setIsWsConnecting(false);
       return;
@@ -373,8 +685,64 @@ export function useSocialFloatingEffects(ctx: SocialFloatingEffectsContext) {
   }, [user, userId, setIsWsConnecting]);
 
   useEffect(() => {
-    logger.chat('РЎР‚РЎСџРІР‚СњР Р‰', 'Setting up WebSocket subscription (ONCE on mount)');
+    logger.chat('Р РЋР вЂљР РЋРЎСџР Р†Р вЂљРЎСљР В Р вЂ°', 'Setting up WebSocket subscription (ONCE on mount)');
 
+    const maxLoadedServerMessageId = (chatId: number) =>
+      messagesRef.current.reduce((maxId, message) => {
+        if (message.chatId !== chatId) return maxId;
+        if (typeof message.messageId !== 'number') return maxId;
+        return message.messageId > maxId ? message.messageId : maxId;
+      }, 0);
+
+    const unsubscribeConnection = secureChatClient.onConnectionState(async (state) => {
+      if (state === 'disconnected') {
+        setIsWsConnecting(true);
+        return;
+      }
+
+      if (state !== 'connected') {
+        return;
+      }
+
+      setIsWsConnecting(false);
+      const currentUser = userRef.current;
+      if (!currentUser) {
+        return;
+      }
+
+      const chatIds = Array.from(
+        new Set(
+          chatsRef.current
+            .map((chat) => chat.chatId)
+            .filter((chatId): chatId is number => Number.isFinite(chatId) && chatId > 0)
+        )
+      );
+
+      for (const chatId of chatIds) {
+        const fallbackLastMessageId = (() => {
+          const chat = chatsRef.current.find((item) => item.chatId === chatId);
+          if (!chat || !chat.lastMessage) return 0;
+          return typeof chat.lastMessage.messageId === 'number' ? chat.lastMessage.messageId : 0;
+        })();
+        const afterMessageId = Math.max(maxLoadedServerMessageId(chatId), fallbackLastMessageId);
+        if (afterMessageId <= 0) {
+          continue;
+        }
+
+        const lastSyncedAfterId = reconnectSyncCursorByChatRef.current.get(chatId);
+        if (lastSyncedAfterId === afterMessageId) {
+          continue;
+        }
+
+        try {
+          await loadMessagesAfter(chatId, afterMessageId, 100);
+          reconnectSyncCursorByChatRef.current.set(chatId, afterMessageId);
+        } catch (error) {
+          reconnectSyncCursorByChatRef.current.delete(chatId);
+          logger.warn('Failed to load reconnect missed-range', { chatId, afterMessageId, error });
+        }
+      }
+    });
     const unsubscribe = secureChatClient.onMessage(async (wsMessage) => {
       const currentUser = userRef.current;
       const currentChatId = selectedChatRef.current;
@@ -535,419 +903,109 @@ export function useSocialFloatingEffects(ctx: SocialFloatingEffectsContext) {
       }
 
       if (wsMessage.type === 'message_read' && wsMessage.chatId && wsMessage.lastReadMessageId) {
-        console.log('РІСљвЂ¦ Received message_read event for chat', wsMessage.chatId, 'up to message', wsMessage.lastReadMessageId);
-        setChats(prev => prev.map(c => {
-          if (c.chatId !== wsMessage.chatId || !c.lastMessage) return c;
-          if (c.lastMessage.senderId !== currentUser.id) return c;
-          if (typeof c.lastMessage.messageId === 'string') return c;
-          if (c.lastMessage.messageId > wsMessage.lastReadMessageId!) return c;
-          return { ...c, lastMessage: { ...c.lastMessage, isRead: true } };
-        }));
-        setMessages(prev => prev.map(m =>
-          typeof m.messageId === 'number' && m.messageId <= wsMessage.lastReadMessageId! && m.senderId === currentUser.id
-            ? { ...m, isRead: true }
-            : m
-        ));
-        loadChats();
+        console.log('Р Р†РЎС™РІР‚В¦ Received message_read event for chat', wsMessage.chatId, 'up to message', wsMessage.lastReadMessageId);
+        setMessageStore((prev) =>
+          patchMessagesInStore(
+            prev,
+            (message) =>
+              message.chatId === wsMessage.chatId &&
+              message.senderId === currentUser.id &&
+              typeof message.messageId === 'number' &&
+              message.messageId <= wsMessage.lastReadMessageId!,
+            () => ({ isRead: true }),
+            currentUser.id
+          )
+        );
         return;
       }
-
       if (wsMessage.type === 'message_edited' && wsMessage.chatId && wsMessage.messageId) {
-        console.log('РІСљРЏРїС‘РЏ Received message_edited event for chat', wsMessage.chatId, 'message', wsMessage.messageId);
-        
-        loadChats();
-
-        if (selectedChatRef.current !== wsMessage.chatId) {
+        console.log('Р Р†РЎС™Р РЏР С—РЎвЂР РЏ Received message_edited event for chat', wsMessage.chatId, 'message', wsMessage.messageId);
+        if (wsMessage.message?.content === undefined) {
           return;
         }
-        
-        if (wsMessage.message?.content !== undefined) {
-          setMessages(prev => prev.map(m =>
-            m.messageId === wsMessage.messageId
-              ? {
-                  ...m,
-                  content: wsMessage.message!.content!,
-                  entities: wsMessage.message?.entities ?? m.entities,
-                  edited: true,
-                }
-              : m
-          ));
-        }
+        setMessageStore((prev) =>
+          patchMessagesInStore(
+            prev,
+            (message) => message.messageId === wsMessage.messageId,
+            (message) => ({
+              content: wsMessage.message?.content ?? message.content,
+              entities: wsMessage.message?.entities ?? message.entities,
+              edited: true,
+            }),
+            currentUser.id
+          )
+        );
+        return;
+      }
+      if (wsMessage.type === 'message_deleted' && wsMessage.chatId && wsMessage.messageId) {
+        console.log('РЎР‚РЎСџРІР‚вЂќРІР‚ВР С—РЎвЂР РЏ Received message_deleted event for chat', wsMessage.chatId, 'message', wsMessage.messageId);
+        setMessageStore((prev) => removeMessageFromStore(prev, wsMessage.messageId!, currentUser.id));
+        return;
+      }
+      if (wsMessage.type === 'message_sent' && wsMessage.messageId && wsMessage.clientMessageId) {
+        setMessageStore((prev) =>
+          upsertMessageInStore(
+            prev,
+            {
+              messageId: wsMessage.messageId,
+              clientMessageId: wsMessage.clientMessageId,
+              status: 'sent',
+              sequenceNumber: wsMessage.sequenceNumber,
+              serverTimestamp: wsMessage.serverTimestamp,
+              signatureTimestamp: wsMessage.serverTimestamp,
+              groupingKey: wsMessage.groupingKey,
+            },
+            currentUser.id
+          )
+        );
         return;
       }
 
-      if (wsMessage.type === 'message_deleted' && wsMessage.chatId && wsMessage.messageId) {
-        console.log('СЂСџвЂ”вЂРїС‘РЏ Received message_deleted event for chat', wsMessage.chatId, 'message', wsMessage.messageId);
-        if (selectedChatRef.current === wsMessage.chatId) {
-          setMessages(prev => prev.filter(m => m.messageId !== wsMessage.messageId));
+      if (wsMessage.type === 'media_updated' && wsMessage.chatId && wsMessage.messageId) {
+        const mediaPath = wsMessage.mediaPath ?? wsMessage.media?.mediaPath;
+        if (!mediaPath) {
+          return;
         }
-        loadChats();
+
+        const patch = {
+          messageId: wsMessage.messageId,
+          clientMessageId: wsMessage.clientMessageId,
+          senderId: wsMessage.senderId,
+          mediaPath,
+          contentType: wsMessage.mediaContentType ?? wsMessage.media?.contentType,
+          sizeBytes: wsMessage.mediaSizeBytes ?? wsMessage.media?.sizeBytes,
+          imageEncryptionIv: wsMessage.mediaEncryptionIv ?? wsMessage.media?.imageEncryptionIv,
+          imageKeyVersion: wsMessage.mediaKeyVersion ?? wsMessage.media?.imageKeyVersion,
+        };
+
+        setMessageStore((prev) => patchMediaMetadataInStore(prev, patch));
         return;
       }
 
       if (wsMessage.type !== 'new_message') return;
 
-      const msg = wsMessage.message! as any;
-      const mergeMediaImages = (
-        incomingImages: any[] | undefined,
-        existingImages: any[] | undefined
-      ) => {
-        if (!incomingImages || incomingImages.length === 0) {
-          return existingImages;
-        }
-
-        const isNonEmptyString = (value: unknown): value is string =>
-          typeof value === 'string' && value.trim().length > 0;
-
-        const matchByIdentity = (left: any, right: any) => {
-          const leftPath = isNonEmptyString(left?.imagePath) ? left.imagePath : undefined;
-          const rightPath = isNonEmptyString(right?.imagePath) ? right.imagePath : undefined;
-          if (leftPath && rightPath) {
-            return leftPath === rightPath;
-          }
-
-          const leftName = isNonEmptyString(left?.fileName) ? left.fileName : undefined;
-          const rightName = isNonEmptyString(right?.fileName) ? right.fileName : undefined;
-          if (!leftName || !rightName || leftName !== rightName) {
-            return false;
-          }
-
-          const leftSize = typeof left?.sizeBytes === 'number' ? left.sizeBytes : undefined;
-          const rightSize = typeof right?.sizeBytes === 'number' ? right.sizeBytes : undefined;
-          if (leftSize !== undefined && rightSize !== undefined && leftSize !== rightSize) {
-            return false;
-          }
-
-          const leftType = isNonEmptyString(left?.contentType) ? left.contentType : undefined;
-          const rightType = isNonEmptyString(right?.contentType) ? right.contentType : undefined;
-          if (leftType && rightType && leftType !== rightType) {
-            return false;
-          }
-
-          return true;
-        };
-
-        return incomingImages.map((incoming, index) => {
-          const existing =
-            existingImages?.[index] ||
-            existingImages?.find((candidate: any) => {
-              if (!candidate) return false;
-              return matchByIdentity(incoming, candidate);
-            });
-
-          if (!existing) {
-            return incoming;
-          }
-
-          return {
-            ...existing,
-            ...incoming,
-            imagePath: incoming?.imagePath || existing.imagePath,
-            imageUrl: incoming?.imageUrl || existing.imageUrl,
-            fileName: incoming?.fileName || existing.fileName,
-            contentType: incoming?.contentType || existing.contentType,
-            sizeBytes: incoming?.sizeBytes ?? existing.sizeBytes,
-            isImage: incoming?.isImage ?? existing.isImage,
-            imageKeyVersion: incoming?.imageKeyVersion ?? existing.imageKeyVersion,
-          };
-        });
-      };
-
-      const resolvePrimaryImageUrl = (
-        directImageUrl: string | undefined,
-        images: any[] | undefined
-      ) => {
-        if (directImageUrl) return directImageUrl;
-        if (!images || images.length === 0) return undefined;
-        return images.find((img: any) => !!img?.imageUrl)?.imageUrl;
-      };
-
-      const shouldKeepLocalMedia = (candidate: any) => {
-        if (!candidate) return false;
-        const hasLocalPreview =
-          (typeof candidate.imageUrl === 'string'
-            && (candidate.imageUrl.startsWith('blob:') || candidate.imageUrl.startsWith('data:')))
-          || (
-            Array.isArray(candidate.images)
-            && candidate.images.some(
-              (image: any) =>
-                typeof image?.imageUrl === 'string'
-                && (image.imageUrl.startsWith('blob:') || image.imageUrl.startsWith('data:'))
-            )
-          );
-
-        return (
-          candidate.senderId === currentUser.id &&
-          (
-            hasLocalPreview ||
-            (typeof candidate.messageId === 'string' &&
-              candidate.messageId.toString().startsWith('local-')) ||
-            candidate.status === 'pending'
-          )
-        );
-      };
-
-      logger.chat('СЂСџвЂњРЃ', 'WebSocket message received:', wsMessage);
-
-      if (
-        (
-          msg.messageType === 'image' ||
-          msg.messageType === 'images' ||
-          msg.messageType === 'file' ||
-          msg.messageType === 'files' ||
-          msg.messageType === 'voice' ||
-          msg.messageType === 'circle'
-        ) &&
-        (msg.imageUrl || (msg.images && msg.images.length)) &&
-        processedMessageIds.current.has(msg.messageId)
-      ) {
-        console.log('СЂСџвЂќвЂћ Updating existing image message with imageUrl:', msg.messageId);
-        
-        // Р С›Р В±Р Р…Р С•Р Р†Р В»РЎРЏР ВµР С Р Р† РЎРѓР С—Р С‘РЎРѓР С”Р Вµ РЎвЂЎР В°РЎвЂљР С•Р Р†
-        setChats(prev => prev.map(c => {
-          if (c.chatId !== msg.chatId || !c.lastMessage || c.lastMessage.messageId !== msg.messageId) return c;
-          const keepLocalMedia = shouldKeepLocalMedia(c.lastMessage);
-          const mergedImages = keepLocalMedia
-            ? (c.lastMessage.images as any[] | undefined)
-            : mergeMediaImages(msg.images, c.lastMessage.images as any[] | undefined);
-          return {
-            ...c,
-            lastMessage: { 
-              ...c.lastMessage, 
-              imageUrl: keepLocalMedia
-                ? c.lastMessage.imageUrl
-                : resolvePrimaryImageUrl(msg.imageUrl, mergedImages) || c.lastMessage.imageUrl, 
-              images: mergedImages || c.lastMessage.images 
-            }
-          };
-        }));
-        
-        // Р С›Р В±Р Р…Р С•Р Р†Р В»РЎРЏР ВµР С Р Р† РЎРѓР С—Р С‘РЎРѓР С”Р Вµ РЎРѓР С•Р С•Р В±РЎвЂ°Р ВµР Р…Р С‘Р в„–
-        if (currentChatId === msg.chatId) {
-          setMessages(prev =>
-            prev.map(m => {
-              if (m.messageId !== msg.messageId) return m;
-              const keepLocalMedia = shouldKeepLocalMedia(m);
-              const mergedImages = keepLocalMedia
-                ? (m.images as any[] | undefined)
-                : mergeMediaImages(msg.images, m.images as any[] | undefined);
-              return {
-                ...m,
-                imageUrl: keepLocalMedia
-                  ? m.imageUrl
-                  : resolvePrimaryImageUrl(msg.imageUrl, mergedImages) || m.imageUrl,
-                images: mergedImages || m.images,
-              };
-            })
-          );
-        }
-        
+      const incoming = wsMessage.message as ChatMessage | undefined;
+      if (!incoming || typeof incoming.messageId !== 'number' || typeof incoming.chatId !== 'number') {
         return;
       }
 
-      if (processedMessageIds.current.has(msg.messageId)) {
-        logger.chat('РІС™В РїС‘РЏ', 'Message already processed, skipping:', msg.messageId);
-        return;
-      }
-      processedMessageIds.current.add(msg.messageId);
+      const normalizedMessage: ChatMessage = {
+        ...incoming,
+        chatId: incoming.chatId,
+        messageId: incoming.messageId,
+        clientMessageId: incoming.clientMessageId,
+        status: incoming.isRead ? 'read' : 'sent',
+        serverTimestamp: incoming.serverTimestamp ?? incoming.signatureTimestamp,
+        signatureTimestamp: incoming.serverTimestamp ?? incoming.signatureTimestamp,
+      };
 
-      showDesktopNotification(msg, currentUser.id);
-
-      setChats(prev => prev.map(c => {
-        if (c.chatId !== msg.chatId) return c;
-        const lastMessage = c.lastMessage;
-
-        const existingContent =
-          lastMessage && lastMessage.messageId === msg.messageId
-            ? lastMessage.content
-            : undefined;
-        const existingImages =
-          lastMessage && lastMessage.messageId === msg.messageId
-            ? (lastMessage.images as any[] | undefined)
-            : undefined;
-        const mergedImages = mergeMediaImages(msg.images, existingImages);
-
-        return {
-          ...c,
-          lastMessage: {
-            messageId: msg.messageId,
-            senderId: msg.senderId,
-            senderUsername: msg.senderUsername,
-            senderDisplayName: msg.senderDisplayName,
-            content: (existingContent ?? msg.content) || '',
-            entities: msg.entities,
-            messageType: msg.messageType,
-            imagePath: msg.imagePath,
-            imageUrl: resolvePrimaryImageUrl(msg.imageUrl, mergedImages),
-            images: mergedImages,
-            createdAt: msg.createdAt,
-            encryptionMetadata: '',
-            replyToId: msg.replyToId,
-            replyToMessage: msg.replyToMessage,
-            isRead: msg.isRead
-          },
-        };
-      }));
-
-      if (currentChatId === msg.chatId) {
-        setMessages((prev) => {
-          const existingIndex = prev.findIndex(m => m.messageId === msg.messageId);
-          if (existingIndex !== -1) {
-            const existing = prev[existingIndex];
-            if (
-              msg.messageType === 'image' ||
-              msg.messageType === 'images' ||
-              msg.messageType === 'file' ||
-              msg.messageType === 'files' ||
-              msg.messageType === 'voice' ||
-              msg.messageType === 'circle'
-            ) {
-              const updated = [...prev];
-              const keepLocalMedia = shouldKeepLocalMedia(existing);
-              const mergedImages = keepLocalMedia
-                ? (existing.images as any[] | undefined)
-                : mergeMediaImages(msg.images, existing.images as any[] | undefined);
-              updated[existingIndex] = {
-                ...existing,
-                imageUrl: keepLocalMedia
-                  ? existing.imageUrl
-                  : resolvePrimaryImageUrl(msg.imageUrl, mergedImages) || existing.imageUrl,
-                imagePath: msg.imagePath || existing.imagePath,
-                images: mergedImages || existing.images,
-                entities: msg.entities ?? existing.entities,
-              } as ChatMessage;
-              return updated;
-            }
-            return prev;
-          }
-          
-            if (msg.senderId === currentUser.id) {
-              const incomingPrimary = Array.isArray(msg.images) && msg.images.length > 0 ? msg.images[0] : undefined;
-              const incomingIdentity = {
-                imagePath: msg.imagePath ?? incomingPrimary?.imagePath,
-                fileName: incomingPrimary?.fileName,
-                contentType: incomingPrimary?.contentType,
-                sizeBytes: incomingPrimary?.sizeBytes,
-              };
-
-              const matchByIdentity = (candidate: any) => {
-                if (!candidate) return false;
-
-                const candidatePrimary =
-                  Array.isArray(candidate.images) && candidate.images.length > 0
-                    ? candidate.images[0]
-                    : undefined;
-                const candidateIdentity = {
-                  imagePath: candidate.imagePath ?? candidatePrimary?.imagePath,
-                  fileName: candidatePrimary?.fileName,
-                  contentType: candidatePrimary?.contentType,
-                  sizeBytes: candidatePrimary?.sizeBytes,
-                };
-
-                const incomingPath =
-                  typeof incomingIdentity.imagePath === 'string' && incomingIdentity.imagePath.trim().length > 0
-                    ? incomingIdentity.imagePath
-                    : undefined;
-                const candidatePath =
-                  typeof candidateIdentity.imagePath === 'string' && candidateIdentity.imagePath.trim().length > 0
-                    ? candidateIdentity.imagePath
-                    : undefined;
-                if (incomingPath && candidatePath) {
-                  return incomingPath === candidatePath;
-                }
-
-                const incomingName =
-                  typeof incomingIdentity.fileName === 'string' && incomingIdentity.fileName.trim().length > 0
-                    ? incomingIdentity.fileName
-                    : undefined;
-                const candidateName =
-                  typeof candidateIdentity.fileName === 'string' && candidateIdentity.fileName.trim().length > 0
-                    ? candidateIdentity.fileName
-                    : undefined;
-                if (!incomingName || !candidateName || incomingName !== candidateName) {
-                  return false;
-                }
-
-                const incomingSize = typeof incomingIdentity.sizeBytes === 'number' ? incomingIdentity.sizeBytes : undefined;
-                const candidateSize = typeof candidateIdentity.sizeBytes === 'number' ? candidateIdentity.sizeBytes : undefined;
-                if (incomingSize !== undefined && candidateSize !== undefined && incomingSize !== candidateSize) {
-                  return false;
-                }
-
-                return true;
-              };
-
-              let tempIndex = -1;
-              for (let i = prev.length - 1; i >= 0; i--) {
-                const candidate = prev[i];
-                const localIdMatch =
-                  candidate.localId === msg.localId ||
-                  (typeof candidate.messageId === 'string' && candidate.messageId.toString().startsWith('local-'));
-                const identityMatch = matchByIdentity(candidate);
-                const candidateStatus = candidate.status;
-                if (
-                  candidate.messageType === msg.messageType &&
-                  (candidateStatus === 'pending' || candidateStatus === 'sent') &&
-                  (localIdMatch || identityMatch)
-                ) {
-                  tempIndex = i;
-                  break;
-                }
-              }
-            
-            if (tempIndex !== -1) {
-              const tempMsg = prev[tempIndex];
-              const mergedImages = mergeMediaImages(msg.images, tempMsg.images as any[] | undefined);
-              
-              const newMessages = [...prev];
-              newMessages[tempIndex] = {
-                ...tempMsg,
-                ...msg,
-                localId: tempMsg.localId ?? tempMsg.messageId,
-                messageId: msg.messageId,
-                status: msg.isRead ? 'read' : 'sent',
-                content: tempMsg.content || msg.content || '',
-                images: mergedImages || tempMsg.images,
-                imageUrl:
-                  resolvePrimaryImageUrl(msg.imageUrl, mergedImages) ?? tempMsg.imageUrl,
-                imagePath: msg.imagePath ?? tempMsg.imagePath,
-                replyToMessage: (msg.replyToMessage ?? tempMsg.replyToMessage) as ChatMessage | undefined,
-              } as ChatMessage;
-              
-              return newMessages;
-            }
-          }
-
-          // Р вЂўРЎРѓР В»Р С‘ РЎРЊРЎвЂљР С• Р Р…Р С•Р Р†Р С•Р Вµ РЎРѓР С•Р С•Р В±РЎвЂ°Р ВµР Р…Р С‘Р Вµ (Р Р…Р Вµ Р С•РЎвЂљ Р Р…Р В°РЎРѓ Р С‘Р В»Р С‘ Р Р…Р ВµРЎвЂљ Р Р†РЎР‚Р ВµР СР ВµР Р…Р Р…Р С•Р С–Р С•), Р Т‘Р С•Р В±Р В°Р Р†Р В»РЎРЏР ВµР С
-          let replyToMessage = msg.replyToMessage as ChatMessage | undefined;
-          if (!replyToMessage && msg.replyToId) {
-            replyToMessage = prev.find(m => m.messageId === msg.replyToId);
-          }
-          
-          return [...prev, {
-            messageId: msg.messageId,
-            senderId: msg.senderId,
-            senderUsername: msg.senderUsername,
-            senderDisplayName: msg.senderDisplayName,
-            content: msg.content || '',
-            entities: msg.entities,
-            messageType: msg.messageType,
-            imagePath: msg.imagePath,
-            imageUrl: resolvePrimaryImageUrl(msg.imageUrl, msg.images),
-            images: msg.images,
-            createdAt: msg.createdAt,
-            isRead: msg.isRead, // РІВРѓРїС‘РЏ Р вЂќР С•Р Р†Р ВµРЎР‚РЎРЏР ВµР С РЎРѓР ВµРЎР‚Р Р†Р ВµРЎР‚РЎС“ - Р С•Р Р… Р В·Р Р…Р В°Р ВµРЎвЂљ Р С—РЎР‚Р В°Р Р†Р С‘Р В»РЎРЉР Р…РЎвЂ№Р в„– РЎРѓРЎвЂљР В°РЎвЂљРЎС“РЎРѓ
-            replyToId: msg.replyToId,
-            replyToMessage,
-          } as ChatMessage];
-        });
-       
-      }
-
+      showDesktopNotification(normalizedMessage, currentUser.id);
+      setMessageStore((prev) => upsertMessageInStore(prev, normalizedMessage, currentUser.id));
     });
 
     return () => {
-      logger.chat('СЂСџвЂќРЉ', 'Unsubscribing from WebSocket');
+      logger.chat('РЎР‚РЎСџРІР‚СњР Р‰', 'Unsubscribing from WebSocket');
+      unsubscribeConnection();
       unsubscribe();
     };
   }, []);
@@ -956,7 +1014,7 @@ export function useSocialFloatingEffects(ctx: SocialFloatingEffectsContext) {
     if (!user) return;
     loadIncomingRequests();
     loadOutgoingRequests();
-    logger.chat('РЎР‚РЎСџРІР‚СљР вЂ°', 'Loading initial friend requests for badge counts');
+    logger.chat('Р РЋР вЂљР РЋРЎСџР Р†Р вЂљРЎС™Р В РІР‚В°', 'Loading initial friend requests for badge counts');
   }, [user]);
 
   useEffect(() => {
@@ -1122,6 +1180,8 @@ export function useSocialFloatingEffects(ctx: SocialFloatingEffectsContext) {
   }, []);
 
 }
+
+
 
 
 

@@ -29,13 +29,22 @@ export type ImageBubbleMediaItem = {
   mediaType: 'image' | 'video';
   contentType?: string;
   sizeBytes?: number;
+  width?: number;
+  height?: number;
+  aspectRatio?: number;
 };
 
-type IncomingImageLoadPhase = 'loading' | 'ready' | 'canceled' | 'error';
+type IncomingImageLoadPhase =
+  | 'loading'
+  | 'ready'
+  | 'manual'
+  | 'canceled'
+  | 'error';
 
 type StatusLineProps = {
   isOwn: boolean;
   isRead: boolean;
+  status?: 'pending' | 'failed' | 'sent' | 'delivered' | 'read';
   isEdited: boolean;
   time: string;
   editedClassName: string;
@@ -49,6 +58,7 @@ type SingleImageBubbleProps = {
   time: string;
   isOwn: boolean;
   isRead: boolean;
+  status?: 'pending' | 'failed' | 'sent' | 'delivered' | 'read';
   isEdited: boolean;
   replyPreview?: ReplyPreview;
   hideTail?: boolean;
@@ -65,6 +75,7 @@ type MultiImageBubbleProps = {
   time: string;
   isOwn: boolean;
   isRead: boolean;
+  status?: 'pending' | 'failed' | 'sent' | 'delivered' | 'read';
   isEdited: boolean;
   replyPreview?: ReplyPreview;
   hideTail?: boolean;
@@ -76,6 +87,7 @@ type MultiImageBubbleProps = {
 function StatusLine({
   isOwn,
   isRead,
+  status,
   isEdited,
   time,
   editedClassName,
@@ -88,11 +100,17 @@ function StatusLine({
       <span>{time}</span>
       {isOwn ? (
         <span className="ml-[4px] inline-flex h-[12px] w-[12px] items-center justify-center">
-          <CheckCheckIcon
-            size={15}
-            strokeWidth={2.25}
-            className={`origin-center scale-[1.85] ${isRead ? 'text-[#d8fff0]' : ''}`}
-          />
+          {status === 'pending' ? (
+            <span className="h-3 w-3 animate-pulse rounded-full border border-white/88" />
+          ) : status === 'failed' ? (
+            <span className="text-[14px] leading-none text-[#ffb0ba]">!</span>
+          ) : (
+            <CheckCheckIcon
+              size={15}
+              strokeWidth={2.25}
+              className={`origin-center scale-[1.85] ${isRead ? 'text-[#d8fff0]' : ''}`}
+            />
+          )}
         </span>
       ) : null}
     </>
@@ -176,20 +194,26 @@ function IncomingDownloadOverlay({
   progress,
   indeterminate,
   onCancel,
-  onRetry,
+  onAction,
 }: {
   phase: IncomingImageLoadPhase;
   progress: number;
   indeterminate: boolean;
   onCancel: () => void;
-  onRetry: () => void;
+  onAction: () => void;
 }) {
   const safeProgress = Math.max(0, Math.min(100, progress));
   const radius = 17;
   const circumference = 2 * Math.PI * radius;
   const dashOffset = circumference - (safeProgress / 100) * circumference;
   const loading = phase === 'loading';
-  const actionLabel = loading ? 'Cancel media loading' : 'Retry media loading';
+  const manual = phase === 'manual' || phase === 'canceled';
+  const retryable = phase === 'error';
+  const actionLabel = loading
+    ? 'Cancel media loading'
+    : manual
+      ? 'Download media'
+      : 'Retry media loading';
 
   return (
     <div className="pointer-events-none absolute inset-0 z-[6] flex items-center justify-center bg-black/26 backdrop-blur-[1px]">
@@ -201,7 +225,7 @@ function IncomingDownloadOverlay({
           if (loading) {
             onCancel();
           } else {
-            onRetry();
+            onAction();
           }
         }}
         className="pointer-events-auto relative grid h-[42px] w-[42px] place-items-center rounded-full bg-black/62 text-white shadow-[0_8px_18px_rgba(0,0,0,0.42)] transition-colors hover:bg-black/76"
@@ -244,12 +268,29 @@ function IncomingDownloadOverlay({
                 strokeDashoffset={dashOffset}
               />
             )
+          ) : retryable ? (
+            <circle
+              cx="21"
+              cy="21"
+              r={radius}
+              fill="none"
+              stroke="rgba(255,255,255,0.95)"
+              strokeWidth="2.6"
+              strokeLinecap="round"
+              strokeDasharray={`${circumference * 0.24} ${circumference}`}
+            />
           ) : null}
         </svg>
         {loading ? (
           <span className="relative block h-[14px] w-[14px]">
             <span className="absolute left-1/2 top-0 h-full w-[2px] -translate-x-1/2 rotate-45 rounded-full bg-white" />
             <span className="absolute left-1/2 top-0 h-full w-[2px] -translate-x-1/2 -rotate-45 rounded-full bg-white" />
+          </span>
+        ) : manual ? (
+          <span className="relative block h-[14px] w-[14px]">
+            <span className="absolute left-1/2 top-[1px] h-[8px] w-[2px] -translate-x-1/2 rounded-full bg-white" />
+            <span className="absolute left-1/2 top-[7px] h-[6px] w-[6px] -translate-x-1/2 rotate-45 border-b-[2px] border-r-[2px] border-white" />
+            <span className="absolute left-1/2 bottom-[-1px] h-[2px] w-[8px] -translate-x-1/2 rounded-full bg-white" />
           </span>
         ) : (
           <span className="relative block h-[14px] w-[14px]">
@@ -262,11 +303,50 @@ function IncomingDownloadOverlay({
   );
 }
 
-function toIncomingLoadPhase(phase: string): IncomingImageLoadPhase {
+function toIncomingLoadPhase(phase: string, manual: boolean): IncomingImageLoadPhase {
   if (phase === 'ready') return 'ready';
   if (phase === 'error') return 'error';
-  if (phase === 'canceled' || phase === 'paused') return 'canceled';
+  if (phase === 'paused') return manual ? 'manual' : 'canceled';
+  if (phase === 'canceled') return 'canceled';
   return 'loading';
+}
+
+const normalizeAspectRatio = (value?: number) => {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) {
+    return undefined;
+  }
+  return Math.min(4, Math.max(0.25, value));
+};
+
+function PlaceholderLayer({
+  strippedPreviewUrl,
+  previewUrl,
+  strippedBlurPx = 14,
+  previewBlurPx = 6,
+}: {
+  strippedPreviewUrl?: string;
+  previewUrl?: string;
+  strippedBlurPx?: number;
+  previewBlurPx?: number;
+}) {
+  const source = strippedPreviewUrl || previewUrl;
+  if (!source) {
+    return <span className="absolute inset-0 bg-[#1f2129]" />;
+  }
+
+  const isStripped = source === strippedPreviewUrl;
+  return (
+    <span
+      className="absolute inset-0"
+      style={{
+        backgroundImage: `url(${source})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        filter: `blur(${isStripped ? strippedBlurPx : previewBlurPx}px)`,
+        transform: 'scale(1.06)',
+      }}
+    />
+  );
 }
 
 function ProgressiveIncomingImage({
@@ -276,6 +356,7 @@ function ProgressiveIncomingImage({
   sizeBytes,
   alt,
   isOwnMessage,
+  preferredAspectRatio,
   disableProgressive = false,
   onOpenMedia,
   buttonClassName,
@@ -289,6 +370,7 @@ function ProgressiveIncomingImage({
   sizeBytes?: number;
   alt: string;
   isOwnMessage: boolean;
+  preferredAspectRatio?: number;
   disableProgressive?: boolean;
   onOpenMedia?: () => void;
   buttonClassName: string;
@@ -300,18 +382,19 @@ function ProgressiveIncomingImage({
     !disableProgressive && !isOwnMessage && isManagedMediaSourceUrl(src);
   const { ref: viewportRef, isInViewport } = useViewportPresence<HTMLDivElement>({
     disabled: !supportsProgressiveDownload,
+    rootMargin: '420px',
   });
   const managedDownload = useManagedMediaDownload({
     url: src,
     kind: 'image',
     sizeBytes,
-    priority: isInViewport ? 96 : 16,
-    autoStart: true,
+    priority: isInViewport ? 96 : 8,
+    autoStart: isInViewport,
     managed: supportsProgressiveDownload,
     inViewport: isInViewport,
   });
   const phase: IncomingImageLoadPhase = supportsProgressiveDownload
-    ? toIncomingLoadPhase(managedDownload.phase)
+    ? toIncomingLoadPhase(managedDownload.phase, managedDownload.snapshot.manual)
     : 'ready';
   const progress = supportsProgressiveDownload ? managedDownload.progress : 100;
   const indeterminate = supportsProgressiveDownload
@@ -320,22 +403,76 @@ function ProgressiveIncomingImage({
   const resolvedSrc = supportsProgressiveDownload
     ? managedDownload.resolvedUrl || ''
     : src;
-  const [isImageVisible, setIsImageVisible] = useState(!supportsProgressiveDownload);
+  const [resolvedAspectRatio, setResolvedAspectRatio] = useState<number | undefined>(
+    normalizeAspectRatio(preferredAspectRatio)
+  );
   useEffect(() => {
-    if (!supportsProgressiveDownload) {
-      setIsImageVisible(true);
-      return;
+    const normalized = normalizeAspectRatio(preferredAspectRatio);
+    if (normalized) {
+      setResolvedAspectRatio(normalized);
     }
-    if (!resolvedSrc) {
-      setIsImageVisible(false);
-      return;
-    }
+  }, [preferredAspectRatio]);
+  useEffect(() => {
+    if (resolvedAspectRatio) return;
+    const candidate = previewUrl || strippedPreviewUrl || '';
+    if (!candidate) return;
+
+    let cancelled = false;
+    const probe = new Image();
+    probe.decoding = 'async';
+    probe.onload = () => {
+      if (cancelled) return;
+      const width = probe.naturalWidth || 0;
+      const height = probe.naturalHeight || 0;
+      if (width > 0 && height > 0) {
+        setResolvedAspectRatio(width / height);
+      }
+    };
+    probe.src = candidate;
+    return () => {
+      cancelled = true;
+      probe.onload = null;
+    };
+  }, [resolvedAspectRatio, previewUrl, strippedPreviewUrl]);
+  const [isImageVisible, setIsImageVisible] = useState(false);
+  const [showPlaceholderLayer, setShowPlaceholderLayer] = useState(true);
+  useEffect(() => {
     setIsImageVisible(false);
-  }, [resolvedSrc, supportsProgressiveDownload]);
+    if (!resolvedSrc) {
+      setShowPlaceholderLayer(true);
+      return;
+    }
+  }, [resolvedSrc]);
+  useEffect(() => {
+    if (!resolvedSrc) {
+      setShowPlaceholderLayer(true);
+      return;
+    }
+    if (supportsProgressiveDownload && phase !== 'ready') {
+      setShowPlaceholderLayer(true);
+      return;
+    }
+    if (!isImageVisible) {
+      setShowPlaceholderLayer(true);
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      setShowPlaceholderLayer(false);
+    }, 220);
+    return () => {
+      window.clearTimeout(timeout);
+    };
+  }, [isImageVisible, phase, resolvedSrc, supportsProgressiveDownload]);
 
   const canOpen = !!onOpenMedia && (!supportsProgressiveDownload || phase === 'ready');
-  const shouldShowPlaceholder =
-    supportsProgressiveDownload && (phase !== 'ready' || !isImageVisible);
+  const shouldShowPlaceholder = showPlaceholderLayer;
+  const buttonStyle: CSSProperties | undefined = resolvedAspectRatio
+    ? {
+        ...(imageStyle || {}),
+        aspectRatio: resolvedAspectRatio,
+      }
+    : imageStyle;
 
   return (
     <div ref={viewportRef} className="relative h-full w-full">
@@ -347,6 +484,7 @@ function ProgressiveIncomingImage({
         }}
         className={`${buttonClassName} ${canOpen ? 'cursor-zoom-in' : 'cursor-default'}`}
         aria-label={ariaLabel}
+        style={buttonStyle}
       >
         <span
           aria-hidden="true"
@@ -354,41 +492,29 @@ function ProgressiveIncomingImage({
             shouldShowPlaceholder ? 'opacity-100' : 'opacity-0'
           }`}
         >
-          {strippedPreviewUrl ? (
-            <span
-              className="absolute inset-0"
-              style={{
-                backgroundImage: `url(${strippedPreviewUrl})`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                filter: 'blur(16px)',
-                transform: 'scale(1.08)',
-              }}
-            />
-          ) : null}
-          <span
-            className="absolute inset-0 bg-gradient-to-br from-[#5d6480]/65 via-[#2f3345]/80 to-[#1d1f2c]/92"
-            style={
-              previewUrl
-                ? {
-                    backgroundImage: `linear-gradient(135deg, rgba(93,100,128,0.35), rgba(29,31,44,0.68)), url(${previewUrl})`,
-                    backgroundSize: 'cover',
-                    backgroundPosition: 'center',
-                  }
-                : undefined
-            }
+          <PlaceholderLayer
+            strippedPreviewUrl={strippedPreviewUrl}
+            previewUrl={previewUrl}
+            strippedBlurPx={15}
+            previewBlurPx={5}
           />
-          <span className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.16),transparent_52%)]" />
         </span>
         {resolvedSrc ? (
           <img
             src={resolvedSrc}
             alt={alt}
-            className={`${imageClassName} transition-[opacity,filter,transform] duration-300 ${
-              isImageVisible ? 'opacity-100 blur-0 scale-100' : 'opacity-0 blur-2xl scale-[1.05]'
+            className={`${imageClassName} transition-opacity duration-300 ${
+              isImageVisible ? 'opacity-100' : 'opacity-0'
             }`}
-            style={imageStyle}
-            onLoad={() => setIsImageVisible(true)}
+            onLoad={(event) => {
+              const target = event.currentTarget;
+              const width = target.naturalWidth || 0;
+              const height = target.naturalHeight || 0;
+              if (width > 0 && height > 0) {
+                setResolvedAspectRatio(width / height);
+              }
+              setIsImageVisible(true);
+            }}
             loading="lazy"
             decoding="async"
             draggable={false}
@@ -402,7 +528,7 @@ function ProgressiveIncomingImage({
           progress={progress}
           indeterminate={indeterminate}
           onCancel={() => managedDownload.cancel()}
-          onRetry={() => {
+          onAction={() => {
             if (managedDownload.phase === 'error') {
               managedDownload.retry();
             } else {
@@ -448,18 +574,19 @@ function ProgressiveIncomingVideo({
     !disableProgressive && !isOwnMessage && isManagedMediaSourceUrl(src);
   const { ref: viewportRef, isInViewport } = useViewportPresence<HTMLDivElement>({
     disabled: !supportsProgressiveDownload,
+    rootMargin: '420px',
   });
   const managedDownload = useManagedMediaDownload({
     url: src,
     kind: 'video',
     sizeBytes,
-    priority: isInViewport ? 88 : 12,
-    autoStart: true,
+    priority: isInViewport ? 88 : 8,
+    autoStart: isInViewport,
     managed: supportsProgressiveDownload,
     inViewport: isInViewport,
   });
   const phase: IncomingImageLoadPhase = supportsProgressiveDownload
-    ? toIncomingLoadPhase(managedDownload.phase)
+    ? toIncomingLoadPhase(managedDownload.phase, managedDownload.snapshot.manual)
     : 'ready';
   const progress = supportsProgressiveDownload ? managedDownload.progress : 100;
   const indeterminate = supportsProgressiveDownload
@@ -468,7 +595,8 @@ function ProgressiveIncomingVideo({
   const resolvedSrc = supportsProgressiveDownload
     ? managedDownload.resolvedUrl || ''
     : src;
-  const [isVideoVisible, setIsVideoVisible] = useState(!supportsProgressiveDownload);
+  const [isVideoVisible, setIsVideoVisible] = useState(false);
+  const [showPlaceholderLayer, setShowPlaceholderLayer] = useState(true);
   const [generatedPosterUrl, setGeneratedPosterUrl] = useState<string | undefined>(undefined);
   const [posterFailed, setPosterFailed] = useState(false);
   const [resolvedAspectRatio, setResolvedAspectRatio] = useState<number | undefined>(undefined);
@@ -583,17 +711,36 @@ function ProgressiveIncomingVideo({
   }, [resolvedPosterUrl, resolvedSrc]);
 
   useEffect(() => {
+    setIsVideoVisible(false);
     if (!resolvedSrc) {
-      setIsVideoVisible(false);
+      setShowPlaceholderLayer(true);
       return;
     }
-    setIsVideoVisible(!supportsProgressiveDownload);
-  }, [resolvedSrc, supportsProgressiveDownload]);
+  }, [resolvedSrc]);
+  useEffect(() => {
+    if (!resolvedSrc) {
+      setShowPlaceholderLayer(true);
+      return;
+    }
+    if (supportsProgressiveDownload && phase !== 'ready') {
+      setShowPlaceholderLayer(true);
+      return;
+    }
+    if (!isVideoVisible) {
+      setShowPlaceholderLayer(true);
+      return;
+    }
+    const timeout = window.setTimeout(() => {
+      setShowPlaceholderLayer(false);
+    }, 220);
+    return () => {
+      window.clearTimeout(timeout);
+    };
+  }, [isVideoVisible, phase, resolvedSrc, supportsProgressiveDownload]);
 
   const canOpen = !!onOpenMedia && (!supportsProgressiveDownload || phase === 'ready');
   const useFallbackVideoFrame = !resolvedPosterUrl || posterFailed;
-  const showPlaceholder =
-    (supportsProgressiveDownload && phase !== 'ready') || !isVideoVisible;
+  const showPlaceholder = showPlaceholderLayer;
   const displayAspectRatio = resolvedAspectRatio || 16 / 9;
   const effectiveVideoStyle: CSSProperties = {
     ...videoStyle,
@@ -620,31 +767,12 @@ function ProgressiveIncomingVideo({
             showPlaceholder ? 'opacity-100' : 'opacity-0'
           }`}
         >
-          {strippedPreviewUrl ? (
-            <span
-              className="absolute inset-0"
-              style={{
-                backgroundImage: `url(${strippedPreviewUrl})`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                filter: 'blur(14px)',
-                transform: 'scale(1.08)',
-              }}
-            />
-          ) : null}
-          <span
-            className="absolute inset-0 bg-gradient-to-br from-[#5d6480]/65 via-[#2f3345]/80 to-[#1d1f2c]/92"
-            style={
-              previewUrl
-                ? {
-                    backgroundImage: `linear-gradient(135deg, rgba(93,100,128,0.35), rgba(29,31,44,0.68)), url(${previewUrl})`,
-                    backgroundSize: 'cover',
-                    backgroundPosition: 'center',
-                  }
-                : undefined
-            }
+          <PlaceholderLayer
+            strippedPreviewUrl={strippedPreviewUrl}
+            previewUrl={previewUrl}
+            strippedBlurPx={14}
+            previewBlurPx={4}
           />
-          <span className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.16),transparent_52%)]" />
         </span>
         {resolvedSrc ? (
           useFallbackVideoFrame ? (
@@ -702,7 +830,7 @@ function ProgressiveIncomingVideo({
           progress={progress}
           indeterminate={indeterminate}
           onCancel={() => managedDownload.cancel()}
-          onRetry={() => {
+          onAction={() => {
             if (managedDownload.phase === 'error') {
               managedDownload.retry();
             } else {
@@ -832,6 +960,28 @@ export function ReplyPreviewBlock({
   );
 }
 
+const resolveSingleMediaContainerStyle = (
+  bubbleMaxWidthPx: number,
+  aspectRatio?: number
+): CSSProperties => {
+  const normalizedAspectRatio = normalizeAspectRatio(aspectRatio);
+  if (!normalizedAspectRatio) {
+    return { maxWidth: bubbleMaxWidthPx };
+  }
+
+  const viewportHeight =
+    typeof window !== 'undefined' && Number.isFinite(window.innerHeight)
+      ? window.innerHeight
+      : 900;
+  const maxHeight = Math.max(220, Math.round(viewportHeight * 0.72));
+  const widthByHeight = Math.round(maxHeight * normalizedAspectRatio);
+  const width = Math.max(220, Math.min(bubbleMaxWidthPx, widthByHeight));
+  return {
+    width,
+    maxWidth: '100%',
+  };
+};
+
 export function SingleImageBubble({
   mediaItem,
   caption,
@@ -840,6 +990,7 @@ export function SingleImageBubble({
   time,
   isOwn,
   isRead,
+  status,
   isEdited,
   replyPreview,
   hideTail = false,
@@ -854,7 +1005,7 @@ export function SingleImageBubble({
   const rootContainerStyle: CSSProperties =
     mediaItem.mediaType === 'video'
       ? { width: bubbleMaxWidthPx, maxWidth: '100%' }
-      : { maxWidth: bubbleMaxWidthPx };
+      : resolveSingleMediaContainerStyle(bubbleMaxWidthPx, mediaItem.aspectRatio);
   const captionPaddingClass = isEdited
     ? (isOwn ? 'pr-[96px]' : 'pr-[82px]')
     : (isOwn ? 'pr-[56px]' : 'pr-[48px]');
@@ -886,6 +1037,7 @@ export function SingleImageBubble({
               strippedPreviewUrl={mediaItem.strippedPreviewUrl}
               previewUrl={mediaItem.previewUrl}
               sizeBytes={mediaItem.sizeBytes}
+              preferredAspectRatio={mediaItem.aspectRatio}
               alt="Image message"
               isOwnMessage={isOwn}
               disableProgressive={!!uploadState}
@@ -906,6 +1058,7 @@ export function SingleImageBubble({
           <StatusLine
             isOwn={isOwn}
             isRead={isRead}
+            status={status}
             isEdited={isEdited}
             time={time}
             editedClassName={editedLabelClass}
@@ -924,24 +1077,20 @@ export function SingleImageBubble({
         <div className="relative w-full overflow-hidden bg-black">
           {mediaItem.mediaType === 'image' ? (
             <>
-              {isOwn || uploadState ? (
-                <img
-                  src={mediaItem.url}
-                  alt=""
-                  aria-hidden="true"
-                  className="pointer-events-none absolute inset-0 h-full w-full scale-[1.16] object-cover blur-2xl brightness-[0.88]"
+              <span aria-hidden="true" className="pointer-events-none absolute inset-0">
+                <PlaceholderLayer
+                  strippedPreviewUrl={mediaItem.strippedPreviewUrl}
+                  previewUrl={mediaItem.previewUrl || mediaItem.url}
+                  strippedBlurPx={15}
+                  previewBlurPx={5}
                 />
-              ) : (
-                <span
-                  aria-hidden="true"
-                  className="pointer-events-none absolute inset-0 bg-gradient-to-br from-[#5d6480]/62 via-[#2f3345]/78 to-[#1d1f2c]/90"
-                />
-              )}
+              </span>
               <div className="relative flex w-full justify-center">
                 <ProgressiveIncomingImage
                   src={mediaItem.url}
                   strippedPreviewUrl={mediaItem.strippedPreviewUrl}
                   previewUrl={mediaItem.previewUrl}
+                  preferredAspectRatio={mediaItem.aspectRatio}
                   alt="Image message"
                   isOwnMessage={isOwn}
                   disableProgressive={!!uploadState}
@@ -995,6 +1144,7 @@ export function SingleImageBubble({
             <StatusLine
               isOwn={isOwn}
               isRead={isRead}
+              status={status}
               isEdited={isEdited}
               time={time}
               editedClassName={editedLabelClass}
@@ -1039,6 +1189,7 @@ export function SingleImageBubble({
             strippedPreviewUrl={mediaItem.strippedPreviewUrl}
             previewUrl={mediaItem.previewUrl}
             sizeBytes={mediaItem.sizeBytes}
+            preferredAspectRatio={mediaItem.aspectRatio}
             alt="Image message"
             isOwnMessage={isOwn}
             disableProgressive={!!uploadState}
@@ -1060,6 +1211,7 @@ export function SingleImageBubble({
         <StatusLine
           isOwn={isOwn}
           isRead={isRead}
+          status={status}
           isEdited={isEdited}
           time={time}
           editedClassName={editedLabelClass}
@@ -1077,6 +1229,7 @@ export function MultiImageBubble({
   time,
   isOwn,
   isRead,
+  status,
   isEdited,
   replyPreview,
   hideTail = false,
@@ -1116,6 +1269,7 @@ export function MultiImageBubble({
           <StatusLine
             isOwn={isOwn}
             isRead={isRead}
+            status={status}
             isEdited={isEdited}
             time={time}
             editedClassName={editedLabelClass}
@@ -1157,6 +1311,7 @@ export function MultiImageBubble({
             <StatusLine
               isOwn={isOwn}
               isRead={isRead}
+              status={status}
               isEdited={isEdited}
               time={time}
               editedClassName={editedLabelClass}
@@ -1190,6 +1345,7 @@ export function MultiImageBubble({
         <StatusLine
           isOwn={isOwn}
           isRead={isRead}
+          status={status}
           isEdited={isEdited}
           time={time}
           editedClassName={editedLabelClass}

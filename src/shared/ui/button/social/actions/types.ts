@@ -7,11 +7,17 @@ import type {
   ChatMessage,
   UploadImageResponse,
 } from '@/shared/api/types';
+import type { ChatMessageStore } from './messageReconcile';
 
 export type AttachedImage = {
   id: string;
   file: File;
   preview?: string;
+  thumbnailUrl?: string;
+  strippedThumbnailUrl?: string;
+  width?: number;
+  height?: number;
+  aspectRatio?: number;
   isImage?: boolean;
   sendAsFile?: boolean;
   groupWithOthers?: boolean;
@@ -25,6 +31,11 @@ export type AttachedImage = {
 export type AttachImageOptions = {
   forcedMessageType?: 'voice' | 'circle';
   preview?: string;
+  thumbnailUrl?: string;
+  strippedThumbnailUrl?: string;
+  width?: number;
+  height?: number;
+  aspectRatio?: number;
   sendAsFile?: boolean;
   groupWithOthers?: boolean;
 };
@@ -34,6 +45,7 @@ export type SendImagesOptions = {
   clearComposerDraft?: boolean;
   replyToMessageId?: number;
   resetReplyTo?: boolean;
+  groupingKeyOverride?: string;
 };
 
 export type UploadingImagePhase = 'queued' | 'uploading' | 'uploaded';
@@ -53,15 +65,18 @@ export type SocialFloatingActionsContext = {
   selectedChat: number | null;
   chats: PrivateChat[];
   messages: ChatMessage[];
+  messageStore: ChatMessageStore;
   messageInput: string;
   attachedImages: AttachedImage[];
   editingMessage: ChatMessage | null;
   replyingTo: ChatMessage | null;
   markReadTimeoutRef: MutableRefObject<NodeJS.Timeout | null>;
   markReadTargetRef: MutableRefObject<{ chatId: number; lastId: number } | null>;
-  sendInFlightRef: MutableRefObject<boolean>;
-  sendCooldownUntilRef: MutableRefObject<number>;
+  sendQueueRef: MutableRefObject<Map<number, Promise<void>>>;
   pendingUploadCancelsRef: MutableRefObject<Map<string, () => void>>;
+  historyBeforeByChatRef: MutableRefObject<Map<number, number>>;
+  historyHasMoreByChatRef: MutableRefObject<Map<number, boolean>>;
+  historyLoadingByChatRef: MutableRefObject<Set<number>>;
   lastProtocolSeqRef: MutableRefObject<number>;
   lastProtocolMsgIdRef: MutableRefObject<number>;
   typingThrottleRef: MutableRefObject<Map<number, { lastSentAt: number; lastState: boolean }>>;
@@ -73,6 +88,7 @@ export type SocialFloatingActionsContext = {
   setLoading: Dispatch<SetStateAction<boolean>>;
   setSearchResults: Dispatch<SetStateAction<UserSearchResult[]>>;
   setMessages: Dispatch<SetStateAction<ChatMessage[]>>;
+  setMessageStore: Dispatch<SetStateAction<ChatMessageStore>>;
   setChats: Dispatch<SetStateAction<PrivateChat[]>>;
   setSelectedChat: Dispatch<SetStateAction<number | null>>;
   setActiveTab: Dispatch<SetStateAction<'friends' | 'search' | 'requests' | 'chat'>>;
@@ -103,6 +119,8 @@ export type SocialChatActions = {
   markChatRead: (chatId: number, lastId: number) => Promise<void>;
   loadChats: () => Promise<void>;
   loadMessages: (chatId: number, append?: boolean) => Promise<void>;
+  loadMessagesAfter: (chatId: number, afterMessageId: number, limit?: number) => Promise<void>;
+  loadOlderMessages: (chatId: number, limit?: number) => Promise<void>;
   openChatWith: (participantId: string) => Promise<void>;
   createGroupChat: (payload: {
     title: string;
@@ -120,6 +138,7 @@ export type SocialChatActions = {
     imageKeyVersion?: number,
   ) => Promise<void>;
   sendChatMessage: () => Promise<void>;
+  retryFailedMessage: (messageId: number | string) => Promise<void>;
   sendMessagesWithImages: (
     chatId: number,
     textContent: string,

@@ -9,7 +9,7 @@ import {
   type ChatResolvedLink,
 } from '@/shared/utils/chatTextEntities';
 import { CheckCheckIcon, DownloadIcon, FileIcon, PauseIcon, PlayIcon } from '../icons';
-import type { ChatPlaybackState, MessageRow } from '../types';
+import type { ChatPlaybackState } from '../types';
 import {
   type ImageBubbleMediaItem,
   MultiImageBubble,
@@ -71,6 +71,7 @@ type ChatMessageListProps = {
   onDeleteMessage: (messageId: number | string) => void;
   onCopyMessage: (text: string) => void;
   onCancelPendingUpload?: (localId: string, attachmentIndex: number) => void;
+  onRetryMessage?: (messageId: number | string) => void;
 };
 
 type MessageTextBubbleProps = {
@@ -81,6 +82,7 @@ type MessageTextBubbleProps = {
   time: string;
   isOwn: boolean;
   isRead: boolean;
+  status?: string;
   isEdited: boolean;
   replyPreview?: ReplyPreview;
   hideTail?: boolean;
@@ -107,6 +109,7 @@ type VoiceMessageBubbleProps = {
   sizeBytes?: number;
   createdAt: string;
   isRead: boolean;
+  status?: string;
   isOwn: boolean;
   isEdited: boolean;
   hideTail?: boolean;
@@ -138,6 +141,7 @@ type FileMessageBubbleProps = {
   fileItem: FileAttachmentItem;
   createdAt: string;
   isRead: boolean;
+  status?: string;
   isOwn: boolean;
   isEdited: boolean;
   hideTail?: boolean;
@@ -149,6 +153,31 @@ type FileMessageBubbleProps = {
 type OpenMediaViewerPayload = {
   messageId: string;
   attachmentIndex: number;
+};
+
+type MessageContextMenuState = {
+  x: number;
+  y: number;
+  message: ChatMessage;
+  albumMessageIds?: Array<number | string>;
+};
+
+type ChatRenderRow =
+  | { type: 'divider'; key: string; label: string }
+  | { type: 'message'; key: string; message: ChatMessage };
+
+type AlbumRenderCluster = {
+  startMessageId: string;
+  lastMessageId: string;
+  groupingKey: string;
+  messages: ChatMessage[];
+  hiddenMessageIds: string[];
+  contextMessage: ChatMessage;
+};
+
+type PendingUploadPreviewEntry = {
+  objectUrl: string;
+  lastTouchedAt: number;
 };
 
 type GroupServiceMessageType =
@@ -369,6 +398,20 @@ const toMessageDomId = (messageId: string | number) =>
 const isTailBubbleMessage = (message: ChatMessage) =>
   toGroupServiceMessageType(message.messageType) === null && message.messageType !== 'circle';
 
+const normalizeGroupingKey = (value?: string) => {
+  if (typeof value !== 'string') return '';
+  return value.trim();
+};
+
+const isAlbumGroupingCandidate = (message: ChatMessage) => {
+  const groupingKey = normalizeGroupingKey(message.groupingKey);
+  if (!groupingKey) return false;
+  if (message.messageType !== 'image' && message.messageType !== 'images') {
+    return false;
+  }
+  return getMessageAttachments(message).length > 0;
+};
+
 const messageTimestamp = (value: string): number | null => {
   const timestamp = Date.parse(value);
   return Number.isFinite(timestamp) ? timestamp : null;
@@ -448,9 +491,27 @@ const resolveAttachmentPreviewUrl = (value?: string) => {
   return resolveMediaUrl(`/media/${normalized}`);
 };
 
+const resolveAttachmentAspectRatio = (attachment: MessageAttachmentItem) => {
+  const width =
+    typeof attachment.width === 'number' && Number.isFinite(attachment.width) && attachment.width > 0
+      ? attachment.width
+      : undefined;
+  const height =
+    typeof attachment.height === 'number' &&
+    Number.isFinite(attachment.height) &&
+    attachment.height > 0
+      ? attachment.height
+      : undefined;
+  if (!width || !height) {
+    return undefined;
+  }
+  return width / height;
+};
+
 const toVisualMediaAttachmentItems = (
   messageType: ChatMessage['messageType'],
-  attachments: MessageAttachmentItem[]
+  attachments: MessageAttachmentItem[],
+  resolvePendingUploadUrl?: (attachmentIndex: number) => string
 ): VisualMediaAttachmentItem[] => {
   if (
     messageType === 'voice' ||
@@ -462,7 +523,8 @@ const toVisualMediaAttachmentItems = (
   }
 
   return attachments.flatMap((attachment, attachmentIndex) => {
-    const resolvedUrl = resolveAttachmentUrl(attachment);
+    const pendingUploadUrl = resolvePendingUploadUrl?.(attachmentIndex) || '';
+    const resolvedUrl = resolveAttachmentUrl(attachment) || pendingUploadUrl;
     if (!resolvedUrl) {
       return [];
     }
@@ -482,11 +544,14 @@ const toVisualMediaAttachmentItems = (
     const previewUrl =
       typeof attachment.thumbnailUrl === 'string'
         ? resolveAttachmentPreviewUrl(attachment.thumbnailUrl)
-        : undefined;
+        : isImage
+          ? pendingUploadUrl
+          : undefined;
     const strippedPreviewUrl =
       typeof attachment.strippedThumbnailUrl === 'string'
         ? resolveAttachmentPreviewUrl(attachment.strippedThumbnailUrl)
         : undefined;
+    const aspectRatio = resolveAttachmentAspectRatio(attachment);
 
     const mediaItem: ImageBubbleMediaItem = {
       url: resolvedUrl,
@@ -495,6 +560,9 @@ const toVisualMediaAttachmentItems = (
       mediaType: isVideo ? 'video' : 'image',
       contentType: attachment.contentType,
       sizeBytes: attachment.sizeBytes,
+      width: attachment.width,
+      height: attachment.height,
+      aspectRatio,
     };
 
     return [
@@ -510,7 +578,8 @@ const toVisualMediaAttachmentItems = (
 
 const toFileAttachmentItems = (
   messageType: ChatMessage['messageType'],
-  attachments: MessageAttachmentItem[]
+  attachments: MessageAttachmentItem[],
+  resolvePendingUploadUrl?: (attachmentIndex: number) => string
 ): FileAttachmentItem[] => {
   if (messageType === 'voice' || messageType === 'circle') {
     return [];
@@ -518,7 +587,8 @@ const toFileAttachmentItems = (
   const forceFilePresentation = messageType === 'file' || messageType === 'files';
 
   return attachments.flatMap((attachment, attachmentIndex) => {
-    const resolvedUrl = resolveAttachmentUrl(attachment);
+    const pendingUploadUrl = resolvePendingUploadUrl?.(attachmentIndex) || '';
+    const resolvedUrl = resolveAttachmentUrl(attachment) || pendingUploadUrl;
     if (!resolvedUrl) {
       return [];
     }
@@ -556,7 +626,9 @@ const toFileAttachmentItems = (
     const previewUrl =
       isImage && typeof attachment.thumbnailUrl === 'string'
         ? resolveAttachmentPreviewUrl(attachment.thumbnailUrl)
-        : undefined;
+        : isImage
+          ? pendingUploadUrl
+          : undefined;
     const strippedPreviewUrl =
       isImage && typeof attachment.strippedThumbnailUrl === 'string'
         ? resolveAttachmentPreviewUrl(attachment.strippedThumbnailUrl)
@@ -1195,6 +1267,7 @@ function MessageTextBubble({
   time,
   isOwn,
   isRead,
+  status,
   isEdited,
   replyPreview,
   hideTail = false,
@@ -1218,11 +1291,17 @@ function MessageTextBubble({
       <span>{time}</span>
       {isOwn ? (
         <span className="ml-[4px] inline-flex h-[12px] w-[12px] items-center justify-center">
-          <CheckCheckIcon
-            size={15}
-            strokeWidth={2.25}
-            className={`origin-center scale-[1.85] ${isRead ? 'text-[#d8fff0]' : ''}`}
-          />
+          {status === 'pending' ? (
+            <span className="h-3 w-3 animate-pulse rounded-full border border-white/88" />
+          ) : status === 'failed' ? (
+            <span className="text-[14px] leading-none text-[#ffb0ba]">!</span>
+          ) : (
+            <CheckCheckIcon
+              size={15}
+              strokeWidth={2.25}
+              className={`origin-center scale-[1.85] ${isRead ? 'text-[#d8fff0]' : ''}`}
+            />
+          )}
         </span>
       ) : null}
     </>
@@ -1253,10 +1332,125 @@ function MessageTextBubble({
   );
 }
 
+type ManagedDownloadPhase = 'loading' | 'manual' | 'canceled' | 'error' | 'ready';
+
+function toManagedDownloadPhase(
+  phase: string,
+  manual: boolean
+): ManagedDownloadPhase {
+  if (phase === 'ready') return 'ready';
+  if (phase === 'error') return 'error';
+  if (phase === 'paused') return manual ? 'manual' : 'canceled';
+  if (phase === 'canceled') return 'canceled';
+  return 'loading';
+}
+
+function InlineDownloadControl({
+  loading,
+  manual,
+  retryable,
+  progress,
+  indeterminate,
+  idleIcon,
+}: {
+  loading: boolean;
+  manual: boolean;
+  retryable: boolean;
+  progress: number;
+  indeterminate: boolean;
+  idleIcon: React.ReactNode;
+}) {
+  const safeProgress = Math.max(0, Math.min(100, progress));
+  const radius = 16;
+  const circumference = 2 * Math.PI * radius;
+  const dashOffset = circumference - (safeProgress / 100) * circumference;
+
+  return (
+    <span className="relative grid h-full w-full place-items-center">
+      {loading || retryable ? (
+        <svg
+          className={`pointer-events-none absolute inset-0 h-full w-full -rotate-90 ${
+            loading && indeterminate ? 'animate-spin' : ''
+          }`}
+          viewBox="0 0 42 42"
+          aria-hidden="true"
+        >
+          <circle
+            cx="21"
+            cy="21"
+            r={radius}
+            fill="none"
+            stroke="rgba(255,255,255,0.28)"
+            strokeWidth="2.2"
+          />
+          {loading ? (
+            indeterminate ? (
+              <circle
+                cx="21"
+                cy="21"
+                r={radius}
+                fill="none"
+                stroke="rgba(255,255,255,0.95)"
+                strokeWidth="2.6"
+                strokeLinecap="round"
+                strokeDasharray={`${circumference * 0.3} ${circumference}`}
+              />
+            ) : (
+              <circle
+                cx="21"
+                cy="21"
+                r={radius}
+                fill="none"
+                stroke="rgba(255,255,255,0.95)"
+                strokeWidth="2.6"
+                strokeLinecap="round"
+                strokeDasharray={circumference}
+                strokeDashoffset={dashOffset}
+              />
+            )
+          ) : (
+            <circle
+              cx="21"
+              cy="21"
+              r={radius}
+              fill="none"
+              stroke="rgba(255,255,255,0.95)"
+              strokeWidth="2.6"
+              strokeLinecap="round"
+              strokeDasharray={`${circumference * 0.24} ${circumference}`}
+            />
+          )}
+        </svg>
+      ) : null}
+
+      {loading ? (
+        <span className="relative block h-[14px] w-[14px]">
+          <span className="absolute left-1/2 top-0 h-full w-[2px] -translate-x-1/2 rotate-45 rounded-full bg-current" />
+          <span className="absolute left-1/2 top-0 h-full w-[2px] -translate-x-1/2 -rotate-45 rounded-full bg-current" />
+        </span>
+      ) : manual ? (
+        <span className="relative block h-[14px] w-[14px]">
+          <span className="absolute left-1/2 top-[1px] h-[8px] w-[2px] -translate-x-1/2 rounded-full bg-current" />
+          <span className="absolute left-1/2 top-[7px] h-[6px] w-[6px] -translate-x-1/2 rotate-45 border-b-[2px] border-r-[2px] border-current" />
+          <span className="absolute left-1/2 bottom-[-1px] h-[2px] w-[8px] -translate-x-1/2 rounded-full bg-current" />
+        </span>
+      ) : retryable ? (
+        <span className="relative block h-[14px] w-[14px]">
+          <span className="absolute left-1/2 top-[1px] h-[7px] w-[2px] -translate-x-1/2 rounded-full bg-current" />
+          <span className="absolute left-1/2 top-[5px] h-[7px] w-[7px] -translate-x-1/2 rotate-45 border-b-[2px] border-r-[2px] border-current" />
+        </span>
+      ) : (
+        idleIcon
+      )}
+    </span>
+  );
+}
+
 function FileMessageBubble({
   fileItem,
   createdAt,
   isRead,
+  status,
   isOwn,
   isEdited,
   hideTail = false,
@@ -1278,23 +1472,30 @@ function FileMessageBubble({
     kind: 'file',
     sizeBytes: fileItem.sizeBytes,
     priority: isInViewport ? 74 : 10,
-    autoStart: true,
+    autoStart: isInViewport,
     managed: shouldManageFileMedia,
     inViewport: isInViewport,
   });
 
   const resolvedFileUrl =
     (shouldManageFileMedia ? fileDownload.resolvedUrl : fileItem.resolvedUrl) || '';
-  const downloadPhase = fileDownload.phase;
-  const isDownloadReady = !uploadState && !!resolvedFileUrl && downloadPhase === 'ready';
+  const managedPhase = toManagedDownloadPhase(
+    fileDownload.phase,
+    fileDownload.snapshot.manual
+  );
+  const isDownloadReady = !uploadState && !!resolvedFileUrl && (!shouldManageFileMedia || managedPhase === 'ready');
   const isDownloadLoading =
     !uploadState &&
     shouldManageFileMedia &&
-    (downloadPhase === 'queued' || downloadPhase === 'downloading');
+    managedPhase === 'loading';
+  const isDownloadManual =
+    !uploadState &&
+    shouldManageFileMedia &&
+    managedPhase === 'manual';
   const isDownloadRetryable =
     !uploadState &&
     shouldManageFileMedia &&
-    (downloadPhase === 'error' || downloadPhase === 'canceled' || downloadPhase === 'paused');
+    (managedPhase === 'error' || managedPhase === 'canceled');
 
   const timeText = formatMessageTime(createdAt);
   const sizeText = formatFileSize(fileItem.sizeBytes);
@@ -1307,6 +1508,8 @@ function FileMessageBubble({
       ? fileDownload.indeterminate
         ? 'loading'
         : `${Math.max(0, Math.min(100, Math.round(fileDownload.progress)))}%`
+      : isDownloadManual
+        ? 'tap to load'
       : isDownloadRetryable
         ? 'tap to retry'
         : '';
@@ -1339,11 +1542,15 @@ function FileMessageBubble({
       return;
     }
     if (isDownloadRetryable) {
-      if (downloadPhase === 'error') {
+      if (managedPhase === 'error') {
         fileDownload.retry();
       } else {
         fileDownload.start();
       }
+      return;
+    }
+    if (isDownloadManual) {
+      fileDownload.start();
       return;
     }
     if (isDownloadLoading) {
@@ -1355,13 +1562,19 @@ function FileMessageBubble({
     ? 'Cancel upload'
     : isDownloadLoading
       ? 'Cancel download'
+      : isDownloadManual
+        ? 'Download'
       : isDownloadRetryable
         ? 'Retry download'
         : 'Open file';
 
-  const previewUrl = fileItem.previewUrl || fileItem.strippedPreviewUrl;
-  const previewVisible = fileItem.isImageFile && (previewUrl || isDownloadReady);
-  const previewSrc = isDownloadReady ? resolvedFileUrl : previewUrl || '';
+  const previewBaseSrc = fileItem.previewUrl || fileItem.strippedPreviewUrl || '';
+  const fullPreviewSrc = isDownloadReady ? resolvedFileUrl : '';
+  const previewVisible = fileItem.isImageFile && (!!previewBaseSrc || !!fullPreviewSrc);
+  const [isFullPreviewVisible, setIsFullPreviewVisible] = useState(false);
+  useEffect(() => {
+    setIsFullPreviewVisible(false);
+  }, [fullPreviewSrc]);
 
   return (
     <div ref={viewportRef}>
@@ -1373,17 +1586,42 @@ function FileMessageBubble({
           aria-label={actionLabel}
         >
           <div className="relative h-[72px] w-[72px] shrink-0 overflow-hidden rounded-[14px] bg-black/24">
-            {previewVisible && previewSrc ? (
-              <img
-                src={previewSrc}
-                alt={fileItem.fileName}
-                className={`h-full w-full object-cover transition-[filter,opacity] duration-300 ${
-                  isDownloadReady ? 'opacity-100 blur-0' : 'opacity-90 blur-[2px]'
-                }`}
-                loading="lazy"
-                decoding="async"
-                draggable={false}
-              />
+            {previewVisible ? (
+              <>
+                {previewBaseSrc ? (
+                  <img
+                    src={previewBaseSrc}
+                    alt=""
+                    aria-hidden="true"
+                    className={`h-full w-full object-cover transition-[filter,opacity] duration-300 ${
+                      isFullPreviewVisible
+                        ? 'opacity-0 blur-[2px]'
+                        : 'opacity-95 blur-[2px]'
+                    }`}
+                    loading="lazy"
+                    decoding="async"
+                    draggable={false}
+                  />
+                ) : (
+                  <span
+                    aria-hidden="true"
+                    className="absolute inset-0 bg-[#1f2129]"
+                  />
+                )}
+                {fullPreviewSrc ? (
+                  <img
+                    src={fullPreviewSrc}
+                    alt={fileItem.fileName}
+                    className={`absolute inset-0 h-full w-full object-cover transition-[filter,opacity] duration-300 ${
+                      isFullPreviewVisible ? 'opacity-100 blur-0' : 'opacity-0 blur-[2px]'
+                    }`}
+                    loading="lazy"
+                    decoding="async"
+                    draggable={false}
+                    onLoad={() => setIsFullPreviewVisible(true)}
+                  />
+                ) : null}
+              </>
             ) : (
               <div className="grid h-full w-full place-items-center">
                 <span className="grid h-[42px] w-[42px] place-items-center rounded-full bg-[#5ba1df] text-white">
@@ -1408,14 +1646,14 @@ function FileMessageBubble({
               isOwn ? 'bg-white/20 text-white' : 'bg-black/18 text-white/95'
             }`}
           >
-            {isDownloadLoading || uploadState ? (
-              <span className="relative block h-[14px] w-[14px]">
-                <span className="absolute left-1/2 top-0 h-full w-[2px] -translate-x-1/2 rotate-45 rounded-full bg-current" />
-                <span className="absolute left-1/2 top-0 h-full w-[2px] -translate-x-1/2 -rotate-45 rounded-full bg-current" />
-              </span>
-            ) : (
-              <DownloadIcon size={16} strokeWidth={2.3} />
-            )}
+            <InlineDownloadControl
+              loading={isDownloadLoading || !!uploadState}
+              manual={isDownloadManual}
+              retryable={isDownloadRetryable}
+              progress={uploadState ? uploadState.progress : fileDownload.progress}
+              indeterminate={uploadState ? false : fileDownload.indeterminate}
+              idleIcon={<DownloadIcon size={16} strokeWidth={2.3} />}
+            />
           </span>
         </button>
 
@@ -1428,11 +1666,17 @@ function FileMessageBubble({
           <span>{timeText}</span>
           {isOwn ? (
             <span className="ml-[4px] inline-flex h-[12px] w-[12px] items-center justify-center">
-              <CheckCheckIcon
-                size={14}
-                strokeWidth={2.25}
-                className={`origin-center scale-[1.85] ${isRead ? 'text-[#d8fff0]' : 'text-white/72'}`}
-              />
+              {status === 'pending' ? (
+                <span className="h-3 w-3 animate-pulse rounded-full border border-white/82" />
+              ) : status === 'failed' ? (
+                <span className="text-[14px] leading-none text-[#ffb0ba]">!</span>
+              ) : (
+                <CheckCheckIcon
+                  size={14}
+                  strokeWidth={2.25}
+                  className={`origin-center scale-[1.85] ${isRead ? 'text-[#d8fff0]' : 'text-white/72'}`}
+                />
+              )}
             </span>
           ) : null}
         </div>
@@ -1450,6 +1694,7 @@ function VoiceMessageBubble({
   sizeBytes,
   createdAt,
   isRead,
+  status,
   isOwn,
   isEdited,
   hideTail = false,
@@ -1467,12 +1712,28 @@ function VoiceMessageBubble({
     kind: 'audio',
     sizeBytes,
     priority: isInViewport ? 72 : 8,
-    autoStart: true,
+    autoStart: isInViewport,
     managed: shouldManageVoiceMedia,
     inViewport: isInViewport,
   });
   const playbackFileUrl =
     (shouldManageVoiceMedia ? voiceDownload.resolvedUrl : fileUrl) || '';
+  const managedVoicePhase = toManagedDownloadPhase(
+    voiceDownload.phase,
+    voiceDownload.snapshot.manual
+  );
+  const isVoiceDownloadLoading =
+    shouldManageVoiceMedia &&
+    !playbackFileUrl &&
+    managedVoicePhase === 'loading';
+  const isVoiceDownloadManual =
+    shouldManageVoiceMedia &&
+    !playbackFileUrl &&
+    managedVoicePhase === 'manual';
+  const isVoiceDownloadRetryable =
+    shouldManageVoiceMedia &&
+    !playbackFileUrl &&
+    (managedVoicePhase === 'error' || managedVoicePhase === 'canceled');
   const [isPlaying, setIsPlaying] = useState(false);
   const [durationSec, setDurationSec] = useState(0);
   const [currentSec, setCurrentSec] = useState(0);
@@ -1704,9 +1965,32 @@ function VoiceMessageBubble({
   const timeText = formatMessageTime(createdAt);
   const durationText = formatDuration(isPlaying ? currentSec : durationSec);
   const sizeText = formatFileSize(sizeBytes);
+  const voiceStatusText = playbackFileUrl
+    ? durationText
+    : shouldManageVoiceMedia
+      ? isVoiceDownloadManual
+        ? 'Tap to load'
+        : isVoiceDownloadRetryable
+          ? 'Tap to retry'
+          : voiceDownload.indeterminate
+            ? 'Loading...'
+            : `Loading ${Math.max(0, Math.min(100, Math.round(voiceDownload.progress)))}%`
+      : 'Preparing';
 
   const togglePlayback = async () => {
-    if (!playbackFileUrl) return;
+    if (!playbackFileUrl) {
+      if (!shouldManageVoiceMedia) return;
+      if (isVoiceDownloadLoading) {
+        voiceDownload.cancel();
+        return;
+      }
+      if (managedVoicePhase === 'error') {
+        voiceDownload.retry();
+        return;
+      }
+      voiceDownload.start();
+      return;
+    }
     const audio = audioRef.current;
     if (!audio) return;
 
@@ -1793,10 +2077,35 @@ function VoiceMessageBubble({
           type="button"
           onClick={togglePlayback}
           className={playButtonClass}
-          disabled={!playbackFileUrl}
-          aria-label={isPlaying ? 'Pause voice message' : 'Play voice message'}
+          disabled={!playbackFileUrl && !shouldManageVoiceMedia}
+          aria-label={
+            !playbackFileUrl
+              ? isVoiceDownloadLoading
+                ? 'Cancel voice download'
+                : isVoiceDownloadRetryable
+                  ? 'Retry voice download'
+                  : 'Download voice message'
+              : isPlaying
+                ? 'Pause voice message'
+                : 'Play voice message'
+          }
         >
-          {isPlaying ? <PauseIcon size={19} /> : <PlayIcon size={19} className="translate-x-[1px]" />}
+          {!playbackFileUrl ? (
+            <span className="h-[18px] w-[18px]">
+              <InlineDownloadControl
+                loading={isVoiceDownloadLoading}
+                manual={isVoiceDownloadManual}
+                retryable={isVoiceDownloadRetryable}
+                progress={voiceDownload.progress}
+                indeterminate={voiceDownload.indeterminate}
+                idleIcon={<DownloadIcon size={17} strokeWidth={2.2} />}
+              />
+            </span>
+          ) : isPlaying ? (
+            <PauseIcon size={19} />
+          ) : (
+            <PlayIcon size={19} className="translate-x-[1px]" />
+          )}
         </button>
 
         <div className="min-w-0 flex-1">
@@ -1821,11 +2130,7 @@ function VoiceMessageBubble({
 
           <div className={`mt-[5px] flex items-center justify-between text-[12px] ${isOwn ? 'text-white/78' : 'text-white/62'}`}>
             <span>
-              {playbackFileUrl
-                ? durationText
-                : shouldManageVoiceMedia
-                  ? 'Loading'
-                  : 'Preparing'}
+              {voiceStatusText}
               {sizeText ? ` | ${sizeText}` : ''}
             </span>
             <span className="inline-flex items-center gap-1">
@@ -1837,11 +2142,17 @@ function VoiceMessageBubble({
               {timeText}
               {isOwn ? (
                 <span className="ml-[4px] inline-flex h-[11px] w-[11px] items-center justify-center">
-                  <CheckCheckIcon
-                    size={13}
-                    strokeWidth={2.2}
-                    className={`origin-center scale-[1.9] ${isRead ? 'text-[#d8fff0]' : 'text-white/65'}`}
-                  />
+                  {status === 'pending' ? (
+                    <span className="h-3 w-3 animate-pulse rounded-full border border-white/80" />
+                  ) : status === 'failed' ? (
+                    <span className="text-[14px] leading-none text-[#ffb0ba]">!</span>
+                  ) : (
+                    <CheckCheckIcon
+                      size={13}
+                      strokeWidth={2.2}
+                      className={`origin-center scale-[1.9] ${isRead ? 'text-[#d8fff0]' : 'text-white/65'}`}
+                    />
+                  )}
                 </span>
               ) : null}
             </span>
@@ -1863,35 +2174,6 @@ function VoiceMessageBubble({
           )}
         </button>
       </div>
-
-      {shouldManageVoiceMedia && !playbackFileUrl ? (
-        <div className={`mt-2 flex items-center justify-between text-[12px] ${isOwn ? 'text-white/72' : 'text-white/58'}`}>
-          <span>
-            {voiceDownload.phase === 'error'
-              ? 'Download error'
-              : voiceDownload.phase === 'canceled' || voiceDownload.phase === 'paused'
-                ? 'Download paused'
-                : `Loading ${voiceDownload.indeterminate ? '...' : `${voiceDownload.progress}%`}`}
-          </span>
-          <button
-            type="button"
-            onClick={() => {
-              if (voiceDownload.phase === 'error') {
-                voiceDownload.retry();
-              } else if (voiceDownload.phase === 'canceled' || voiceDownload.phase === 'paused') {
-                voiceDownload.start();
-              } else {
-                voiceDownload.cancel();
-              }
-            }}
-            className={`rounded-[8px] px-2 py-[2px] text-[11px] font-[600] ${isOwn ? 'bg-white/18 text-white hover:bg-white/26' : 'bg-white/12 text-white/90 hover:bg-white/18'}`}
-          >
-            {voiceDownload.phase === 'error' || voiceDownload.phase === 'canceled' || voiceDownload.phase === 'paused'
-              ? 'Retry'
-              : 'Cancel'}
-          </button>
-        </div>
-      ) : null}
 
       {transcript ? <div className={transcriptClass}>{transcript}</div> : null}
       {!transcript && transcriptionError ? <div className={transcriptErrorClass}>{transcriptionError}</div> : null}
@@ -1958,6 +2240,135 @@ function CircleUploadOverlay({
   );
 }
 
+type CircleManagedDownloadPhase = 'loading' | 'manual' | 'canceled' | 'error';
+
+function toCircleManagedDownloadPhase(
+  phase: string,
+  manual: boolean
+): CircleManagedDownloadPhase {
+  if (phase === 'error') return 'error';
+  if (phase === 'paused') return manual ? 'manual' : 'canceled';
+  if (phase === 'canceled') return 'canceled';
+  return 'loading';
+}
+
+function CircleManagedDownloadOverlay({
+  phase,
+  progress,
+  indeterminate,
+  onCancel,
+  onAction,
+}: {
+  phase: CircleManagedDownloadPhase;
+  progress: number;
+  indeterminate: boolean;
+  onCancel: () => void;
+  onAction: () => void;
+}) {
+  const safeProgress = Math.max(0, Math.min(100, progress));
+  const radius = 17;
+  const circumference = 2 * Math.PI * radius;
+  const dashOffset = circumference - (safeProgress / 100) * circumference;
+  const loading = phase === 'loading';
+  const manual = phase === 'manual' || phase === 'canceled';
+  const retryable = phase === 'error';
+
+  return (
+    <div className="pointer-events-none absolute inset-0 z-30 grid place-items-center rounded-full bg-black/26 backdrop-blur-[1px]">
+      <button
+        type="button"
+        aria-label={
+          loading
+            ? 'Cancel media loading'
+            : manual
+              ? 'Download media'
+              : 'Retry media loading'
+        }
+        onClick={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          if (loading) {
+            onCancel();
+          } else {
+            onAction();
+          }
+        }}
+        className="pointer-events-auto relative grid h-[44px] w-[44px] place-items-center rounded-full bg-black/64 text-white shadow-[0_10px_22px_rgba(0,0,0,0.48)] transition-colors hover:bg-black/78"
+      >
+        <svg
+          className={`pointer-events-none absolute inset-0 h-full w-full -rotate-90 ${loading && indeterminate ? 'animate-spin' : ''}`}
+          viewBox="0 0 44 44"
+          aria-hidden="true"
+        >
+          <circle
+            cx="22"
+            cy="22"
+            r={radius}
+            fill="none"
+            stroke="rgba(255,255,255,0.32)"
+            strokeWidth="2.3"
+          />
+          {loading ? (
+            indeterminate ? (
+              <circle
+                cx="22"
+                cy="22"
+                r={radius}
+                fill="none"
+                stroke="rgba(255,255,255,0.96)"
+                strokeWidth="2.7"
+                strokeLinecap="round"
+                strokeDasharray={`${circumference * 0.3} ${circumference}`}
+              />
+            ) : (
+              <circle
+                cx="22"
+                cy="22"
+                r={radius}
+                fill="none"
+                stroke="rgba(255,255,255,0.96)"
+                strokeWidth="2.7"
+                strokeLinecap="round"
+                strokeDasharray={circumference}
+                strokeDashoffset={dashOffset}
+              />
+            )
+          ) : retryable ? (
+            <circle
+              cx="22"
+              cy="22"
+              r={radius}
+              fill="none"
+              stroke="rgba(255,255,255,0.96)"
+              strokeWidth="2.7"
+              strokeLinecap="round"
+              strokeDasharray={`${circumference * 0.24} ${circumference}`}
+            />
+          ) : null}
+        </svg>
+
+        {loading ? (
+          <span className="relative block h-[15px] w-[15px]">
+            <span className="absolute left-1/2 top-0 h-full w-[2px] -translate-x-1/2 rotate-45 rounded-full bg-white" />
+            <span className="absolute left-1/2 top-0 h-full w-[2px] -translate-x-1/2 -rotate-45 rounded-full bg-white" />
+          </span>
+        ) : manual ? (
+          <span className="relative block h-[15px] w-[15px]">
+            <span className="absolute left-1/2 top-[1px] h-[8px] w-[2px] -translate-x-1/2 rounded-full bg-white" />
+            <span className="absolute left-1/2 top-[7px] h-[6px] w-[6px] -translate-x-1/2 rotate-45 border-b-[2px] border-r-[2px] border-white" />
+            <span className="absolute left-1/2 bottom-[-1px] h-[2px] w-[8px] -translate-x-1/2 rounded-full bg-white" />
+          </span>
+        ) : (
+          <span className="relative block h-[15px] w-[15px]">
+            <span className="absolute left-1/2 top-[1px] h-[8px] w-[2px] -translate-x-1/2 rounded-full bg-white" />
+            <span className="absolute left-1/2 top-[6px] h-[8px] w-[8px] -translate-x-1/2 rotate-45 border-b-[2px] border-r-[2px] border-white" />
+          </span>
+        )}
+      </button>
+    </div>
+  );
+}
+
 function CircleMessageBubble({
   mediaId,
   author,
@@ -2007,19 +2418,27 @@ function CircleMessageBubble({
     (shouldManageCircleMedia ? circleDownload.resolvedUrl : fileUrl) || null;
   const mediaSourceForPoster = resolvedFileUrl || fileUrl || '';
   const cachedPosterUrl = getCachedVideoPosterUrl(mediaSourceForPoster);
+  const hasHighQualityPoster = !!(previewUrl || generatedPosterUrl || cachedPosterUrl);
   const resolvedPosterUrl =
-    previewUrl || strippedPreviewUrl || generatedPosterUrl || cachedPosterUrl;
+    previewUrl || generatedPosterUrl || cachedPosterUrl || strippedPreviewUrl;
+  const usesOnlyStrippedPoster = !!(resolvedPosterUrl && strippedPreviewUrl && !hasHighQualityPoster);
+  const downloadPhase = toCircleManagedDownloadPhase(
+    circleDownload.phase,
+    circleDownload.snapshot.manual
+  );
   const resolvedCircleAspectRatio =
     getCachedVideoAspectRatio(mediaSourceForPoster) ||
     posterAspectRatio ||
     1;
-  const mediaPhase: 'processing' | 'ready' | 'error' = hasUploadState
+  const mediaPhase: 'processing' | 'ready' | 'manual' | 'error' = hasUploadState
     ? 'processing'
     : hasPlaybackError || circleDownload.phase === 'error'
       ? 'error'
       : resolvedFileUrl
         ? 'ready'
-        : 'processing';
+        : shouldManageCircleMedia && downloadPhase === 'manual'
+          ? 'manual'
+          : 'processing';
   const circleDisplaySize = 'min(36vw, 280px)';
   const circleSize = 176;
   const ringStrokeWidth = 4;
@@ -2358,6 +2777,8 @@ function CircleMessageBubble({
       ? duration
       : mediaPhase === 'error'
         ? 'Not ready'
+        : mediaPhase === 'manual'
+          ? 'Tap to load'
         : shouldManageCircleMedia
           ? `Loading ${circleDownload.indeterminate ? '...' : `${circleDownload.progress}%`}`
           : 'Preparing';
@@ -2405,7 +2826,7 @@ function CircleMessageBubble({
             alt="Video note preview"
             className={`pointer-events-none absolute inset-0 h-full w-full rounded-full object-cover transition-opacity duration-200 ${
               mediaPhase === 'ready' && showVideoLayer ? 'opacity-0' : 'opacity-100'
-            }`}
+            } ${usesOnlyStrippedPoster ? 'scale-[1.04] blur-[10px]' : ''}`}
             loading="lazy"
             decoding="async"
             draggable={false}
@@ -2418,11 +2839,7 @@ function CircleMessageBubble({
             }`}
             style={{ aspectRatio: resolvedCircleAspectRatio }}
           >
-            <div className="absolute inset-0 animate-pulse bg-[radial-gradient(circle_at_25%_20%,rgba(151,132,226,0.30),transparent_58%)]" />
-            <div
-              className="absolute inset-0 animate-pulse bg-[radial-gradient(circle_at_78%_74%,rgba(75,64,125,0.55),transparent_62%)]"
-              style={{ animationDelay: '700ms' }}
-            />
+            <div className="absolute inset-0 animate-pulse bg-white/5" />
           </div>
         )}
 
@@ -2468,32 +2885,19 @@ function CircleMessageBubble({
           />
         ) : null}
         {!hasUploadState && shouldManageCircleMedia && !resolvedFileUrl ? (
-          <div className="absolute inset-0 z-30 grid place-items-center">
-            <button
-              type="button"
-              onClick={(event) => {
-                event.preventDefault();
-                event.stopPropagation();
-                if (circleDownload.phase === 'error') {
-                  circleDownload.retry();
-                } else if (
-                  circleDownload.phase === 'canceled' ||
-                  circleDownload.phase === 'paused'
-                ) {
-                  circleDownload.start();
-                } else {
-                  circleDownload.cancel();
-                }
-              }}
-              className="rounded-full bg-black/62 px-3 py-1.5 text-[12px] font-[700] text-white shadow-[0_8px_16px_rgba(0,0,0,0.35)] transition-colors hover:bg-black/76"
-            >
-              {circleDownload.phase === 'error' ||
-              circleDownload.phase === 'canceled' ||
-              circleDownload.phase === 'paused'
-                ? 'Retry'
-                : 'Cancel'}
-            </button>
-          </div>
+          <CircleManagedDownloadOverlay
+            phase={downloadPhase}
+            progress={circleDownload.progress}
+            indeterminate={circleDownload.indeterminate}
+            onCancel={() => circleDownload.cancel()}
+            onAction={() => {
+              if (circleDownload.phase === 'error') {
+                circleDownload.retry();
+              } else {
+                circleDownload.start();
+              }
+            }}
+          />
         ) : null}
 
       </button>
@@ -2536,6 +2940,8 @@ function CircleMessageBubble({
           <span className="ml-[4px] inline-flex">
             {status === 'pending' ? (
               <span className="h-3 w-3 animate-pulse rounded-full border border-white/80" />
+            ) : status === 'failed' ? (
+              <span className="text-[14px] leading-none text-[#ffb0ba]">!</span>
             ) : (
               <CheckCheckIcon
                 size={13}
@@ -2560,6 +2966,7 @@ function ChatMessageRow({
   userId,
   bubbleMaxWidthPx,
   uploadingImages,
+  resolvePendingUploadPreviewUrl,
   onCircleMediaError,
   isCircleMuted,
   onToggleCircleMuted,
@@ -2578,6 +2985,7 @@ function ChatMessageRow({
   userId: string;
   bubbleMaxWidthPx: number;
   uploadingImages?: ChatMessageListProps['uploadingImages'];
+  resolvePendingUploadPreviewUrl?: (localId: string, attachmentIndex: number, file?: File) => string;
   onCircleMediaError?: () => void;
   isCircleMuted: boolean;
   onToggleCircleMuted: () => void;
@@ -2597,6 +3005,19 @@ function ChatMessageRow({
   const time = formatMessageTime(message.createdAt);
   const isRead = isMessageRead(message);
   const attachments = getMessageAttachments(message);
+  const messageLocalId =
+    message.localId || (typeof message.messageId === 'string' ? message.messageId : undefined);
+  const resolvePendingUploadUrlByAttachmentIndex = (attachmentIndex: number) => {
+    if (
+      !resolvePendingUploadPreviewUrl ||
+      !messageLocalId ||
+      attachmentIndex < 0
+    ) {
+      return '';
+    }
+    const uploadState = uploadingImages?.get(`${messageLocalId}-${attachmentIndex}`);
+    return resolvePendingUploadPreviewUrl(messageLocalId, attachmentIndex, uploadState?.file);
+  };
   const textContent = message.content || '';
   const hasTextContent = textContent.trim().length > 0;
   const fallbackParsed = buildMessageTextAndEntities(textContent);
@@ -2622,8 +3043,16 @@ function ChatMessageRow({
         })()
       : undefined;
   const circleAttachment = circleAttachmentItem?.attachment;
-  const mediaAttachmentItems = toVisualMediaAttachmentItems(message.messageType, attachments);
-  const fileAttachmentItems = toFileAttachmentItems(message.messageType, attachments);
+  const mediaAttachmentItems = toVisualMediaAttachmentItems(
+    message.messageType,
+    attachments,
+    resolvePendingUploadUrlByAttachmentIndex
+  );
+  const fileAttachmentItems = toFileAttachmentItems(
+    message.messageType,
+    attachments,
+    resolvePendingUploadUrlByAttachmentIndex
+  );
   const groupServiceMessageType = toGroupServiceMessageType(message.messageType);
   const isCircleMessage = message.messageType === 'circle' && !!circleAttachment;
   const mediaId = `${message.messageType}-${String(message.messageId)}`;
@@ -2650,18 +3079,19 @@ function ChatMessageRow({
   }`;
 
   const voiceUrl = voiceAttachment ? resolveAttachmentUrl(voiceAttachment) : '';
-  const circleUrl = circleAttachmentItem?.resolvedUrl || '';
+  const circlePendingPreviewUrl = circleAttachmentItem
+    ? resolvePendingUploadUrlByAttachmentIndex(circleAttachmentItem.attachmentIndex)
+    : '';
+  const circleUrl = circleAttachmentItem?.resolvedUrl || circlePendingPreviewUrl || '';
   const circlePreviewUrl =
     circleAttachment && typeof circleAttachment.thumbnailUrl === 'string'
       ? resolveAttachmentPreviewUrl(circleAttachment.thumbnailUrl) || undefined
-      : undefined;
+      : circlePendingPreviewUrl || undefined;
   const circleStrippedPreviewUrl =
     circleAttachment && typeof circleAttachment.strippedThumbnailUrl === 'string'
       ? resolveAttachmentPreviewUrl(circleAttachment.strippedThumbnailUrl) || undefined
       : undefined;
   const mediaItems = mediaAttachmentItems.map((item) => item.mediaItem);
-  const messageLocalId =
-    message.localId || (typeof message.messageId === 'string' ? message.messageId : undefined);
   const imageUploadStates = mediaAttachmentItems.map((item) => {
     if (!messageLocalId || !uploadingImages) {
       return undefined;
@@ -2724,6 +3154,7 @@ function ChatMessageRow({
             sizeBytes={voiceAttachment.sizeBytes}
             createdAt={message.createdAt}
             isRead={isRead}
+            status={message.status}
             isOwn={isOwn}
             isEdited={isEdited}
             hideTail={hideTail}
@@ -2761,6 +3192,7 @@ function ChatMessageRow({
                 fileItem={fileItem}
                 createdAt={message.createdAt}
                 isRead={isRead}
+                status={message.status}
                 isOwn={isOwn}
                 isEdited={isEdited}
                 hideTail={hideTail && index === fileAttachmentItems.length - 1}
@@ -2781,6 +3213,7 @@ function ChatMessageRow({
             time={time}
             isOwn={isOwn}
             isRead={isRead}
+            status={message.status}
             isEdited={isEdited}
             replyPreview={replyPreview}
             hideTail={hideTail}
@@ -2810,6 +3243,7 @@ function ChatMessageRow({
             time={time}
             isOwn={isOwn}
             isRead={isRead}
+            status={message.status}
             isEdited={isEdited}
             replyPreview={replyPreview}
             hideTail={hideTail}
@@ -2837,6 +3271,7 @@ function ChatMessageRow({
             time={time}
             isOwn={isOwn}
             isRead={isRead}
+            status={message.status}
             isEdited={isEdited}
             replyPreview={replyPreview}
             hideTail={hideTail}
@@ -2882,6 +3317,211 @@ function ChatMessageRow({
   );
 }
 
+function ChatAlbumRow({
+  cluster,
+  userId,
+  bubbleMaxWidthPx,
+  uploadingImages,
+  resolvePendingUploadPreviewUrl,
+  resolveUserName,
+  resolveUserAvatar,
+  onCancelPendingUpload,
+  isSearchMatch,
+  isSearchActive,
+  hideTail,
+  showEdgeAvatar,
+  rowBottomGapPx,
+  onOpenMediaViewer,
+}: {
+  cluster: AlbumRenderCluster;
+  userId: string;
+  bubbleMaxWidthPx: number;
+  uploadingImages?: ChatMessageListProps['uploadingImages'];
+  resolvePendingUploadPreviewUrl?: (localId: string, attachmentIndex: number, file?: File) => string;
+  resolveUserName: (userId: string) => string;
+  resolveUserAvatar?: (userId: string) => string | undefined;
+  onCancelPendingUpload?: (localId: string, attachmentIndex: number) => void;
+  isSearchMatch: boolean;
+  isSearchActive: boolean;
+  hideTail: boolean;
+  showEdgeAvatar: boolean;
+  rowBottomGapPx: number;
+  onOpenMediaViewer?: (payload: OpenMediaViewerPayload) => void;
+}) {
+  const { messages: albumMessages } = cluster;
+  const lastMessage = albumMessages[albumMessages.length - 1];
+  const captionSource = albumMessages.find((message) => (message.content || '').trim().length > 0);
+  const replySource = albumMessages.find((message) => !!message.replyToMessage);
+  const captionText = captionSource?.content || '';
+  const hasCaptionText = captionText.trim().length > 0;
+  const captionParsed = buildMessageTextAndEntities(captionText);
+  const captionContent =
+    captionSource?.entities && captionSource.entities.length > 0 ? captionText : captionParsed.content;
+  const captionEntities =
+    captionSource?.entities && captionSource.entities.length > 0
+      ? captionSource.entities
+      : captionParsed.entities;
+  const isOwn = lastMessage.senderId === userId;
+  const isRead = isMessageRead(lastMessage);
+  const isEdited = albumMessages.some((message) => !!message.edited);
+  const albumStatus: ChatMessage['status'] =
+    albumMessages.some((message) => message.status === 'failed')
+      ? 'failed'
+      : albumMessages.some((message) => message.status === 'pending')
+        ? 'pending'
+        : lastMessage.status;
+  const time = formatMessageTime(lastMessage.createdAt);
+  const edgeAvatarName =
+    lastMessage.senderDisplayName?.trim() ||
+    lastMessage.senderUsername?.trim() ||
+    resolveUserName(lastMessage.senderId) ||
+    lastMessage.senderId.slice(0, 8);
+  const edgeAvatarUrl = resolveUserAvatar?.(lastMessage.senderId);
+  const edgeAvatarText = initialOf(edgeAvatarName);
+  const edgeAvatarStyle = edgeAvatarUrl ? undefined : { background: hashColor(lastMessage.senderId) };
+  const rowHighlightClass = `rounded-[22px] transition-shadow ${
+    isSearchActive
+      ? 'shadow-[0_0_0_2px_rgba(179,156,255,0.95),0_8px_24px_rgba(108,78,204,0.35)]'
+      : isSearchMatch
+        ? 'shadow-[0_0_0_1px_rgba(179,156,255,0.5)]'
+        : ''
+  }`;
+
+  const albumMediaReferences = albumMessages.flatMap((message) => {
+    const attachments = getMessageAttachments(message);
+    const messageLocalId =
+      message.localId || (typeof message.messageId === 'string' ? message.messageId : undefined);
+    const resolvePendingUploadUrlByAttachmentIndex = (attachmentIndex: number) => {
+      if (
+        !resolvePendingUploadPreviewUrl ||
+        !messageLocalId ||
+        attachmentIndex < 0
+      ) {
+        return '';
+      }
+      const uploadState = uploadingImages?.get(`${messageLocalId}-${attachmentIndex}`);
+      return resolvePendingUploadPreviewUrl(messageLocalId, attachmentIndex, uploadState?.file);
+    };
+
+    return toVisualMediaAttachmentItems(
+      message.messageType,
+      attachments,
+      resolvePendingUploadUrlByAttachmentIndex
+    ).map((item) => ({
+      message,
+      attachmentIndex: item.attachmentIndex,
+      mediaItem: item.mediaItem,
+      uploadState:
+        messageLocalId && uploadingImages
+          ? uploadingImages.get(`${messageLocalId}-${item.attachmentIndex}`)
+          : undefined,
+      localId: messageLocalId,
+    }));
+  });
+
+  if (albumMediaReferences.length === 0) {
+    return null;
+  }
+
+  const mediaItems = albumMediaReferences.map((item) => item.mediaItem);
+  const uploadStates = albumMediaReferences.map((item) => item.uploadState);
+  const replyPreview: ReplyPreview | undefined = replySource?.replyToMessage
+    ? {
+        author:
+          replySource.replyToMessage.senderId === userId
+            ? 'You'
+            : resolveUserName(replySource.replyToMessage.senderId),
+        text: messagePreviewText(replySource.replyToMessage),
+      }
+    : undefined;
+
+  return (
+    <div
+      className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}
+      style={{ marginBottom: rowBottomGapPx }}
+    >
+      <div className={`${rowHighlightClass} relative`} style={{ maxWidth: bubbleMaxWidthPx }}>
+        {mediaItems.length > 1 ? (
+          <MultiImageBubble
+            mediaItems={mediaItems}
+            caption={hasCaptionText ? captionContent : ''}
+            captionEntities={hasCaptionText ? captionEntities : undefined}
+            bubbleMaxWidthPx={bubbleMaxWidthPx}
+            time={time}
+            isOwn={isOwn}
+            isRead={isRead}
+            status={albumStatus}
+            isEdited={isEdited}
+            replyPreview={replyPreview}
+            hideTail={hideTail}
+            uploadStates={uploadStates}
+            onCancelUploadAt={(visibleIndex) => {
+              if (!onCancelPendingUpload) return;
+              const item = albumMediaReferences[visibleIndex];
+              if (!item?.localId) return;
+              onCancelPendingUpload(item.localId, item.attachmentIndex);
+            }}
+            onOpenMediaAt={(visibleIndex) => {
+              if (!onOpenMediaViewer) return;
+              const item = albumMediaReferences[visibleIndex];
+              if (!item) return;
+              onOpenMediaViewer({
+                messageId: String(item.message.messageId),
+                attachmentIndex: item.attachmentIndex,
+              });
+            }}
+          />
+        ) : (
+          <SingleImageBubble
+            mediaItem={mediaItems[0]}
+            caption={hasCaptionText ? captionContent : ''}
+            captionEntities={hasCaptionText ? captionEntities : undefined}
+            bubbleMaxWidthPx={bubbleMaxWidthPx}
+            time={time}
+            isOwn={isOwn}
+            isRead={isRead}
+            status={albumStatus}
+            isEdited={isEdited}
+            replyPreview={replyPreview}
+            hideTail={hideTail}
+            uploadState={uploadStates[0]}
+            onCancelUpload={() => {
+              if (!onCancelPendingUpload) return;
+              const firstMedia = albumMediaReferences[0];
+              if (!firstMedia?.localId) return;
+              onCancelPendingUpload(firstMedia.localId, firstMedia.attachmentIndex);
+            }}
+            onOpenMedia={() => {
+              if (!onOpenMediaViewer) return;
+              const firstMedia = albumMediaReferences[0];
+              if (!firstMedia) return;
+              onOpenMediaViewer({
+                messageId: String(firstMedia.message.messageId),
+                attachmentIndex: firstMedia.attachmentIndex,
+              });
+            }}
+          />
+        )}
+
+        {showEdgeAvatar ? (
+          <span
+            className={`pointer-events-none absolute bottom-[-2px] z-10 grid h-[42px] w-[42px] place-items-center overflow-hidden rounded-full border border-black/35 text-[11px] font-[700] text-white shadow-[0_6px_12px_rgba(0,0,0,0.4)] ${
+              isOwn ? '-right-[50px]' : '-left-[50px]'
+            }`}
+            style={edgeAvatarStyle}
+          >
+            {edgeAvatarUrl ? (
+              <img src={edgeAvatarUrl} alt={edgeAvatarName} className="h-full w-full object-cover" />
+            ) : (
+              edgeAvatarText
+            )}
+          </span>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 export function ChatMessageList({
   messages,
   userId,
@@ -2900,18 +3540,57 @@ export function ChatMessageList({
   onDeleteMessage,
   onCopyMessage,
   onCancelPendingUpload,
+  onRetryMessage,
 }: ChatMessageListProps) {
   const [isCircleMuted, setIsCircleMuted] = useState(true);
-  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; message: ChatMessage } | null>(null);
+  const [contextMenu, setContextMenu] = useState<MessageContextMenuState | null>(null);
   const [mediaViewerIndex, setMediaViewerIndex] = useState<number | null>(null);
   const contextMenuRef = useRef<HTMLDivElement | null>(null);
   const hasInitializedMessagesRef = useRef(false);
   const previousMessageIdsRef = useRef<Set<string>>(new Set());
+  const pendingUploadPreviewUrlsRef = useRef<Map<string, PendingUploadPreviewEntry>>(new Map());
   const [enteringMessageIds, setEnteringMessageIds] = useState<Set<string>>(new Set());
   const matchedMessageIdSet = useMemo(() => new Set(matchedMessageIds), [matchedMessageIds]);
 
-  const rows = useMemo<MessageRow[]>(() => {
-    const output: MessageRow[] = [];
+  const resolvePendingUploadPreviewUrl = (
+    localId: string,
+    attachmentIndex: number,
+    file?: File
+  ) => {
+    if (typeof URL === 'undefined') {
+      return '';
+    }
+
+    const key = `${localId}-${attachmentIndex}`;
+    const existing = pendingUploadPreviewUrlsRef.current.get(key);
+    if (existing) {
+      existing.lastTouchedAt = Date.now();
+      return existing.objectUrl;
+    }
+
+    if (!file) {
+      return '';
+    }
+
+    const fileType = (file.type || '').toLowerCase();
+    const previewableType =
+      fileType.startsWith('image/') ||
+      fileType.startsWith('video/') ||
+      fileType.startsWith('audio/');
+    if (!previewableType) {
+      return '';
+    }
+
+    const objectUrl = URL.createObjectURL(file);
+    pendingUploadPreviewUrlsRef.current.set(key, {
+      objectUrl,
+      lastTouchedAt: Date.now(),
+    });
+    return objectUrl;
+  };
+
+  const rows = useMemo<ChatRenderRow[]>(() => {
+    const output: ChatRenderRow[] = [];
     let lastDateKey = '';
 
     for (const message of messages) {
@@ -2933,6 +3612,93 @@ export function ChatMessageList({
     }
 
     return output;
+  }, [messages]);
+
+  const {
+    albumClusterByStartMessageId,
+    hiddenAlbumMessageIds,
+    albumMessageIdsByStartMessageId,
+    albumLastMessageIdByStartMessageId,
+    albumContextMessageByStartMessageId,
+  } = useMemo(() => {
+    const clusterByStartMessageId = new Map<string, AlbumRenderCluster>();
+    const hiddenMessageIds = new Set<string>();
+    const messageIdsByStartMessageId = new Map<string, string[]>();
+    const lastMessageIdByStartMessageId = new Map<string, string>();
+    const contextMessageByStartMessageId = new Map<string, ChatMessage>();
+
+    for (let index = 0; index < messages.length; index += 1) {
+      const current = messages[index];
+      const currentId = String(current.messageId);
+      if (hiddenMessageIds.has(currentId)) {
+        continue;
+      }
+      if (!isAlbumGroupingCandidate(current)) {
+        continue;
+      }
+
+      const baseGroupingKey = normalizeGroupingKey(current.groupingKey);
+      if (!baseGroupingKey) {
+        continue;
+      }
+      const baseDateKey = new Date(current.createdAt).toDateString();
+      const groupedMessages: ChatMessage[] = [current];
+
+      let cursor = index + 1;
+      while (cursor < messages.length) {
+        const next = messages[cursor];
+        if (!isAlbumGroupingCandidate(next)) {
+          break;
+        }
+        if (next.senderId !== current.senderId) {
+          break;
+        }
+        if (normalizeGroupingKey(next.groupingKey) !== baseGroupingKey) {
+          break;
+        }
+        const nextDateKey = new Date(next.createdAt).toDateString();
+        if (nextDateKey !== baseDateKey) {
+          break;
+        }
+        groupedMessages.push(next);
+        cursor += 1;
+      }
+
+      if (groupedMessages.length < 2) {
+        continue;
+      }
+
+      const startMessageId = String(groupedMessages[0].messageId);
+      const lastMessageId = String(groupedMessages[groupedMessages.length - 1].messageId);
+      const hiddenIds = groupedMessages.slice(1).map((message) => String(message.messageId));
+      hiddenIds.forEach((id) => hiddenMessageIds.add(id));
+      const contextMessage =
+        groupedMessages.find((message) => (message.content || '').trim().length > 0) ??
+        groupedMessages[groupedMessages.length - 1];
+      const cluster: AlbumRenderCluster = {
+        startMessageId,
+        lastMessageId,
+        groupingKey: baseGroupingKey,
+        messages: groupedMessages,
+        hiddenMessageIds: hiddenIds,
+        contextMessage,
+      };
+      clusterByStartMessageId.set(startMessageId, cluster);
+      messageIdsByStartMessageId.set(
+        startMessageId,
+        groupedMessages.map((message) => String(message.messageId))
+      );
+      lastMessageIdByStartMessageId.set(startMessageId, lastMessageId);
+      contextMessageByStartMessageId.set(startMessageId, contextMessage);
+    }
+
+    return {
+      albumClusterByStartMessageId: clusterByStartMessageId,
+      hiddenAlbumMessageIds: hiddenMessageIds,
+      albumMessageIdsByStartMessageId: messageIdsByStartMessageId,
+      albumLastMessageIdByStartMessageId: lastMessageIdByStartMessageId,
+      albumContextMessageByStartMessageId: contextMessageByStartMessageId,
+    };
   }, [messages]);
 
   const bubbleVisualStateByMessageId = useMemo(() => {
@@ -3001,6 +3767,38 @@ export function ChatMessageList({
       setMediaViewerIndex(null);
     }
   }, [hasSelectedChat, onPlaybackStateChange]);
+
+  useEffect(() => {
+    const activeKeys = new Set<string>();
+    if (uploadingImages) {
+      for (const [uploadKey] of uploadingImages.entries()) {
+        activeKeys.add(uploadKey);
+      }
+    }
+    const now = Date.now();
+    const ORPHAN_PREVIEW_TTL_MS = 45_000;
+
+    for (const [uploadKey, entry] of pendingUploadPreviewUrlsRef.current.entries()) {
+      if (activeKeys.has(uploadKey)) {
+        continue;
+      }
+      if (now - entry.lastTouchedAt < ORPHAN_PREVIEW_TTL_MS) {
+        continue;
+      }
+      URL.revokeObjectURL(entry.objectUrl);
+      pendingUploadPreviewUrlsRef.current.delete(uploadKey);
+    }
+  }, [uploadingImages]);
+
+  useEffect(
+    () => () => {
+      for (const entry of pendingUploadPreviewUrlsRef.current.values()) {
+        URL.revokeObjectURL(entry.objectUrl);
+      }
+      pendingUploadPreviewUrlsRef.current.clear();
+    },
+    []
+  );
 
   useEffect(() => {
     if (mediaViewerIndex === null) return;
@@ -3081,6 +3879,24 @@ export function ChatMessageList({
     };
   }, [messages]);
 
+  const messageById = useMemo(() => {
+    const index = new Map<string, ChatMessage>();
+    for (const message of messages) {
+      index.set(String(message.messageId), message);
+    }
+    return index;
+  }, [messages]);
+
+  const contextAlbumMessageIds =
+    contextMenu?.albumMessageIds?.length && contextMenu.albumMessageIds.length > 0
+      ? contextMenu.albumMessageIds
+      : contextMenu
+        ? [contextMenu.message.messageId]
+        : [];
+  const contextAlbumMessages = contextAlbumMessageIds
+    .map((id) => messageById.get(String(id)))
+    .filter((message): message is ChatMessage => !!message);
+  const contextHasAlbumGroup = contextAlbumMessageIds.length > 1;
   const safeMenuLeft = contextMenu ? Math.min(contextMenu.x, window.innerWidth - 220) : 0;
   const safeMenuTop = contextMenu ? Math.min(contextMenu.y, window.innerHeight - 232) : 0;
   const canEdit =
@@ -3089,8 +3905,13 @@ export function ChatMessageList({
     typeof contextMenu.message.messageId === 'number';
   const canDelete =
     !!contextMenu &&
+    contextAlbumMessages.length > 0 &&
+    contextAlbumMessages.every((message) => message.senderId === userId);
+  const canRetry =
+    !!contextMenu &&
+    !contextHasAlbumGroup &&
     contextMenu.message.senderId === userId &&
-    typeof contextMenu.message.messageId === 'number';
+    contextMenu.message.status === 'failed';
   const contextIsGroupServiceMessage =
     !!contextMenu && toGroupServiceMessageType(contextMenu.message.messageType) !== null;
   const menuCopyText = contextMenu
@@ -3114,54 +3935,117 @@ export function ChatMessageList({
       ) : rows.length === 0 ? (
         <div className="py-10 text-center text-white/50">No messages yet</div>
       ) : (
-        rows.map((row) =>
-          row.type === 'divider' ? (
-            <DateDivider key={row.key} label={row.label} />
-          ) : (() => {
-              const messageId = String(row.message.messageId);
-              const bubbleVisualState = bubbleVisualStateByMessageId.get(messageId);
-              return (
-                <div
-                  key={row.key}
-                  id={toMessageDomId(row.message.messageId)}
-                  className={enteringMessageIds.has(messageId) ? 'chat-message-enter-quick' : undefined}
-                  onContextMenu={(event) => {
-                    event.preventDefault();
-                    setContextMenu({ x: event.clientX, y: event.clientY, message: row.message });
-                  }}
-                >
-                  <ChatMessageRow
-                    message={row.message}
-                    userId={userId}
-                    bubbleMaxWidthPx={messageBubbleMaxWidthPx}
-                    uploadingImages={uploadingImages}
-                    onCircleMediaError={onCircleMediaError}
-                    isCircleMuted={isCircleMuted}
-                    onToggleCircleMuted={() => setIsCircleMuted((prev) => !prev)}
-                    resolveUserName={resolveUserName}
-                    resolveUserAvatar={resolveUserAvatar}
-                    onPlaybackStateChange={onPlaybackStateChange || undefined}
-                    onCancelPendingUpload={onCancelPendingUpload}
-                    isSearchMatch={matchedMessageIdSet.has(messageId)}
-                    isSearchActive={messageId === activeMatchedMessageId}
-                    hideTail={bubbleVisualState?.hideTail ?? false}
-                    showEdgeAvatar={bubbleVisualState?.showEdgeAvatar ?? false}
-                    rowBottomGapPx={
-                      messageRowBottomGapByMessageId.get(messageId) ??
-                      MESSAGE_ROW_BASE_GAP_PX
+        rows.map((row) => {
+          if (row.type === 'divider') {
+            return <DateDivider key={row.key} label={row.label} />;
+          }
+
+          const messageId = String(row.message.messageId);
+          if (hiddenAlbumMessageIds.has(messageId)) {
+            return null;
+          }
+
+          const albumCluster = albumClusterByStartMessageId.get(messageId);
+          const visualAnchorMessageId =
+            (albumCluster && albumLastMessageIdByStartMessageId.get(messageId)) || messageId;
+          const bubbleVisualState = bubbleVisualStateByMessageId.get(visualAnchorMessageId);
+          const clusterMessageIds = albumMessageIdsByStartMessageId.get(messageId) || [messageId];
+          const isSearchMatch = clusterMessageIds.some((id) => matchedMessageIdSet.has(id));
+          const isSearchActive =
+            !!activeMatchedMessageId && clusterMessageIds.includes(activeMatchedMessageId);
+          const isEntering = clusterMessageIds.some((id) => enteringMessageIds.has(id));
+          const contextMessage =
+            (albumCluster && albumContextMessageByStartMessageId.get(messageId)) || row.message;
+
+          return (
+            <div
+              key={row.key}
+              id={toMessageDomId(row.message.messageId)}
+              data-chat-message-row="true"
+              className={isEntering ? 'chat-message-enter-quick' : undefined}
+              onContextMenu={(event) => {
+                event.preventDefault();
+                setContextMenu({
+                  x: event.clientX,
+                  y: event.clientY,
+                  message: contextMessage,
+                  albumMessageIds: albumCluster
+                    ? albumCluster.messages.map((message) => message.messageId)
+                    : undefined,
+                });
+              }}
+            >
+              {albumCluster
+                ? albumCluster.hiddenMessageIds.map((hiddenId) => (
+                    <span
+                      key={`${row.key}-anchor-${hiddenId}`}
+                      id={toMessageDomId(hiddenId)}
+                      className="block h-0 w-0 overflow-hidden"
+                      aria-hidden="true"
+                    />
+                  ))
+                : null}
+
+              {albumCluster ? (
+                <ChatAlbumRow
+                  cluster={albumCluster}
+                  userId={userId}
+                  bubbleMaxWidthPx={messageBubbleMaxWidthPx}
+                  uploadingImages={uploadingImages}
+                  resolvePendingUploadPreviewUrl={resolvePendingUploadPreviewUrl}
+                  resolveUserName={resolveUserName}
+                  resolveUserAvatar={resolveUserAvatar}
+                  onCancelPendingUpload={onCancelPendingUpload}
+                  isSearchMatch={isSearchMatch}
+                  isSearchActive={isSearchActive}
+                  hideTail={bubbleVisualState?.hideTail ?? false}
+                  showEdgeAvatar={bubbleVisualState?.showEdgeAvatar ?? false}
+                  rowBottomGapPx={
+                    messageRowBottomGapByMessageId.get(visualAnchorMessageId) ??
+                    MESSAGE_ROW_BASE_GAP_PX
+                  }
+                  onOpenMediaViewer={(payload) => {
+                    const anchorId = toMediaViewerAnchorId(payload.messageId, payload.attachmentIndex);
+                    const index = mediaViewerTimeline.findIndex((entry) => entry.id === anchorId);
+                    if (index >= 0) {
+                      setMediaViewerIndex(index);
                     }
-                    onOpenMediaViewer={(payload) => {
-                      const anchorId = toMediaViewerAnchorId(payload.messageId, payload.attachmentIndex);
-                      const index = mediaViewerTimeline.findIndex((entry) => entry.id === anchorId);
-                      if (index >= 0) {
-                        setMediaViewerIndex(index);
-                      }
-                    }}
-                  />
-                </div>
-              );
-            })()
-        )
+                  }}
+                />
+              ) : (
+                <ChatMessageRow
+                  message={row.message}
+                  userId={userId}
+                  bubbleMaxWidthPx={messageBubbleMaxWidthPx}
+                  uploadingImages={uploadingImages}
+                  resolvePendingUploadPreviewUrl={resolvePendingUploadPreviewUrl}
+                  onCircleMediaError={onCircleMediaError}
+                  isCircleMuted={isCircleMuted}
+                  onToggleCircleMuted={() => setIsCircleMuted((prev) => !prev)}
+                  resolveUserName={resolveUserName}
+                  resolveUserAvatar={resolveUserAvatar}
+                  onPlaybackStateChange={onPlaybackStateChange || undefined}
+                  onCancelPendingUpload={onCancelPendingUpload}
+                  isSearchMatch={isSearchMatch}
+                  isSearchActive={isSearchActive}
+                  hideTail={bubbleVisualState?.hideTail ?? false}
+                  showEdgeAvatar={bubbleVisualState?.showEdgeAvatar ?? false}
+                  rowBottomGapPx={
+                    messageRowBottomGapByMessageId.get(messageId) ??
+                    MESSAGE_ROW_BASE_GAP_PX
+                  }
+                  onOpenMediaViewer={(payload) => {
+                    const anchorId = toMediaViewerAnchorId(payload.messageId, payload.attachmentIndex);
+                    const index = mediaViewerTimeline.findIndex((entry) => entry.id === anchorId);
+                    if (index >= 0) {
+                      setMediaViewerIndex(index);
+                    }
+                  }}
+                />
+              )}
+            </div>
+          );
+        })
       )}
       <div ref={messagesEndRef} />
 
@@ -3195,6 +4079,23 @@ export function ChatMessageList({
                 Copy text
               </button>
 
+              {onRetryMessage ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!canRetry) return;
+                    onRetryMessage(contextMenu.message.messageId);
+                    setContextMenu(null);
+                  }}
+                  disabled={!canRetry}
+                  className={`flex w-full items-center rounded-xl px-3 py-2 text-left text-sm transition-colors ${
+                    canRetry ? 'text-[#ffd58f] hover:bg-[#c89a4e]/18' : 'cursor-not-allowed text-[#ffd58f]/45'
+                  }`}
+                >
+                  Retry send
+                </button>
+              ) : null}
+
               <button
                 type="button"
                 onClick={() => {
@@ -3216,7 +4117,13 @@ export function ChatMessageList({
             type="button"
             onClick={() => {
               if (!canDelete) return;
-              onDeleteMessage(contextMenu.message.messageId);
+              if (contextHasAlbumGroup && contextAlbumMessageIds.length > 0) {
+                contextAlbumMessageIds.forEach((messageId) => {
+                  onDeleteMessage(messageId);
+                });
+              } else {
+                onDeleteMessage(contextMenu.message.messageId);
+              }
               setContextMenu(null);
             }}
             disabled={!canDelete}
@@ -3224,7 +4131,7 @@ export function ChatMessageList({
               canDelete ? 'text-[#ff9fb9] hover:bg-[#ff7da2]/16' : 'cursor-not-allowed text-[#ff9fb9]/45'
             }`}
           >
-            Delete
+            {contextHasAlbumGroup ? 'Delete album' : 'Delete'}
           </button>
         </div>
       ) : null}

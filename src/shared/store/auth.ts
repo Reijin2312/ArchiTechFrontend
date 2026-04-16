@@ -1,5 +1,4 @@
 import { create } from 'zustand'
-import { secureChatWebSocket } from '@/shared/api/secureChatWebSocket'
 
 export type User = { id: string; username: string; email?: string }
 
@@ -42,8 +41,7 @@ export const authStore = create<State & Actions>((set) => ({
     })
 
     if (sessionId && deviceId) {
-      secureChatWebSocket.setSessionCredentials(sessionId, deviceId)
-      console.log('[Auth] Server credentials passed to WebSocket: sessionId and deviceId')
+      console.log('[Auth] Server credentials updated: sessionId and deviceId')
     }
   },
 

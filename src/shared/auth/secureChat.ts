@@ -13,29 +13,54 @@ export interface ChatMessage {
   content: string
   messageType?: 'text' | 'image' | 'images' | 'file' | 'files' | 'voice' | 'circle'
   replyToId?: number
-  imagePath?: string
+  images?: Array<{
+    imagePath: string
+    imageEncrypted?: boolean
+    imageEncryptionIv?: string
+    imageKeyVersion?: number
+    fileName?: string
+    contentType?: string
+    sizeBytes?: number
+    isImage?: boolean
+  }>
   entities?: TextEntity[]
 }
 
 export interface ReceivedMessage {
   messageId: number
+  clientMessageId?: number
   chatId: number
   senderId: string
   content: string
   messageType: 'text' | 'image' | 'images' | 'file' | 'files' | 'voice' | 'circle'
   entities?: TextEntity[]
-  imagePath?: string
-  imageUrl?: string
+  images?: Array<{
+    imagePath: string
+    imageUrl?: string
+    thumbnailUrl?: string
+    strippedThumbnailUrl?: string
+    fileName?: string
+    contentType?: string
+    sizeBytes?: number
+    isImage?: boolean
+    imageKeyVersion?: number
+    imageEncryptionIv?: string
+  }>
   createdAt: string
   isRead: boolean
   edited?: boolean
   replyToId?: number
   replyToMessage?: ReceivedMessage
+  sequenceNumber?: number
+  serverTimestamp?: number
+  groupingKey?: string
 }
 
 export interface WebSocketEvent {
   type:
     | 'new_message'
+    | 'message_sent'
+    | 'media_updated'
     | 'friend_request'
     | 'friend_accept'
     | 'friend_reject'
@@ -51,6 +76,7 @@ export interface WebSocketEvent {
   messageId?: number
   lastReadMessageId?: number
   userId?: string
+  senderId?: string
   typing?: boolean
   online?: boolean
   lastSeenAt?: string
@@ -58,6 +84,22 @@ export interface WebSocketEvent {
   username?: string
   requestId?: number
   friendRequest?: any
+  clientMessageId?: number
+  sequenceNumber?: number
+  serverTimestamp?: number
+  groupingKey?: string
+  mediaPath?: string
+  mediaContentType?: string
+  mediaSizeBytes?: number
+  mediaEncryptionIv?: string
+  mediaKeyVersion?: number
+  media?: {
+    mediaPath?: string
+    contentType?: string
+    sizeBytes?: number
+    imageEncryptionIv?: string
+    imageKeyVersion?: number
+  }
 }
 
 export interface WebSocketConfig {
@@ -66,12 +108,15 @@ export interface WebSocketConfig {
   heartbeatInterval?: number
 }
 
+export type ChatConnectionState = 'connected' | 'disconnected'
+
 type AnyRecord = Record<string, unknown>
 
 export class CloudChatClient {
   private ws: WebSocket | null = null
   private messageHandlers: Set<(msg: WebSocketEvent) => void> = new Set()
   private errorHandlers: Set<(error: Error) => void> = new Set()
+  private connectionStateHandlers: Set<(state: ChatConnectionState) => void> = new Set()
   private config: Required<WebSocketConfig>
 
   private cachedDeviceToken: { token: string; expiresAt: number } | null = null
@@ -291,6 +336,7 @@ export class CloudChatClient {
         opened = true
         this.reconnectAttempt = 0
         this.startHeartbeat()
+        this.notifyConnectionState('connected')
         console.log('[ChatWS] connected')
         settleResolve()
       }
@@ -316,6 +362,9 @@ export class CloudChatClient {
         }
 
         this.stopHeartbeat()
+        if (generation === this.connectionGeneration && !this.disconnectRequested) {
+          this.notifyConnectionState('disconnected')
+        }
 
         if (generation !== this.connectionGeneration || this.disconnectRequested) {
           if (!opened) {
@@ -363,6 +412,68 @@ export class CloudChatClient {
         type: 'new_message',
         message: parsed.message as ReceivedMessage,
         chatId: (parsed.message as AnyRecord).chatId as number | undefined,
+      })
+      return
+    }
+
+    if (type === 'message_sent') {
+      this.notifyHandlers({
+        type: 'message_sent',
+        chatId: parsed.chatId as number | undefined,
+        messageId: parsed.messageId as number | undefined,
+        clientMessageId: parsed.clientMessageId as number | undefined,
+        sequenceNumber: parsed.sequenceNumber as number | undefined,
+        serverTimestamp: parsed.serverTimestamp as number | undefined,
+        groupingKey: parsed.groupingKey as string | undefined,
+      })
+      return
+    }
+
+    if (type === 'media_updated') {
+      const media =
+        (parsed.media as AnyRecord | undefined) ??
+        ({
+          mediaPath: parsed.mediaPath,
+          contentType: parsed.contentType,
+          sizeBytes: parsed.sizeBytes,
+          imageEncryptionIv: parsed.imageEncryptionIv,
+          imageKeyVersion: parsed.imageKeyVersion,
+        } as AnyRecord)
+
+      this.notifyHandlers({
+        type: 'media_updated',
+        chatId: parsed.chatId as number | undefined,
+        messageId: parsed.messageId as number | undefined,
+        clientMessageId: parsed.clientMessageId as number | undefined,
+        senderId:
+          (parsed.senderId as string | undefined) ??
+          ((parsed.message as AnyRecord | undefined)?.senderId as string | undefined),
+        mediaPath:
+          (media.mediaPath as string | undefined) ?? (parsed.mediaPath as string | undefined),
+        mediaContentType:
+          (media.contentType as string | undefined) ?? (parsed.contentType as string | undefined),
+        mediaSizeBytes:
+          (media.sizeBytes as number | undefined) ?? (parsed.sizeBytes as number | undefined),
+        mediaEncryptionIv:
+          (media.imageEncryptionIv as string | undefined) ??
+          (parsed.imageEncryptionIv as string | undefined),
+        mediaKeyVersion:
+          (media.imageKeyVersion as number | undefined) ??
+          (parsed.imageKeyVersion as number | undefined),
+        media: {
+          mediaPath:
+            (media.mediaPath as string | undefined) ?? (parsed.mediaPath as string | undefined),
+          contentType:
+            (media.contentType as string | undefined) ?? (parsed.contentType as string | undefined),
+          sizeBytes:
+            (media.sizeBytes as number | undefined) ?? (parsed.sizeBytes as number | undefined),
+          imageEncryptionIv:
+            (media.imageEncryptionIv as string | undefined) ??
+            (parsed.imageEncryptionIv as string | undefined),
+          imageKeyVersion:
+            (media.imageKeyVersion as number | undefined) ??
+            (parsed.imageKeyVersion as number | undefined),
+        },
       })
       return
     }
@@ -670,7 +781,19 @@ export class CloudChatClient {
       content: message.content,
       messageType: message.messageType || 'text',
       replyToId: message.replyToId,
-      imagePath: message.imagePath,
+      images:
+        Array.isArray(message.images) && message.images.length > 0
+          ? message.images.map((image) => ({
+              image_path: image.imagePath,
+              image_encrypted: image.imageEncrypted,
+              image_encryption_iv: image.imageEncryptionIv,
+              image_key_version: image.imageKeyVersion,
+              file_name: image.fileName,
+              content_type: image.contentType,
+              size_bytes: image.sizeBytes,
+              is_image: image.isImage,
+            }))
+          : undefined,
     }
 
     this.ws.send(JSON.stringify(protocolMessage))
@@ -704,6 +827,13 @@ export class CloudChatClient {
     }
   }
 
+  onConnectionState(handler: (state: ChatConnectionState) => void): () => void {
+    this.connectionStateHandlers.add(handler)
+    return () => {
+      this.connectionStateHandlers.delete(handler)
+    }
+  }
+
   isConnected(): boolean {
     return this.ws?.readyState === WebSocket.OPEN
   }
@@ -728,9 +858,20 @@ export class CloudChatClient {
     })
   }
 
+  private notifyConnectionState(state: ChatConnectionState): void {
+    this.connectionStateHandlers.forEach((handler) => {
+      try {
+        handler(state)
+      } catch (handlerError) {
+        console.error('[ChatWS] connection-state handler failed', handlerError)
+      }
+    })
+  }
+
   disconnect(): void {
     this.disconnectRequested = true
     this.connectionGeneration += 1
+    this.notifyConnectionState('disconnected')
 
     this.clearReconnectTimer()
     this.stopHeartbeat()

@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import type { SocialFloatingModel } from '@/shared/ui/button/social/useSocialFloatingModel';
+import { getMessageMediaAttachments } from '@/shared/ui/button/social/chat/mediaAttachments';
+import { buildLocalMediaPreviewMeta } from '@/shared/ui/button/social/chat/localMediaPreview';
 import { CloseIcon, MicIcon, PaperclipIcon, SendIcon, SmilePlusIcon, VideoIcon } from '../icons';
 import { formatFileSize } from '../utils';
 import { useChatRecorder } from '../hooks/useChatRecorder';
@@ -177,13 +179,8 @@ export function ChatComposer({ model }: ChatComposerProps) {
   const isPreviewUrlStillUsed = (previewUrl: string) => {
     const messages = messagesRef.current;
     return messages.some((message) => {
-      if (message.imageUrl === previewUrl) {
-        return true;
-      }
-      if (!Array.isArray(message.images) || message.images.length === 0) {
-        return false;
-      }
-      return message.images.some((image) => image?.imageUrl === previewUrl);
+      const attachments = getMessageMediaAttachments(message);
+      return attachments.some((image) => image?.imageUrl === previewUrl);
     });
   };
 
@@ -373,19 +370,39 @@ export function ChatComposer({ model }: ChatComposerProps) {
           }
           const sendingDraft = pendingImageDraft;
           const sendPreviewUrls = sendingDraft.items.map((item) => item.previewUrl);
-          const attachments = sendingDraft.items.map((item) => ({
-            id: item.id,
-            file: item.file,
-            preview: item.previewUrl,
-            sendAsFile: sendingDraft.sendAsFile,
-            isImage:
-              !sendingDraft.sendAsFile
-              && (item.file.type || '').toLowerCase().startsWith('image/'),
-            groupWithOthers: sendingDraft.groupImages,
-            contentType: item.file.type || 'application/octet-stream',
-            sizeBytes: item.file.size,
-            uploading: false,
-          }));
+          const attachments = await Promise.all(
+            sendingDraft.items.map(async (item) => {
+              const contentType = (item.file.type || '').toLowerCase();
+              const mediaType = contentType.startsWith('video/') ? 'video' : 'image';
+              const localPreviewMeta =
+                !sendingDraft.sendAsFile &&
+                (contentType.startsWith('image/') || contentType.startsWith('video/'))
+                  ? await buildLocalMediaPreviewMeta(item.file, {
+                      preferredPreviewUrl: item.previewUrl,
+                      forceMediaType: mediaType,
+                    })
+                  : null;
+
+              return {
+                id: item.id,
+                file: item.file,
+                preview: item.previewUrl,
+                thumbnailUrl: localPreviewMeta?.thumbnailUrl,
+                strippedThumbnailUrl: localPreviewMeta?.strippedThumbnailUrl,
+                width: localPreviewMeta?.width,
+                height: localPreviewMeta?.height,
+                aspectRatio: localPreviewMeta?.aspectRatio,
+                sendAsFile: sendingDraft.sendAsFile,
+                isImage:
+                  !sendingDraft.sendAsFile &&
+                  contentType.startsWith('image/'),
+                groupWithOthers: sendingDraft.groupImages,
+                contentType: item.file.type || 'application/octet-stream',
+                sizeBytes: item.file.size,
+                uploading: false,
+              };
+            })
+          );
           const replyToMessageId =
             typeof model.replyingTo?.messageId === 'number'
               ? model.replyingTo.messageId

@@ -1,8 +1,21 @@
-import { useState, useRef, type Dispatch, type SetStateAction } from 'react';
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type Dispatch,
+  type SetStateAction,
+} from 'react';
 import { authStore } from '@/shared/store/auth';
 import { logger } from '@/shared/lib/logger';
 import { useSocialFloatingEffects } from './useSocialFloatingEffects';
 import { createSocialFloatingActions } from './createSocialFloatingActions';
+import {
+  createMessageStore,
+  messageStoreToArray,
+  projectChatsFromMessageStore,
+  type ChatMessageStore,
+} from './actions/messageReconcile';
 import type {
   Friend,
   FriendRequest,
@@ -45,7 +58,25 @@ export function useSocialFloatingModel(options: SocialFloatingModelOptions = {})
   
   const [chats, setChats] = useState<PrivateChat[]>([]);
   const [selectedChat, setSelectedChat] = useState<number | null>(null);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messageStore, setMessageStore] = useState<ChatMessageStore>(() => createMessageStore([]));
+  const messages = useMemo(() => {
+    if (!selectedChat) {
+      return [];
+    }
+    return messageStoreToArray(messageStore).filter(
+      (message) => message.chatId === selectedChat
+    );
+  }, [messageStore, selectedChat]);
+  const setMessages: Dispatch<SetStateAction<ChatMessage[]>> = (value) => {
+    setMessageStore((previousStore) => {
+      const previousMessages = messageStoreToArray(previousStore);
+      const nextMessages =
+        typeof value === 'function'
+          ? (value as (prev: ChatMessage[]) => ChatMessage[])(previousMessages)
+          : value;
+      return createMessageStore(nextMessages, userId);
+    });
+  };
   const [messageInput, setMessageInput] = useState('');
   const [typingUsersByChat, setTypingUsersByChat] = useState<Record<number, string[]>>({});
   const [presenceByUser, setPresenceByUser] = useState<Record<string, ChatPresenceState>>({});
@@ -65,6 +96,11 @@ export function useSocialFloatingModel(options: SocialFloatingModelOptions = {})
     id: string;
     file: File;
     preview?: string;
+    thumbnailUrl?: string;
+    strippedThumbnailUrl?: string;
+    width?: number;
+    height?: number;
+    aspectRatio?: number;
     isImage?: boolean;
     groupWithOthers?: boolean;
     forcedMessageType?: 'voice' | 'circle';
@@ -77,9 +113,11 @@ export function useSocialFloatingModel(options: SocialFloatingModelOptions = {})
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const markReadTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const markReadTargetRef = useRef<{ chatId: number; lastId: number } | null>(null);
-  const sendInFlightRef = useRef<boolean>(false);
-  const sendCooldownUntilRef = useRef<number>(0);
+  const sendQueueRef = useRef<Map<number, Promise<void>>>(new Map());
   const pendingUploadCancelsRef = useRef<Map<string, () => void>>(new Map());
+  const historyBeforeByChatRef = useRef<Map<number, number>>(new Map());
+  const historyHasMoreByChatRef = useRef<Map<number, boolean>>(new Map());
+  const historyLoadingByChatRef = useRef<Set<number>>(new Set());
   const lastProtocolSeqRef = useRef<number>(0);
   const lastProtocolMsgIdRef = useRef<number>(0);
   const typingTimeoutsRef = useRef<Map<string, number>>(new Map());
@@ -87,7 +125,6 @@ export function useSocialFloatingModel(options: SocialFloatingModelOptions = {})
     new Map(),
   );
   const isFirstLoadRef = useRef<boolean>(true);
-  const processedMessageIds = useRef<Set<number | string>>(new Set());
   const autoScrollLockedRef = useRef(false);
 
   const setAutoScrollLocked: Dispatch<SetStateAction<boolean>> = (value) => {
@@ -174,6 +211,10 @@ export function useSocialFloatingModel(options: SocialFloatingModelOptions = {})
     setIsFullscreen(false);
     setActiveTab('chat');
   };
+
+  useEffect(() => {
+    setChats((previousChats) => projectChatsFromMessageStore(previousChats, messageStore));
+  }, [messageStore]);
 
   const normalizeAssetUrl = (url?: string): string | undefined => {
     if (!url) return undefined;
@@ -276,11 +317,14 @@ export function useSocialFloatingModel(options: SocialFloatingModelOptions = {})
     markChatRead,
     loadChats,
     loadMessages,
+    loadMessagesAfter,
+    loadOlderMessages,
     openChatWith,
     createGroupChat,
     sendTypingState,
     sendMessageToUser,
     sendChatMessage,
+    retryFailedMessage,
     sendMessagesWithImages,
     cancelPendingMediaUpload,
     attachImage,
@@ -295,14 +339,17 @@ export function useSocialFloatingModel(options: SocialFloatingModelOptions = {})
     selectedChat,
     chats,
     messages,
+    messageStore,
     messageInput,
     attachedImages,
     editingMessage,
     replyingTo,
     markReadTimeoutRef,
-    sendInFlightRef,
-    sendCooldownUntilRef,
+    sendQueueRef,
     pendingUploadCancelsRef,
+    historyBeforeByChatRef,
+    historyHasMoreByChatRef,
+    historyLoadingByChatRef,
     lastProtocolSeqRef,
     lastProtocolMsgIdRef,
     typingThrottleRef,
@@ -315,6 +362,7 @@ export function useSocialFloatingModel(options: SocialFloatingModelOptions = {})
     setLoading,
     setSearchResults,
     setMessages,
+    setMessageStore,
     setChats,
     setSelectedChat,
     setActiveTab,
@@ -349,15 +397,13 @@ export function useSocialFloatingModel(options: SocialFloatingModelOptions = {})
     setOutgoingRequests,
     setFriends,
     setChats,
-    setMessages,
+    setMessageStore,
     loadFriends,
     loadIncomingRequests,
     loadOutgoingRequests,
     refreshSearchIfNeeded,
     loadChats,
     showDesktopNotification,
-    processedMessageIds,
-    typingUsersByChat,
     setTypingUsersByChat,
     typingTimeoutsRef,
     presenceByUser,
@@ -366,6 +412,7 @@ export function useSocialFloatingModel(options: SocialFloatingModelOptions = {})
     contextMenu,
     activeTab,
     loadMessages,
+    loadMessagesAfter,
     searchQuery,
     setSearchResults,
     searchUsers,
@@ -400,6 +447,8 @@ export function useSocialFloatingModel(options: SocialFloatingModelOptions = {})
     setChats,
     selectedChat,
     setSelectedChat,
+    messageStore,
+    setMessageStore,
     messages,
     setMessages,
     messageInput,
@@ -440,7 +489,6 @@ export function useSocialFloatingModel(options: SocialFloatingModelOptions = {})
     typingTimeoutsRef,
     typingThrottleRef,
     isFirstLoadRef,
-    processedMessageIds,
     selectedChatRef,
     userRef,
     isOpenRef,
@@ -466,11 +514,14 @@ export function useSocialFloatingModel(options: SocialFloatingModelOptions = {})
     markChatRead,
     loadChats,
     loadMessages,
+    loadMessagesAfter,
+    loadOlderMessages,
     openChatWith,
     createGroupChat,
     sendTypingState,
     sendMessageToUser,
     sendChatMessage,
+    retryFailedMessage,
     sendMessagesWithImages,
     cancelPendingMediaUpload,
     attachImage,

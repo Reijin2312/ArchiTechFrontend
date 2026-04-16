@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
 import type { Friend, FriendRequest, PrivateChat, UserSearchResult } from '@/shared/api/types';
+import { getMessageMediaAttachments } from './chat/mediaAttachments';
 
 type ChatsListProps = {
   chats: PrivateChat[];
@@ -75,46 +76,27 @@ export function ChatsList({
     const text = (lastMsg.content || '').trim();
     if (text) return lastMsg.content;
 
-    const attachments = Array.isArray(lastMsg.images) ? lastMsg.images : [];
-    const topLevelMediaUrl = (
-      (lastMsg.imageUrl || '') ||
-      (lastMsg.imagePath ? `/media/${lastMsg.imagePath}` : '')
-    ).toLowerCase();
+    const attachments = getMessageMediaAttachments(lastMsg);
     const hasVideoAttachment = attachments.some((attachment) => {
-      const legacy = attachment as unknown as Record<string, unknown>;
-      const contentType =
-        (attachment.contentType ||
-          (typeof legacy.content_type === 'string' ? legacy.content_type : '')).toLowerCase();
+      const contentType = (attachment.contentType || '').toLowerCase();
       if (contentType.startsWith('video/')) return true;
       const url = (
         attachment.imageUrl ||
-        (typeof legacy.image_url === 'string' ? legacy.image_url : '') ||
-        attachment.imagePath ||
-        (typeof legacy.image_path === 'string' ? legacy.image_path : '')
+        attachment.imagePath
       ).toLowerCase();
       return /\.(mp4|webm|mov|m4v|ogv|m3u8|mkv|avi)(?:$|[?#])/.test(url);
     });
     const hasImageAttachment = attachments.some((attachment) => {
-      const legacy = attachment as unknown as Record<string, unknown>;
-      const contentType =
-        (attachment.contentType ||
-          (typeof legacy.content_type === 'string' ? legacy.content_type : '')).toLowerCase();
-      const isImage =
-        attachment.isImage ??
-        (typeof legacy.is_image === 'boolean' ? legacy.is_image : false);
+      const contentType = (attachment.contentType || '').toLowerCase();
+      const isImage = !!attachment.isImage;
       const url = (
         attachment.imageUrl ||
-        (typeof legacy.image_url === 'string' ? legacy.image_url : '') ||
-        attachment.imagePath ||
-        (typeof legacy.image_path === 'string' ? legacy.image_path : '')
+        attachment.imagePath
       ).toLowerCase();
       return isImage || contentType.startsWith('image/') || /\.(png|jpe?g|gif|webp|avif|bmp|svg)(?:$|[?#])/.test(url);
     });
 
-    const topLevelLooksVideo = /\.(mp4|webm|mov|m4v|ogv|m3u8|mkv|avi)(?:$|[?#])/.test(
-      topLevelMediaUrl
-    );
-    if (hasVideoAttachment || topLevelLooksVideo) return 'Video message';
+    if (hasVideoAttachment) return 'Video message';
     if (hasImageAttachment) return 'Photo';
 
     if (lastMsg.messageType === 'image' || lastMsg.messageType === 'images') return 'Photo';

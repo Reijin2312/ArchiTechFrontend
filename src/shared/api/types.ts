@@ -120,8 +120,10 @@ export interface ChatMessageEntity {
 
 export interface ChatMessage {
   messageId: number | string
+  chatId?: number
+  clientMessageId?: number
   localId?: string
-  status?: 'pending' | 'sent' | 'delivered' | 'read'
+  status?: 'pending' | 'failed' | 'sent' | 'delivered' | 'read'
   senderId: string
   senderUsername?: string
   senderDisplayName?: string
@@ -140,13 +142,14 @@ export interface ChatMessage {
     | 'group_member_added'
     | 'group_members_added'
   entities?: ChatMessageEntity[]
-  imagePath?: string
-  imageUrl?: string
   images?: Array<{
     imagePath: string
     imageUrl?: string
     thumbnailUrl?: string
     strippedThumbnailUrl?: string
+    width?: number
+    height?: number
+    imageEncryptionIv?: string
     fileName?: string
     contentType?: string
     sizeBytes?: number
@@ -162,7 +165,9 @@ export interface ChatMessage {
   imageKeyVersion?: number
   messageHmac?: string
   sequenceNumber?: number
+  serverTimestamp?: number
   signatureTimestamp?: number
+  groupingKey?: string
 }
 
 export type ChatType = 'PRIVATE' | 'GROUP'
@@ -208,19 +213,41 @@ export interface SendMessageRequest {
   chatId: number
   content: string
   messageType?: 'text' | 'image' | 'images' | 'file' | 'files' | 'voice' | 'circle'
-  imagePath?: string
+  images?: Array<{
+    imagePath: string
+    imageEncrypted?: boolean
+    imageEncryptionIv?: string
+    imageKeyVersion?: number
+    width?: number
+    height?: number
+    fileName?: string
+    contentType?: string
+    sizeBytes?: number
+    isImage?: boolean
+  }>
   replyToId?: number
 }
 
 export interface SendMessageResponse {
   success: boolean
   messageId: number
-  imageUrl?: string
-  imageUrls?: Array<{
+  clientMessageId?: number
+  serverTimestamp?: number
+  sequenceNumber?: number
+  groupingKey?: string
+  images?: Array<{
     imagePath: string
     imageUrl: string
     thumbnailUrl?: string
     strippedThumbnailUrl?: string
+    width?: number
+    height?: number
+    imageEncryptionIv?: string
+    fileName?: string
+    contentType?: string
+    sizeBytes?: number
+    isImage?: boolean
+    imageKeyVersion?: number
   }>
 }
 
@@ -266,6 +293,8 @@ export interface UploadImageResponse {
   imageUrl: string
   thumbnailUrl?: string
   strippedThumbnailUrl?: string
+  width?: number
+  height?: number
   fileName?: string
   contentType?: string
   sizeBytes?: number

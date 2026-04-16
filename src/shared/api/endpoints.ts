@@ -56,7 +56,17 @@ chatCreate: '/api/v1/chat/create',
   chatAddMembers: (chatId: number) => `/api/v1/chat/${chatId}/members`,
   chatUpdateGroup: (chatId: number) => `/api/v1/chat/${chatId}/group`,
   chatDelete: (chatId: number) => `/api/v1/chat/${chatId}/delete`,
-  chatMessages: (chatId: number, before?: number, limit = 50) => `/api/v1/chat/${chatId}/messages${before ? `?before=${before}&limit=${limit}` : `?limit=${limit}`}`,
+  chatMessages: (chatId: number, before?: number, limit = 50, after?: number) => {
+    const query = new URLSearchParams();
+    query.set('limit', String(limit));
+    if (before && before > 0) {
+      query.set('before', String(before));
+    }
+    if (after && after > 0) {
+      query.set('after', String(after));
+    }
+    return `/api/v1/chat/${chatId}/messages?${query.toString()}`;
+  },
   chatLinks: (chatId: number, before?: number, limit = 24) => `/api/v1/chat/${chatId}/links${before ? `?before=${before}&limit=${limit}` : `?limit=${limit}`}`,
   chatLinkPreview: (url: string) => `/api/v1/chat/link-preview?url=${encodeURIComponent(url)}`,
   chatSend: '/api/v1/chat/send',

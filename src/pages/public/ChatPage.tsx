@@ -58,6 +58,7 @@ const MESSAGE_COLUMN_MAX_WIDTH =
   );
 const MESSAGE_BUBBLE_MAX_WIDTH = Math.floor(MESSAGE_COLUMN_MAX_WIDTH / 2);
 const GROUP_INFO_LINKS_PAGE_SIZE = 24;
+const CHAT_STICKY_BOTTOM_THRESHOLD_PX = 96;
 
 type CurrentUserProfile = {
   username?: string;
@@ -207,6 +208,11 @@ export default function ChatPage() {
   const groupInfoLinksLoadingRef = useRef(false);
   const [playback, setPlayback] = useState<ChatPlaybackState | null>(null);
   const [isPlaybackVisible, setIsPlaybackVisible] = useState(false);
+  const [isNearBottom, setIsNearBottom] = useState(true);
+  const [pendingIncomingCount, setPendingIncomingCount] = useState(0);
+  const lastSeenIncomingMessageIdRef = useRef(0);
+  const historyLoadInFlightRef = useRef(false);
+  const lastHistoryLoadAttemptAtRef = useRef(0);
 
   useEffect(() => {
     model.setIsOpen(true);
@@ -221,11 +227,151 @@ export default function ChatPage() {
     autoSelectRef.current = true;
   }, [model.chats, model.selectedChat]);
 
+  const getMaxIncomingServerMessageId = useCallback(
+    (sourceMessages: typeof model.messages) => {
+      if (!model.selectedChat || !model.userId) {
+        return 0;
+      }
+      return sourceMessages.reduce((maxId, message) => {
+        if (message.chatId !== model.selectedChat) return maxId;
+        if (message.senderId === model.userId) return maxId;
+        if (typeof message.messageId !== 'number') return maxId;
+        return message.messageId > maxId ? message.messageId : maxId;
+      }, 0);
+    },
+    [model.selectedChat, model.userId]
+  );
+
   useEffect(() => {
-    if (model.messages.length > 0) {
-      model.scrollToBottom(false);
+    if (!model.selectedChat) {
+      setPendingIncomingCount(0);
+      setIsNearBottom(true);
+      lastSeenIncomingMessageIdRef.current = 0;
+      return;
     }
-  }, [model.messages.length]);
+
+    const initialMaxIncomingId = getMaxIncomingServerMessageId(model.messages);
+    lastSeenIncomingMessageIdRef.current = initialMaxIncomingId;
+    setPendingIncomingCount(0);
+  }, [model.selectedChat, model.messages, getMaxIncomingServerMessageId]);
+
+  useEffect(() => {
+    if (!model.selectedChat) {
+      return;
+    }
+
+    const scrollContainer = document.querySelector<HTMLElement>(
+      '[data-chat-scroll-container="true"]'
+    );
+    if (!scrollContainer) {
+      return;
+    }
+
+    const syncBottomState = () => {
+      const distanceToBottom =
+        scrollContainer.scrollHeight - (scrollContainer.scrollTop + scrollContainer.clientHeight);
+      const nearBottom = distanceToBottom <= CHAT_STICKY_BOTTOM_THRESHOLD_PX;
+      setIsNearBottom(nearBottom);
+      if (!nearBottom) {
+        return;
+      }
+
+      const maxIncomingId = getMaxIncomingServerMessageId(model.messages);
+      if (maxIncomingId > lastSeenIncomingMessageIdRef.current) {
+        lastSeenIncomingMessageIdRef.current = maxIncomingId;
+      }
+      setPendingIncomingCount(0);
+    };
+
+    syncBottomState();
+    scrollContainer.addEventListener('scroll', syncBottomState, { passive: true });
+    window.addEventListener('resize', syncBottomState, { passive: true });
+
+    return () => {
+      scrollContainer.removeEventListener('scroll', syncBottomState);
+      window.removeEventListener('resize', syncBottomState);
+    };
+  }, [model.selectedChat, model.messages, getMaxIncomingServerMessageId]);
+
+  useEffect(() => {
+    if (!model.selectedChat || !model.userId) {
+      setPendingIncomingCount(0);
+      return;
+    }
+
+    const maxIncomingId = getMaxIncomingServerMessageId(model.messages);
+    if (isNearBottom) {
+      if (maxIncomingId > lastSeenIncomingMessageIdRef.current) {
+        lastSeenIncomingMessageIdRef.current = maxIncomingId;
+      }
+      setPendingIncomingCount(0);
+      return;
+    }
+
+    const unseenIncomingCount = model.messages.reduce((count, message) => {
+      if (message.chatId !== model.selectedChat) return count;
+      if (message.senderId === model.userId) return count;
+      if (typeof message.messageId !== 'number') return count;
+      if (message.messageId <= lastSeenIncomingMessageIdRef.current) return count;
+      return count + 1;
+    }, 0);
+    setPendingIncomingCount(unseenIncomingCount);
+  }, [
+    model.messages,
+    model.selectedChat,
+    model.userId,
+    isNearBottom,
+    getMaxIncomingServerMessageId,
+  ]);
+
+  useEffect(() => {
+    if (!model.selectedChat) {
+      historyLoadInFlightRef.current = false;
+      return;
+    }
+
+    const scrollContainer = document.querySelector<HTMLElement>(
+      '[data-chat-scroll-container="true"]'
+    );
+    if (!scrollContainer) {
+      return;
+    }
+
+    const maybeLoadOlder = () => {
+      if (scrollContainer.scrollTop > 140) {
+        return;
+      }
+      if (historyLoadInFlightRef.current) {
+        return;
+      }
+      const now = Date.now();
+      if (now - lastHistoryLoadAttemptAtRef.current < 280) {
+        return;
+      }
+      lastHistoryLoadAttemptAtRef.current = now;
+      historyLoadInFlightRef.current = true;
+      void model.loadOlderMessages(model.selectedChat!, 50).finally(() => {
+        historyLoadInFlightRef.current = false;
+      });
+    };
+
+    maybeLoadOlder();
+    scrollContainer.addEventListener('scroll', maybeLoadOlder, { passive: true });
+    return () => {
+      scrollContainer.removeEventListener('scroll', maybeLoadOlder);
+    };
+  }, [model.selectedChat, model.loadOlderMessages, model.messages.length]);
+
+  const handleJumpToBottom = useCallback(() => {
+    model.setAutoScrollLocked(false);
+    model.scrollToBottom(true);
+    const maxIncomingId = getMaxIncomingServerMessageId(model.messages);
+    if (maxIncomingId > 0) {
+      lastSeenIncomingMessageIdRef.current = maxIncomingId;
+    }
+    setPendingIncomingCount(0);
+    setIsNearBottom(true);
+  }, [model, getMaxIncomingServerMessageId]);
 
   useEffect(() => {
     playbackRef.current = playback;
@@ -1221,7 +1367,7 @@ export default function ChatPage() {
             </div>
 
             <div className="relative z-0 flex min-h-0 flex-1">
-              <div className="min-w-0 flex-1">
+              <div className="relative min-w-0 flex-1">
                 <div
                   className="tg-scroll relative h-full overflow-y-auto"
                   data-chat-scroll-container="true"
@@ -1233,6 +1379,7 @@ export default function ChatPage() {
                 >
                   <div
                     className="mx-auto flex min-h-full w-full flex-col px-[18px] pb-[110px] pt-[12px]"
+                    data-chat-scroll-content="true"
                     style={{ maxWidth: COMPOSER_TRACK_MAX_WIDTH }}
                   >
                     <div className="w-full" style={{ maxWidth: MESSAGE_COLUMN_MAX_WIDTH }}>
@@ -1267,10 +1414,29 @@ export default function ChatPage() {
                         onCancelPendingUpload={(localId, attachmentIndex) => {
                           model.cancelPendingMediaUpload(localId, attachmentIndex);
                         }}
+                        onRetryMessage={(messageId) => {
+                          void model.retryFailedMessage(messageId);
+                        }}
                       />
                     </div>
                   </div>
                 </div>
+                {model.selectedChat !== null && !isNearBottom ? (
+                  <div className="pointer-events-none absolute bottom-[124px] right-[24px] z-[38]">
+                    <button
+                      type="button"
+                      onClick={handleJumpToBottom}
+                      className="pointer-events-auto inline-flex items-center gap-2 rounded-full bg-[#7f67e8] px-4 py-2 text-[13px] font-[700] text-white shadow-[0_12px_26px_rgba(41,24,92,0.45)] transition-colors hover:bg-[#8f78ef]"
+                    >
+                      <span aria-hidden="true">↓</span>
+                      <span>
+                        {pendingIncomingCount > 0
+                          ? `${pendingIncomingCount} new`
+                          : 'Latest messages'}
+                      </span>
+                    </button>
+                  </div>
+                ) : null}
               </div>
 
               {selectedGroupChat ? (
