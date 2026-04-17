@@ -961,21 +961,41 @@ export function useSocialFloatingEffects(ctx: SocialFloatingEffectsContext) {
         return;
       }
 
-      if (wsMessage.type === 'media_updated' && wsMessage.chatId && wsMessage.messageId) {
+      if (wsMessage.type === 'media_updated' && wsMessage.chatId) {
         const mediaPath = wsMessage.mediaPath ?? wsMessage.media?.mediaPath;
-        if (!mediaPath) {
+        const hasServerMessageId =
+          typeof wsMessage.messageId === 'number' && Number.isFinite(wsMessage.messageId);
+        const hasClientMessageKey =
+          typeof wsMessage.clientMessageId === 'number'
+          && Number.isFinite(wsMessage.clientMessageId)
+          && typeof wsMessage.senderId === 'string'
+          && wsMessage.senderId.trim().length > 0;
+
+        if (!hasServerMessageId && !hasClientMessageKey) {
           return;
         }
 
         const patch = {
-          messageId: wsMessage.messageId,
-          clientMessageId: wsMessage.clientMessageId,
+          messageId: hasServerMessageId ? wsMessage.messageId : undefined,
+          clientMessageId:
+            typeof wsMessage.clientMessageId === 'number'
+              ? wsMessage.clientMessageId
+              : undefined,
           senderId: wsMessage.senderId,
           mediaPath,
           contentType: wsMessage.mediaContentType ?? wsMessage.media?.contentType,
           sizeBytes: wsMessage.mediaSizeBytes ?? wsMessage.media?.sizeBytes,
           imageEncryptionIv: wsMessage.mediaEncryptionIv ?? wsMessage.media?.imageEncryptionIv,
           imageKeyVersion: wsMessage.mediaKeyVersion ?? wsMessage.media?.imageKeyVersion,
+          imageUrl: wsMessage.mediaUrl ?? wsMessage.media?.imageUrl,
+          thumbnailUrl: wsMessage.mediaThumbnailUrl ?? wsMessage.media?.thumbnailUrl,
+          strippedThumbnailUrl:
+            wsMessage.mediaStrippedThumbnailUrl ?? wsMessage.media?.strippedThumbnailUrl,
+          fileName: wsMessage.mediaFileName ?? wsMessage.media?.fileName,
+          isImage:
+            typeof wsMessage.mediaIsImage === 'boolean'
+              ? wsMessage.mediaIsImage
+              : wsMessage.media?.isImage,
         };
 
         setMessageStore((prev) => patchMediaMetadataInStore(prev, patch));

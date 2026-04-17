@@ -93,12 +93,22 @@ export interface WebSocketEvent {
   mediaSizeBytes?: number
   mediaEncryptionIv?: string
   mediaKeyVersion?: number
+  mediaUrl?: string
+  mediaThumbnailUrl?: string
+  mediaStrippedThumbnailUrl?: string
+  mediaFileName?: string
+  mediaIsImage?: boolean
   media?: {
     mediaPath?: string
     contentType?: string
     sizeBytes?: number
     imageEncryptionIv?: string
     imageKeyVersion?: number
+    imageUrl?: string
+    thumbnailUrl?: string
+    strippedThumbnailUrl?: string
+    fileName?: string
+    isImage?: boolean
   }
 }
 
@@ -438,6 +448,11 @@ export class CloudChatClient {
           sizeBytes: parsed.sizeBytes,
           imageEncryptionIv: parsed.imageEncryptionIv,
           imageKeyVersion: parsed.imageKeyVersion,
+          imageUrl: parsed.imageUrl,
+          thumbnailUrl: parsed.thumbnailUrl,
+          strippedThumbnailUrl: parsed.strippedThumbnailUrl,
+          fileName: parsed.fileName,
+          isImage: parsed.isImage,
         } as AnyRecord)
 
       this.notifyHandlers({
@@ -460,6 +475,18 @@ export class CloudChatClient {
         mediaKeyVersion:
           (media.imageKeyVersion as number | undefined) ??
           (parsed.imageKeyVersion as number | undefined),
+        mediaUrl:
+          (media.imageUrl as string | undefined) ?? (parsed.imageUrl as string | undefined),
+        mediaThumbnailUrl:
+          (media.thumbnailUrl as string | undefined) ??
+          (parsed.thumbnailUrl as string | undefined),
+        mediaStrippedThumbnailUrl:
+          (media.strippedThumbnailUrl as string | undefined) ??
+          (parsed.strippedThumbnailUrl as string | undefined),
+        mediaFileName:
+          (media.fileName as string | undefined) ?? (parsed.fileName as string | undefined),
+        mediaIsImage:
+          (media.isImage as boolean | undefined) ?? (parsed.isImage as boolean | undefined),
         media: {
           mediaPath:
             (media.mediaPath as string | undefined) ?? (parsed.mediaPath as string | undefined),
@@ -473,6 +500,18 @@ export class CloudChatClient {
           imageKeyVersion:
             (media.imageKeyVersion as number | undefined) ??
             (parsed.imageKeyVersion as number | undefined),
+          imageUrl:
+            (media.imageUrl as string | undefined) ?? (parsed.imageUrl as string | undefined),
+          thumbnailUrl:
+            (media.thumbnailUrl as string | undefined) ??
+            (parsed.thumbnailUrl as string | undefined),
+          strippedThumbnailUrl:
+            (media.strippedThumbnailUrl as string | undefined) ??
+            (parsed.strippedThumbnailUrl as string | undefined),
+          fileName:
+            (media.fileName as string | undefined) ?? (parsed.fileName as string | undefined),
+          isImage:
+            (media.isImage as boolean | undefined) ?? (parsed.isImage as boolean | undefined),
         },
       })
       return

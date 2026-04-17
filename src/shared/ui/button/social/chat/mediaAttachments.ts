@@ -22,6 +22,20 @@ export const getMessageMediaAttachments = (
     return [];
   }
 
+  const hasRenderableAttachmentPayload = (item: ChatMediaAttachment) =>
+    !!(
+      item.imagePath ||
+      item.imageUrl ||
+      item.thumbnailUrl ||
+      item.strippedThumbnailUrl ||
+      item.fileName ||
+      item.contentType ||
+      typeof item.isImage === 'boolean' ||
+      (typeof item.sizeBytes === 'number' && Number.isFinite(item.sizeBytes) && item.sizeBytes > 0) ||
+      (typeof item.width === 'number' && Number.isFinite(item.width) && item.width > 0) ||
+      (typeof item.height === 'number' && Number.isFinite(item.height) && item.height > 0)
+    );
+
   return message.images
     .map((item) => ({
       imagePath: typeof item.imagePath === 'string' ? item.imagePath : '',
@@ -50,5 +64,5 @@ export const getMessageMediaAttachments = (
       imageEncryptionIv:
         typeof item.imageEncryptionIv === 'string' ? item.imageEncryptionIv : undefined,
     }))
-    .filter((item) => item.imagePath || item.imageUrl);
+    .filter(hasRenderableAttachmentPayload);
 };

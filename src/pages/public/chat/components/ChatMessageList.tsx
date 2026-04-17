@@ -59,6 +59,7 @@ type ChatMessageListProps = {
   hasSelectedChat: boolean;
   messageBubbleMaxWidthPx?: number;
   uploadingImages?: Map<string, PendingUploadState>;
+  pendingMediaPreviewUrls?: Map<string, string>;
   messagesEndRef: RefObject<HTMLDivElement | null>;
   matchedMessageIds: string[];
   activeMatchedMessageId: string | null;
@@ -524,7 +525,16 @@ const toVisualMediaAttachmentItems = (
 
   return attachments.flatMap((attachment, attachmentIndex) => {
     const pendingUploadUrl = resolvePendingUploadUrl?.(attachmentIndex) || '';
-    const resolvedUrl = resolveAttachmentUrl(attachment) || pendingUploadUrl;
+    const previewUrl =
+      typeof attachment.thumbnailUrl === 'string'
+        ? resolveAttachmentPreviewUrl(attachment.thumbnailUrl)
+        : '';
+    const strippedPreviewUrl =
+      typeof attachment.strippedThumbnailUrl === 'string'
+        ? resolveAttachmentPreviewUrl(attachment.strippedThumbnailUrl)
+        : '';
+    const resolvedUrl =
+      resolveAttachmentUrl(attachment) || pendingUploadUrl || previewUrl || strippedPreviewUrl || '';
     if (!resolvedUrl) {
       return [];
     }
@@ -541,22 +551,14 @@ const toVisualMediaAttachmentItems = (
       return [];
     }
 
-    const previewUrl =
-      typeof attachment.thumbnailUrl === 'string'
-        ? resolveAttachmentPreviewUrl(attachment.thumbnailUrl)
-        : isImage
-          ? pendingUploadUrl
-          : undefined;
-    const strippedPreviewUrl =
-      typeof attachment.strippedThumbnailUrl === 'string'
-        ? resolveAttachmentPreviewUrl(attachment.strippedThumbnailUrl)
-        : undefined;
+    const effectivePreviewUrl = previewUrl || (isImage ? pendingUploadUrl : undefined);
+    const effectiveStrippedPreviewUrl = strippedPreviewUrl || undefined;
     const aspectRatio = resolveAttachmentAspectRatio(attachment);
 
     const mediaItem: ImageBubbleMediaItem = {
       url: resolvedUrl,
-      strippedPreviewUrl: strippedPreviewUrl || undefined,
-      previewUrl: previewUrl || undefined,
+      strippedPreviewUrl: effectiveStrippedPreviewUrl,
+      previewUrl: effectivePreviewUrl,
       mediaType: isVideo ? 'video' : 'image',
       contentType: attachment.contentType,
       sizeBytes: attachment.sizeBytes,
@@ -3528,6 +3530,7 @@ export function ChatMessageList({
   hasSelectedChat,
   messageBubbleMaxWidthPx = DEFAULT_MESSAGE_BUBBLE_MAX_WIDTH_PX,
   uploadingImages,
+  pendingMediaPreviewUrls,
   messagesEndRef,
   matchedMessageIds,
   activeMatchedMessageId,
@@ -3562,6 +3565,10 @@ export function ChatMessageList({
     }
 
     const key = `${localId}-${attachmentIndex}`;
+    const modelPreviewUrl = pendingMediaPreviewUrls?.get(key);
+    if (modelPreviewUrl) {
+      return modelPreviewUrl;
+    }
     const existing = pendingUploadPreviewUrlsRef.current.get(key);
     if (existing) {
       existing.lastTouchedAt = Date.now();
@@ -3788,7 +3795,7 @@ export function ChatMessageList({
       URL.revokeObjectURL(entry.objectUrl);
       pendingUploadPreviewUrlsRef.current.delete(uploadKey);
     }
-  }, [uploadingImages]);
+  }, [uploadingImages, pendingMediaPreviewUrls]);
 
   useEffect(
     () => () => {

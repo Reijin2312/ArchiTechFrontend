@@ -97,6 +97,8 @@ export type SocialFloatingActionsContext = {
   setAttachedImages: Dispatch<SetStateAction<AttachedImage[]>>;
   setEditingMessage: Dispatch<SetStateAction<ChatMessage | null>>;
   setUploadingImages: Dispatch<SetStateAction<Map<string, UploadingImageState>>>;
+  pendingMediaPreviewUrls: Map<string, string>;
+  setPendingMediaPreviewUrls: Dispatch<SetStateAction<Map<string, string>>>;
   setAutoScrollLocked: Dispatch<SetStateAction<boolean>>;
   setIsChatsRefreshing: Dispatch<SetStateAction<boolean>>;
   scrollToBottom: (smooth?: boolean) => void;

@@ -1389,6 +1389,7 @@ export default function ChatPage() {
                         hasSelectedChat={model.selectedChat !== null}
                         messageBubbleMaxWidthPx={MESSAGE_BUBBLE_MAX_WIDTH}
                         uploadingImages={model.uploadingImages}
+                        pendingMediaPreviewUrls={model.pendingMediaPreviewUrls}
                         messagesEndRef={model.messagesEndRef}
                         matchedMessageIds={isMessageSearchOpen ? messageSearchMatches : []}
                         activeMatchedMessageId={activeMessageSearchId}

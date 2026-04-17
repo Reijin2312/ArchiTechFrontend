@@ -29,12 +29,6 @@ import type { UploadingImageState } from './actions/types';
 
 export type Tab = 'friends' | 'search' | 'requests' | 'chat';
 export type RequestsSubTab = 'incoming' | 'outgoing';
-export type ImageGridLayout = {
-  columns: number;
-  rows: number;
-  spans: { colSpan: number; rowSpan: number }[];
-};
-
 type SocialFloatingModelOptions = {
   mode?: 'floating' | 'page';
 };
@@ -88,6 +82,9 @@ export function useSocialFloatingModel(options: SocialFloatingModelOptions = {})
   const [editingMessage, setEditingMessage] = useState<ChatMessage | null>(null);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; message: ChatMessage } | null>(null);
   const [uploadingImages, setUploadingImages] = useState<Map<string, UploadingImageState>>(new Map());
+  const [pendingMediaPreviewUrls, setPendingMediaPreviewUrls] = useState<Map<string, string>>(
+    new Map()
+  );
   const [isRecordingVoice, setIsRecordingVoice] = useState(false);
   const [isRecordingCircle, setIsRecordingCircle] = useState(false);
   const [recordingCircleStream, setRecordingCircleStream] = useState<MediaStream | null>(null);
@@ -111,6 +108,7 @@ export function useSocialFloatingModel(options: SocialFloatingModelOptions = {})
   }>>([]);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const pendingMediaPreviewUrlsRef = useRef<Map<string, string>>(new Map());
   const markReadTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const markReadTargetRef = useRef<{ chatId: number; lastId: number } | null>(null);
   const sendQueueRef = useRef<Map<number, Promise<void>>>(new Map());
@@ -142,57 +140,6 @@ export function useSocialFloatingModel(options: SocialFloatingModelOptions = {})
   const isOpenRef = useRef(isOpen);
   const friendsRef = useRef<Friend[]>([]);
   const chatsRef = useRef<PrivateChat[]>([]);
-
-  // Подбираем сетку для мультиизображений: фиксированный контейнер, предсказуемые ряды
-  const getImageGridLayout = (count: number): ImageGridLayout => {
-    if (count === 3) {
-      return {
-        columns: 2,
-        rows: 2,
-        spans: [
-          { colSpan: 2, rowSpan: 1 }, // одно сверху
-          { colSpan: 1, rowSpan: 1 },
-          { colSpan: 1, rowSpan: 1 },
-        ],
-      };
-    }
-
-    if (count === 5) {
-      return {
-        columns: 6,
-        rows: 2,
-        spans: [
-          { colSpan: 3, rowSpan: 1 },
-          { colSpan: 3, rowSpan: 1 },
-          { colSpan: 2, rowSpan: 1 },
-          { colSpan: 2, rowSpan: 1 },
-          { colSpan: 2, rowSpan: 1 },
-        ],
-      };
-    }
-
-    if (count === 7) {
-      return {
-        columns: 12,
-        rows: 2,
-        spans: [
-          { colSpan: 4, rowSpan: 1 },
-          { colSpan: 4, rowSpan: 1 },
-          { colSpan: 4, rowSpan: 1 },
-          { colSpan: 3, rowSpan: 1 },
-          { colSpan: 3, rowSpan: 1 },
-          { colSpan: 3, rowSpan: 1 },
-          { colSpan: 3, rowSpan: 1 },
-        ],
-      };
-    }
-
-    const columns = (count === 2 || count === 4) ? 2 : 3;
-    const rows = Math.max(1, Math.ceil(count / columns));
-    const spans = Array.from({ length: count }, () => ({ colSpan: 1, rowSpan: 1 }));
-
-    return { columns, rows, spans };
-  };
 
   const scrollToBottom = (smooth = true) => {
     if (autoScrollLockedRef.current) {
@@ -371,10 +318,26 @@ export function useSocialFloatingModel(options: SocialFloatingModelOptions = {})
     setAttachedImages,
     setEditingMessage,
     setUploadingImages,
+    pendingMediaPreviewUrls,
+    setPendingMediaPreviewUrls,
     setAutoScrollLocked,
     setIsChatsRefreshing,
     scrollToBottom,
   });
+
+  useEffect(() => {
+    pendingMediaPreviewUrlsRef.current = pendingMediaPreviewUrls;
+  }, [pendingMediaPreviewUrls]);
+
+  useEffect(() => {
+    return () => {
+      for (const url of pendingMediaPreviewUrlsRef.current.values()) {
+        if (url.startsWith('blob:')) {
+          URL.revokeObjectURL(url);
+        }
+      }
+    };
+  }, []);
 
 
   useSocialFloatingEffects({
@@ -473,6 +436,8 @@ export function useSocialFloatingModel(options: SocialFloatingModelOptions = {})
     setContextMenu,
     uploadingImages,
     setUploadingImages,
+    pendingMediaPreviewUrls,
+    setPendingMediaPreviewUrls,
     isRecordingVoice,
     setIsRecordingVoice,
     isRecordingCircle,
@@ -494,7 +459,6 @@ export function useSocialFloatingModel(options: SocialFloatingModelOptions = {})
     isOpenRef,
     friendsRef,
     chatsRef,
-    getImageGridLayout,
     scrollToBottom,
     closeMessenger,
     normalizeAssetUrl,
@@ -534,6 +498,7 @@ export function useSocialFloatingModel(options: SocialFloatingModelOptions = {})
 }
 
 export type SocialFloatingModel = ReturnType<typeof useSocialFloatingModel>;
+
 
 
 

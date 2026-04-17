@@ -25,6 +25,11 @@ type ChatMediaPatch = {
   sizeBytes?: number;
   imageEncryptionIv?: string;
   imageKeyVersion?: number;
+  imageUrl?: string;
+  thumbnailUrl?: string;
+  strippedThumbnailUrl?: string;
+  fileName?: string;
+  isImage?: boolean;
 };
 
 const isNonEmptyString = (value: unknown): value is string =>
@@ -283,12 +288,10 @@ export const mergeHistoryWithPending = (
 };
 
 export const patchMediaMetadata = (messages: ChatMessage[], patch: ChatMediaPatch) => {
-  if (!patch.mediaPath) {
-    return messages;
-  }
   const hasServerMessageId = typeof patch.messageId === 'number' && Number.isFinite(patch.messageId);
   const hasClientMessageId =
     typeof patch.clientMessageId === 'number' && Number.isFinite(patch.clientMessageId);
+  const hasMediaPath = isNonEmptyString(patch.mediaPath);
   if (!hasServerMessageId && !hasClientMessageId) {
     return messages;
   }
@@ -302,14 +305,28 @@ export const patchMediaMetadata = (messages: ChatMessage[], patch: ChatMediaPatc
 
     let changed = false;
     const nextImages = images.map((image) => {
-      if (image.imagePath !== patch.mediaPath) return image;
+      const pathMatches = hasMediaPath && image.imagePath === patch.mediaPath;
+      const fallbackSingleAttachmentMatch = !hasMediaPath && images.length === 1;
+      if (!pathMatches && !fallbackSingleAttachmentMatch) return image;
       changed = true;
       return {
         ...image,
+        imageUrl:
+          (isNonEmptyString(patch.imageUrl) ? patch.imageUrl : undefined) || image.imageUrl,
+        thumbnailUrl:
+          (isNonEmptyString(patch.thumbnailUrl) ? patch.thumbnailUrl : undefined)
+            || image.thumbnailUrl,
+        strippedThumbnailUrl:
+          (isNonEmptyString(patch.strippedThumbnailUrl) ? patch.strippedThumbnailUrl : undefined)
+            || image.strippedThumbnailUrl,
+        fileName:
+          (isNonEmptyString(patch.fileName) ? patch.fileName : undefined)
+            || image.fileName,
         contentType: patch.contentType || image.contentType,
         sizeBytes: patch.sizeBytes ?? image.sizeBytes,
         imageEncryptionIv: patch.imageEncryptionIv ?? image.imageEncryptionIv,
         imageKeyVersion: patch.imageKeyVersion ?? image.imageKeyVersion,
+        isImage: typeof patch.isImage === 'boolean' ? patch.isImage : image.isImage,
       };
     });
 
@@ -538,9 +555,6 @@ export const removeMessageFromStore = (
 };
 
 export const patchMediaMetadataInStore = (store: ChatMessageStore, patch: ChatMediaPatch) => {
-  if (!patch.mediaPath) {
-    return store;
-  }
   const hasServerMessageId = typeof patch.messageId === 'number' && Number.isFinite(patch.messageId);
   const hasClientMessageId =
     typeof patch.clientMessageId === 'number' && Number.isFinite(patch.clientMessageId);

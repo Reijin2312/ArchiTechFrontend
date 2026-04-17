@@ -379,7 +379,7 @@ function ProgressiveIncomingImage({
   ariaLabel?: string;
 }) {
   const supportsProgressiveDownload =
-    !disableProgressive && !isOwnMessage && isManagedMediaSourceUrl(src);
+    !disableProgressive && isManagedMediaSourceUrl(src);
   const { ref: viewportRef, isInViewport } = useViewportPresence<HTMLDivElement>({
     disabled: !supportsProgressiveDownload,
     rootMargin: '420px',
@@ -571,7 +571,7 @@ function ProgressiveIncomingVideo({
   ariaLabel?: string;
 }) {
   const supportsProgressiveDownload =
-    !disableProgressive && !isOwnMessage && isManagedMediaSourceUrl(src);
+    !disableProgressive && isManagedMediaSourceUrl(src);
   const { ref: viewportRef, isInViewport } = useViewportPresence<HTMLDivElement>({
     disabled: !supportsProgressiveDownload,
     rootMargin: '420px',

@@ -52,6 +52,8 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
     setAttachedImages,
     setEditingMessage,
     setUploadingImages,
+    pendingMediaPreviewUrls,
+    setPendingMediaPreviewUrls,
     setAutoScrollLocked,
     setIsChatsRefreshing,
     scrollToBottom,
@@ -142,6 +144,57 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
         if (key.startsWith(`${localId}-`)) {
           next.delete(key);
           changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  };
+
+  const upsertPendingMediaPreviewUrl = (key: string, nextUrl: string) => {
+    setPendingMediaPreviewUrls((prev) => {
+      const current = prev.get(key);
+      if (current === nextUrl) {
+        return prev;
+      }
+      if (current && current.startsWith('blob:')) {
+        URL.revokeObjectURL(current);
+      }
+      const next = new Map(prev);
+      next.set(key, nextUrl);
+      return next;
+    });
+  };
+
+  const clearPendingMediaPreviewUrlByKey = (key: string) => {
+    setPendingMediaPreviewUrls((prev) => {
+      const current = prev.get(key);
+      if (!current) {
+        return prev;
+      }
+      const next = new Map(prev);
+      next.delete(key);
+      if (current.startsWith('blob:')) {
+        URL.revokeObjectURL(current);
+      }
+      return next;
+    });
+  };
+
+  const clearPendingMediaPreviewUrlsByLocalId = (localId: string) => {
+    setPendingMediaPreviewUrls((prev) => {
+      if (prev.size === 0) {
+        return prev;
+      }
+      const next = new Map(prev);
+      let changed = false;
+      for (const [key, url] of prev.entries()) {
+        if (!key.startsWith(`${localId}-`)) {
+          continue;
+        }
+        next.delete(key);
+        changed = true;
+        if (url.startsWith('blob:')) {
+          URL.revokeObjectURL(url);
         }
       }
       return changed ? next : prev;
@@ -327,6 +380,21 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
     return contentType.startsWith('video/');
   };
 
+  const normalizeMediaContentType = (value?: string) => {
+    const normalized = (value || '').trim().toLowerCase();
+    return normalized || 'application/octet-stream';
+  };
+
+  const resolveIsImageFlag = (contentType: string, fallback?: boolean) => {
+    if (contentType.startsWith('video/')) {
+      return false;
+    }
+    if (contentType.startsWith('image/')) {
+      return true;
+    }
+    return !!fallback;
+  };
+
   const isVisualMediaAttachment = (attachment: {
     isImage?: boolean;
     sendAsFile?: boolean;
@@ -401,6 +469,9 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
         const imagePath = normalized.imagePath || '';
         if (!imagePath) return null;
         const fallbackFileName = imagePath.split('/').pop() || `attachment-${index + 1}`;
+        const normalizedContentType = normalizeMediaContentType(
+          normalized.contentType || 'application/octet-stream'
+        );
         return {
           imagePath,
           imageUrl: normalized.imageUrl || (imagePath ? `/media/${imagePath}` : undefined),
@@ -409,9 +480,9 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
           width: normalized.width,
           height: normalized.height,
           fileName: normalized.fileName || fallbackFileName,
-          contentType: normalized.contentType || 'application/octet-stream',
+          contentType: normalizedContentType,
           sizeBytes: normalized.sizeBytes ?? 0,
-          isImage: normalized.isImage ?? fallbackMediaType,
+          isImage: resolveIsImageFlag(normalizedContentType, normalized.isImage ?? fallbackMediaType),
           imageKeyVersion: normalized.imageKeyVersion,
           imageEncryptionIv: normalized.imageEncryptionIv,
           imageEncrypted: !!normalized.imageEncryptionIv,
@@ -761,16 +832,51 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
 
   const loadMessages = async (chatId: number, append = false) => {
     try {
-      const { data } = await http.get<ChatMessagesResponse>(
-        endpoints.chatMessages(chatId, undefined, INITIAL_HISTORY_PAGE_LIMIT)
-      );
+      const aggregatedBatch: ChatMessage[] = [];
+      let beforeCursor: number | undefined;
+      let rounds = 0;
+      const maxRounds = append ? 1 : 6;
+      let exhaustedHistory = false;
 
-      const messagesWithContent = normalizeHistoryBatch(chatId, data.messages || []);
+      while (rounds < maxRounds) {
+        const { data } = await http.get<ChatMessagesResponse>(
+          endpoints.chatMessages(chatId, beforeCursor, INITIAL_HISTORY_PAGE_LIMIT)
+        );
+        const incomingBatch = normalizeHistoryBatch(chatId, data.messages || []);
+        if (incomingBatch.length === 0) {
+          break;
+        }
+
+        aggregatedBatch.push(...incomingBatch);
+
+        const oldestInBatch = incomingBatch.reduce((oldest, message) => {
+          if (typeof message.messageId !== 'number' || !Number.isFinite(message.messageId)) {
+            return oldest;
+          }
+          return oldest === 0 || message.messageId < oldest ? message.messageId : oldest;
+        }, 0);
+
+        if (incomingBatch.length < INITIAL_HISTORY_PAGE_LIMIT || oldestInBatch <= 0) {
+          exhaustedHistory = true;
+          break;
+        }
+        if (beforeCursor && oldestInBatch >= beforeCursor) {
+          break;
+        }
+
+        beforeCursor = oldestInBatch;
+        rounds += 1;
+      }
+
+      const messagesWithContent = aggregatedBatch;
 
       historyLoadingByChatRef.current.delete(chatId);
       historyHasMoreByChatRef.current.set(chatId, true);
       historyBeforeByChatRef.current.delete(chatId);
       setHistoryCursorFromBatch(chatId, messagesWithContent, INITIAL_HISTORY_PAGE_LIMIT);
+      if (exhaustedHistory) {
+        historyHasMoreByChatRef.current.set(chatId, false);
+      }
 
       setMessageStore((prev) =>
         mergeHistoryWithPendingInStore(prev, messagesWithContent, user?.id)
@@ -1452,6 +1558,9 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
             user?.id
           )
         );
+        if (typeof failedMessage.localId === 'string') {
+          clearPendingMediaPreviewUrlsByLocalId(failedMessage.localId);
+        }
       } catch (error) {
         const err = error as any;
         logger.error('[chat.send.retry] failed', {
@@ -1543,34 +1652,28 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
         const seededAttachment = fileRef.uploadedData
           ? normalizeAttachmentPayload(fileRef.uploadedData as unknown as LooseAttachmentPayload)
           : null;
-        const localPreviewUrl = fileRef.preview;
+        const resolvedContentType = normalizeMediaContentType(
+          fileRef.contentType || fileRef.file.type || seededAttachment?.contentType
+        );
         return {
           imagePath: seededAttachment?.imagePath || '',
-          imageUrl: seededAttachment?.imageUrl || localPreviewUrl,
-          thumbnailUrl:
-            seededAttachment?.thumbnailUrl ||
-            fileRef.thumbnailUrl ||
-            (fileRef.isImage ? localPreviewUrl : undefined),
-          strippedThumbnailUrl:
-            seededAttachment?.strippedThumbnailUrl ||
-            fileRef.strippedThumbnailUrl,
+          imageUrl: seededAttachment?.imageUrl,
+          thumbnailUrl: seededAttachment?.thumbnailUrl,
+          strippedThumbnailUrl: seededAttachment?.strippedThumbnailUrl,
           width: seededAttachment?.width ?? fileRef.width,
           height: seededAttachment?.height ?? fileRef.height,
           fileName:
             seededAttachment?.fileName ||
             fileRef.file.name,
-          contentType:
-            seededAttachment?.contentType ||
-            fileRef.contentType ||
-            fileRef.file.type ||
-            'application/octet-stream',
+          contentType: resolvedContentType,
           sizeBytes:
             seededAttachment?.sizeBytes ??
             fileRef.sizeBytes ??
             fileRef.file.size,
-          isImage:
-            seededAttachment?.isImage ??
-            isImageAttachment(fileRef),
+          isImage: resolveIsImageFlag(
+            resolvedContentType,
+            seededAttachment?.isImage ?? isImageAttachment(fileRef)
+          ),
           imageKeyVersion: seededAttachment?.imageKeyVersion,
           imageEncryptionIv: seededAttachment?.imageEncryptionIv,
         };
@@ -1614,8 +1717,6 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
       }
 
       const hasEnoughLocalMeta =
-        !!attachment.thumbnailUrl &&
-        !!attachment.strippedThumbnailUrl &&
         typeof attachment.width === 'number' &&
         attachment.width > 0 &&
         typeof attachment.height === 'number' &&
@@ -1659,18 +1760,6 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
                   idx === attachmentIndex
                     ? {
                         ...image,
-                        imageUrl:
-                          image.imageUrl ||
-                          nextAttachment.preview ||
-                          meta.previewUrl,
-                        thumbnailUrl:
-                          image.thumbnailUrl ||
-                          nextAttachment.thumbnailUrl ||
-                          meta.thumbnailUrl,
-                        strippedThumbnailUrl:
-                          image.strippedThumbnailUrl ||
-                          nextAttachment.strippedThumbnailUrl ||
-                          meta.strippedThumbnailUrl,
                         width: image.width ?? nextAttachment.width ?? meta.width,
                         height: image.height ?? nextAttachment.height ?? meta.height,
                       }
@@ -1690,6 +1779,7 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
     const removeTempMessageIfAllCanceled = () => {
       if (hasActiveAttachments()) return;
       setMessageStore((prev) => removeMessageFromStore(prev, localId, user?.id));
+      clearPendingMediaPreviewUrlsByLocalId(localId);
     };
 
     const clearCanceledImagePreview = (attachmentIndex: number) => {
@@ -1737,6 +1827,7 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
         next.delete(uploadKey);
         return next;
       });
+      clearPendingMediaPreviewUrlByKey(uploadKey);
 
       const controller = controllersByIndex.get(attachmentIndex);
       if (controller && !controller.signal.aborted) {
@@ -1757,6 +1848,12 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
         continue;
       }
       const uploadKey = toUploadStateKey(localId, attachmentIndex);
+      const existingPreviewUrl = pendingMediaPreviewUrls.get(uploadKey);
+      const shouldTrackPreview =
+        isVisualMediaAttachment(attachment) || attachment.forcedMessageType === 'circle';
+      if (!existingPreviewUrl && shouldTrackPreview) {
+        upsertPendingMediaPreviewUrl(uploadKey, URL.createObjectURL(attachment.file));
+      }
 
       pendingUploadCancelsRef.current.set(uploadKey, () => {
         requestCancelAttachment(attachmentIndex);
@@ -1800,6 +1897,9 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
           ? normalizeAttachmentPayload(seededUpload as unknown as LooseAttachmentPayload)
           : null;
         if (seededAttachment?.imagePath) {
+          const resolvedContentType = normalizeMediaContentType(
+            attachment.file.type || seededAttachment.contentType
+          );
           uploadedByIndex.set(attachmentIndex, {
             imagePath: seededAttachment.imagePath,
             imageUrl:
@@ -1815,16 +1915,14 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
             fileName:
               seededAttachment.fileName ||
               attachment.file.name,
-            contentType:
-              seededAttachment.contentType ||
-              attachment.file.type ||
-              'application/octet-stream',
+            contentType: resolvedContentType,
             sizeBytes:
               seededAttachment.sizeBytes ??
               attachment.file.size,
-            isImage:
-              seededAttachment.isImage ??
-              isImageAttachment(attachment),
+            isImage: resolveIsImageFlag(
+              resolvedContentType,
+              seededAttachment.isImage ?? isImageAttachment(attachment)
+            ),
           });
           removePendingCancelHandler(attachmentIndex);
           continue;
@@ -1902,6 +2000,13 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
           const normalizedUploadAttachment = normalizeAttachmentPayload(
             data as unknown as LooseAttachmentPayload
           );
+          const resolvedContentType = normalizeMediaContentType(
+            attachment.file.type || data.contentType
+          );
+          const resolvedIsImage = resolveIsImageFlag(
+            resolvedContentType,
+            data.isImage ?? isImageAttachment(attachment)
+          );
           const uploadedAttachment: UploadedAttachmentPayload = {
             imagePath: data.imagePath,
             imageUrl: data.imageUrl,
@@ -1913,9 +2018,9 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
             imageEncryptionIv: data.imageEncryptionIv,
             imageKeyVersion: data.imageKeyVersion,
             fileName: data.fileName || attachment.file.name,
-            contentType: data.contentType || attachment.file.type || 'application/octet-stream',
+            contentType: resolvedContentType,
             sizeBytes: data.sizeBytes ?? attachment.file.size,
-            isImage: data.isImage ?? isImageAttachment(attachment),
+            isImage: resolvedIsImage,
           };
 
           uploadedByIndex.set(attachmentIndex, uploadedAttachment);
@@ -1963,12 +2068,9 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
                             image.height ??
                             attachment.height,
                           fileName: data.fileName || attachment.file.name,
-                          contentType:
-                            data.contentType ||
-                            attachment.file.type ||
-                            'application/octet-stream',
+                          contentType: resolvedContentType,
                           sizeBytes: data.sizeBytes ?? attachment.file.size,
-                          isImage: data.isImage ?? isImageAttachment(attachment),
+                          isImage: resolvedIsImage,
                           imageKeyVersion: data.imageKeyVersion,
                         }
                       : image
@@ -2072,6 +2174,7 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
       );
 
       clearUploadStatesByLocalId(localId);
+      clearPendingMediaPreviewUrlsByLocalId(localId);
       effectiveAttachments.forEach((attachment) => {
         const preview = attachment?.preview;
         if (preview && preview.startsWith('blob:')) {
@@ -2101,24 +2204,28 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
       });
       console.error('Failed to send multi-attachment message:', error);
 
-      setMessageStore((prev) =>
-        upsertMessageInStore(
+      setMessageStore((prev) => {
+        const hasExistingPending = prev.orderedIds.some((id) => {
+          const item = prev.byId[id];
+          return !!item && (item.localId === localId || item.messageId === localId);
+        });
+        if (hasExistingPending) {
+          return patchMessagesInStore(
+            prev,
+            (message) => message.localId === localId || message.messageId === localId,
+            () => ({ status: 'failed' }),
+            user?.id
+          );
+        }
+        return upsertMessageInStore(
           prev,
           {
-            chatId,
-            messageId: localId,
-            localId,
-            clientMessageId,
+            ...tempMessage,
             status: 'failed',
-            senderId: user?.id || '',
-            content: normalizedContent,
-            entities: normalizedEntities,
-            messageType: tempMessageType,
-            createdAt,
           },
           user?.id
-        )
-      );
+        );
+      });
       clearUploadStatesByLocalId(localId);
       alert(
         error instanceof Error
