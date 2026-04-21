@@ -21,6 +21,8 @@ type ChatMediaPatch = {
   clientMessageId?: number;
   senderId?: string;
   mediaPath?: string;
+  width?: number;
+  height?: number;
   contentType?: string;
   sizeBytes?: number;
   imageEncryptionIv?: string;
@@ -319,6 +321,12 @@ export const patchMediaMetadata = (messages: ChatMessage[], patch: ChatMediaPatc
         strippedThumbnailUrl:
           (isNonEmptyString(patch.strippedThumbnailUrl) ? patch.strippedThumbnailUrl : undefined)
             || image.strippedThumbnailUrl,
+        width:
+          (isFiniteNumber(patch.width) && patch.width > 0 ? patch.width : undefined)
+            ?? image.width,
+        height:
+          (isFiniteNumber(patch.height) && patch.height > 0 ? patch.height : undefined)
+            ?? image.height,
         fileName:
           (isNonEmptyString(patch.fileName) ? patch.fileName : undefined)
             || image.fileName,

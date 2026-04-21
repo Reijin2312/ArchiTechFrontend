@@ -318,6 +318,12 @@ const normalizeAspectRatio = (value?: number) => {
   return Math.min(4, Math.max(0.25, value));
 };
 
+const DEFAULT_IMAGE_ASPECT_RATIO = 1;
+const DEFAULT_VIDEO_ASPECT_RATIO = 16 / 9;
+const FALLBACK_MEDIA_WIDTH_PX = 360;
+const isLocalPreviewSource = (value?: string) =>
+  !!value && (value.startsWith('blob:') || value.startsWith('data:'));
+
 function PlaceholderLayer({
   strippedPreviewUrl,
   previewUrl,
@@ -403,52 +409,30 @@ function ProgressiveIncomingImage({
   const resolvedSrc = supportsProgressiveDownload
     ? managedDownload.resolvedUrl || ''
     : src;
+  const [displaySrc, setDisplaySrc] = useState(resolvedSrc);
+  const hasInstantInitialFrame =
+    !supportsProgressiveDownload && isLocalPreviewSource(resolvedSrc);
   const [resolvedAspectRatio, setResolvedAspectRatio] = useState<number | undefined>(
     normalizeAspectRatio(preferredAspectRatio)
   );
   useEffect(() => {
-    const normalized = normalizeAspectRatio(preferredAspectRatio);
-    if (normalized) {
-      setResolvedAspectRatio(normalized);
-    }
+    setResolvedAspectRatio(normalizeAspectRatio(preferredAspectRatio));
   }, [preferredAspectRatio]);
+  const [isImageVisible, setIsImageVisible] = useState(hasInstantInitialFrame);
+  const [showPlaceholderLayer, setShowPlaceholderLayer] = useState(!hasInstantInitialFrame);
   useEffect(() => {
-    if (resolvedAspectRatio) return;
-    const candidate = previewUrl || strippedPreviewUrl || '';
-    if (!candidate) return;
-
-    let cancelled = false;
-    const probe = new Image();
-    probe.decoding = 'async';
-    probe.onload = () => {
-      if (cancelled) return;
-      const width = probe.naturalWidth || 0;
-      const height = probe.naturalHeight || 0;
-      if (width > 0 && height > 0) {
-        setResolvedAspectRatio(width / height);
-      }
-    };
-    probe.src = candidate;
-    return () => {
-      cancelled = true;
-      probe.onload = null;
-    };
-  }, [resolvedAspectRatio, previewUrl, strippedPreviewUrl]);
-  const [isImageVisible, setIsImageVisible] = useState(false);
-  const [showPlaceholderLayer, setShowPlaceholderLayer] = useState(true);
-  useEffect(() => {
+    if (!resolvedSrc) {
+      return;
+    }
+    if (resolvedSrc === displaySrc) {
+      return;
+    }
+    setDisplaySrc(resolvedSrc);
     setIsImageVisible(false);
-    if (!resolvedSrc) {
-      setShowPlaceholderLayer(true);
-      return;
-    }
-  }, [resolvedSrc]);
+    setShowPlaceholderLayer(true);
+  }, [displaySrc, resolvedSrc]);
   useEffect(() => {
-    if (!resolvedSrc) {
-      setShowPlaceholderLayer(true);
-      return;
-    }
-    if (supportsProgressiveDownload && phase !== 'ready') {
+    if (!displaySrc) {
       setShowPlaceholderLayer(true);
       return;
     }
@@ -463,16 +447,16 @@ function ProgressiveIncomingImage({
     return () => {
       window.clearTimeout(timeout);
     };
-  }, [isImageVisible, phase, resolvedSrc, supportsProgressiveDownload]);
+  }, [displaySrc, isImageVisible]);
 
-  const canOpen = !!onOpenMedia && (!supportsProgressiveDownload || phase === 'ready');
+  const canOpen =
+    !!onOpenMedia && (!supportsProgressiveDownload || phase === 'ready' || !!displaySrc);
   const shouldShowPlaceholder = showPlaceholderLayer;
-  const buttonStyle: CSSProperties | undefined = resolvedAspectRatio
-    ? {
-        ...(imageStyle || {}),
-        aspectRatio: resolvedAspectRatio,
-      }
-    : imageStyle;
+  const shouldShowDownloadOverlay = supportsProgressiveDownload && phase !== 'ready';
+  const buttonStyle: CSSProperties = {
+    ...(imageStyle || {}),
+    aspectRatio: resolvedAspectRatio || DEFAULT_IMAGE_ASPECT_RATIO,
+  };
 
   return (
     <div ref={viewportRef} className="relative h-full w-full">
@@ -499,20 +483,15 @@ function ProgressiveIncomingImage({
             previewBlurPx={5}
           />
         </span>
-        {resolvedSrc ? (
+        {displaySrc ? (
           <img
-            src={resolvedSrc}
+            src={displaySrc}
             alt={alt}
             className={`${imageClassName} transition-opacity duration-300 ${
               isImageVisible ? 'opacity-100' : 'opacity-0'
             }`}
             onLoad={(event) => {
-              const target = event.currentTarget;
-              const width = target.naturalWidth || 0;
-              const height = target.naturalHeight || 0;
-              if (width > 0 && height > 0) {
-                setResolvedAspectRatio(width / height);
-              }
+              void event;
               setIsImageVisible(true);
             }}
             loading="lazy"
@@ -522,7 +501,7 @@ function ProgressiveIncomingImage({
         ) : null}
       </button>
 
-      {supportsProgressiveDownload && phase !== 'ready' ? (
+      {shouldShowDownloadOverlay ? (
         <IncomingDownloadOverlay
           phase={phase}
           progress={progress}
@@ -545,6 +524,7 @@ function ProgressiveIncomingVideo({
   src,
   strippedPreviewUrl,
   previewUrl,
+  preferredAspectRatio,
   contentType,
   sizeBytes,
   isOwnMessage,
@@ -559,6 +539,7 @@ function ProgressiveIncomingVideo({
   src: string;
   strippedPreviewUrl?: string;
   previewUrl?: string;
+  preferredAspectRatio?: number;
   contentType?: string;
   sizeBytes?: number;
   isOwnMessage: boolean;
@@ -595,93 +576,61 @@ function ProgressiveIncomingVideo({
   const resolvedSrc = supportsProgressiveDownload
     ? managedDownload.resolvedUrl || ''
     : src;
-  const [isVideoVisible, setIsVideoVisible] = useState(false);
-  const [showPlaceholderLayer, setShowPlaceholderLayer] = useState(true);
+  const [displaySrc, setDisplaySrc] = useState(resolvedSrc);
+  const hasInstantInitialFrame =
+    !supportsProgressiveDownload && isLocalPreviewSource(resolvedSrc);
+  const [isVideoVisible, setIsVideoVisible] = useState(hasInstantInitialFrame);
+  const [showPlaceholderLayer, setShowPlaceholderLayer] = useState(!hasInstantInitialFrame);
   const [generatedPosterUrl, setGeneratedPosterUrl] = useState<string | undefined>(undefined);
   const [posterFailed, setPosterFailed] = useState(false);
-  const [resolvedAspectRatio, setResolvedAspectRatio] = useState<number | undefined>(undefined);
+  const [resolvedAspectRatio, setResolvedAspectRatio] = useState<number | undefined>(
+    normalizeAspectRatio(preferredAspectRatio)
+  );
 
   useEffect(() => {
-    if (!resolvedSrc) {
+    const normalizedPreferred = normalizeAspectRatio(preferredAspectRatio);
+    setResolvedAspectRatio(normalizedPreferred);
+  }, [preferredAspectRatio]);
+
+  useEffect(() => {
+    if (!displaySrc) {
       setGeneratedPosterUrl(undefined);
-      setResolvedAspectRatio(undefined);
+      setResolvedAspectRatio(normalizeAspectRatio(preferredAspectRatio));
       return;
     }
-    const cachedPoster = getCachedVideoPosterUrl(resolvedSrc);
-    const cachedAspectRatio = getCachedVideoAspectRatio(resolvedSrc);
-    setResolvedAspectRatio(cachedAspectRatio);
+    const cachedPoster = getCachedVideoPosterUrl(displaySrc);
+    const normalizedPreferred = normalizeAspectRatio(preferredAspectRatio);
+    const cachedAspectRatio = getCachedVideoAspectRatio(displaySrc);
+    setResolvedAspectRatio(normalizedPreferred || cachedAspectRatio);
     if (cachedPoster) {
       setGeneratedPosterUrl(cachedPoster);
       return;
     }
     setGeneratedPosterUrl(undefined);
-  }, [previewUrl, strippedPreviewUrl, resolvedSrc]);
+  }, [previewUrl, strippedPreviewUrl, displaySrc, preferredAspectRatio]);
 
   useEffect(() => {
     if (!resolvedSrc) {
       return;
     }
-    if (supportsProgressiveDownload && phase !== 'ready') {
+    if (resolvedSrc === displaySrc) {
       return;
     }
-
-    const cachedAspectRatio = getCachedVideoAspectRatio(resolvedSrc);
-    if (cachedAspectRatio) {
-      setResolvedAspectRatio(cachedAspectRatio);
-      return;
-    }
-
-    let cancelled = false;
-    const probe = document.createElement('video');
-    probe.preload = 'metadata';
-    probe.muted = true;
-    probe.playsInline = true;
-
-    const cleanup = () => {
-      probe.removeEventListener('loadedmetadata', onLoadedMetadata);
-      probe.removeEventListener('error', onError);
-      probe.removeAttribute('src');
-      probe.load();
-    };
-
-    const onLoadedMetadata = () => {
-      if (cancelled) {
-        cleanup();
-        return;
-      }
-      const width = probe.videoWidth || 0;
-      const height = probe.videoHeight || 0;
-      if (width > 0 && height > 0) {
-        setResolvedAspectRatio(width / height);
-      }
-      cleanup();
-    };
-
-    const onError = () => {
-      cleanup();
-    };
-
-    probe.addEventListener('loadedmetadata', onLoadedMetadata, { once: true });
-    probe.addEventListener('error', onError, { once: true });
-    probe.src = resolvedSrc;
-    probe.load();
-
-    return () => {
-      cancelled = true;
-      cleanup();
-    };
-  }, [resolvedSrc, supportsProgressiveDownload, phase]);
+    setDisplaySrc(resolvedSrc);
+    setIsVideoVisible(false);
+    setShowPlaceholderLayer(true);
+  }, [displaySrc, resolvedSrc]);
 
   useEffect(() => {
-    if (previewUrl || strippedPreviewUrl || !resolvedSrc) {
+    if (previewUrl || strippedPreviewUrl || !displaySrc) {
       return;
     }
     if (supportsProgressiveDownload && phase !== 'ready') {
       return;
     }
 
-    const cachedPoster = getCachedVideoPosterUrl(resolvedSrc);
-    const cachedAspectRatio = getCachedVideoAspectRatio(resolvedSrc);
+    const cachedPoster = getCachedVideoPosterUrl(displaySrc);
+    const cachedAspectRatio = getCachedVideoAspectRatio(displaySrc);
     if (cachedAspectRatio) {
       setResolvedAspectRatio(cachedAspectRatio);
     }
@@ -692,37 +641,25 @@ function ProgressiveIncomingVideo({
 
     let cancelled = false;
     void (async () => {
-      const meta = await ensureVideoPosterMeta(resolvedSrc);
+      const meta = await ensureVideoPosterMeta(displaySrc);
       if (cancelled || !meta) {
         return;
       }
       setGeneratedPosterUrl(meta.posterDataUrl);
-      setResolvedAspectRatio(meta.aspectRatio);
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [previewUrl, strippedPreviewUrl, resolvedSrc, supportsProgressiveDownload, phase]);
+  }, [previewUrl, strippedPreviewUrl, displaySrc, supportsProgressiveDownload, phase]);
 
   const resolvedPosterUrl = previewUrl || strippedPreviewUrl || generatedPosterUrl;
   useEffect(() => {
     setPosterFailed(false);
-  }, [resolvedPosterUrl, resolvedSrc]);
+  }, [resolvedPosterUrl, displaySrc]);
 
   useEffect(() => {
-    setIsVideoVisible(false);
-    if (!resolvedSrc) {
-      setShowPlaceholderLayer(true);
-      return;
-    }
-  }, [resolvedSrc]);
-  useEffect(() => {
-    if (!resolvedSrc) {
-      setShowPlaceholderLayer(true);
-      return;
-    }
-    if (supportsProgressiveDownload && phase !== 'ready') {
+    if (!displaySrc) {
       setShowPlaceholderLayer(true);
       return;
     }
@@ -736,12 +673,14 @@ function ProgressiveIncomingVideo({
     return () => {
       window.clearTimeout(timeout);
     };
-  }, [isVideoVisible, phase, resolvedSrc, supportsProgressiveDownload]);
+  }, [displaySrc, isVideoVisible]);
 
-  const canOpen = !!onOpenMedia && (!supportsProgressiveDownload || phase === 'ready');
+  const canOpen =
+    !!onOpenMedia && (!supportsProgressiveDownload || phase === 'ready' || !!displaySrc);
   const useFallbackVideoFrame = !resolvedPosterUrl || posterFailed;
   const showPlaceholder = showPlaceholderLayer;
-  const displayAspectRatio = resolvedAspectRatio || 16 / 9;
+  const shouldShowDownloadOverlay = supportsProgressiveDownload && phase !== 'ready';
+  const displayAspectRatio = resolvedAspectRatio || DEFAULT_VIDEO_ASPECT_RATIO;
   const effectiveVideoStyle: CSSProperties = {
     ...videoStyle,
     aspectRatio: displayAspectRatio,
@@ -774,10 +713,10 @@ function ProgressiveIncomingVideo({
             previewBlurPx={4}
           />
         </span>
-        {resolvedSrc ? (
+        {displaySrc ? (
           useFallbackVideoFrame ? (
             <video
-              src={resolvedSrc}
+              src={displaySrc}
               className={`${videoClassName} transition-opacity duration-300 ${
                 isVideoVisible ? 'opacity-100' : 'opacity-0'
               }`}
@@ -794,7 +733,7 @@ function ProgressiveIncomingVideo({
                 }
               }}
             >
-              <source src={resolvedSrc} type={contentType || 'video/mp4'} />
+              <source src={displaySrc} type={contentType || 'video/mp4'} />
             </video>
           ) : resolvedPosterUrl ? (
             <img
@@ -824,7 +763,7 @@ function ProgressiveIncomingVideo({
         <VideoPlayOverlay compact={compactPlayIcon} />
       </button>
 
-      {supportsProgressiveDownload && phase !== 'ready' ? (
+      {shouldShowDownloadOverlay ? (
         <IncomingDownloadOverlay
           phase={phase}
           progress={progress}
@@ -884,6 +823,7 @@ function ImageGrid({
                         src={mediaItem.url}
                         strippedPreviewUrl={mediaItem.strippedPreviewUrl}
                         previewUrl={mediaItem.previewUrl}
+                        preferredAspectRatio={mediaItem.aspectRatio}
                         contentType={mediaItem.contentType}
                         sizeBytes={mediaItem.sizeBytes}
                         isOwnMessage={isOwn}
@@ -966,7 +906,10 @@ const resolveSingleMediaContainerStyle = (
 ): CSSProperties => {
   const normalizedAspectRatio = normalizeAspectRatio(aspectRatio);
   if (!normalizedAspectRatio) {
-    return { maxWidth: bubbleMaxWidthPx };
+    return {
+      width: Math.min(bubbleMaxWidthPx, FALLBACK_MEDIA_WIDTH_PX),
+      maxWidth: '100%',
+    };
   }
 
   const viewportHeight =
@@ -1002,10 +945,10 @@ export function SingleImageBubble({
   const hasCaption = normalizedCaption.length > 0;
   const useFramedBubble = hasCaption || !!replyPreview;
   const useCaptionStripLayout = hasCaption;
-  const rootContainerStyle: CSSProperties =
-    mediaItem.mediaType === 'video'
-      ? { width: bubbleMaxWidthPx, maxWidth: '100%' }
-      : resolveSingleMediaContainerStyle(bubbleMaxWidthPx, mediaItem.aspectRatio);
+  const rootContainerStyle: CSSProperties = resolveSingleMediaContainerStyle(
+    bubbleMaxWidthPx,
+    mediaItem.aspectRatio
+  );
   const captionPaddingClass = isEdited
     ? (isOwn ? 'pr-[96px]' : 'pr-[82px]')
     : (isOwn ? 'pr-[56px]' : 'pr-[48px]');
@@ -1022,6 +965,7 @@ export function SingleImageBubble({
               src={mediaItem.url}
               strippedPreviewUrl={mediaItem.strippedPreviewUrl}
               previewUrl={mediaItem.previewUrl}
+              preferredAspectRatio={mediaItem.aspectRatio}
               contentType={mediaItem.contentType}
               sizeBytes={mediaItem.sizeBytes}
               isOwnMessage={isOwn}
@@ -1107,6 +1051,7 @@ export function SingleImageBubble({
                 src={mediaItem.url}
                 strippedPreviewUrl={mediaItem.strippedPreviewUrl}
                 previewUrl={mediaItem.previewUrl}
+                preferredAspectRatio={mediaItem.aspectRatio}
                 contentType={mediaItem.contentType}
                 sizeBytes={mediaItem.sizeBytes}
                 isOwnMessage={isOwn}
@@ -1174,6 +1119,7 @@ export function SingleImageBubble({
             src={mediaItem.url}
             strippedPreviewUrl={mediaItem.strippedPreviewUrl}
             previewUrl={mediaItem.previewUrl}
+            preferredAspectRatio={mediaItem.aspectRatio}
             contentType={mediaItem.contentType}
             sizeBytes={mediaItem.sizeBytes}
             isOwnMessage={isOwn}

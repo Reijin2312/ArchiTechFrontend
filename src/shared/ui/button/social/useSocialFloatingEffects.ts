@@ -11,6 +11,7 @@ import {
   upsertMessageInStore,
   type ChatMessageStore,
 } from './actions/messageReconcile';
+import { ChatScrollSaver, withChatScrollTransaction } from './scroll/chatScrollSaver';
 import type { Dispatch, MutableRefObject, SetStateAction } from 'react';
 import type {
   ChatPresenceResponse,
@@ -132,15 +133,7 @@ export function useSocialFloatingEffects(ctx: SocialFloatingEffectsContext) {
     scrollHeight: 0,
     nearBottom: true,
   });
-  const chatScrollAnchorRef = useRef<{
-    chatId: number | null;
-    messageDomId: string;
-    offsetTop: number;
-  }>({
-    chatId: null,
-    messageDomId: '',
-    offsetTop: 0,
-  });
+  const chatScrollSaverRef = useRef<ChatScrollSaver | null>(null);
 
   const resolveActiveChatScrollContainer = (): HTMLElement | null =>
     document.querySelector<HTMLElement>('[data-chat-scroll-container="true"]');
@@ -148,59 +141,6 @@ export function useSocialFloatingEffects(ctx: SocialFloatingEffectsContext) {
   const resolveActiveChatScrollContent = (container: HTMLElement): HTMLElement | null =>
     container.querySelector<HTMLElement>('[data-chat-scroll-content="true"]') ??
     (container.firstElementChild instanceof HTMLElement ? container.firstElementChild : null);
-
-  const resolveViewportAnchor = (container: HTMLElement) => {
-    const containerRect = container.getBoundingClientRect();
-    const rowElements = container.querySelectorAll<HTMLElement>('[data-chat-message-row="true"]');
-
-    for (const rowElement of rowElements) {
-      const rowId = rowElement.getAttribute('id');
-      if (!rowId) {
-        continue;
-      }
-
-      const rowRect = rowElement.getBoundingClientRect();
-      if (rowRect.bottom <= containerRect.top + 1) {
-        continue;
-      }
-      if (rowRect.top >= containerRect.bottom - 1) {
-        break;
-      }
-
-      return {
-        messageDomId: rowId,
-        offsetTop: rowRect.top - containerRect.top,
-      };
-    }
-
-    return null;
-  };
-
-  const updateScrollAnchorSnapshot = (
-    container: HTMLElement,
-    chatId: number,
-    nearBottom: boolean
-  ) => {
-    if (nearBottom) {
-      chatScrollAnchorRef.current = {
-        chatId,
-        messageDomId: '',
-        offsetTop: 0,
-      };
-      return;
-    }
-
-    const anchor = resolveViewportAnchor(container);
-    if (!anchor) {
-      return;
-    }
-
-    chatScrollAnchorRef.current = {
-      chatId,
-      messageDomId: anchor.messageDomId,
-      offsetTop: anchor.offsetTop,
-    };
-  };
 
   const isNearBottom = (element: HTMLElement, thresholdPx = STICKY_BOTTOM_THRESHOLD_PX) => {
     const distanceToBottom = element.scrollHeight - (element.scrollTop + element.clientHeight);
@@ -469,11 +409,7 @@ export function useSocialFloatingEffects(ctx: SocialFloatingEffectsContext) {
   useEffect(() => {
     if (!selectedChat || !isOpen || activeTab !== 'chat') {
       chatScrollSyncRef.current.chatId = selectedChat ?? null;
-      chatScrollAnchorRef.current = {
-        chatId: selectedChat ?? null,
-        messageDomId: '',
-        offsetTop: 0,
-      };
+      chatScrollSaverRef.current = null;
       return;
     }
 
@@ -481,12 +417,20 @@ export function useSocialFloatingEffects(ctx: SocialFloatingEffectsContext) {
     if (!scrollContainer) {
       return;
     }
+    const saver =
+      chatScrollSaverRef.current ??
+      new ChatScrollSaver(scrollContainer, {
+        reverse: true,
+      });
+    chatScrollSaverRef.current = saver;
 
     const syncNearBottomState = () => {
       const nearBottom = isNearBottom(scrollContainer);
       chatScrollSyncRef.current.nearBottom = nearBottom;
       chatScrollSyncRef.current.scrollHeight = scrollContainer.scrollHeight;
-      updateScrollAnchorSnapshot(scrollContainer, selectedChat, nearBottom);
+      if (!nearBottom) {
+        saver.save();
+      }
     };
 
     syncNearBottomState();
@@ -510,6 +454,13 @@ export function useSocialFloatingEffects(ctx: SocialFloatingEffectsContext) {
     }
 
     const scrollContent = resolveActiveChatScrollContent(scrollContainer);
+    const saver =
+      chatScrollSaverRef.current ??
+      new ChatScrollSaver(scrollContainer, {
+        reverse: true,
+      });
+    chatScrollSaverRef.current = saver;
+    saver.save();
     let rafId: number | null = null;
 
     const syncAfterLayoutShift = () => {
@@ -535,33 +486,16 @@ export function useSocialFloatingEffects(ctx: SocialFloatingEffectsContext) {
           scrollHeight: currentScrollHeight,
           nearBottom: currentNearBottom,
         };
-        updateScrollAnchorSnapshot(scrollContainer, selectedChat, currentNearBottom);
+        if (!currentNearBottom) {
+          saver.save();
+        }
         return;
       }
 
       if (previous.nearBottom || currentNearBottom) {
-        // Telegram-like behavior: keep bottom pinned while media resolves and changes row heights.
         scrollContainer.scrollTop = scrollContainer.scrollHeight;
       } else {
-        const anchorSnapshot = chatScrollAnchorRef.current;
-        const canUseAnchor =
-          anchorSnapshot.chatId === selectedChat && anchorSnapshot.messageDomId.length > 0;
-        if (canUseAnchor) {
-          const anchorElement = document.getElementById(anchorSnapshot.messageDomId);
-          if (anchorElement) {
-            const containerRect = scrollContainer.getBoundingClientRect();
-            const anchorRect = anchorElement.getBoundingClientRect();
-            const nextOffsetTop = anchorRect.top - containerRect.top;
-            const anchorDrift = nextOffsetTop - anchorSnapshot.offsetTop;
-            if (Math.abs(anchorDrift) >= 1) {
-              scrollContainer.scrollTop += anchorDrift;
-            }
-          } else {
-            scrollContainer.scrollTop += heightDelta;
-          }
-        } else {
-          scrollContainer.scrollTop += heightDelta;
-        }
+        saver.restore();
       }
 
       const nearBottomAfterSync = isNearBottom(scrollContainer);
@@ -570,7 +504,9 @@ export function useSocialFloatingEffects(ctx: SocialFloatingEffectsContext) {
         scrollHeight: scrollContainer.scrollHeight,
         nearBottom: nearBottomAfterSync,
       };
-      updateScrollAnchorSnapshot(scrollContainer, selectedChat, nearBottomAfterSync);
+      if (!nearBottomAfterSync) {
+        saver.save();
+      }
     };
 
     const queueSync = () => {
@@ -628,19 +564,11 @@ export function useSocialFloatingEffects(ctx: SocialFloatingEffectsContext) {
     let nearBottomAfterSync = currentNearBottom;
 
     if (previous.chatId === chatId) {
-      const heightDelta = currentScrollHeight - previous.scrollHeight;
-      const prependedHistory =
-        previous.firstServerMessageId > 0 &&
-        nextState.firstServerMessageId > 0 &&
-        nextState.firstServerMessageId < previous.firstServerMessageId;
       const appendedMessages =
         nextState.lastMessageIdentity.length > 0 &&
-        nextState.lastMessageIdentity !== previous.lastMessageIdentity &&
-        !prependedHistory;
+        nextState.lastMessageIdentity !== previous.lastMessageIdentity;
 
-      if (prependedHistory && heightDelta > 0 && !previous.nearBottom) {
-        scrollContainer.scrollTop += heightDelta;
-      } else if (appendedMessages && previous.nearBottom) {
+      if (appendedMessages && previous.nearBottom) {
         scrollContainer.scrollTop = scrollContainer.scrollHeight;
       }
       nearBottomAfterSync = isNearBottom(scrollContainer);
@@ -653,7 +581,9 @@ export function useSocialFloatingEffects(ctx: SocialFloatingEffectsContext) {
       scrollHeight: scrollContainer.scrollHeight,
       nearBottom: nearBottomAfterSync,
     };
-    updateScrollAnchorSnapshot(scrollContainer, chatId, nearBottomAfterSync);
+    if (!nearBottomAfterSync) {
+      chatScrollSaverRef.current?.save();
+    }
   }, [messages, selectedChat, isOpen, activeTab]);
 
   useEffect(() => {
@@ -983,6 +913,14 @@ export function useSocialFloatingEffects(ctx: SocialFloatingEffectsContext) {
               : undefined,
           senderId: wsMessage.senderId,
           mediaPath,
+          width:
+            typeof wsMessage.mediaWidth === 'number'
+              ? wsMessage.mediaWidth
+              : wsMessage.media?.width,
+          height:
+            typeof wsMessage.mediaHeight === 'number'
+              ? wsMessage.mediaHeight
+              : wsMessage.media?.height,
           contentType: wsMessage.mediaContentType ?? wsMessage.media?.contentType,
           sizeBytes: wsMessage.mediaSizeBytes ?? wsMessage.media?.sizeBytes,
           imageEncryptionIv: wsMessage.mediaEncryptionIv ?? wsMessage.media?.imageEncryptionIv,
@@ -998,7 +936,15 @@ export function useSocialFloatingEffects(ctx: SocialFloatingEffectsContext) {
               : wsMessage.media?.isImage,
         };
 
-        setMessageStore((prev) => patchMediaMetadataInStore(prev, patch));
+        withChatScrollTransaction(
+          () => {
+            setMessageStore((prev) => patchMediaMetadataInStore(prev, patch));
+          },
+          {
+            reverse: true,
+            frames: 2,
+          }
+        );
         return;
       }
 

@@ -18,6 +18,8 @@ export interface ChatMessage {
     imageEncrypted?: boolean
     imageEncryptionIv?: string
     imageKeyVersion?: number
+    width?: number
+    height?: number
     fileName?: string
     contentType?: string
     sizeBytes?: number
@@ -39,6 +41,8 @@ export interface ReceivedMessage {
     imageUrl?: string
     thumbnailUrl?: string
     strippedThumbnailUrl?: string
+    width?: number
+    height?: number
     fileName?: string
     contentType?: string
     sizeBytes?: number
@@ -91,6 +95,8 @@ export interface WebSocketEvent {
   mediaPath?: string
   mediaContentType?: string
   mediaSizeBytes?: number
+  mediaWidth?: number
+  mediaHeight?: number
   mediaEncryptionIv?: string
   mediaKeyVersion?: number
   mediaUrl?: string
@@ -102,6 +108,8 @@ export interface WebSocketEvent {
     mediaPath?: string
     contentType?: string
     sizeBytes?: number
+    width?: number
+    height?: number
     imageEncryptionIv?: string
     imageKeyVersion?: number
     imageUrl?: string
@@ -446,6 +454,8 @@ export class CloudChatClient {
           mediaPath: parsed.mediaPath,
           contentType: parsed.contentType,
           sizeBytes: parsed.sizeBytes,
+          width: parsed.width,
+          height: parsed.height,
           imageEncryptionIv: parsed.imageEncryptionIv,
           imageKeyVersion: parsed.imageKeyVersion,
           imageUrl: parsed.imageUrl,
@@ -469,6 +479,10 @@ export class CloudChatClient {
           (media.contentType as string | undefined) ?? (parsed.contentType as string | undefined),
         mediaSizeBytes:
           (media.sizeBytes as number | undefined) ?? (parsed.sizeBytes as number | undefined),
+        mediaWidth:
+          (media.width as number | undefined) ?? (parsed.width as number | undefined),
+        mediaHeight:
+          (media.height as number | undefined) ?? (parsed.height as number | undefined),
         mediaEncryptionIv:
           (media.imageEncryptionIv as string | undefined) ??
           (parsed.imageEncryptionIv as string | undefined),
@@ -494,6 +508,10 @@ export class CloudChatClient {
             (media.contentType as string | undefined) ?? (parsed.contentType as string | undefined),
           sizeBytes:
             (media.sizeBytes as number | undefined) ?? (parsed.sizeBytes as number | undefined),
+          width:
+            (media.width as number | undefined) ?? (parsed.width as number | undefined),
+          height:
+            (media.height as number | undefined) ?? (parsed.height as number | undefined),
           imageEncryptionIv:
             (media.imageEncryptionIv as string | undefined) ??
             (parsed.imageEncryptionIv as string | undefined),
@@ -827,6 +845,8 @@ export class CloudChatClient {
               image_encrypted: image.imageEncrypted,
               image_encryption_iv: image.imageEncryptionIv,
               image_key_version: image.imageKeyVersion,
+              width: image.width,
+              height: image.height,
               file_name: image.fileName,
               content_type: image.contentType,
               size_bytes: image.sizeBytes,

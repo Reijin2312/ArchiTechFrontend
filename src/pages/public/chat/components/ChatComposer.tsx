@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
+import { createPortal } from 'react-dom';
 import type { SocialFloatingModel } from '@/shared/ui/button/social/useSocialFloatingModel';
 import { getMessageMediaAttachments } from '@/shared/ui/button/social/chat/mediaAttachments';
 import { buildLocalMediaPreviewMeta } from '@/shared/ui/button/social/chat/localMediaPreview';
@@ -79,6 +80,7 @@ export function ChatComposer({ model }: ChatComposerProps) {
   const pendingPreviewUrlsRef = useRef<string[]>([]);
   const sendingPreviewUrlsRef = useRef<string[]>([]);
   const sendingPreviewReleaseTimersRef = useRef<Set<number>>(new Set());
+  const pendingDraftChatIdRef = useRef<number | null>(null);
   const emojiHideTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [isRecordingLocked, setIsRecordingLocked] = useState(false);
   const [isPointerInCancelZone, setIsPointerInCancelZone] = useState(false);
@@ -225,6 +227,7 @@ export function ChatComposer({ model }: ChatComposerProps) {
       mediaType: ((file.type || '').toLowerCase().startsWith('video/') ? 'video' : 'image') as PendingImageDraftItem['mediaType'],
     }));
     pendingPreviewUrlsRef.current = items.map((item) => item.previewUrl);
+    pendingDraftChatIdRef.current = model.selectedChat;
     setPendingImageDraft({
       items,
       caption: '',
@@ -239,6 +242,7 @@ export function ChatComposer({ model }: ChatComposerProps) {
     } else {
       releasePendingPreviewUrls();
     }
+    pendingDraftChatIdRef.current = null;
     setPendingImageDraft(null);
     setIsPendingImageApplying(false);
   };
@@ -279,11 +283,18 @@ export function ChatComposer({ model }: ChatComposerProps) {
       return;
     }
 
-    const chatMain = root.closest('main');
-    const targetRect = (chatMain ?? root).getBoundingClientRect();
+    const targetRect = root.getBoundingClientRect();
+    const panelWidth = Math.min(440, Math.max(280, window.innerWidth - 28));
+    const halfPanelWidth = panelWidth / 2;
+    const safeX = Math.max(
+      halfPanelWidth + 14,
+      Math.min(window.innerWidth - halfPanelWidth - 14, targetRect.left + targetRect.width / 2)
+    );
+    const safeY = Math.max(160, Math.min(window.innerHeight - 160, window.innerHeight / 2));
+
     setPendingPanelAnchor({
-      x: targetRect.left + targetRect.width / 2,
-      y: targetRect.top + targetRect.height / 2,
+      x: safeX,
+      y: safeY,
     });
   };
 
@@ -479,6 +490,12 @@ export function ChatComposer({ model }: ChatComposerProps) {
     };
   }, [pendingImageDraft]);
 
+  useEffect(() => {
+    if (!pendingImageDraft) return;
+    if (pendingDraftChatIdRef.current === model.selectedChat) return;
+    closePendingImageDraft();
+  }, [model.selectedChat, pendingImageDraft]);
+
   const clearHoldStartTimeout = () => {
     if (holdStartTimeoutRef.current !== null) {
       clearTimeout(holdStartTimeoutRef.current);
@@ -639,170 +656,172 @@ export function ChatComposer({ model }: ChatComposerProps) {
     handleSend();
   };
 
-  return (
-    <>
-      {pendingImageDraft ? (
-        <div className="pointer-events-none fixed inset-0 z-[90]">
-          <div
-            className="pointer-events-auto absolute w-[min(440px,calc(100vw-28px))] overflow-hidden rounded-[16px] bg-[#1a1b20]/98 text-white shadow-[0_22px_60px_rgba(0,0,0,.55)] ring-1 ring-[#8e77ef]/28"
-            style={{
-              left: `${pendingPanelAnchor.x}px`,
-              top: `${pendingPanelAnchor.y}px`,
-              transform: 'translate(-50%, -50%)',
-            }}
+  const pendingDraftModal = pendingImageDraft ? (
+    <div className="pointer-events-none fixed inset-0 z-[90]">
+      <div
+        className="pointer-events-auto absolute w-[min(440px,calc(100vw-28px))] overflow-hidden rounded-[16px] bg-[#1a1b20]/98 text-white shadow-[0_22px_60px_rgba(0,0,0,.55)] ring-1 ring-[#8e77ef]/28"
+        style={{
+          left: `${pendingPanelAnchor.x}px`,
+          top: `${pendingPanelAnchor.y}px`,
+          transform: 'translate(-50%, -50%)',
+        }}
+      >
+        <div className="flex items-center justify-between px-4 pb-2 pt-3">
+          <h3 className="text-[16px] font-[600] tracking-tight text-white/96">
+            Selected {pendingImageDraft.items.length}{' '}
+            {pendingImageDraft.items.length === 1 ? 'item' : 'items'}
+          </h3>
+          <button
+            type="button"
+            onClick={() => closePendingImageDraft()}
+            className="grid h-8 w-8 place-items-center rounded-full text-[#b79cff]/80 transition-colors hover:bg-[#8e77ef]/18 hover:text-white"
+            aria-label="Close media preview"
+            disabled={isPendingImageApplying}
           >
-            <div className="flex items-center justify-between px-4 pb-2 pt-3">
-              <h3 className="text-[16px] font-[600] tracking-tight text-white/96">
-                Selected {pendingImageDraft.items.length}{' '}
-                {pendingImageDraft.items.length === 1 ? 'item' : 'items'}
-              </h3>
-              <button
-                type="button"
-                onClick={() => closePendingImageDraft()}
-                className="grid h-8 w-8 place-items-center rounded-full text-[#b79cff]/80 transition-colors hover:bg-[#8e77ef]/18 hover:text-white"
-                aria-label="Close media preview"
-                disabled={isPendingImageApplying}
-              >
-                <CloseIcon size={18} strokeWidth={2.4} />
-              </button>
-            </div>
+            <CloseIcon size={18} strokeWidth={2.4} />
+          </button>
+        </div>
 
-            <div className="px-4 pb-2">
-              <div className="max-h-[min(46vh,420px)] overflow-y-auto">
-                <div className="overflow-hidden rounded-[10px] bg-black/22 p-[2px]">
-                  <div className="flex flex-col gap-[2px]">
-                    {pendingGridRows.map((row, rowIndex) => (
+        <div className="px-4 pb-2">
+          <div className="max-h-[min(46vh,420px)] overflow-y-auto">
+            <div className="overflow-hidden rounded-[10px] bg-black/22 p-[2px]">
+              <div className="flex flex-col gap-[2px]">
+                {pendingGridRows.map((row, rowIndex) => (
+                  <div
+                    key={`pending-row-${rowIndex}`}
+                    className="grid gap-[2px]"
+                    style={{ gridTemplateColumns: `repeat(${row.columns}, minmax(0, 1fr))` }}
+                  >
+                    {row.items.map((item) => (
                       <div
-                        key={`pending-row-${rowIndex}`}
-                        className="grid gap-[2px]"
-                        style={{ gridTemplateColumns: `repeat(${row.columns}, minmax(0, 1fr))` }}
+                        key={item.id}
+                        className={`group relative overflow-hidden bg-black/35 ${
+                          row.columns === 1 ? 'aspect-[16/10]' : 'aspect-square'
+                        }`}
                       >
-                        {row.items.map((item) => (
-                          <div
-                            key={item.id}
-                            className={`group relative overflow-hidden bg-black/35 ${
-                              row.columns === 1 ? 'aspect-[16/10]' : 'aspect-square'
-                            }`}
-                          >
-                            {item.mediaType === 'video' ? (
-                              <>
-                                <video
-                                  src={item.previewUrl}
-                                  className="h-full w-full object-cover"
-                                  playsInline
-                                  preload="metadata"
-                                  controls={false}
-                                  muted
-                                />
-                                <span className="pointer-events-none absolute left-2 top-2 rounded-full bg-black/48 px-2 py-[3px] text-[11px] font-[600] text-white/95">
-                                  video
-                                </span>
-                              </>
-                            ) : (
-                              <img
-                                src={item.previewUrl}
-                                alt={item.file.name}
-                                className="h-full w-full object-cover"
-                              />
-                            )}
-                            <button
-                              type="button"
-                              onClick={() => removePendingDraftItem(item.id)}
-                              className="absolute right-1.5 top-1.5 z-10 grid h-6 w-6 place-items-center rounded-full bg-black/52 text-white/92 opacity-100 transition-colors hover:bg-black/72"
-                              aria-label="Remove media from selection"
-                              disabled={isPendingImageApplying}
-                            >
-                              <CloseIcon size={13} strokeWidth={2.4} />
-                            </button>
-                          </div>
-                        ))}
+                        {item.mediaType === 'video' ? (
+                          <>
+                            <video
+                              src={item.previewUrl}
+                              className="h-full w-full object-cover"
+                              playsInline
+                              preload="metadata"
+                              controls={false}
+                              muted
+                            />
+                            <span className="pointer-events-none absolute left-2 top-2 rounded-full bg-black/48 px-2 py-[3px] text-[11px] font-[600] text-white/95">
+                              video
+                            </span>
+                          </>
+                        ) : (
+                          <img
+                            src={item.previewUrl}
+                            alt={item.file.name}
+                            className="h-full w-full object-cover"
+                          />
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => removePendingDraftItem(item.id)}
+                          className="absolute right-1.5 top-1.5 z-10 grid h-6 w-6 place-items-center rounded-full bg-black/52 text-white/92 opacity-100 transition-colors hover:bg-black/72"
+                          aria-label="Remove media from selection"
+                          disabled={isPendingImageApplying}
+                        >
+                          <CloseIcon size={13} strokeWidth={2.4} />
+                        </button>
                       </div>
                     ))}
                   </div>
-                </div>
+                ))}
               </div>
-            </div>
-
-            {pendingImageDraft.items.length > 1 ? (
-              <div className="px-4 pb-2 pt-1">
-                <label className="flex items-center gap-2.5 text-[14px] text-white/94">
-                  <input
-                    type="checkbox"
-                    checked={pendingImageDraft.groupImages}
-                    onChange={(event) => {
-                      const checked = event.target.checked;
-                      setPendingImageDraft((prev) => (prev ? { ...prev, groupImages: checked } : prev));
-                    }}
-                    className="h-5 w-5 rounded-[5px] border border-[#8e77ef]/55 bg-transparent accent-[#8e77ef]"
-                    disabled={isPendingImageApplying}
-                  />
-                  Group
-                </label>
-              </div>
-            ) : null}
-
-            <div className="px-4 pb-3 pt-1">
-              <label className="flex items-center gap-2.5 text-[14px] text-white/94">
-                <input
-                  type="checkbox"
-                  checked={pendingImageDraft.sendAsFile}
-                  onChange={(event) => {
-                    const checked = event.target.checked;
-                    setPendingImageDraft((prev) => (prev ? { ...prev, sendAsFile: checked } : prev));
-                  }}
-                  className="h-5 w-5 rounded-[5px] border border-[#8e77ef]/55 bg-transparent accent-[#8e77ef]"
-                  disabled={isPendingImageApplying}
-                />
-                Send as files
-              </label>
-            </div>
-
-            <div className="px-4 pb-2">
-              <div className="text-[13px] font-[600] text-[#b79cff]">Caption</div>
-              <div className="mt-1 flex items-center gap-2 border-b border-[#8e77ef]/50 pb-1.5">
-                <input
-                  value={pendingImageDraft.caption}
-                  onChange={(event) => {
-                    const value = event.target.value;
-                    setPendingImageDraft((prev) => (prev ? { ...prev, caption: value } : prev));
-                  }}
-                  placeholder="Write a caption"
-                  className="h-8 flex-1 bg-transparent text-[15px] text-white/92 placeholder:text-white/35 focus:outline-none"
-                  disabled={isPendingImageApplying}
-                />
-                <SmilePlusIcon size={18} className="text-white/35" strokeWidth={2.05} />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-3 border-t border-[#8e77ef]/30 px-2 py-1.5">
-              <button
-                type="button"
-                onClick={() => applyPendingImage('add')}
-                className="rounded-xl px-3 py-2 text-center text-[14px] font-[500] text-[#b79cff] transition-colors hover:bg-[#8e77ef]/14"
-                disabled={isPendingImageApplying}
-              >
-                Add
-              </button>
-              <button
-                type="button"
-                onClick={() => closePendingImageDraft()}
-                className="rounded-xl px-3 py-2 text-center text-[14px] font-[500] text-[#b79cff] transition-colors hover:bg-[#8e77ef]/14"
-                disabled={isPendingImageApplying}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() => applyPendingImage('send')}
-                className="rounded-xl px-3 py-2 text-center text-[14px] font-[600] text-[#b79cff] transition-colors hover:bg-[#8e77ef]/14"
-                disabled={isPendingImageApplying}
-              >
-                Send
-              </button>
             </div>
           </div>
         </div>
-      ) : null}
+
+        {pendingImageDraft.items.length > 1 ? (
+          <div className="px-4 pb-2 pt-1">
+            <label className="flex items-center gap-2.5 text-[14px] text-white/94">
+              <input
+                type="checkbox"
+                checked={pendingImageDraft.groupImages}
+                onChange={(event) => {
+                  const checked = event.target.checked;
+                  setPendingImageDraft((prev) => (prev ? { ...prev, groupImages: checked } : prev));
+                }}
+                className="h-5 w-5 rounded-[5px] border border-[#8e77ef]/55 bg-transparent accent-[#8e77ef]"
+                disabled={isPendingImageApplying}
+              />
+              Group
+            </label>
+          </div>
+        ) : null}
+
+        <div className="px-4 pb-3 pt-1">
+          <label className="flex items-center gap-2.5 text-[14px] text-white/94">
+            <input
+              type="checkbox"
+              checked={pendingImageDraft.sendAsFile}
+              onChange={(event) => {
+                const checked = event.target.checked;
+                setPendingImageDraft((prev) => (prev ? { ...prev, sendAsFile: checked } : prev));
+              }}
+              className="h-5 w-5 rounded-[5px] border border-[#8e77ef]/55 bg-transparent accent-[#8e77ef]"
+              disabled={isPendingImageApplying}
+            />
+            Send as files
+          </label>
+        </div>
+
+        <div className="px-4 pb-2">
+          <div className="text-[13px] font-[600] text-[#b79cff]">Caption</div>
+          <div className="mt-1 flex items-center gap-2 border-b border-[#8e77ef]/50 pb-1.5">
+            <input
+              value={pendingImageDraft.caption}
+              onChange={(event) => {
+                const value = event.target.value;
+                setPendingImageDraft((prev) => (prev ? { ...prev, caption: value } : prev));
+              }}
+              placeholder="Write a caption"
+              className="h-8 flex-1 bg-transparent text-[15px] text-white/92 placeholder:text-white/35 focus:outline-none"
+              disabled={isPendingImageApplying}
+            />
+            <SmilePlusIcon size={18} className="text-white/35" strokeWidth={2.05} />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-3 border-t border-[#8e77ef]/30 px-2 py-1.5">
+          <button
+            type="button"
+            onClick={() => applyPendingImage('add')}
+            className="rounded-xl px-3 py-2 text-center text-[14px] font-[500] text-[#b79cff] transition-colors hover:bg-[#8e77ef]/14"
+            disabled={isPendingImageApplying}
+          >
+            Add
+          </button>
+          <button
+            type="button"
+            onClick={() => closePendingImageDraft()}
+            className="rounded-xl px-3 py-2 text-center text-[14px] font-[500] text-[#b79cff] transition-colors hover:bg-[#8e77ef]/14"
+            disabled={isPendingImageApplying}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={() => applyPendingImage('send')}
+            className="rounded-xl px-3 py-2 text-center text-[14px] font-[600] text-[#b79cff] transition-colors hover:bg-[#8e77ef]/14"
+            disabled={isPendingImageApplying}
+          >
+            Send
+          </button>
+        </div>
+      </div>
+    </div>
+  ) : null;
+
+  return (
+    <>
+      {typeof document !== 'undefined' ? createPortal(pendingDraftModal, document.body) : pendingDraftModal}
 
       {model.attachedImages.length > 0 && !recorder.isRecording ? (
         <div className="px-[18px] pb-2">

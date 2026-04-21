@@ -231,9 +231,6 @@ export function ChatHeader({
         </div>
       )}
 
-      {!isMessageSearchOpen ? (
-        <div className="absolute left-1/2 top-[64px] h-[3px] w-[47.3%] -translate-x-1/2 rounded-full bg-[#b39cff]" />
-      ) : null}
     </div>
   );
 }

@@ -34,6 +34,7 @@ import {
   upsertMessageInStore,
   upsertMessagesInStore,
 } from './messageReconcile';
+import { withChatScrollTransaction } from '../scroll/chatScrollSaver';
 
 export function createSocialChatActions(ctx: SocialFloatingActionsContext): SocialChatActions {
   const {
@@ -601,6 +602,8 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
         image_encrypted: item.imageEncrypted,
         image_encryption_iv: item.imageEncryptionIv,
         image_key_version: item.imageKeyVersion,
+        width: item.width,
+        height: item.height,
         file_name: item.fileName,
         content_type: item.contentType,
         size_bytes: item.sizeBytes,
@@ -1100,7 +1103,15 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
       }
 
       setHistoryCursorFromBatch(chatId, mergedBatch, limit);
-      setMessageStore((prev) => mergeHistoryWithPendingInStore(prev, mergedBatch, user?.id));
+      withChatScrollTransaction(
+        () => {
+          setMessageStore((prev) => mergeHistoryWithPendingInStore(prev, mergedBatch, user?.id));
+        },
+        {
+          reverse: false,
+          frames: 2,
+        }
+      );
     } catch (err) {
       logger.warn('Failed to load missed messages after reconnect', {
         chatId,
@@ -1155,7 +1166,15 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
         return;
       }
 
-      setMessageStore((prev) => mergeHistoryWithPendingInStore(prev, batch, user?.id));
+      withChatScrollTransaction(
+        () => {
+          setMessageStore((prev) => mergeHistoryWithPendingInStore(prev, batch, user?.id));
+        },
+        {
+          reverse: true,
+          frames: 2,
+        }
+      );
       const previousOldest = beforeMessageId;
       setHistoryCursorFromBatch(chatId, batch, limit);
       const nextOldest = historyBeforeByChatRef.current.get(chatId) ?? previousOldest;

@@ -251,6 +251,7 @@ export default function ChatPage() {
   const lastSeenIncomingMessageIdRef = useRef(0);
   const historyLoadInFlightRef = useRef(false);
   const lastHistoryLoadAttemptAtRef = useRef(0);
+  const historyLoadSentinelRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     model.setIsOpen(true);
@@ -367,10 +368,12 @@ export default function ChatPage() {
       return;
     }
 
+    const sentinel = historyLoadSentinelRef.current;
+    if (!sentinel) {
+      return;
+    }
+
     const maybeLoadOlder = () => {
-      if (scrollContainer.scrollTop > 140) {
-        return;
-      }
       if (historyLoadInFlightRef.current) {
         return;
       }
@@ -385,12 +388,25 @@ export default function ChatPage() {
       });
     };
 
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          maybeLoadOlder();
+        }
+      },
+      {
+        root: scrollContainer,
+        rootMargin: '180px 0px 0px 0px',
+        threshold: 0.01,
+      }
+    );
+    observer.observe(sentinel);
+
     maybeLoadOlder();
-    scrollContainer.addEventListener('scroll', maybeLoadOlder, { passive: true });
     return () => {
-      scrollContainer.removeEventListener('scroll', maybeLoadOlder);
+      observer.disconnect();
     };
-  }, [model.selectedChat, model.loadOlderMessages, model.messages.length]);
+  }, [model.selectedChat, model.loadOlderMessages]);
 
   const handleJumpToBottom = useCallback(() => {
     model.setAutoScrollLocked(false);
@@ -2351,6 +2367,12 @@ export default function ChatPage() {
                     data-chat-scroll-content="true"
                     style={{ maxWidth: COMPOSER_TRACK_MAX_WIDTH }}
                   >
+                    <div
+                      ref={historyLoadSentinelRef}
+                      className="h-px w-full shrink-0"
+                      data-chat-history-sentinel="true"
+                      aria-hidden="true"
+                    />
                     {model.selectedChat !== null ? (
                       <div className="w-full" style={{ maxWidth: MESSAGE_COLUMN_MAX_WIDTH }}>
                         <ChatMessageList
@@ -2666,15 +2688,17 @@ export default function ChatPage() {
               ) : null}
             </div>
 
-            <div
-              className={`absolute bottom-0 left-0 right-0 transform-gpu transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
-                isGroupInfoVisible ? 'lg:-translate-x-[180px]' : 'lg:translate-x-0'
-              }`}
-              style={{ willChange: isGroupInfoVisible ? 'transform' : undefined }}
-              data-chat-composer-container="true"
-            >
-              <ChatComposer model={model} />
-            </div>
+            {model.selectedChat !== null ? (
+              <div
+                className={`absolute bottom-0 left-0 right-0 transform-gpu transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+                  isGroupInfoVisible ? 'lg:-translate-x-[180px]' : 'lg:translate-x-0'
+                }`}
+                style={{ willChange: isGroupInfoVisible ? 'transform' : undefined }}
+                data-chat-composer-container="true"
+              >
+                <ChatComposer model={model} />
+              </div>
+            ) : null}
           </main>
         </div>
       </div>

@@ -381,6 +381,8 @@ export interface ChatGroupMediaItem {
   attachmentUrl?: string
   thumbnailUrl?: string
   strippedThumbnailUrl?: string
+  width?: number
+  height?: number
   fileName?: string
   contentType?: string
   sizeBytes?: number
