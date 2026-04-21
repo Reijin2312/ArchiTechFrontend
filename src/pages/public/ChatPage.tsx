@@ -1834,7 +1834,10 @@ export default function ChatPage() {
       try {
         const before = reset ? undefined : groupFilesCursor ?? undefined;
         const data: ChatGroupMediaItemsResponse = await model.getGroupFiles(chatId, before, 30);
-        const nextItems = data.items || [];
+        const nextItems = (data.items || []).filter((item) => {
+          const type = (item.messageType || '').toLowerCase();
+          return type === 'file' || type === 'files';
+        });
         setGroupFileItems((prev) => {
           const merged = reset ? nextItems : [...prev, ...nextItems];
           const deduplicated = new Map<string, ChatGroupMediaItem>();

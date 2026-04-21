@@ -16,6 +16,7 @@ import type { SidebarChat } from '../types';
 import { CloseIcon, PenSquareIcon } from '../icons';
 import { Avatar } from './Avatar';
 import { MediaViewerModal, type MediaViewerItem } from './messageTypes/MediaViewerModal';
+import { formatFileSize } from '../utils';
 
 export type GroupInfoTab = 'members' | 'media' | 'files' | 'links';
 
@@ -226,6 +227,36 @@ const MEDIA_MONTH_WITH_YEAR_FORMATTER = new Intl.DateTimeFormat('en-US', {
   month: 'long',
   year: 'numeric',
 });
+const FILE_LIST_DAY_FORMATTER = new Intl.DateTimeFormat('en-US', {
+  month: 'short',
+  day: 'numeric',
+});
+const FILE_LIST_TIME_FORMATTER = new Intl.DateTimeFormat('ru-RU', {
+  hour: '2-digit',
+  minute: '2-digit',
+});
+
+const formatFileListDate = (value: string) => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return `${FILE_LIST_DAY_FORMATTER.format(date)} at ${FILE_LIST_TIME_FORMATTER.format(date)}`;
+};
+
+const formatFileListSize = (size?: number) => {
+  const raw = formatFileSize(size);
+  if (!raw) return '';
+  return raw.replace(/\.0\s(?=(?:K|M|G)B\b)/, ' ');
+};
+
+const resolveFileExtensionLabel = (value?: string) => {
+  const source = (value || '').trim();
+  if (!source) return 'FILE';
+  const withoutQuery = source.split(/[?#]/, 1)[0];
+  const filename = withoutQuery.split('/').pop() || withoutQuery;
+  const dotIndex = filename.lastIndexOf('.');
+  if (dotIndex < 0 || dotIndex === filename.length - 1) return 'FILE';
+  return filename.slice(dotIndex + 1, dotIndex + 5).toUpperCase();
+};
 
 async function fileToAvatarDataUrl(file: File): Promise<string> {
   const objectUrl = URL.createObjectURL(file);
@@ -1030,6 +1061,48 @@ function GroupMediaGridThumb({
         </div>
       ) : null}
     </button>
+  );
+}
+
+function GroupFileListRow({ item }: { item: ChatGroupMediaItem }) {
+  const fileUrl = item.attachmentUrl || `/media/${item.attachmentPath}`;
+  const previewUrl =
+    item.thumbnailUrl ||
+    (item.isImage ? item.attachmentUrl || `/media/${item.attachmentPath}` : undefined);
+  const sizeLabel = formatFileListSize(item.sizeBytes);
+  const dateLabel = formatFileListDate(item.createdAt);
+  const extensionLabel = resolveFileExtensionLabel(item.fileName || item.attachmentPath);
+  const metaLine = [sizeLabel, dateLabel].filter(Boolean).join(' · ');
+
+  return (
+    <a
+      href={fileUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="group flex items-center gap-4 px-4 py-2.5 transition-colors hover:bg-white/[0.045]"
+    >
+      <div className="relative h-[64px] w-[64px] shrink-0 overflow-hidden rounded-[12px] bg-[#262833]">
+        {previewUrl ? (
+          <img
+            src={previewUrl}
+            alt={item.fileName || item.attachmentPath}
+            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+            loading="lazy"
+          />
+        ) : (
+          <div className="grid h-full w-full place-items-center bg-[linear-gradient(160deg,#2f3240_0%,#21242d_100%)] text-[12px] font-[700] tracking-[0.35px] text-white/70">
+            {extensionLabel}
+          </div>
+        )}
+      </div>
+
+      <div className="min-w-0 flex-1">
+        <div className="truncate text-[17px] font-[500] leading-tight text-white/95">
+          {item.fileName || item.attachmentPath}
+        </div>
+        <div className="truncate text-[15px] text-white/56">{metaLine || (item.contentType || item.messageType)}</div>
+      </div>
+    </a>
   );
 }
 
@@ -1975,11 +2048,15 @@ export function GroupInfoPanel({
     if (activeTab !== 'files' || filesLoading || !filesHasMore || !onFilesLoadMore) {
       return;
     }
-    if (fileItems.length > 0) {
+    const hasRenderableFiles = fileItems.some((item) => {
+      const type = (item.messageType || '').toLowerCase();
+      return type === 'file' || type === 'files';
+    });
+    if (hasRenderableFiles) {
       return;
     }
     onFilesLoadMore();
-  }, [activeTab, fileItems.length, filesHasMore, filesLoading, onFilesLoadMore]);
+  }, [activeTab, fileItems, filesHasMore, filesLoading, onFilesLoadMore]);
 
   const memberEditorTitle =
     memberEditor?.mode === 'restrict-user' ? 'User Permissions' : memberEditor ? 'Admin Rights' : '';
@@ -2069,6 +2146,14 @@ export function GroupInfoPanel({
   const visibleMediaItems = useMemo(
     () => mediaItems.filter((item) => (item.messageType || '').toLowerCase() !== 'circle'),
     [mediaItems]
+  );
+  const visibleFileItems = useMemo(
+    () =>
+      fileItems.filter((item) => {
+        const type = (item.messageType || '').toLowerCase();
+        return type === 'file' || type === 'files';
+      }),
+    [fileItems]
   );
   const mediaViewerItems = useMemo<MediaViewerItem[]>(() => {
     const memberById = new Map(members.map((member) => [member.userId, member]));
@@ -3042,30 +3127,17 @@ export function GroupInfoPanel({
               </div>
             )
           ) : activeTab === 'files' ? (
-            fileItems.length === 0 ? (
+            visibleFileItems.length === 0 ? (
               <div className="px-6 py-8 text-[14px] text-white/52">
                 {filesLoading ? 'Loading files...' : 'No files yet.'}
               </div>
             ) : (
-              <div className="pb-1">
-                {fileItems.map((item) => (
-                  <a
+              <div className="pb-2 pt-2">
+                {visibleFileItems.map((item) => (
+                  <GroupFileListRow
                     key={`${item.messageId}-${item.attachmentPath}`}
-                    href={item.attachmentUrl || `/media/${item.attachmentPath}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-3 border-b border-white/6 px-4 py-3 transition-colors hover:bg-white/[0.045]"
-                  >
-                    <div className="grid h-14 w-14 place-items-center rounded-[10px] bg-[#272832] text-[11px] text-white/62">
-                      FILE
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate text-[14px] text-white/90">
-                        {item.fileName || item.attachmentPath}
-                      </div>
-                      <div className="text-[12px] text-white/52">{item.contentType || item.messageType}</div>
-                    </div>
-                  </a>
+                    item={item}
+                  />
                 ))}
                 {filesLoading ? (
                   <div className="px-4 py-3 text-[13px] text-white/46">Loading more...</div>
