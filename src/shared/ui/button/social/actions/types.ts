@@ -234,7 +234,18 @@ export type SocialChatActions = {
       clearBannedUntil?: boolean;
       canSendMessages?: boolean;
       canSendMedia?: boolean;
+      canSendPhotos?: boolean;
+      canSendVideos?: boolean;
+      canSendStickersAndGifs?: boolean;
+      canSendMusic?: boolean;
+      canSendFiles?: boolean;
+      canSendVoiceMessages?: boolean;
+      canSendVideoMessages?: boolean;
+      canEmbedLinks?: boolean;
       canSendPolls?: boolean;
+      canInviteUsers?: boolean;
+      canPinMessages?: boolean;
+      canChangeInfo?: boolean;
       reason?: string;
     }
   ) => Promise<ChatMemberRestrictions>;

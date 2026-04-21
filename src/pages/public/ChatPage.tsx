@@ -15,6 +15,7 @@ import type {
   ChatJoinRequestsResponse,
   ChatLinkItem,
   ChatLinksResponse,
+  ChatMemberRestrictions,
   ChatTopic,
   ChatPresenceState,
   UserSearchResponse,
@@ -223,6 +224,7 @@ export default function ChatPage() {
   const [groupMembersByUserId, setGroupMembersByUserId] = useState<
     Record<string, { role: ChatGroupMemberRole; joinedAt?: string | null }>
   >({});
+  const [groupMemberTagsByUserId, setGroupMemberTagsByUserId] = useState<Record<string, string>>({});
   const [selectedGroupTopicId, setSelectedGroupTopicId] = useState<number | undefined>(undefined);
   const [isGroupMembersLoading, setIsGroupMembersLoading] = useState(false);
   const [presenceNowMs, setPresenceNowMs] = useState(() => Date.now());
@@ -234,7 +236,6 @@ export default function ChatPage() {
   const [sidebarWidth, setSidebarWidth] = useState(SIDEBAR_MAX_WIDTH);
   const [isSidebarResizing, setIsSidebarResizing] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
-  const autoSelectRef = useRef(false);
   const lastCircleReloadAtRef = useRef(0);
   const sidebarResizeRef = useRef<{ startX: number; startWidth: number } | null>(null);
   const playbackHideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -255,14 +256,6 @@ export default function ChatPage() {
     model.setIsOpen(true);
     model.setActiveTab('chat');
   }, []);
-
-  useEffect(() => {
-    if (autoSelectRef.current || model.selectedChat !== null || model.chats.length === 0) return;
-    const firstChatId = model.chats[0].chatId;
-    model.setSelectedChat(firstChatId);
-    void model.loadMessages(firstChatId, false);
-    autoSelectRef.current = true;
-  }, [model.chats, model.selectedChat]);
 
   const getMaxIncomingServerMessageId = useCallback(
     (sourceMessages: typeof model.messages) => {
@@ -812,6 +805,9 @@ export default function ChatPage() {
         : formatPresenceLabel(selectedPresence);
   const selectedGroupChat = selectedChat?.chatType === 'GROUP' ? selectedChat : undefined;
   const visibleMessages = useMemo(() => {
+    if (!selectedChat) {
+      return [];
+    }
     if (!selectedGroupChat || !selectedGroupTopicId) {
       return model.messages;
     }
@@ -821,7 +817,7 @@ export default function ChatPage() {
       }
       return message.topicId === selectedGroupTopicId;
     });
-  }, [model.messages, selectedGroupChat, selectedGroupTopicId]);
+  }, [model.messages, selectedChat, selectedGroupChat, selectedGroupTopicId]);
   const isGroupInfoVisible = isGroupInfoOpen && !!selectedGroupChat;
   const selectedGroupParticipantIdSet = useMemo(() => {
     const ids = new Set<string>([
@@ -836,6 +832,7 @@ export default function ChatPage() {
   const loadGroupMembers = useCallback(async (chatId: number) => {
     if (!Number.isFinite(chatId) || chatId <= 0) {
       setGroupMembersByUserId({});
+      setGroupMemberTagsByUserId({});
       return;
     }
 
@@ -843,6 +840,7 @@ export default function ChatPage() {
     try {
       const { data } = await http.get<ChatGroupMembersResponse>(endpoints.chatMembers(chatId));
       const next: Record<string, { role: ChatGroupMemberRole; joinedAt?: string | null }> = {};
+      const adminOrOwnerIds: string[] = [];
       for (const member of data.members || []) {
         if (!member?.userId) continue;
         const role = (member.role || 'MEMBER').toUpperCase();
@@ -852,15 +850,37 @@ export default function ChatPage() {
           role: normalizedRole,
           joinedAt: member.joinedAt,
         };
+        if (normalizedRole === 'OWNER' || normalizedRole === 'ADMIN') {
+          adminOrOwnerIds.push(member.userId);
+        }
       }
+
+      const nextTags: Record<string, string> = {};
+      if (adminOrOwnerIds.length > 0) {
+        const rightsResults = await Promise.allSettled(
+          adminOrOwnerIds.map(async (userId) => {
+            const rights = await model.getAdminRights(chatId, userId);
+            return { userId, customTitle: rights.customTitle?.trim() || '' };
+          })
+        );
+
+        for (const result of rightsResults) {
+          if (result.status !== 'fulfilled') continue;
+          if (!result.value.customTitle) continue;
+          nextTags[result.value.userId] = result.value.customTitle;
+        }
+      }
+
       setGroupMembersByUserId(next);
+      setGroupMemberTagsByUserId(nextTags);
     } catch (error) {
       console.error('Failed to load group members:', error);
       setGroupMembersByUserId({});
+      setGroupMemberTagsByUserId({});
     } finally {
       setIsGroupMembersLoading(false);
     }
-  }, []);
+  }, [model]);
 
   const loadGroupMeta = useCallback(async (chatId: number) => {
     if (!Number.isFinite(chatId) || chatId <= 0) {
@@ -945,6 +965,7 @@ export default function ChatPage() {
   useEffect(() => {
     if (!selectedGroupChat) {
       setGroupMembersByUserId({});
+      setGroupMemberTagsByUserId({});
       setIsGroupMembersLoading(false);
       return;
     }
@@ -979,7 +1000,11 @@ export default function ChatPage() {
     if (fromApi) {
       return fromApi;
     }
-    if (selectedGroupChat.ownerId && selectedGroupChat.ownerId === model.userId) {
+    const ownerFallbackId =
+      Object.entries(groupMembersByUserId).find(([, value]) => value.role === 'OWNER')?.[0] ||
+      selectedGroupChat.ownerId ||
+      selectedGroupChat.participantIds?.[0];
+    if (ownerFallbackId && ownerFallbackId === model.userId) {
       return 'OWNER';
     }
     return 'MEMBER';
@@ -1380,6 +1405,94 @@ export default function ChatPage() {
     [loadGroupMembers, loadGroupMeta, model, selectedGroupChat]
   );
 
+  const openMemberPrivateChat = useCallback(
+    async (userId: string) => {
+      if (!userId || userId === model.userId) return;
+      await model.openChatWith(userId);
+      setIsGroupInfoOpen(false);
+      setIsGroupAddMembersOpen(false);
+      setGroupInfoTab('members');
+    },
+    [model]
+  );
+
+  const loadMemberAdminRights = useCallback(
+    async (userId: string) => {
+      if (!selectedGroupChat) {
+        throw new Error('Group is not selected');
+      }
+      return model.getAdminRights(selectedGroupChat.chatId, userId);
+    },
+    [model, selectedGroupChat]
+  );
+
+  const saveMemberAdminRights = useCallback(
+    async (
+      userId: string,
+      payload: {
+        canManageGroup?: boolean;
+        canManageMembers?: boolean;
+        canManageInviteLinks?: boolean;
+        canPinMessages?: boolean;
+        canDeleteMessages?: boolean;
+        canBanUsers?: boolean;
+        canManageTopics?: boolean;
+        canManageReactions?: boolean;
+        canManagePolls?: boolean;
+        isAnonymous?: boolean;
+        customTitle?: string | null;
+      }
+    ) => {
+      if (!selectedGroupChat) return;
+      await model.updateAdminRights(selectedGroupChat.chatId, userId, payload);
+      await loadGroupMembers(selectedGroupChat.chatId);
+      await loadGroupMeta(selectedGroupChat.chatId);
+    },
+    [loadGroupMembers, loadGroupMeta, model, selectedGroupChat]
+  );
+
+  const loadMemberRestrictions = useCallback(
+    async (userId: string): Promise<ChatMemberRestrictions> => {
+      if (!selectedGroupChat) {
+        throw new Error('Group is not selected');
+      }
+      return model.getMemberRestrictions(selectedGroupChat.chatId, userId);
+    },
+    [model, selectedGroupChat]
+  );
+
+  const saveMemberRestrictions = useCallback(
+    async (
+      userId: string,
+      payload: {
+        mutedUntil?: string | null;
+        bannedUntil?: string | null;
+        clearMutedUntil?: boolean;
+        clearBannedUntil?: boolean;
+        canSendMessages?: boolean;
+        canSendMedia?: boolean;
+        canSendPhotos?: boolean;
+        canSendVideos?: boolean;
+        canSendStickersAndGifs?: boolean;
+        canSendMusic?: boolean;
+        canSendFiles?: boolean;
+        canSendVoiceMessages?: boolean;
+        canSendVideoMessages?: boolean;
+        canEmbedLinks?: boolean;
+        canSendPolls?: boolean;
+        canInviteUsers?: boolean;
+        canPinMessages?: boolean;
+        canChangeInfo?: boolean;
+        reason?: string;
+      }
+    ) => {
+      if (!selectedGroupChat) return;
+      await model.updateMemberRestrictions(selectedGroupChat.chatId, userId, payload);
+      await loadGroupMeta(selectedGroupChat.chatId);
+    },
+    [loadGroupMeta, model, selectedGroupChat]
+  );
+
   const leaveSelectedGroup = useCallback(async () => {
     if (!selectedGroupChat) return;
     await model.leaveGroupChat(selectedGroupChat.chatId);
@@ -1432,6 +1545,7 @@ export default function ChatPage() {
     setSelectedGroupAddMemberIds([]);
     setIsAddingGroupMembers(false);
     setGroupMembersByUserId({});
+    setGroupMemberTagsByUserId({});
     setIsGroupMembersLoading(false);
     setSelectedGroupTopicId(
       selectedChat?.chatId ? model.getActiveTopicId(selectedChat.chatId) : undefined
@@ -1575,6 +1689,8 @@ export default function ChatPage() {
         statusText: formatPresenceLabel(presence),
         isOnline,
         role,
+        memberTag: groupMemberTagsByUserId[id],
+        isCurrentUser,
         canTransferOwnership,
         canPromote,
         canDemote,
@@ -1585,6 +1701,7 @@ export default function ChatPage() {
     currentUserProfile,
     currentUserVisualPresence,
     formatPresenceLabel,
+    groupMemberTagsByUserId,
     groupMembersByUserId,
     model.presenceByUser,
     model.user,
@@ -1669,7 +1786,9 @@ export default function ChatPage() {
       try {
         const before = reset ? undefined : groupMediaCursor ?? undefined;
         const data: ChatGroupMediaItemsResponse = await model.getGroupMedia(chatId, before, 30);
-        const nextItems = data.items || [];
+        const nextItems = (data.items || []).filter(
+          (item) => (item.messageType || '').toLowerCase() !== 'circle'
+        );
         setGroupMediaItems((prev) => {
           const merged = reset ? nextItems : [...prev, ...nextItems];
           const deduplicated = new Map<string, ChatGroupMediaItem>();
@@ -1908,6 +2027,55 @@ export default function ChatPage() {
     setMessageSearchQuery('');
     setMessageSearchIndex(0);
   }, []);
+
+  useEffect(() => {
+    const onEscape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      if (event.defaultPrevented) return;
+
+      if (isGroupAddMembersOpen) {
+        event.preventDefault();
+        setIsGroupAddMembersOpen(false);
+        setGroupAddMembersQuery('');
+        setSelectedGroupAddMemberIds([]);
+        return;
+      }
+
+      if (isGroupInfoOpen) {
+        // Let GroupInfoPanel handle Esc while it is open (including its nested states).
+        return;
+      }
+
+      if (isMessageSearchOpen) {
+        event.preventDefault();
+        closeMessageSearch();
+        return;
+      }
+
+      if (menuOpen) {
+        event.preventDefault();
+        setMenuOpen(false);
+        return;
+      }
+
+      if (model.selectedChat !== null) {
+        event.preventDefault();
+        model.setSelectedChat(null);
+      }
+    };
+
+    window.addEventListener('keydown', onEscape);
+    return () => {
+      window.removeEventListener('keydown', onEscape);
+    };
+  }, [
+    closeMessageSearch,
+    isGroupAddMembersOpen,
+    isGroupInfoOpen,
+    isMessageSearchOpen,
+    menuOpen,
+    model,
+  ]);
 
   const goToNextMessageSearchResult = useCallback(() => {
     if (messageSearchMatches.length === 0) return;
@@ -2152,8 +2320,13 @@ export default function ChatPage() {
               ) : null}
             </div>
 
-            <div className="relative z-0 flex min-h-0 flex-1">
-              <div className="relative min-w-0 flex-1">
+            <div className="relative z-0 flex min-h-0 flex-1 overflow-hidden">
+              <div
+                className={`relative min-w-0 flex-1 transform-gpu transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+                  isGroupInfoVisible ? 'lg:-translate-x-[180px]' : 'lg:translate-x-0'
+                }`}
+                style={{ willChange: isGroupInfoVisible ? 'transform' : undefined }}
+              >
                 <div
                   className="tg-scroll relative h-full overflow-y-auto"
                   data-chat-scroll-container="true"
@@ -2163,64 +2336,73 @@ export default function ChatPage() {
                     backgroundSize: '256px 256px',
                   }}
                 >
+                  {model.selectedChat === null ? (
+                    <div className="absolute inset-0 grid place-items-center px-6">
+                      <div className="max-w-[460px] text-center text-[24px] font-[600] leading-[1.2] text-white/52">
+                        Выберите, кому хотите написать
+                      </div>
+                    </div>
+                  ) : null}
                   <div
                     className="mx-auto flex min-h-full w-full flex-col px-[18px] pb-[110px] pt-[12px]"
                     data-chat-scroll-content="true"
                     style={{ maxWidth: COMPOSER_TRACK_MAX_WIDTH }}
                   >
-                    <div className="w-full" style={{ maxWidth: MESSAGE_COLUMN_MAX_WIDTH }}>
-                      <ChatMessageList
-                        messages={visibleMessages}
-                        chatId={selectedChat?.chatId ?? null}
-                        isGroupChat={selectedChat?.chatType === 'GROUP'}
-                        reactionsEnabled={selectedChat?.chatType === 'GROUP' ? (groupSettings?.reactionsEnabled ?? true) : true}
-                        pollsEnabled={selectedChat?.chatType === 'GROUP' ? (groupSettings?.pollsEnabled ?? true) : false}
-                        canManagePolls={canManagePolls}
-                        userId={model.userId}
-                        hasSelectedChat={model.selectedChat !== null}
-                        messageBubbleMaxWidthPx={MESSAGE_BUBBLE_MAX_WIDTH}
-                        uploadingImages={model.uploadingImages}
-                        pendingMediaPreviewUrls={model.pendingMediaPreviewUrls}
-                        messagesEndRef={model.messagesEndRef}
-                        matchedMessageIds={isMessageSearchOpen ? messageSearchMatches : []}
-                        activeMatchedMessageId={activeMessageSearchId}
-                        onCircleMediaError={refreshSignedMediaUrls}
-                        onPlaybackStateChange={handlePlaybackStateChange}
-                        resolveUserName={resolveMessageUserName}
-                        resolveUserAvatar={resolveMessageUserAvatar}
-                        onReplyMessage={(message) => {
-                          model.setEditingMessage(null);
-                          model.setReplyingTo(message);
-                        }}
-                        onEditMessage={(message) => {
-                          model.setReplyingTo(null);
-                          model.setEditingMessage(message);
-                          model.setMessageInput(message.content || '');
-                        }}
-                        onDeleteMessage={(messageId) => {
-                          void model.deleteMessage(messageId);
-                        }}
-                        canDeleteMessage={(message) =>
-                          message.senderId === model.userId ||
-                          (selectedChat?.chatType === 'GROUP' && canDeleteAnyGroupMessage)
-                        }
-                        onCopyMessage={(text) => {
-                          model.copyMessageText(text);
-                        }}
-                        onCancelPendingUpload={(localId, attachmentIndex) => {
-                          model.cancelPendingMediaUpload(localId, attachmentIndex);
-                        }}
-                        onRetryMessage={(messageId) => {
-                          void model.retryFailedMessage(messageId);
-                        }}
-                        onLoadMessageReactions={loadMessageReactions}
-                        onToggleMessageReaction={toggleMessageReaction}
-                        onLoadPollByMessageId={loadPollByMessageId}
-                        onLoadPollVoters={loadPollVoters}
-                        onVotePoll={votePoll}
-                        onClosePoll={closePoll}
-                      />
-                    </div>
+                    {model.selectedChat !== null ? (
+                      <div className="w-full" style={{ maxWidth: MESSAGE_COLUMN_MAX_WIDTH }}>
+                        <ChatMessageList
+                          messages={visibleMessages}
+                          chatId={selectedChat?.chatId ?? null}
+                          isGroupChat={selectedChat?.chatType === 'GROUP'}
+                          reactionsEnabled={selectedChat?.chatType === 'GROUP' ? (groupSettings?.reactionsEnabled ?? true) : true}
+                          pollsEnabled={selectedChat?.chatType === 'GROUP' ? (groupSettings?.pollsEnabled ?? true) : false}
+                          canManagePolls={canManagePolls}
+                          userId={model.userId}
+                          hasSelectedChat={model.selectedChat !== null}
+                          messageBubbleMaxWidthPx={MESSAGE_BUBBLE_MAX_WIDTH}
+                          uploadingImages={model.uploadingImages}
+                          pendingMediaPreviewUrls={model.pendingMediaPreviewUrls}
+                          messagesEndRef={model.messagesEndRef}
+                          matchedMessageIds={isMessageSearchOpen ? messageSearchMatches : []}
+                          activeMatchedMessageId={activeMessageSearchId}
+                          onCircleMediaError={refreshSignedMediaUrls}
+                          onPlaybackStateChange={handlePlaybackStateChange}
+                          resolveUserName={resolveMessageUserName}
+                          resolveUserAvatar={resolveMessageUserAvatar}
+                          onReplyMessage={(message) => {
+                            model.setEditingMessage(null);
+                            model.setReplyingTo(message);
+                          }}
+                          onEditMessage={(message) => {
+                            model.setReplyingTo(null);
+                            model.setEditingMessage(message);
+                            model.setMessageInput(message.content || '');
+                          }}
+                          onDeleteMessage={(messageId) => {
+                            void model.deleteMessage(messageId);
+                          }}
+                          canDeleteMessage={(message) =>
+                            message.senderId === model.userId ||
+                            (selectedChat?.chatType === 'GROUP' && canDeleteAnyGroupMessage)
+                          }
+                          onCopyMessage={(text) => {
+                            model.copyMessageText(text);
+                          }}
+                          onCancelPendingUpload={(localId, attachmentIndex) => {
+                            model.cancelPendingMediaUpload(localId, attachmentIndex);
+                          }}
+                          onRetryMessage={(messageId) => {
+                            void model.retryFailedMessage(messageId);
+                          }}
+                          onLoadMessageReactions={loadMessageReactions}
+                          onToggleMessageReaction={toggleMessageReaction}
+                          onLoadPollByMessageId={loadPollByMessageId}
+                          onLoadPollVoters={loadPollVoters}
+                          onVotePoll={votePoll}
+                          onClosePoll={closePoll}
+                        />
+                      </div>
+                    ) : null}
                   </div>
                 </div>
                 {model.selectedChat !== null && !isNearBottom ? (
@@ -2243,15 +2425,16 @@ export default function ChatPage() {
 
               {selectedGroupChat ? (
                 <div
-                  className="relative hidden h-full shrink-0 overflow-hidden transition-[width] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] lg:block"
-                  style={{ width: isGroupInfoVisible ? GROUP_INFO_PANEL_WIDTH : 0 }}
+                  className="absolute inset-y-0 right-0 z-[44] hidden overflow-hidden lg:block"
+                  style={{ width: GROUP_INFO_PANEL_WIDTH }}
                 >
                   <div
-                    className={`absolute inset-y-0 right-0 w-[360px] transition-[transform,opacity] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+                    className={`absolute inset-y-0 right-0 w-[360px] transform-gpu transition-[transform,opacity] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
                       isGroupInfoVisible
                         ? 'translate-x-0 opacity-100'
-                        : 'pointer-events-none translate-x-8 opacity-0'
+                        : 'pointer-events-none translate-x-full opacity-0'
                     }`}
+                    style={{ willChange: isGroupInfoVisible ? 'transform, opacity' : undefined }}
                   >
                     {isGroupAddMembersOpen ? (
                       <GroupAddMembersPanel
@@ -2273,6 +2456,7 @@ export default function ChatPage() {
                     ) : (
                       <GroupInfoPanel
                         chat={selectedGroupChat}
+                        isOpen={isGroupInfoVisible}
                         memberCount={groupInfoMemberCount}
                         members={groupInfoMembers}
                         links={groupInfoLinks}
@@ -2288,8 +2472,8 @@ export default function ChatPage() {
                         isOwner={isGroupOwner}
                         onUpdateGroup={canEditGroupInfo ? updateGroupInfo : undefined}
                         onTransferOwnership={isGroupOwner ? transferGroupOwnership : undefined}
-                        onPromoteMember={isGroupOwner ? promoteGroupMember : undefined}
-                        onDemoteMember={isGroupOwner ? demoteGroupMember : undefined}
+                        onPromoteMember={canManageGroupMembers ? promoteGroupMember : undefined}
+                        onDemoteMember={canManageGroupMembers ? demoteGroupMember : undefined}
                         onRemoveMember={canManageGroupMembers ? removeGroupMember : undefined}
                         onLeaveGroup={leaveSelectedGroup}
                         onDeleteGroup={deleteSelectedGroup}
@@ -2332,6 +2516,11 @@ export default function ChatPage() {
                         onUnmuteMember={canBanGroupMembers ? unmuteGroupMember : undefined}
                         onBanMember={canBanGroupMembers ? banGroupMember : undefined}
                         onUnbanMember={canBanGroupMembers ? unbanGroupMember : undefined}
+                        onOpenPrivateChat={openMemberPrivateChat}
+                        onLoadMemberRestrictions={canBanGroupMembers ? loadMemberRestrictions : undefined}
+                        onSaveMemberRestrictions={canBanGroupMembers ? saveMemberRestrictions : undefined}
+                        onLoadMemberAdminRights={canManageGroupMembers ? loadMemberAdminRights : undefined}
+                        onSaveMemberAdminRights={canManageGroupMembers ? saveMemberAdminRights : undefined}
                         onCreatePoll={
                           groupSettings?.pollsEnabled && canCreatePollInGroup
                             ? createGroupPoll
@@ -2361,7 +2550,7 @@ export default function ChatPage() {
                   }}
                 >
                   <div
-                    className={`ml-auto h-full w-full max-w-[420px] transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+                    className={`ml-auto h-full w-full max-w-[420px] transform-gpu transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
                       isGroupInfoVisible ? 'translate-x-0' : 'translate-x-full'
                     }`}
                     onClick={(event) => event.stopPropagation()}
@@ -2386,6 +2575,7 @@ export default function ChatPage() {
                     ) : (
                       <GroupInfoPanel
                         chat={selectedGroupChat}
+                        isOpen={isGroupInfoVisible}
                         memberCount={groupInfoMemberCount}
                         members={groupInfoMembers}
                         links={groupInfoLinks}
@@ -2401,8 +2591,8 @@ export default function ChatPage() {
                         isOwner={isGroupOwner}
                         onUpdateGroup={canEditGroupInfo ? updateGroupInfo : undefined}
                         onTransferOwnership={isGroupOwner ? transferGroupOwnership : undefined}
-                        onPromoteMember={isGroupOwner ? promoteGroupMember : undefined}
-                        onDemoteMember={isGroupOwner ? demoteGroupMember : undefined}
+                        onPromoteMember={canManageGroupMembers ? promoteGroupMember : undefined}
+                        onDemoteMember={canManageGroupMembers ? demoteGroupMember : undefined}
                         onRemoveMember={canManageGroupMembers ? removeGroupMember : undefined}
                         onLeaveGroup={leaveSelectedGroup}
                         onDeleteGroup={deleteSelectedGroup}
@@ -2445,6 +2635,11 @@ export default function ChatPage() {
                         onUnmuteMember={canBanGroupMembers ? unmuteGroupMember : undefined}
                         onBanMember={canBanGroupMembers ? banGroupMember : undefined}
                         onUnbanMember={canBanGroupMembers ? unbanGroupMember : undefined}
+                        onOpenPrivateChat={openMemberPrivateChat}
+                        onLoadMemberRestrictions={canBanGroupMembers ? loadMemberRestrictions : undefined}
+                        onSaveMemberRestrictions={canBanGroupMembers ? saveMemberRestrictions : undefined}
+                        onLoadMemberAdminRights={canManageGroupMembers ? loadMemberAdminRights : undefined}
+                        onSaveMemberAdminRights={canManageGroupMembers ? saveMemberAdminRights : undefined}
                         onCreatePoll={
                           groupSettings?.pollsEnabled && canCreatePollInGroup
                             ? createGroupPoll
@@ -2469,9 +2664,10 @@ export default function ChatPage() {
             </div>
 
             <div
-              className={`absolute bottom-0 left-0 right-0 transition-[right] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
-                isGroupInfoVisible ? 'lg:right-[360px]' : 'lg:right-0'
+              className={`absolute bottom-0 left-0 right-0 transform-gpu transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+                isGroupInfoVisible ? 'lg:-translate-x-[180px]' : 'lg:translate-x-0'
               }`}
+              style={{ willChange: isGroupInfoVisible ? 'transform' : undefined }}
               data-chat-composer-container="true"
             >
               <ChatComposer model={model} />

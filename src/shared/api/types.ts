@@ -337,7 +337,18 @@ export interface ChatMemberRestrictions {
   bannedUntil?: string | null
   canSendMessages: boolean
   canSendMedia: boolean
+  canSendPhotos?: boolean
+  canSendVideos?: boolean
+  canSendStickersAndGifs?: boolean
+  canSendMusic?: boolean
+  canSendFiles?: boolean
+  canSendVoiceMessages?: boolean
+  canSendVideoMessages?: boolean
+  canEmbedLinks?: boolean
   canSendPolls: boolean
+  canInviteUsers?: boolean
+  canPinMessages?: boolean
+  canChangeInfo?: boolean
   reason?: string | null
   updatedBy?: string | null
   updatedAt?: string | null

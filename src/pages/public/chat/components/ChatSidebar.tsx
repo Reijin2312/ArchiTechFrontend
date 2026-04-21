@@ -173,7 +173,7 @@ function ChatRow({
       <button
         type="button"
         onClick={onClick}
-        className={`mx-auto mb-[10px] grid h-[64px] w-[64px] place-items-center rounded-[18px] transition-colors ${
+        className={`mx-auto mb-[10px] grid h-[64px] w-[64px] place-items-center rounded-[18px] outline-none transition-colors focus:outline-none focus-visible:outline-none focus-visible:ring-0 ${
           item.selected ? 'bg-[#8f79ee]' : 'hover:bg-white/[0.035]'
         }`}
         title={item.name}
@@ -208,7 +208,7 @@ function ChatRow({
     <button
       type="button"
       onClick={onClick}
-      className={`mx-[8px] mb-[2px] flex w-[calc(100%-16px)] items-start gap-[12px] rounded-[16px] px-[12px] py-[11px] text-left ${
+      className={`mx-[8px] mb-[2px] flex w-[calc(100%-16px)] items-start gap-[12px] rounded-[16px] px-[12px] py-[11px] text-left outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-0 ${
         item.selected ? 'bg-[#8f79ee] text-white' : 'text-white hover:bg-white/[0.035]'
       }`}
       style={item.selected ? { boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06)' } : undefined}

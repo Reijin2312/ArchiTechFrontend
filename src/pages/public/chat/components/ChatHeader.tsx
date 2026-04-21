@@ -133,7 +133,7 @@ export function ChatHeader({
             <button
               type="button"
               onClick={onToggleGroupInfo}
-              className="group min-w-0 text-left"
+              className="group min-w-0 text-left outline-none focus:outline-none focus-visible:outline-none"
               aria-label={isGroupInfoOpen ? 'Hide group info' : 'Show group info'}
             >
               <div className="flex min-w-0 items-center gap-1.5">

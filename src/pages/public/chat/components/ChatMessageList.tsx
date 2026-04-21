@@ -4899,6 +4899,7 @@ export function ChatMessageList({
 
     const onEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
+        event.preventDefault();
         setContextMenu(null);
       }
     };
