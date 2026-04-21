@@ -3,9 +3,23 @@ import { endpoints } from '@/shared/api/endpoints';
 import { logger } from '@/shared/lib/logger';
 import { buildMessageTextAndEntities } from '@/shared/utils/chatTextEntities';
 import type {
+  ChatAdminLogResponse,
+  ChatAdminRights,
+  ChatGroupMediaItemsResponse,
+  ChatGroupPermissions,
+  ChatGroupSettings,
+  ChatInviteLink,
+  ChatInviteLinksResponse,
+  ChatJoinRequestsResponse,
   ChatListResponse,
+  ChatMemberRestrictions,
+  ChatMessageReactionsResponse,
   ChatMessage,
   ChatMessagesResponse,
+  ChatPoll,
+  ChatPollVotersResponse,
+  ChatTopic,
+  ChatTopicsResponse,
   CreateChatResponse,
   SendMessageResponse,
   UploadImageResponse,
@@ -38,6 +52,7 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
     historyBeforeByChatRef,
     historyHasMoreByChatRef,
     historyLoadingByChatRef,
+    activeTopicByChatRef,
     lastProtocolSeqRef,
     lastProtocolMsgIdRef,
     typingThrottleRef,
@@ -74,6 +89,35 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
     lastProtocolSeqRef.current = nextSeqNo;
 
     return { msgId: clientMessageId ?? nextClientMessageId(), seqNo: nextSeqNo, timestamp };
+  };
+
+  const normalizeTopicId = (topicId?: number | null) => {
+    if (typeof topicId !== 'number' || !Number.isFinite(topicId) || topicId <= 0) {
+      return undefined;
+    }
+    return Math.trunc(topicId);
+  };
+
+  const getActiveTopicId = (chatId: number) => {
+    if (!Number.isFinite(chatId) || chatId <= 0) {
+      return undefined;
+    }
+    return normalizeTopicId(activeTopicByChatRef.current.get(chatId));
+  };
+
+  const setActiveTopicId = (chatId: number, topicId?: number) => {
+    if (!Number.isFinite(chatId) || chatId <= 0) {
+      return;
+    }
+    const normalizedTopicId = normalizeTopicId(topicId);
+    if (normalizedTopicId) {
+      activeTopicByChatRef.current.set(chatId, normalizedTopicId);
+    } else {
+      activeTopicByChatRef.current.delete(chatId);
+    }
+    historyBeforeByChatRef.current.delete(chatId);
+    historyHasMoreByChatRef.current.delete(chatId);
+    historyLoadingByChatRef.current.delete(chatId);
   };
 
   const enqueueByChat = async (chatId: number, task: () => Promise<void>) => {
@@ -509,6 +553,7 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
 
   const buildSendRequestPayload = (params: {
     chatId: number;
+    topicId?: number;
     messageType: string;
     content: string;
     entities?: ChatMessage['entities'];
@@ -519,6 +564,7 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
   }) => {
     const {
       chatId,
+      topicId,
       messageType,
       content,
       entities,
@@ -540,6 +586,10 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
       hmac: '',
       reply_to_id: replyToMessageId,
     };
+
+    if (topicId && topicId > 0) {
+      payload.topic_id = topicId;
+    }
 
     if (groupingKey) {
       payload.grouping_key = groupingKey;
@@ -611,6 +661,7 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
 
   const sendPreparedMessage = async (params: {
     chatId: number;
+    topicId?: number;
     messageType: ChatMessage['messageType'];
     content: string;
     entities?: ChatMessage['entities'];
@@ -622,6 +673,7 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
   }) => {
     const {
       chatId,
+      topicId,
       messageType,
       content,
       entities,
@@ -634,6 +686,7 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
 
     const payload = buildSendRequestPayload({
       chatId,
+      topicId,
       messageType,
       content,
       entities,
@@ -655,6 +708,7 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
       images: finalizedImages.length > 0 ? finalizedImages : tempMessage.images,
       groupingKey: data.groupingKey || groupingKey,
       isRead: false,
+      topicId: topicId ?? tempMessage.topicId,
       sequenceNumber: data.sequenceNumber,
       serverTimestamp: data.serverTimestamp,
       signatureTimestamp: data.serverTimestamp,
@@ -830,7 +884,12 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
     }
   };
 
-  const loadMessages = async (chatId: number, append = false) => {
+  const loadMessages = async (chatId: number, append = false, topicId?: number) => {
+    const normalizedTopicId = normalizeTopicId(topicId);
+    if (typeof topicId !== 'undefined') {
+      setActiveTopicId(chatId, normalizedTopicId);
+    }
+    const effectiveTopicId = normalizedTopicId ?? getActiveTopicId(chatId);
     try {
       const aggregatedBatch: ChatMessage[] = [];
       let beforeCursor: number | undefined;
@@ -840,7 +899,7 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
 
       while (rounds < maxRounds) {
         const { data } = await http.get<ChatMessagesResponse>(
-          endpoints.chatMessages(chatId, beforeCursor, INITIAL_HISTORY_PAGE_LIMIT)
+          endpoints.chatMessages(chatId, beforeCursor, INITIAL_HISTORY_PAGE_LIMIT, undefined, effectiveTopicId)
         );
         const incomingBatch = normalizeHistoryBatch(chatId, data.messages || []);
         if (incomingBatch.length === 0) {
@@ -993,10 +1052,16 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
     }
   };
 
-  const loadMessagesAfter = async (chatId: number, afterMessageId: number, limit = 100) => {
+  const loadMessagesAfter = async (
+    chatId: number,
+    afterMessageId: number,
+    limit = 100,
+    topicId?: number
+  ) => {
     if (chatId <= 0 || !Number.isFinite(afterMessageId) || afterMessageId <= 0) {
       return;
     }
+    const effectiveTopicId = normalizeTopicId(topicId) ?? getActiveTopicId(chatId);
 
     try {
       let cursor = afterMessageId;
@@ -1006,7 +1071,7 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
 
       while (rounds < maxRounds) {
         const { data } = await http.get<ChatMessagesResponse>(
-          endpoints.chatMessages(chatId, undefined, limit, cursor)
+          endpoints.chatMessages(chatId, undefined, limit, cursor, effectiveTopicId)
         );
         const incomingMessages = normalizeHistoryBatch(chatId, data.messages || []);
         if (incomingMessages.length === 0) {
@@ -1046,10 +1111,15 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
     }
   };
 
-  const loadOlderMessages = async (chatId: number, limit = INITIAL_HISTORY_PAGE_LIMIT) => {
+  const loadOlderMessages = async (
+    chatId: number,
+    limit = INITIAL_HISTORY_PAGE_LIMIT,
+    topicId?: number
+  ) => {
     if (chatId <= 0) {
       return;
     }
+    const effectiveTopicId = normalizeTopicId(topicId) ?? getActiveTopicId(chatId);
 
     const loadingSet = historyLoadingByChatRef.current;
     if (loadingSet.has(chatId)) {
@@ -1076,7 +1146,7 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
     loadingSet.add(chatId);
     try {
       const { data } = await http.get<ChatMessagesResponse>(
-        endpoints.chatMessages(chatId, beforeMessageId, limit)
+        endpoints.chatMessages(chatId, beforeMessageId, limit, undefined, effectiveTopicId)
       );
       const batch = normalizeHistoryBatch(chatId, data.messages || []);
 
@@ -1150,11 +1220,548 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
     setSelectedChat(data.chatId);
   };
 
+  const updateGroupChat = async (
+    chatId: number,
+    payload: {
+      title?: string;
+      avatarPath?: string;
+    }
+  ) => {
+    if (!Number.isFinite(chatId) || chatId <= 0) {
+      throw new Error('chatId is required');
+    }
+
+    const requestPayload: {
+      title?: string;
+      avatarPath?: string;
+    } = {};
+    if (typeof payload.title === 'string') {
+      requestPayload.title = payload.title;
+    }
+    if (typeof payload.avatarPath === 'string') {
+      requestPayload.avatarPath = payload.avatarPath;
+    }
+    if (!('title' in requestPayload) && !('avatarPath' in requestPayload)) {
+      throw new Error('Nothing to update');
+    }
+
+    await http.patch(endpoints.chatUpdateGroup(chatId), requestPayload);
+    await loadChats();
+    if (selectedChat === chatId) {
+      await loadMessages(chatId, false);
+    }
+  };
+
+  const addGroupMembers = async (chatId: number, participantIds: string[]) => {
+    if (!Number.isFinite(chatId) || chatId <= 0) {
+      throw new Error('chatId is required');
+    }
+    const uniqueParticipantIds = Array.from(
+      new Set((participantIds || []).filter((id) => !!id && id.trim().length > 0))
+    );
+    if (uniqueParticipantIds.length === 0) {
+      return;
+    }
+
+    await http.post(endpoints.chatAddMembers(chatId), {
+      participantIds: uniqueParticipantIds,
+    });
+    await loadChats();
+    if (selectedChat === chatId) {
+      await loadMessages(chatId, false);
+    }
+  };
+
+  const removeGroupMembers = async (chatId: number, participantIds: string[]) => {
+    if (!Number.isFinite(chatId) || chatId <= 0) {
+      throw new Error('chatId is required');
+    }
+    const uniqueParticipantIds = Array.from(
+      new Set((participantIds || []).filter((id) => !!id && id.trim().length > 0))
+    );
+    if (uniqueParticipantIds.length === 0) {
+      return;
+    }
+
+    await http.delete(endpoints.chatRemoveMembers(chatId), {
+      data: {
+        participantIds: uniqueParticipantIds,
+      },
+    });
+    await loadChats();
+    if (selectedChat === chatId) {
+      await loadMessages(chatId, false);
+    }
+  };
+
+  const leaveGroupChat = async (chatId: number) => {
+    if (!Number.isFinite(chatId) || chatId <= 0) {
+      throw new Error('chatId is required');
+    }
+
+    await http.post(endpoints.chatLeave(chatId));
+    if (selectedChat === chatId) {
+      setSelectedChat(null);
+    }
+    await loadChats();
+  };
+
+  const updateGroupMemberRole = async (
+    chatId: number,
+    userId: string,
+    role: 'OWNER' | 'ADMIN' | 'MEMBER'
+  ) => {
+    if (!Number.isFinite(chatId) || chatId <= 0) {
+      throw new Error('chatId is required');
+    }
+    if (!userId || userId.trim().length === 0) {
+      throw new Error('userId is required');
+    }
+
+    await http.patch(endpoints.chatMemberRole(chatId, userId), {
+      role,
+    });
+    await loadChats();
+    if (selectedChat === chatId) {
+      await loadMessages(chatId, false);
+    }
+  };
+
+  const ensureValidChatId = (chatId: number) => {
+    if (!Number.isFinite(chatId) || chatId <= 0) {
+      throw new Error('chatId is required');
+    }
+  };
+
+  const getGroupSettings = async (chatId: number) => {
+    ensureValidChatId(chatId);
+    const { data } = await http.get<ChatGroupSettings>(endpoints.chatGroupSettings(chatId));
+    return data;
+  };
+
+  const updateGroupSettings = async (
+    chatId: number,
+    payload: {
+      description?: string;
+      isPublic?: boolean;
+      publicUsername?: string;
+      historyVisibleToNewMembers?: boolean;
+      slowModeSeconds?: number;
+      topicsEnabled?: boolean;
+      reactionsEnabled?: boolean;
+      reactionMode?: 'ALL' | 'SOME' | 'NONE';
+      allowedReactions?: string[];
+      pollsEnabled?: boolean;
+    }
+  ) => {
+    ensureValidChatId(chatId);
+    const { data } = await http.patch<ChatGroupSettings>(endpoints.chatGroupSettings(chatId), payload);
+    await loadChats();
+    if (selectedChat === chatId) {
+      await loadMessages(chatId, false);
+    }
+    return data;
+  };
+
+  const getGroupPermissions = async (chatId: number) => {
+    ensureValidChatId(chatId);
+    const { data } = await http.get<ChatGroupPermissions>(endpoints.chatGroupPermissions(chatId));
+    return data;
+  };
+
+  const updateGroupPermissions = async (
+    chatId: number,
+    payload: {
+      canSendMessages?: boolean;
+      canSendMedia?: boolean;
+      canSendPolls?: boolean;
+      canAddWebPagePreviews?: boolean;
+      canChangeInfo?: boolean;
+      canInviteUsers?: boolean;
+      canPinMessages?: boolean;
+    }
+  ) => {
+    ensureValidChatId(chatId);
+    const { data } = await http.patch<ChatGroupPermissions>(
+      endpoints.chatGroupPermissions(chatId),
+      payload
+    );
+    return data;
+  };
+
+  const getInviteLinks = async (chatId: number) => {
+    ensureValidChatId(chatId);
+    const { data } = await http.get<ChatInviteLinksResponse>(endpoints.chatInvites(chatId));
+    return data;
+  };
+
+  const createInviteLink = async (
+    chatId: number,
+    payload: {
+      name?: string;
+      createsJoinRequest?: boolean;
+      expiresAt?: string;
+      usageLimit?: number;
+    }
+  ) => {
+    ensureValidChatId(chatId);
+    const { data } = await http.post<ChatInviteLink>(endpoints.chatInvites(chatId), payload);
+    return data;
+  };
+
+  const updateInviteLink = async (
+    chatId: number,
+    inviteId: number,
+    payload: {
+      name?: string;
+      createsJoinRequest?: boolean;
+      expiresAt?: string;
+      clearExpiresAt?: boolean;
+      usageLimit?: number;
+      clearUsageLimit?: boolean;
+    }
+  ) => {
+    ensureValidChatId(chatId);
+    if (!Number.isFinite(inviteId) || inviteId <= 0) {
+      throw new Error('inviteId is required');
+    }
+    const { data } = await http.patch<ChatInviteLink>(
+      endpoints.chatInviteUpdate(chatId, inviteId),
+      payload
+    );
+    return data;
+  };
+
+  const revokeInviteLink = async (chatId: number, inviteId: number) => {
+    ensureValidChatId(chatId);
+    if (!Number.isFinite(inviteId) || inviteId <= 0) {
+      throw new Error('inviteId is required');
+    }
+    await http.post(endpoints.chatInviteRevoke(chatId, inviteId));
+  };
+
+  const joinByInviteCode = async (inviteCode: string) => {
+    const normalized = inviteCode.trim();
+    if (!normalized) {
+      throw new Error('inviteCode is required');
+    }
+    await http.post(endpoints.chatJoinByInvite(normalized));
+    await loadChats();
+  };
+
+  const getJoinRequests = async (
+    chatId: number,
+    status?: 'PENDING' | 'APPROVED' | 'DECLINED',
+    before?: number,
+    limit = 100
+  ) => {
+    ensureValidChatId(chatId);
+    const { data } = await http.get<ChatJoinRequestsResponse>(
+      endpoints.chatJoinRequests(chatId, status, before, limit)
+    );
+    return data;
+  };
+
+  const approveJoinRequest = async (chatId: number, requestId: number) => {
+    ensureValidChatId(chatId);
+    if (!Number.isFinite(requestId) || requestId <= 0) {
+      throw new Error('requestId is required');
+    }
+    await http.post(endpoints.chatJoinRequestApprove(chatId, requestId));
+    await loadChats();
+    if (selectedChat === chatId) {
+      await loadMessages(chatId, false);
+    }
+  };
+
+  const declineJoinRequest = async (chatId: number, requestId: number) => {
+    ensureValidChatId(chatId);
+    if (!Number.isFinite(requestId) || requestId <= 0) {
+      throw new Error('requestId is required');
+    }
+    await http.post(endpoints.chatJoinRequestDecline(chatId, requestId));
+  };
+
+  const getMemberRestrictions = async (chatId: number, userId: string) => {
+    ensureValidChatId(chatId);
+    if (!userId || userId.trim().length === 0) {
+      throw new Error('userId is required');
+    }
+    const { data } = await http.get<ChatMemberRestrictions>(
+      endpoints.chatMemberRestrictions(chatId, userId)
+    );
+    return data;
+  };
+
+  const updateMemberRestrictions = async (
+    chatId: number,
+    userId: string,
+    payload: {
+      mutedUntil?: string | null;
+      bannedUntil?: string | null;
+      clearMutedUntil?: boolean;
+      clearBannedUntil?: boolean;
+      canSendMessages?: boolean;
+      canSendMedia?: boolean;
+      canSendPolls?: boolean;
+      reason?: string;
+    }
+  ) => {
+    ensureValidChatId(chatId);
+    if (!userId || userId.trim().length === 0) {
+      throw new Error('userId is required');
+    }
+    const { data } = await http.patch<ChatMemberRestrictions>(
+      endpoints.chatMemberRestrictions(chatId, userId),
+      payload
+    );
+    await loadChats();
+    if (selectedChat === chatId) {
+      await loadMessages(chatId, false);
+    }
+    return data;
+  };
+
+  const getAdminRights = async (chatId: number, userId: string) => {
+    ensureValidChatId(chatId);
+    if (!userId || userId.trim().length === 0) {
+      throw new Error('userId is required');
+    }
+    const { data } = await http.get<ChatAdminRights>(endpoints.chatMemberAdminRights(chatId, userId));
+    return data;
+  };
+
+  const updateAdminRights = async (
+    chatId: number,
+    userId: string,
+    payload: {
+      canManageGroup?: boolean;
+      canManageMembers?: boolean;
+      canManageInviteLinks?: boolean;
+      canPinMessages?: boolean;
+      canDeleteMessages?: boolean;
+      canBanUsers?: boolean;
+      canManageTopics?: boolean;
+      canManageReactions?: boolean;
+      canManagePolls?: boolean;
+      isAnonymous?: boolean;
+      customTitle?: string | null;
+    }
+  ) => {
+    ensureValidChatId(chatId);
+    if (!userId || userId.trim().length === 0) {
+      throw new Error('userId is required');
+    }
+    const { data } = await http.patch<ChatAdminRights>(
+      endpoints.chatMemberAdminRights(chatId, userId),
+      payload
+    );
+    await loadChats();
+    if (selectedChat === chatId) {
+      await loadMessages(chatId, false);
+    }
+    return data;
+  };
+
+  const getTopics = async (chatId: number, includeDeleted?: boolean) => {
+    ensureValidChatId(chatId);
+    const { data } = await http.get<ChatTopicsResponse>(endpoints.chatTopics(chatId, includeDeleted));
+    return data;
+  };
+
+  const createTopic = async (
+    chatId: number,
+    payload: {
+      title: string;
+      iconEmoji?: string;
+    }
+  ) => {
+    ensureValidChatId(chatId);
+    const { data } = await http.post<ChatTopic>(endpoints.chatTopics(chatId), payload);
+    await loadChats();
+    if (selectedChat === chatId) {
+      await loadMessages(chatId, false);
+    }
+    return data;
+  };
+
+  const updateTopic = async (
+    chatId: number,
+    topicId: number,
+    payload: {
+      title?: string;
+      iconEmoji?: string;
+      closed?: boolean;
+      pinned?: boolean;
+      deleted?: boolean;
+    }
+  ) => {
+    ensureValidChatId(chatId);
+    if (!Number.isFinite(topicId) || topicId <= 0) {
+      throw new Error('topicId is required');
+    }
+    const { data } = await http.patch<ChatTopic>(endpoints.chatTopicUpdate(chatId, topicId), payload);
+    await loadChats();
+    if (selectedChat === chatId) {
+      await loadMessages(chatId, false);
+    }
+    return data;
+  };
+
+  const getMessageReactions = async (chatId: number, messageId: number) => {
+    ensureValidChatId(chatId);
+    if (!Number.isFinite(messageId) || messageId <= 0) {
+      throw new Error('messageId is required');
+    }
+    const { data } = await http.get<ChatMessageReactionsResponse>(
+      endpoints.chatMessageReactions(chatId, messageId)
+    );
+    return data;
+  };
+
+  const toggleMessageReaction = async (chatId: number, messageId: number, emoji: string) => {
+    ensureValidChatId(chatId);
+    if (!Number.isFinite(messageId) || messageId <= 0) {
+      throw new Error('messageId is required');
+    }
+    const normalizedEmoji = emoji.trim();
+    if (!normalizedEmoji) {
+      throw new Error('emoji is required');
+    }
+    const { data } = await http.post<ChatMessageReactionsResponse>(
+      endpoints.chatToggleReaction(chatId, messageId),
+      { emoji: normalizedEmoji }
+    );
+    return data;
+  };
+
+  const createPoll = async (
+    chatId: number,
+    payload: {
+      question: string;
+      allowsMultiple?: boolean;
+      quiz?: boolean;
+      correctOptionIndex?: number;
+      explanation?: string;
+      anonymousVotes?: boolean;
+      topicId?: number;
+      options: string[];
+    }
+  ) => {
+    ensureValidChatId(chatId);
+    const { data } = await http.post<ChatPoll>(endpoints.chatCreatePoll(chatId), payload);
+    await loadChats();
+    if (selectedChat === chatId) {
+      await loadMessages(chatId, false);
+    }
+    return data;
+  };
+
+  const getPoll = async (chatId: number, pollId: number) => {
+    ensureValidChatId(chatId);
+    if (!Number.isFinite(pollId) || pollId <= 0) {
+      throw new Error('pollId is required');
+    }
+    const { data } = await http.get<ChatPoll>(endpoints.chatPoll(chatId, pollId));
+    return data;
+  };
+
+  const getPollByMessageId = async (chatId: number, messageId: number) => {
+    ensureValidChatId(chatId);
+    if (!Number.isFinite(messageId) || messageId <= 0) {
+      throw new Error('messageId is required');
+    }
+    const { data } = await http.get<ChatPoll>(endpoints.chatPollByMessage(chatId, messageId));
+    return data;
+  };
+
+  const getPollVoters = async (chatId: number, pollId: number) => {
+    ensureValidChatId(chatId);
+    if (!Number.isFinite(pollId) || pollId <= 0) {
+      throw new Error('pollId is required');
+    }
+    const { data } = await http.get<ChatPollVotersResponse>(endpoints.chatPollVoters(chatId, pollId));
+    return data;
+  };
+
+  const votePoll = async (chatId: number, pollId: number, optionIndexes: number[]) => {
+    ensureValidChatId(chatId);
+    if (!Number.isFinite(pollId) || pollId <= 0) {
+      throw new Error('pollId is required');
+    }
+    const { data } = await http.post<ChatPoll>(endpoints.chatPollVote(chatId, pollId), {
+      optionIndexes,
+    });
+    return data;
+  };
+
+  const closePoll = async (chatId: number, pollId: number) => {
+    ensureValidChatId(chatId);
+    if (!Number.isFinite(pollId) || pollId <= 0) {
+      throw new Error('pollId is required');
+    }
+    await http.post(endpoints.chatPollClose(chatId, pollId));
+    await loadChats();
+    if (selectedChat === chatId) {
+      await loadMessages(chatId, false);
+    }
+  };
+
+  const pinGroupMessage = async (chatId: number, messageId: number) => {
+    ensureValidChatId(chatId);
+    if (!Number.isFinite(messageId) || messageId <= 0) {
+      throw new Error('messageId is required');
+    }
+    await http.post(endpoints.chatPinMessage(chatId, messageId));
+    await loadChats();
+    if (selectedChat === chatId) {
+      await loadMessages(chatId, false);
+    }
+  };
+
+  const unpinGroupMessage = async (chatId: number) => {
+    ensureValidChatId(chatId);
+    await http.post(endpoints.chatUnpinMessage(chatId));
+    await loadChats();
+    if (selectedChat === chatId) {
+      await loadMessages(chatId, false);
+    }
+  };
+
+  const getGroupMedia = async (chatId: number, before?: number, limit = 30) => {
+    ensureValidChatId(chatId);
+    const { data } = await http.get<ChatGroupMediaItemsResponse>(endpoints.chatMedia(chatId, before, limit));
+    return data;
+  };
+
+  const getGroupFiles = async (chatId: number, before?: number, limit = 30) => {
+    ensureValidChatId(chatId);
+    const { data } = await http.get<ChatGroupMediaItemsResponse>(endpoints.chatFiles(chatId, before, limit));
+    return data;
+  };
+
+  const getGroupAdminLog = async (
+    chatId: number,
+    before?: number,
+    limit = 40,
+    filters?: {
+      actorUserId?: string;
+      targetUserId?: string;
+      eventType?: string;
+    }
+  ) => {
+    ensureValidChatId(chatId);
+    const { data } = await http.get<ChatAdminLogResponse>(
+      endpoints.chatAdminLog(chatId, before, limit, filters)
+    );
+    return data;
+  };
+
   const sendTextMessageToChat = async (
     chatId: number,
     message: string,
     overrideReplyToId?: number,
-    options?: { useCurrentReplyTarget?: boolean }
+    options?: { useCurrentReplyTarget?: boolean; topicId?: number }
   ) => {
     const useCurrentReplyTarget = options?.useCurrentReplyTarget ?? true;
     const localId = `local-${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -1168,6 +1775,12 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
       (useCurrentReplyTarget && typeof replyingTo?.messageId === 'number'
         ? replyingTo.messageId
         : undefined);
+    const resolvedTopicId =
+      normalizeTopicId(options?.topicId) ??
+      (useCurrentReplyTarget
+        ? normalizeTopicId(replyingTo?.topicId as number | undefined)
+        : undefined) ??
+      getActiveTopicId(chatId);
 
     try {
       const tempMessage: ChatMessage = {
@@ -1181,6 +1794,7 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
         entities: normalizedEntities,
         messageType: 'text',
         createdAt,
+        topicId: resolvedTopicId,
         replyToId: replyToMessageId,
         replyToMessage: useCurrentReplyTarget ? replyingTo || undefined : undefined,
       };
@@ -1190,6 +1804,7 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
 
       const { acknowledgedMessage } = await sendPreparedMessage({
         chatId,
+        topicId: resolvedTopicId,
         messageType: 'text',
         content: normalizedContent,
         entities: normalizedEntities,
@@ -1229,6 +1844,7 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
             entities: normalizedEntities,
             messageType: 'text',
             createdAt,
+            topicId: resolvedTopicId,
           },
           user?.id
         )
@@ -1356,7 +1972,7 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
     }
   };
 
-  const sendChatMessage = async () => {
+  const sendChatMessage = async (topicIdOverride?: number) => {
     console.log('sendChatMessage called', { selectedChat, messageInput, attachedImagesCount: attachedImages.length });
     const draftText = messageInput;
     const attachmentsToSend = attachedImages.slice(0, MAX_ATTACHMENTS);
@@ -1378,6 +1994,7 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
         setAttachedImages([]);
       } else if (selectedChat) {
         const targetChatId = selectedChat;
+        const activeTopicId = normalizeTopicId(topicIdOverride) ?? getActiveTopicId(targetChatId);
         await enqueueByChat(targetChatId, async () => {
           const replyToMessageId =
             typeof replyingTo?.messageId === 'number' ? replyingTo.messageId : undefined;
@@ -1390,6 +2007,7 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
                   clearComposerDraft: index === 0,
                   replyToMessageId: index === 0 ? replyToMessageId : undefined,
                   resetReplyTo: index === 0,
+                  topicId: activeTopicId,
                 });
               }
             } else if (shouldSendAsGroupedAlbum(attachmentsToSend)) {
@@ -1401,6 +2019,7 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
                   replyToMessageId: index === 0 ? replyToMessageId : undefined,
                   resetReplyTo: false,
                   groupingKeyOverride: groupingKey,
+                  topicId: activeTopicId,
                 });
               }
               setAttachedImages([]);
@@ -1412,6 +2031,7 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
                 clearComposerDraft: true,
                 replyToMessageId,
                 resetReplyTo: true,
+                topicId: activeTopicId,
               });
             }
           } else {
@@ -1422,6 +2042,7 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
                 clearComposerDraft: false,
                 replyToMessageId: chunkIndex === 0 ? replyToMessageId : undefined,
                 resetReplyTo: chunkIndex === 0,
+                topicId: activeTopicId,
               });
             }
           }
@@ -1538,6 +2159,9 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
         };
         const { acknowledgedMessage } = await sendPreparedMessage({
           chatId,
+          topicId: normalizeTopicId(
+            typeof failedMessage.topicId === 'number' ? failedMessage.topicId : undefined
+          ),
           messageType: messageType as ChatMessage['messageType'],
           content: normalizedContent,
           entities: normalizedEntities,
@@ -1602,11 +2226,14 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
       replyToMessageId?: number;
       resetReplyTo?: boolean;
       groupingKeyOverride?: string;
+      topicId?: number;
     }
   ) => {
     const attachmentsToSend = (options?.attachments ?? attachedImages).slice(0, MAX_ATTACHMENTS);
     if (attachmentsToSend.length === 0) {
-      await sendTextMessageToChat(chatId, textContent, options?.replyToMessageId);
+      await sendTextMessageToChat(chatId, textContent, options?.replyToMessageId, {
+        topicId: options?.topicId,
+      });
       if (options?.clearComposerDraft ?? true) {
         setAttachedImages([]);
         setMessageInput('');
@@ -1636,6 +2263,7 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
       (attachmentsToSend.length > 1
         ? `album-${Date.now()}-${Math.random().toString(16).slice(2)}`
         : undefined);
+    const resolvedTopicId = normalizeTopicId(options?.topicId) ?? getActiveTopicId(chatId);
     const clientMessageId = nextClientMessageId();
     const createdAt = new Date().toISOString();
     const tempMessage: ChatMessage = {
@@ -1680,6 +2308,7 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
       }),
       createdAt,
       groupingKey,
+      topicId: resolvedTopicId,
       replyToId: options?.replyToMessageId,
     };
 
@@ -2152,6 +2781,7 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
       };
       const { acknowledgedMessage } = await sendPreparedMessage({
         chatId: finalChatId,
+        topicId: resolvedTopicId,
         messageType,
         content: normalizedContent,
         entities: normalizedEntities,
@@ -2404,8 +3034,47 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
     loadMessages,
     loadMessagesAfter,
     loadOlderMessages,
+    setActiveTopicId,
+    getActiveTopicId,
     openChatWith,
     createGroupChat,
+    updateGroupChat,
+    addGroupMembers,
+    removeGroupMembers,
+    leaveGroupChat,
+    updateGroupMemberRole,
+    getGroupSettings,
+    updateGroupSettings,
+    getGroupPermissions,
+    updateGroupPermissions,
+    getInviteLinks,
+    createInviteLink,
+    updateInviteLink,
+    revokeInviteLink,
+    joinByInviteCode,
+    getJoinRequests,
+    approveJoinRequest,
+    declineJoinRequest,
+    getMemberRestrictions,
+    updateMemberRestrictions,
+    getAdminRights,
+    updateAdminRights,
+    getTopics,
+    createTopic,
+    updateTopic,
+    getMessageReactions,
+    toggleMessageReaction,
+    createPoll,
+    getPollByMessageId,
+    getPollVoters,
+    getPoll,
+    votePoll,
+    closePoll,
+    pinGroupMessage,
+    unpinGroupMessage,
+    getGroupMedia,
+    getGroupFiles,
+    getGroupAdminLog,
     sendTypingState,
     sendMessageToUser,
     sendChatMessage,

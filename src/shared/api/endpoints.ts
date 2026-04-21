@@ -51,12 +51,79 @@ friendsBlock: '/api/v1/friends/block',
 friendsSearch: (query: string, limit = 20) => `/api/v1/friends/search?q=${encodeURIComponent(query)}&limit=${limit}`,
 friendsStatus: (userId: string) => `/api/v1/friends/status/${userId}`,
 
-chatList: '/api/v1/chat/chats',
-chatCreate: '/api/v1/chat/create',
+  chatList: '/api/v1/chat/chats',
+  chatCreate: '/api/v1/chat/create',
+  chatMembers: (chatId: number) => `/api/v1/chat/${chatId}/members`,
   chatAddMembers: (chatId: number) => `/api/v1/chat/${chatId}/members`,
+  chatRemoveMembers: (chatId: number) => `/api/v1/chat/${chatId}/members`,
+  chatLeave: (chatId: number) => `/api/v1/chat/${chatId}/leave`,
+  chatMemberRole: (chatId: number, userId: string) => `/api/v1/chat/${chatId}/members/${encodeURIComponent(userId)}/role`,
+  chatMemberRestrictions: (chatId: number, userId: string) => `/api/v1/chat/${chatId}/members/${encodeURIComponent(userId)}/restrictions`,
+  chatMemberAdminRights: (chatId: number, userId: string) => `/api/v1/chat/${chatId}/members/${encodeURIComponent(userId)}/admin-rights`,
   chatUpdateGroup: (chatId: number) => `/api/v1/chat/${chatId}/group`,
+  chatGroupSettings: (chatId: number) => `/api/v1/chat/${chatId}/group/settings`,
+  chatGroupPermissions: (chatId: number) => `/api/v1/chat/${chatId}/group/permissions`,
+  chatInvites: (chatId: number) => `/api/v1/chat/${chatId}/invites`,
+  chatInviteUpdate: (chatId: number, inviteId: number) => `/api/v1/chat/${chatId}/invites/${inviteId}`,
+  chatInviteRevoke: (chatId: number, inviteId: number) => `/api/v1/chat/${chatId}/invites/${inviteId}/revoke`,
+  chatJoinByInvite: (inviteCode: string) => `/api/v1/chat/join/${encodeURIComponent(inviteCode)}`,
+  chatJoinRequests: (chatId: number, status?: string, before?: number, limit = 100) => {
+    const query = new URLSearchParams();
+    query.set('limit', String(limit));
+    if (status) {
+      query.set('status', status);
+    }
+    if (before && before > 0) {
+      query.set('before', String(before));
+    }
+    return `/api/v1/chat/${chatId}/join-requests?${query.toString()}`;
+  },
+  chatJoinRequestApprove: (chatId: number, requestId: number) => `/api/v1/chat/${chatId}/join-requests/${requestId}/approve`,
+  chatJoinRequestDecline: (chatId: number, requestId: number) => `/api/v1/chat/${chatId}/join-requests/${requestId}/decline`,
+  chatTopics: (chatId: number, includeDeleted?: boolean) => `/api/v1/chat/${chatId}/topics${includeDeleted ? '?includeDeleted=true' : ''}`,
+  chatTopicUpdate: (chatId: number, topicId: number) => `/api/v1/chat/${chatId}/topics/${topicId}`,
+  chatMessageReactions: (chatId: number, messageId: number) => `/api/v1/chat/${chatId}/messages/${messageId}/reactions`,
+  chatToggleReaction: (chatId: number, messageId: number) => `/api/v1/chat/${chatId}/messages/${messageId}/reactions/toggle`,
+  chatCreatePoll: (chatId: number) => `/api/v1/chat/${chatId}/polls`,
+  chatPoll: (chatId: number, pollId: number) => `/api/v1/chat/${chatId}/polls/${pollId}`,
+  chatPollVoters: (chatId: number, pollId: number) =>
+    `/api/v1/chat/${chatId}/polls/${pollId}/voters`,
+  chatPollByMessage: (chatId: number, messageId: number) =>
+    `/api/v1/chat/${chatId}/polls/by-message/${messageId}`,
+  chatPollVote: (chatId: number, pollId: number) => `/api/v1/chat/${chatId}/polls/${pollId}/vote`,
+  chatPollClose: (chatId: number, pollId: number) => `/api/v1/chat/${chatId}/polls/${pollId}/close`,
+  chatPinMessage: (chatId: number, messageId: number) => `/api/v1/chat/${chatId}/pin/${messageId}`,
+  chatUnpinMessage: (chatId: number) => `/api/v1/chat/${chatId}/unpin`,
+  chatMedia: (chatId: number, before?: number, limit = 30) => `/api/v1/chat/${chatId}/media${before ? `?before=${before}&limit=${limit}` : `?limit=${limit}`}`,
+  chatFiles: (chatId: number, before?: number, limit = 30) => `/api/v1/chat/${chatId}/files${before ? `?before=${before}&limit=${limit}` : `?limit=${limit}`}`,
+  chatAdminLog: (
+    chatId: number,
+    before?: number,
+    limit = 40,
+    filters?: {
+      actorUserId?: string;
+      targetUserId?: string;
+      eventType?: string;
+    }
+  ) => {
+    const params = new URLSearchParams();
+    params.set('limit', String(limit));
+    if (typeof before === 'number' && Number.isFinite(before) && before > 0) {
+      params.set('before', String(before));
+    }
+    if (filters?.actorUserId) {
+      params.set('actorUserId', filters.actorUserId);
+    }
+    if (filters?.targetUserId) {
+      params.set('targetUserId', filters.targetUserId);
+    }
+    if (filters?.eventType) {
+      params.set('eventType', filters.eventType);
+    }
+    return `/api/v1/chat/${chatId}/admin-log?${params.toString()}`;
+  },
   chatDelete: (chatId: number) => `/api/v1/chat/${chatId}/delete`,
-  chatMessages: (chatId: number, before?: number, limit = 50, after?: number) => {
+  chatMessages: (chatId: number, before?: number, limit = 50, after?: number, topicId?: number) => {
     const query = new URLSearchParams();
     query.set('limit', String(limit));
     if (before && before > 0) {
@@ -64,6 +131,9 @@ chatCreate: '/api/v1/chat/create',
     }
     if (after && after > 0) {
       query.set('after', String(after));
+    }
+    if (topicId && topicId > 0) {
+      query.set('topicId', String(topicId));
     }
     return `/api/v1/chat/${chatId}/messages?${query.toString()}`;
   },

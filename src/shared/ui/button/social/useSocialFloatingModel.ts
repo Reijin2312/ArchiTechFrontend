@@ -116,6 +116,7 @@ export function useSocialFloatingModel(options: SocialFloatingModelOptions = {})
   const historyBeforeByChatRef = useRef<Map<number, number>>(new Map());
   const historyHasMoreByChatRef = useRef<Map<number, boolean>>(new Map());
   const historyLoadingByChatRef = useRef<Set<number>>(new Set());
+  const activeTopicByChatRef = useRef<Map<number, number>>(new Map());
   const lastProtocolSeqRef = useRef<number>(0);
   const lastProtocolMsgIdRef = useRef<number>(0);
   const typingTimeoutsRef = useRef<Map<string, number>>(new Map());
@@ -184,6 +185,116 @@ export function useSocialFloatingModel(options: SocialFloatingModelOptions = {})
   };
 
   const getNotificationBody = (msg: any): string => {
+    const messageType = typeof msg?.messageType === 'string' ? msg.messageType : '';
+    const isGroupServiceMessage =
+      messageType === 'group_created' ||
+      messageType === 'group_title_updated' ||
+      messageType === 'group_avatar_updated' ||
+      messageType === 'group_member_added' ||
+      messageType === 'group_members_added' ||
+      messageType === 'group_member_removed' ||
+      messageType === 'group_members_removed' ||
+      messageType === 'group_member_left' ||
+      messageType === 'group_admin_promoted' ||
+      messageType === 'group_admin_demoted' ||
+      messageType === 'group_owner_transferred' ||
+      messageType === 'group_description_updated' ||
+      messageType === 'group_public_username_updated' ||
+      messageType === 'group_slow_mode_updated' ||
+      messageType === 'group_history_visibility_updated' ||
+      messageType === 'group_permissions_updated' ||
+      messageType === 'group_admin_rights_updated' ||
+      messageType === 'group_member_muted' ||
+      messageType === 'group_member_unmuted' ||
+      messageType === 'group_member_banned' ||
+      messageType === 'group_member_unbanned' ||
+      messageType === 'group_message_pinned' ||
+      messageType === 'group_message_unpinned' ||
+      messageType === 'group_invite_link_created' ||
+      messageType === 'group_invite_link_revoked' ||
+      messageType === 'group_join_request_created' ||
+      messageType === 'group_join_request_approved' ||
+      messageType === 'group_join_request_declined' ||
+      messageType === 'group_topic_created' ||
+      messageType === 'group_topic_closed' ||
+      messageType === 'group_topic_reopened' ||
+      messageType === 'group_topic_deleted' ||
+      messageType === 'reaction' ||
+      messageType === 'poll' ||
+      messageType === 'poll_closed';
+    if (isGroupServiceMessage) {
+      const actor =
+        (typeof msg?.senderDisplayName === 'string' && msg.senderDisplayName.trim()) ||
+        (typeof msg?.senderUsername === 'string' && msg.senderUsername.trim()) ||
+        'Someone';
+      const members = typeof msg?.content === 'string'
+        ? msg.content
+            .split(',')
+            .map((item: string) => item.trim())
+            .filter((item: string) => item.length > 0)
+        : [];
+
+      if (messageType === 'group_created') {
+        const title = typeof msg?.content === 'string' ? msg.content.trim() : '';
+        return title ? `${actor} created group "${title}"` : `${actor} created the group`;
+      }
+      if (messageType === 'group_title_updated') {
+        const title = typeof msg?.content === 'string' ? msg.content.trim() : '';
+        return title ? `${actor} changed group title to "${title}"` : `${actor} changed the group title`;
+      }
+      if (messageType === 'group_avatar_updated') return `${actor} updated group photo`;
+      if (messageType === 'group_member_added' || messageType === 'group_members_added') {
+        if (members.length === 1) return `${actor} added ${members[0]}`;
+        if (members.length > 1) return `${actor} added ${members.join(', ')}`;
+        return `${actor} added members`;
+      }
+      if (messageType === 'group_member_removed' || messageType === 'group_members_removed') {
+        if (members.length === 1) return `${actor} removed ${members[0]}`;
+        if (members.length > 1) return `${actor} removed ${members.join(', ')}`;
+        return `${actor} removed members`;
+      }
+      if (messageType === 'group_member_left') return `${actor} left the group`;
+      if (messageType === 'group_admin_promoted') {
+        if (members.length === 1) return `${actor} promoted ${members[0]} to admin`;
+        if (members.length > 1) return `${actor} promoted ${members.join(', ')} to admins`;
+        return `${actor} promoted a new admin`;
+      }
+      if (messageType === 'group_admin_demoted') {
+        if (members.length === 1) return `${actor} demoted ${members[0]}`;
+        if (members.length > 1) return `${actor} demoted ${members.join(', ')}`;
+        return `${actor} changed admin rights`;
+      }
+      if (messageType === 'group_owner_transferred') {
+        if (members.length === 1) return `${actor} transferred ownership to ${members[0]}`;
+        if (members.length > 1) return `${actor} transferred ownership to ${members.join(', ')}`;
+        return `${actor} transferred ownership`;
+      }
+      if (messageType === 'group_description_updated') return `${actor} updated group description`;
+      if (messageType === 'group_public_username_updated') return `${actor} updated public username`;
+      if (messageType === 'group_slow_mode_updated') return `${actor} updated slow mode`;
+      if (messageType === 'group_history_visibility_updated') return `${actor} updated history visibility`;
+      if (messageType === 'group_permissions_updated') return `${actor} updated group permissions`;
+      if (messageType === 'group_admin_rights_updated') return `${actor} updated admin rights`;
+      if (messageType === 'group_member_muted') return `${actor} muted a member`;
+      if (messageType === 'group_member_unmuted') return `${actor} unmuted a member`;
+      if (messageType === 'group_member_banned') return `${actor} banned a member`;
+      if (messageType === 'group_member_unbanned') return `${actor} unbanned a member`;
+      if (messageType === 'group_message_pinned') return `${actor} pinned a message`;
+      if (messageType === 'group_message_unpinned') return `${actor} unpinned a message`;
+      if (messageType === 'group_invite_link_created') return `${actor} created an invite link`;
+      if (messageType === 'group_invite_link_revoked') return `${actor} revoked an invite link`;
+      if (messageType === 'group_join_request_created') return `${actor} requested to join`;
+      if (messageType === 'group_join_request_approved') return `${actor} approved a join request`;
+      if (messageType === 'group_join_request_declined') return `${actor} declined a join request`;
+      if (messageType === 'group_topic_created') return `${actor} created a topic`;
+      if (messageType === 'group_topic_closed') return `${actor} closed a topic`;
+      if (messageType === 'group_topic_reopened') return `${actor} reopened a topic`;
+      if (messageType === 'group_topic_deleted') return `${actor} deleted a topic`;
+      if (messageType === 'reaction') return `${actor} reacted to a message`;
+      if (messageType === 'poll') return `${actor} created a poll`;
+      if (messageType === 'poll_closed') return `${actor} closed a poll`;
+    }
+
     const text = typeof msg.content === 'string' ? msg.content.trim() : '';
     if (text) return text;
 
@@ -266,8 +377,47 @@ export function useSocialFloatingModel(options: SocialFloatingModelOptions = {})
     loadMessages,
     loadMessagesAfter,
     loadOlderMessages,
+    setActiveTopicId,
+    getActiveTopicId,
     openChatWith,
     createGroupChat,
+    updateGroupChat,
+    addGroupMembers,
+    removeGroupMembers,
+    leaveGroupChat,
+    updateGroupMemberRole,
+    getGroupSettings,
+    updateGroupSettings,
+    getGroupPermissions,
+    updateGroupPermissions,
+    getInviteLinks,
+    createInviteLink,
+    updateInviteLink,
+    revokeInviteLink,
+    joinByInviteCode,
+    getJoinRequests,
+    approveJoinRequest,
+    declineJoinRequest,
+    getMemberRestrictions,
+    updateMemberRestrictions,
+    getAdminRights,
+    updateAdminRights,
+    getTopics,
+    createTopic,
+    updateTopic,
+    getMessageReactions,
+    toggleMessageReaction,
+    createPoll,
+    getPollByMessageId,
+    getPollVoters,
+    getPoll,
+    votePoll,
+    closePoll,
+    pinGroupMessage,
+    unpinGroupMessage,
+    getGroupMedia,
+    getGroupFiles,
+    getGroupAdminLog,
     sendTypingState,
     sendMessageToUser,
     sendChatMessage,
@@ -297,6 +447,7 @@ export function useSocialFloatingModel(options: SocialFloatingModelOptions = {})
     historyBeforeByChatRef,
     historyHasMoreByChatRef,
     historyLoadingByChatRef,
+    activeTopicByChatRef,
     lastProtocolSeqRef,
     lastProtocolMsgIdRef,
     typingThrottleRef,
@@ -480,8 +631,47 @@ export function useSocialFloatingModel(options: SocialFloatingModelOptions = {})
     loadMessages,
     loadMessagesAfter,
     loadOlderMessages,
+    setActiveTopicId,
+    getActiveTopicId,
     openChatWith,
     createGroupChat,
+    updateGroupChat,
+    addGroupMembers,
+    removeGroupMembers,
+    leaveGroupChat,
+    updateGroupMemberRole,
+    getGroupSettings,
+    updateGroupSettings,
+    getGroupPermissions,
+    updateGroupPermissions,
+    getInviteLinks,
+    createInviteLink,
+    updateInviteLink,
+    revokeInviteLink,
+    joinByInviteCode,
+    getJoinRequests,
+    approveJoinRequest,
+    declineJoinRequest,
+    getMemberRestrictions,
+    updateMemberRestrictions,
+    getAdminRights,
+    updateAdminRights,
+    getTopics,
+    createTopic,
+    updateTopic,
+    getMessageReactions,
+    toggleMessageReaction,
+    createPoll,
+    getPollByMessageId,
+    getPollVoters,
+    getPoll,
+    votePoll,
+    closePoll,
+    pinGroupMessage,
+    unpinGroupMessage,
+    getGroupMedia,
+    getGroupFiles,
+    getGroupAdminLog,
     sendTypingState,
     sendMessageToUser,
     sendChatMessage,

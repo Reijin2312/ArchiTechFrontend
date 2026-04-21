@@ -1,5 +1,10 @@
-import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent, type RefObject } from 'react';
-import type { ChatMessage } from '@/shared/api/types';
+import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent, type RefObject } from 'react';
+import type {
+  ChatMessage,
+  ChatMessageReactionsResponse,
+  ChatPoll,
+  ChatPollVotersResponse,
+} from '@/shared/api/types';
 import { http } from '@/shared/api/http';
 import { endpoints } from '@/shared/api/endpoints';
 import {
@@ -55,6 +60,11 @@ type PendingUploadState = {
 
 type ChatMessageListProps = {
   messages: ChatMessage[];
+  chatId?: number | null;
+  isGroupChat?: boolean;
+  reactionsEnabled?: boolean;
+  pollsEnabled?: boolean;
+  canManagePolls?: boolean;
   userId: string;
   hasSelectedChat: boolean;
   messageBubbleMaxWidthPx?: number;
@@ -70,9 +80,23 @@ type ChatMessageListProps = {
   onReplyMessage: (message: ChatMessage) => void;
   onEditMessage: (message: ChatMessage) => void;
   onDeleteMessage: (messageId: number | string) => void;
+  canDeleteMessage?: (message: ChatMessage) => boolean;
   onCopyMessage: (text: string) => void;
   onCancelPendingUpload?: (localId: string, attachmentIndex: number) => void;
   onRetryMessage?: (messageId: number | string) => void;
+  onLoadMessageReactions?: (
+    chatId: number,
+    messageId: number
+  ) => Promise<ChatMessageReactionsResponse>;
+  onToggleMessageReaction?: (
+    chatId: number,
+    messageId: number,
+    emoji: string
+  ) => Promise<ChatMessageReactionsResponse>;
+  onLoadPollByMessageId?: (chatId: number, messageId: number) => Promise<ChatPoll | null>;
+  onLoadPollVoters?: (chatId: number, pollId: number) => Promise<ChatPollVotersResponse>;
+  onVotePoll?: (chatId: number, pollId: number, optionIndexes: number[]) => Promise<ChatPoll>;
+  onClosePoll?: (chatId: number, pollId: number) => Promise<void>;
 };
 
 type MessageTextBubbleProps = {
@@ -163,6 +187,12 @@ type MessageContextMenuState = {
   albumMessageIds?: Array<number | string>;
 };
 
+type PollVotersModalState = {
+  messageId: number;
+  pollId: number;
+  optionIndex: number;
+};
+
 type ChatRenderRow =
   | { type: 'divider'; key: string; label: string }
   | { type: 'message'; key: string; message: ChatMessage };
@@ -185,7 +215,35 @@ type GroupServiceMessageType =
   | 'group_created'
   | 'group_title_updated'
   | 'group_avatar_updated'
-  | 'group_members_added';
+  | 'group_members_added'
+  | 'group_members_removed'
+  | 'group_member_left'
+  | 'group_admin_promoted'
+  | 'group_admin_demoted'
+  | 'group_owner_transferred'
+  | 'group_description_updated'
+  | 'group_public_username_updated'
+  | 'group_slow_mode_updated'
+  | 'group_history_visibility_updated'
+  | 'group_permissions_updated'
+  | 'group_admin_rights_updated'
+  | 'group_member_muted'
+  | 'group_member_unmuted'
+  | 'group_member_banned'
+  | 'group_member_unbanned'
+  | 'group_message_pinned'
+  | 'group_message_unpinned'
+  | 'group_invite_link_created'
+  | 'group_invite_link_revoked'
+  | 'group_join_request_created'
+  | 'group_join_request_approved'
+  | 'group_join_request_declined'
+  | 'group_topic_created'
+  | 'group_topic_closed'
+  | 'group_topic_reopened'
+  | 'group_topic_deleted'
+  | 'reaction'
+  | 'poll_closed';
 
 const IMAGE_FILE_PATTERN = /\.(png|jpe?g|gif|webp|avif|bmp|svg)(?:$|[?#])/i;
 const BUBBLE_CHAIN_WINDOW_MS = 5 * 60 * 1000;
@@ -204,6 +262,63 @@ function toGroupServiceMessageType(value?: string): GroupServiceMessageType | nu
     case 'group_members_added':
     case 'group_participants_added':
       return 'group_members_added';
+    case 'group_member_removed':
+    case 'group_members_removed':
+      return 'group_members_removed';
+    case 'group_member_left':
+      return 'group_member_left';
+    case 'group_admin_promoted':
+      return 'group_admin_promoted';
+    case 'group_admin_demoted':
+      return 'group_admin_demoted';
+    case 'group_owner_transferred':
+      return 'group_owner_transferred';
+    case 'group_description_updated':
+      return 'group_description_updated';
+    case 'group_public_username_updated':
+      return 'group_public_username_updated';
+    case 'group_slow_mode_updated':
+      return 'group_slow_mode_updated';
+    case 'group_history_visibility_updated':
+      return 'group_history_visibility_updated';
+    case 'group_permissions_updated':
+      return 'group_permissions_updated';
+    case 'group_admin_rights_updated':
+      return 'group_admin_rights_updated';
+    case 'group_member_muted':
+      return 'group_member_muted';
+    case 'group_member_unmuted':
+      return 'group_member_unmuted';
+    case 'group_member_banned':
+      return 'group_member_banned';
+    case 'group_member_unbanned':
+      return 'group_member_unbanned';
+    case 'group_message_pinned':
+      return 'group_message_pinned';
+    case 'group_message_unpinned':
+      return 'group_message_unpinned';
+    case 'group_invite_link_created':
+      return 'group_invite_link_created';
+    case 'group_invite_link_revoked':
+      return 'group_invite_link_revoked';
+    case 'group_join_request_created':
+      return 'group_join_request_created';
+    case 'group_join_request_approved':
+      return 'group_join_request_approved';
+    case 'group_join_request_declined':
+      return 'group_join_request_declined';
+    case 'group_topic_created':
+      return 'group_topic_created';
+    case 'group_topic_closed':
+      return 'group_topic_closed';
+    case 'group_topic_reopened':
+      return 'group_topic_reopened';
+    case 'group_topic_deleted':
+      return 'group_topic_deleted';
+    case 'reaction':
+      return 'reaction';
+    case 'poll_closed':
+      return 'poll_closed';
     default:
       return null;
   }
@@ -284,6 +399,129 @@ function parseAddedMembers(content: string): string[] {
   return [];
 }
 
+type ParsedPollContent = {
+  question: string;
+  allowsMultiple: boolean;
+  quiz: boolean;
+  correctOptionIndex?: number | null;
+  explanation?: string | null;
+  anonymousVotes: boolean;
+  options: string[];
+};
+
+type ReactionSummaryItem = {
+  emoji: string;
+  count: number;
+  reactedByMe: boolean;
+};
+
+const QUICK_REACTION_EMOJIS = ['👍', '❤️', '🔥', '😂', '😮', '👏'];
+
+function parsePollMessageContent(rawContent: string): ParsedPollContent | null {
+  const trimmed = rawContent.trim();
+  if (!trimmed.startsWith('{') || !trimmed.endsWith('}')) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(trimmed) as {
+      question?: unknown;
+      allowsMultiple?: unknown;
+      quiz?: unknown;
+      correctOptionIndex?: unknown;
+      explanation?: unknown;
+      anonymousVotes?: unknown;
+      options?: unknown;
+    };
+    const question =
+      typeof parsed.question === 'string' && parsed.question.trim().length > 0
+        ? parsed.question.trim()
+        : '';
+    const options = Array.isArray(parsed.options)
+      ? parsed.options
+          .map((value) => (typeof value === 'string' ? value.trim() : ''))
+          .filter((value) => value.length > 0)
+      : [];
+    const allowsMultiple = parsed.allowsMultiple === true;
+    const quiz = parsed.quiz === true;
+    const correctOptionIndex =
+      typeof parsed.correctOptionIndex === 'number' && Number.isFinite(parsed.correctOptionIndex)
+        ? Math.floor(parsed.correctOptionIndex)
+        : null;
+    const explanation =
+      typeof parsed.explanation === 'string' && parsed.explanation.trim().length > 0
+        ? parsed.explanation.trim()
+        : null;
+    const anonymousVotes = parsed.anonymousVotes !== false;
+    if (!question || options.length < 2) {
+      return null;
+    }
+    return {
+      question,
+      allowsMultiple,
+      quiz,
+      correctOptionIndex,
+      explanation,
+      anonymousVotes,
+      options,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function buildReactionSummary(
+  response: ChatMessageReactionsResponse | null | undefined,
+  currentUserId: string
+): ReactionSummaryItem[] {
+  if (!response || !Array.isArray(response.items) || response.items.length === 0) {
+    return [];
+  }
+
+  const byEmoji = new Map<string, ReactionSummaryItem>();
+  for (const item of response.items) {
+    const emoji = (item.emoji || '').trim();
+    if (!emoji) continue;
+    const existing = byEmoji.get(emoji);
+    if (existing) {
+      existing.count += 1;
+      if (item.userId === currentUserId) {
+        existing.reactedByMe = true;
+      }
+      continue;
+    }
+    byEmoji.set(emoji, {
+      emoji,
+      count: 1,
+      reactedByMe: item.userId === currentUserId,
+    });
+  }
+
+  return Array.from(byEmoji.values()).sort((left, right) => {
+    if (right.count !== left.count) {
+      return right.count - left.count;
+    }
+    return left.emoji.localeCompare(right.emoji);
+  });
+}
+
+const normalizeOptionIndexes = (values: number[]) => {
+  const unique = new Set<number>();
+  for (const value of values) {
+    if (!Number.isFinite(value) || value < 0) continue;
+    unique.add(value);
+  }
+  return Array.from(unique).sort((a, b) => a - b);
+};
+
+const arraysEqual = (left: number[], right: number[]) => {
+  if (left.length !== right.length) return false;
+  for (let index = 0; index < left.length; index += 1) {
+    if (left[index] !== right[index]) return false;
+  }
+  return true;
+};
+
 function resolveGroupServiceAvatarUrl(
   message: ChatMessage,
   attachments: ReturnType<typeof getMessageAttachments>
@@ -343,25 +581,98 @@ function GroupServiceMessageBubble({
 }) {
   const payload = parseSystemPayload(message.content || '');
   const contentTitle = (payload.title || message.content || '').trim();
-  const safeTitle = contentTitle || 'Без названия';
+  const safeTitle = contentTitle || 'Untitled';
 
   let text = `${actorName} updated group`;
   if (messageType === 'group_created') {
-    text = `${actorName} создал(а) группу «${safeTitle}»`;
+    text = `${actorName} created group "${safeTitle}"`;
   } else if (messageType === 'group_title_updated') {
-    text = `${actorName} изменил(а) название группы на «${safeTitle}»`;
+    text = `${actorName} changed group title to "${safeTitle}"`;
   } else if (messageType === 'group_avatar_updated') {
-    text = `${actorName} обновил(а) фотографию группы`;
+    text = `${actorName} updated group photo`;
   } else if (messageType === 'group_members_added') {
     const addedMembers = parseAddedMembers(message.content || '');
     if (addedMembers.length === 1) {
-      text = `${actorName} добавил(а) ${addedMembers[0]}`;
+      text = `${actorName} added ${addedMembers[0]}`;
     } else if (addedMembers.length > 1) {
-      text = `${actorName} добавил(а) ${addedMembers.join(', ')}`;
+      text = `${actorName} added ${addedMembers.join(', ')}`;
     } else {
       const content = (message.content || '').trim();
-      text = content || `${actorName} добавил(а) новых участников`;
+      text = content || `${actorName} added members`;
     }
+  } else if (messageType === 'group_members_removed') {
+    const removedMembers = parseAddedMembers(message.content || '');
+    if (removedMembers.length === 1) {
+      text = `${actorName} removed ${removedMembers[0]}`;
+    } else if (removedMembers.length > 1) {
+      text = `${actorName} removed ${removedMembers.join(', ')}`;
+    } else {
+      const content = (message.content || '').trim();
+      text = content || `${actorName} removed members`;
+    }
+  } else if (messageType === 'group_member_left') {
+    text = `${actorName} left the group`;
+  } else if (messageType === 'group_admin_promoted') {
+    const members = parseAddedMembers(message.content || '');
+    text = members.length > 0
+      ? `${actorName} promoted ${members.join(', ')} to admin`
+      : `${actorName} promoted a new admin`;
+  } else if (messageType === 'group_admin_demoted') {
+    const members = parseAddedMembers(message.content || '');
+    text = members.length > 0
+      ? `${actorName} demoted ${members.join(', ')}`
+      : `${actorName} changed admin rights`;
+  } else if (messageType === 'group_owner_transferred') {
+    const members = parseAddedMembers(message.content || '');
+    text = members.length > 0
+      ? `${actorName} transferred ownership to ${members.join(', ')}`
+      : `${actorName} transferred ownership`;
+  } else if (messageType === 'group_description_updated') {
+    text = `${actorName} updated group description`;
+  } else if (messageType === 'group_public_username_updated') {
+    text = `${actorName} updated public username`;
+  } else if (messageType === 'group_slow_mode_updated') {
+    text = `${actorName} updated slow mode`;
+  } else if (messageType === 'group_history_visibility_updated') {
+    text = `${actorName} updated history visibility`;
+  } else if (messageType === 'group_permissions_updated') {
+    text = `${actorName} updated group permissions`;
+  } else if (messageType === 'group_admin_rights_updated') {
+    text = `${actorName} updated admin rights`;
+  } else if (messageType === 'group_member_muted') {
+    text = `${actorName} muted a member`;
+  } else if (messageType === 'group_member_unmuted') {
+    text = `${actorName} unmuted a member`;
+  } else if (messageType === 'group_member_banned') {
+    text = `${actorName} banned a member`;
+  } else if (messageType === 'group_member_unbanned') {
+    text = `${actorName} unbanned a member`;
+  } else if (messageType === 'group_message_pinned') {
+    text = `${actorName} pinned a message`;
+  } else if (messageType === 'group_message_unpinned') {
+    text = `${actorName} unpinned a message`;
+  } else if (messageType === 'group_invite_link_created') {
+    text = `${actorName} created an invite link`;
+  } else if (messageType === 'group_invite_link_revoked') {
+    text = `${actorName} revoked an invite link`;
+  } else if (messageType === 'group_join_request_created') {
+    text = `${actorName} requested to join`;
+  } else if (messageType === 'group_join_request_approved') {
+    text = `${actorName} approved a join request`;
+  } else if (messageType === 'group_join_request_declined') {
+    text = `${actorName} declined a join request`;
+  } else if (messageType === 'group_topic_created') {
+    text = `${actorName} created topic "${safeTitle}"`;
+  } else if (messageType === 'group_topic_closed') {
+    text = `${actorName} closed topic "${safeTitle}"`;
+  } else if (messageType === 'group_topic_reopened') {
+    text = `${actorName} reopened topic "${safeTitle}"`;
+  } else if (messageType === 'group_topic_deleted') {
+    text = `${actorName} deleted topic "${safeTitle}"`;
+  } else if (messageType === 'reaction') {
+    text = `${actorName} reacted ${safeTitle}`;
+  } else if (messageType === 'poll_closed') {
+    text = `${actorName} closed a poll`;
   }
 
   const avatarUrl =
@@ -397,7 +708,9 @@ const toMessageDomId = (messageId: string | number) =>
   `chat-message-${String(messageId).replace(/[^a-zA-Z0-9_-]/g, '_')}`;
 
 const isTailBubbleMessage = (message: ChatMessage) =>
-  toGroupServiceMessageType(message.messageType) === null && message.messageType !== 'circle';
+  toGroupServiceMessageType(message.messageType) === null &&
+  message.messageType !== 'circle' &&
+  message.messageType !== 'poll';
 
 const normalizeGroupingKey = (value?: string) => {
   if (typeof value !== 'string') return '';
@@ -2963,8 +3276,370 @@ function CircleMessageBubble({
   );
 }
 
+function PollMessageBubble({
+  question,
+  options,
+  allowsMultiple,
+  quiz,
+  correctOptionIndex,
+  explanation,
+  anonymousVotes,
+  votedByMe,
+  myAnswerCorrect,
+  closed,
+  totalVotes,
+  isOwn,
+  isRead,
+  status,
+  isEdited,
+  hideTail,
+  time,
+  loading,
+  voting,
+  canClose,
+  closing,
+  canOpenVoters,
+  onOpenVoters,
+  onVote,
+  onClose,
+}: {
+  question: string;
+  options: Array<{
+    optionIndex: number;
+    optionText: string;
+    votes: number;
+    votedByMe: boolean;
+    correct?: boolean | null;
+  }>;
+  allowsMultiple: boolean;
+  quiz: boolean;
+  correctOptionIndex?: number | null;
+  explanation?: string | null;
+  anonymousVotes: boolean;
+  votedByMe: boolean;
+  myAnswerCorrect?: boolean | null;
+  closed: boolean;
+  totalVotes: number;
+  isOwn: boolean;
+  isRead: boolean;
+  status?: string;
+  isEdited: boolean;
+  hideTail?: boolean;
+  time: string;
+  loading: boolean;
+  voting: boolean;
+  canClose: boolean;
+  closing: boolean;
+  canOpenVoters: boolean;
+  onOpenVoters?: (optionIndex: number) => void;
+  onVote?: (optionIndexes: number[]) => void;
+  onClose?: () => void;
+}) {
+  const [selectedForMultiple, setSelectedForMultiple] = useState<number[]>([]);
+
+  const votedIndexes = useMemo(
+    () => normalizeOptionIndexes(options.filter((option) => option.votedByMe).map((option) => option.optionIndex)),
+    [options]
+  );
+
+  useEffect(() => {
+    setSelectedForMultiple(votedIndexes);
+  }, [votedIndexes]);
+
+  const hasOptions = options.length > 0;
+  const normalizedSelected = normalizeOptionIndexes(selectedForMultiple);
+  const canSubmitMultiple =
+    allowsMultiple &&
+    !closed &&
+    !loading &&
+    !voting &&
+    hasOptions &&
+    normalizedSelected.length > 0 &&
+    !arraysEqual(normalizedSelected, votedIndexes);
+
+  const safeTotalVotes = Math.max(totalVotes, options.reduce((sum, option) => sum + option.votes, 0));
+  const bubbleClass = isOwn
+    ? hideTail
+      ? 'rounded-[22px_22px_8px_22px]'
+      : 'rounded-[22px_22px_8px_8px]'
+    : hideTail
+      ? 'rounded-[22px_22px_22px_8px]'
+      : 'rounded-[22px_22px_8px_8px]';
+
+  const selectOption = (optionIndex: number) => {
+    if (!onVote || closed || loading || voting) return;
+    if (!allowsMultiple) {
+      onVote([optionIndex]);
+      return;
+    }
+    setSelectedForMultiple((prev) => {
+      const current = new Set(prev);
+      if (current.has(optionIndex)) {
+        current.delete(optionIndex);
+      } else {
+        current.add(optionIndex);
+      }
+      return normalizeOptionIndexes(Array.from(current));
+    });
+  };
+
+  return (
+    <div
+      className={`relative overflow-hidden px-[14px] pb-[22px] pt-[12px] text-white shadow-[0_10px_28px_rgba(0,0,0,0.32)] ${bubbleClass} ${
+        isOwn
+          ? 'bg-gradient-to-br from-[#8875f6] via-[#7b66ef] to-[#6d56e1]'
+          : 'bg-gradient-to-br from-[#2a2832] via-[#26242d] to-[#23212a]'
+      }`}
+      style={{ minWidth: 260, maxWidth: 420 }}
+    >
+      <div className="text-[15px] font-[700] leading-[1.3] text-white/96">{question}</div>
+      {!hasOptions ? (
+        <div className="mt-2 text-[13px] text-white/64">{loading ? 'Loading poll...' : 'No poll options'}</div>
+      ) : (
+        <div className="mt-2.5 space-y-2">
+          {options.map((option) => {
+            const selectionForMultiple =
+              allowsMultiple && normalizedSelected.includes(option.optionIndex);
+            const isSelected = allowsMultiple ? selectionForMultiple : option.votedByMe;
+            const isCorrect = option.correct === true;
+            const isWrongSelected = option.correct === false && option.votedByMe;
+            const denominator = safeTotalVotes > 0 ? safeTotalVotes : 1;
+            const percent = Math.min(100, Math.max(0, Math.round((option.votes / denominator) * 100)));
+            return (
+              <button
+                key={option.optionIndex}
+                type="button"
+                onClick={() => selectOption(option.optionIndex)}
+                disabled={closed || loading || voting || !onVote}
+                className={`relative w-full overflow-hidden rounded-[11px] border px-3 py-2 text-left transition-colors ${
+                  isCorrect
+                    ? 'border-[#8bd89b] bg-[#8bd89b1c]'
+                    : isWrongSelected
+                      ? 'border-[#f78c9a] bg-[#f78c9a1a]'
+                      : isSelected
+                    ? 'border-[#b8a9ff] bg-[#ffffff14]'
+                    : 'border-white/14 bg-black/10 hover:bg-white/10'
+                } ${
+                  closed || loading || voting || !onVote ? 'cursor-default' : 'cursor-pointer'
+                }`}
+              >
+                <div
+                  className={`absolute inset-y-0 left-0 transition-[width] duration-300 ${
+                    isCorrect
+                      ? 'bg-[#7ed7912e]'
+                      : isWrongSelected
+                        ? 'bg-[#ff9aaa29]'
+                        : isSelected
+                          ? 'bg-[#c1b4ff33]'
+                          : 'bg-[#ffffff12]'
+                  }`}
+                  style={{ width: `${percent}%` }}
+                />
+                <div className="relative z-[1] flex items-center justify-between gap-3">
+                  <span className="truncate text-[13px] font-[600] text-white/92">
+                    {option.optionText}
+                  </span>
+                  <div className="shrink-0 text-right">
+                    <div className="text-[12px] text-white/72">
+                      {safeTotalVotes > 0 ? `${percent}%` : '0%'}
+                    </div>
+                    {canOpenVoters ? (
+                      <span
+                        role="button"
+                        tabIndex={0}
+                        onClick={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          onOpenVoters?.(option.optionIndex);
+                        }}
+                        onKeyDown={(event) => {
+                          if (event.key !== 'Enter' && event.key !== ' ') {
+                            return;
+                          }
+                          event.preventDefault();
+                          event.stopPropagation();
+                          onOpenVoters?.(option.optionIndex);
+                        }}
+                        className="mt-[2px] text-[11px] text-white/70 underline decoration-dotted underline-offset-2 hover:text-white/90"
+                      >
+                        {option.votes} voters
+                      </span>
+                    ) : null}
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      )}
+      <div className="mt-2.5 flex flex-wrap items-center gap-2 text-[12px] text-white/62">
+        <span>{safeTotalVotes} votes</span>
+        {closed ? <span>closed</span> : null}
+        {allowsMultiple && !closed ? <span>multiple answers</span> : null}
+        {quiz ? <span>quiz</span> : null}
+        {anonymousVotes ? <span>anonymous</span> : <span>public voters</span>}
+      </div>
+      {quiz && votedByMe && typeof myAnswerCorrect === 'boolean' ? (
+        <div
+          className={`mt-2 rounded-[10px] border px-2.5 py-2 text-[12px] ${
+            myAnswerCorrect
+              ? 'border-[#7cd49566] bg-[#7cd4951c] text-[#d7ffe6]'
+              : 'border-[#ff9fb466] bg-[#ff9fb41a] text-[#ffd8e1]'
+          }`}
+        >
+          {myAnswerCorrect ? 'Correct answer' : 'Wrong answer'}
+          {typeof correctOptionIndex === 'number' ? ` • correct option #${correctOptionIndex + 1}` : ''}
+        </div>
+      ) : null}
+      {quiz && explanation ? (
+        <div className="mt-2 rounded-[10px] border border-white/14 bg-black/12 px-2.5 py-2 text-[12px] text-white/86">
+          {explanation}
+        </div>
+      ) : null}
+      <div className="mt-2.5 flex flex-wrap items-center gap-2">
+        {allowsMultiple && !closed && onVote ? (
+          <button
+            type="button"
+            onClick={() => {
+              if (!canSubmitMultiple) return;
+              onVote(normalizedSelected);
+            }}
+            disabled={!canSubmitMultiple}
+            className={`rounded-[10px] px-2.5 py-[5px] text-[11px] font-[700] ${
+              canSubmitMultiple
+                ? 'bg-white/22 text-white hover:bg-white/28'
+                : 'bg-white/12 text-white/55'
+            }`}
+          >
+            {voting ? 'Voting...' : 'Vote'}
+          </button>
+        ) : null}
+        {canClose && !closed && onClose ? (
+          <button
+            type="button"
+            onClick={() => {
+              if (closing) return;
+              onClose();
+            }}
+            disabled={closing}
+            className="rounded-[10px] border border-[#ffbacf66] px-2.5 py-[5px] text-[11px] font-[700] text-[#ffd0dd] hover:bg-[#ff87ad1a] disabled:opacity-60"
+          >
+            {closing ? 'Closing...' : 'Close poll'}
+          </button>
+        ) : null}
+      </div>
+      <div
+        className={`pointer-events-none absolute bottom-[6px] right-[10px] inline-flex items-center gap-[3px] text-[11px] ${
+          isOwn ? 'text-white/78' : 'text-white/60'
+        }`}
+      >
+        {isEdited ? <span className="italic text-white/58">edited</span> : null}
+        <span>{time}</span>
+        {isOwn ? (
+          <span className="ml-[2px] inline-flex">
+            {status === 'pending' ? (
+              <span className="h-[10px] w-[10px] animate-pulse rounded-full border border-white/78" />
+            ) : status === 'failed' ? (
+              <span className="text-[12px] leading-none text-[#ffb0ba]">!</span>
+            ) : (
+              <CheckCheckIcon
+                size={11}
+                strokeWidth={2.1}
+                className={`${isRead ? 'text-[#e3fff5]' : 'text-white/74'}`}
+              />
+            )}
+          </span>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function MessageReactionsBar({
+  reactions,
+  reactionsLoading,
+  reactionsEnabled,
+  toggleLoading,
+  onToggleReaction,
+}: {
+  reactions: ReactionSummaryItem[];
+  reactionsLoading: boolean;
+  reactionsEnabled: boolean;
+  toggleLoading: boolean;
+  onToggleReaction?: (emoji: string) => void;
+}) {
+  const [quickPickerOpen, setQuickPickerOpen] = useState(false);
+  const canToggle = reactionsEnabled && !!onToggleReaction;
+
+  if (!canToggle && reactions.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="mt-1.5 flex flex-wrap items-center gap-1.5 px-1">
+      {reactions.map((reaction) => (
+        <button
+          key={`reaction-${reaction.emoji}`}
+          type="button"
+          onClick={() => onToggleReaction?.(reaction.emoji)}
+          disabled={!canToggle || toggleLoading}
+          className={`inline-flex items-center gap-1 rounded-full border px-2 py-[3px] text-[12px] transition-colors ${
+            reaction.reactedByMe
+              ? 'border-[#8f79ff] bg-[#6d56d933] text-white'
+              : 'border-white/15 bg-white/8 text-white/86 hover:bg-white/14'
+          } ${!canToggle || toggleLoading ? 'cursor-default' : ''}`}
+        >
+          <span>{reaction.emoji}</span>
+          <span className="text-[11px]">{reaction.count}</span>
+        </button>
+      ))}
+      {canToggle ? (
+        quickPickerOpen ? (
+          <>
+            {QUICK_REACTION_EMOJIS.map((emoji) => (
+              <button
+                key={`quick-${emoji}`}
+                type="button"
+                onClick={() => {
+                  onToggleReaction?.(emoji);
+                  setQuickPickerOpen(false);
+                }}
+                disabled={toggleLoading}
+                className="rounded-full border border-white/16 bg-white/8 px-2 py-[3px] text-[12px] text-white/92 hover:bg-white/14 disabled:opacity-60"
+              >
+                {emoji}
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={() => setQuickPickerOpen(false)}
+              className="rounded-full border border-white/16 bg-transparent px-2 py-[3px] text-[11px] text-white/70 hover:bg-white/10"
+            >
+              Close
+            </button>
+          </>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setQuickPickerOpen(true)}
+            disabled={toggleLoading || reactionsLoading}
+            className="rounded-full border border-white/16 bg-white/8 px-2 py-[3px] text-[12px] text-white/82 hover:bg-white/14 disabled:opacity-60"
+          >
+            {reactionsLoading ? '...' : '+'}
+          </button>
+        )
+      ) : null}
+    </div>
+  );
+}
+
 function ChatMessageRow({
   message,
+  chatId,
+  isGroupChat,
+  reactionsEnabled,
+  pollsEnabled,
+  canManagePolls,
   userId,
   bubbleMaxWidthPx,
   uploadingImages,
@@ -2981,9 +3656,27 @@ function ChatMessageRow({
   hideTail,
   showEdgeAvatar,
   rowBottomGapPx,
+  messageReactions,
+  reactionsLoading,
+  reactionToggleLoading,
+  onToggleReaction,
+  pollData,
+  pollLoading,
+  pollVoting,
+  pollClosing,
+  pollVoters,
+  pollVotersLoading,
+  onOpenPollVoters,
+  onVotePoll,
+  onClosePoll,
   onOpenMediaViewer,
 }: {
   message: ChatMessage;
+  chatId?: number | null;
+  isGroupChat?: boolean;
+  reactionsEnabled?: boolean;
+  pollsEnabled?: boolean;
+  canManagePolls?: boolean;
   userId: string;
   bubbleMaxWidthPx: number;
   uploadingImages?: ChatMessageListProps['uploadingImages'];
@@ -3000,6 +3693,19 @@ function ChatMessageRow({
   hideTail: boolean;
   showEdgeAvatar: boolean;
   rowBottomGapPx: number;
+  messageReactions?: ChatMessageReactionsResponse | null;
+  reactionsLoading?: boolean;
+  reactionToggleLoading?: boolean;
+  onToggleReaction?: (messageId: number, emoji: string) => void;
+  pollData?: ChatPoll | null;
+  pollLoading?: boolean;
+  pollVoting?: boolean;
+  pollClosing?: boolean;
+  pollVoters?: ChatPollVotersResponse | null;
+  pollVotersLoading?: boolean;
+  onOpenPollVoters?: (messageId: number, pollId: number, optionIndex?: number) => void;
+  onVotePoll?: (messageId: number, pollId: number, optionIndexes: number[]) => void;
+  onClosePoll?: (messageId: number, pollId: number) => void;
   onOpenMediaViewer?: (payload: OpenMediaViewerPayload) => void;
 }) {
   const isOwn = message.senderId === userId;
@@ -3057,6 +3763,7 @@ function ChatMessageRow({
   );
   const groupServiceMessageType = toGroupServiceMessageType(message.messageType);
   const isCircleMessage = message.messageType === 'circle' && !!circleAttachment;
+  const numericMessageId = typeof message.messageId === 'number' ? message.messageId : null;
   const mediaId = `${message.messageType}-${String(message.messageId)}`;
   const author = isOwn ? 'You' : resolveUserName(message.senderId);
   const edgeAvatarName =
@@ -3079,6 +3786,51 @@ function ChatMessageRow({
         ? 'shadow-[0_0_0_1px_rgba(179,156,255,0.5)]'
         : ''
   }`;
+  const parsedPoll = message.messageType === 'poll' ? parsePollMessageContent(textContent) : null;
+  const fallbackPollOptions =
+    parsedPoll?.options.map((optionText, optionIndex) => ({
+      optionIndex,
+      optionText,
+      votes: 0,
+      votedByMe: false,
+    })) || [];
+  const effectivePollOptions =
+    pollData && pollData.options.length > 0 ? pollData.options : fallbackPollOptions;
+  const pollQuestion =
+    (pollData?.question || parsedPoll?.question || '').trim() || 'Poll';
+  const pollAllowsMultiple = pollData?.allowsMultiple ?? parsedPoll?.allowsMultiple ?? false;
+  const pollQuiz = pollData?.quiz ?? parsedPoll?.quiz ?? false;
+  const pollCorrectOptionIndex =
+    typeof pollData?.correctOptionIndex === 'number'
+      ? pollData.correctOptionIndex
+      : (parsedPoll?.correctOptionIndex ?? null);
+  const pollExplanation = pollData?.explanation ?? parsedPoll?.explanation ?? null;
+  const pollAnonymousVotes = pollData?.anonymousVotes ?? parsedPoll?.anonymousVotes ?? true;
+  const pollClosed = pollData?.closed ?? false;
+  const pollTotalVotes = pollData?.totalVotes ?? 0;
+  const pollVotedByMe = pollData?.votedByMe ?? effectivePollOptions.some((option) => option.votedByMe);
+  const pollMyAnswerCorrect = pollData?.myAnswerCorrect;
+  const hasPollVotersData = !!pollVoters && pollVoters.items.length > 0;
+  const canClosePoll =
+    message.messageType === 'poll' &&
+    !pollClosed &&
+    !!pollData &&
+    !!(canManagePolls || (pollData.createdBy && pollData.createdBy === userId) || message.senderId === userId);
+  const canOpenPollVoters =
+    message.messageType === 'poll' &&
+    !!pollData &&
+    !pollAnonymousVotes &&
+    !!onOpenPollVoters &&
+    (!pollVotersLoading || hasPollVotersData);
+
+  const reactionSummary = buildReactionSummary(messageReactions, userId);
+  const canRenderReactions =
+    !!isGroupChat &&
+    !!reactionsEnabled &&
+    groupServiceMessageType === null &&
+    message.messageType !== 'poll_closed' &&
+    message.messageType !== 'poll' &&
+    numericMessageId !== null;
 
   const voiceUrl = voiceAttachment ? resolveAttachmentUrl(voiceAttachment) : '';
   const circlePendingPreviewUrl = circleAttachmentItem
@@ -3185,6 +3937,50 @@ function ChatMessageRow({
               if (!onCancelPendingUpload || !messageLocalId || !circleAttachmentItem) return;
               onCancelPendingUpload(messageLocalId, circleAttachmentItem.attachmentIndex);
             }}
+          />
+        ) : message.messageType === 'poll' ? (
+          <PollMessageBubble
+            question={pollQuestion}
+            options={effectivePollOptions}
+            allowsMultiple={pollAllowsMultiple}
+            quiz={pollQuiz}
+            correctOptionIndex={pollCorrectOptionIndex}
+            explanation={pollExplanation}
+            anonymousVotes={pollAnonymousVotes}
+            votedByMe={pollVotedByMe}
+            myAnswerCorrect={pollMyAnswerCorrect}
+            closed={pollClosed}
+            totalVotes={pollTotalVotes}
+            isOwn={isOwn}
+            isRead={isRead}
+            status={message.status}
+            isEdited={isEdited}
+            hideTail={hideTail}
+            time={time}
+            loading={!!pollLoading}
+            voting={!!pollVoting}
+            canClose={canClosePoll}
+            closing={!!pollClosing}
+            canOpenVoters={canOpenPollVoters}
+            onOpenVoters={
+              onOpenPollVoters && chatId && numericMessageId !== null && pollData
+                ? (optionIndex) => onOpenPollVoters(numericMessageId, pollData.pollId, optionIndex)
+                : undefined
+            }
+            onVote={
+              pollsEnabled !== false &&
+              onVotePoll &&
+              chatId &&
+              numericMessageId !== null &&
+              pollData
+                ? (optionIndexes) => onVotePoll(numericMessageId, pollData.pollId, optionIndexes)
+                : undefined
+            }
+            onClose={
+              onClosePoll && chatId && numericMessageId !== null && pollData
+                ? () => onClosePoll(numericMessageId, pollData.pollId)
+                : undefined
+            }
           />
         ) : fileAttachmentItems.length > 0 ? (
           <div className="flex flex-col gap-2">
@@ -3299,6 +4095,19 @@ function ChatMessageRow({
               />
             ) : null}
           </div>
+        ) : null}
+        {canRenderReactions || reactionSummary.length > 0 ? (
+          <MessageReactionsBar
+            reactions={reactionSummary}
+            reactionsLoading={!!reactionsLoading}
+            reactionsEnabled={canRenderReactions}
+            toggleLoading={!!reactionToggleLoading}
+            onToggleReaction={
+              canRenderReactions && onToggleReaction && numericMessageId !== null
+                ? (emoji) => onToggleReaction(numericMessageId, emoji)
+                : undefined
+            }
+          />
         ) : null}
         {showEdgeAvatar ? (
           <span
@@ -3526,6 +4335,11 @@ function ChatAlbumRow({
 
 export function ChatMessageList({
   messages,
+  chatId = null,
+  isGroupChat = false,
+  reactionsEnabled = true,
+  pollsEnabled = true,
+  canManagePolls = false,
   userId,
   hasSelectedChat,
   messageBubbleMaxWidthPx = DEFAULT_MESSAGE_BUBBLE_MAX_WIDTH_PX,
@@ -3541,13 +4355,36 @@ export function ChatMessageList({
   onReplyMessage,
   onEditMessage,
   onDeleteMessage,
+  canDeleteMessage,
   onCopyMessage,
   onCancelPendingUpload,
   onRetryMessage,
+  onLoadMessageReactions,
+  onToggleMessageReaction,
+  onLoadPollByMessageId,
+  onLoadPollVoters,
+  onVotePoll,
+  onClosePoll,
 }: ChatMessageListProps) {
   const [isCircleMuted, setIsCircleMuted] = useState(true);
   const [contextMenu, setContextMenu] = useState<MessageContextMenuState | null>(null);
   const [mediaViewerIndex, setMediaViewerIndex] = useState<number | null>(null);
+  const [reactionsByMessageId, setReactionsByMessageId] = useState<
+    Record<number, ChatMessageReactionsResponse>
+  >({});
+  const [reactionLoadingByMessageId, setReactionLoadingByMessageId] = useState<Record<number, boolean>>({});
+  const [reactionToggleLoadingByMessageId, setReactionToggleLoadingByMessageId] = useState<Record<number, boolean>>({});
+  const [pollByMessageId, setPollByMessageId] = useState<Record<number, ChatPoll>>({});
+  const [pollLoadingByMessageId, setPollLoadingByMessageId] = useState<Record<number, boolean>>({});
+  const [pollVoteLoadingByMessageId, setPollVoteLoadingByMessageId] = useState<Record<number, boolean>>({});
+  const [pollCloseLoadingByMessageId, setPollCloseLoadingByMessageId] = useState<Record<number, boolean>>({});
+  const [pollVotersByMessageId, setPollVotersByMessageId] = useState<
+    Record<number, ChatPollVotersResponse>
+  >({});
+  const [pollVotersLoadingByMessageId, setPollVotersLoadingByMessageId] = useState<
+    Record<number, boolean>
+  >({});
+  const [pollVotersModal, setPollVotersModal] = useState<PollVotersModalState | null>(null);
   const contextMenuRef = useRef<HTMLDivElement | null>(null);
   const hasInitializedMessagesRef = useRef(false);
   const previousMessageIdsRef = useRef<Set<string>>(new Set());
@@ -3595,6 +4432,230 @@ export function ChatMessageList({
     });
     return objectUrl;
   };
+
+  useEffect(() => {
+    setReactionsByMessageId({});
+    setReactionLoadingByMessageId({});
+    setReactionToggleLoadingByMessageId({});
+    setPollByMessageId({});
+    setPollLoadingByMessageId({});
+    setPollVoteLoadingByMessageId({});
+    setPollCloseLoadingByMessageId({});
+    setPollVotersByMessageId({});
+    setPollVotersLoadingByMessageId({});
+    setPollVotersModal(null);
+  }, [chatId]);
+
+  const ensureMessageReactionsLoaded = useCallback(
+    async (messageId: number) => {
+      if (
+        !chatId ||
+        !isGroupChat ||
+        !onLoadMessageReactions ||
+        reactionLoadingByMessageId[messageId] ||
+        reactionsByMessageId[messageId]
+      ) {
+        return;
+      }
+      setReactionLoadingByMessageId((prev) => ({ ...prev, [messageId]: true }));
+      try {
+        const data = await onLoadMessageReactions(chatId, messageId);
+        setReactionsByMessageId((prev) => ({ ...prev, [messageId]: data }));
+      } catch {
+        setReactionsByMessageId((prev) => prev);
+      } finally {
+        setReactionLoadingByMessageId((prev) => ({ ...prev, [messageId]: false }));
+      }
+    },
+    [chatId, isGroupChat, onLoadMessageReactions, reactionLoadingByMessageId, reactionsByMessageId]
+  );
+
+  const toggleReaction = useCallback(
+    async (messageId: number, emoji: string) => {
+      if (!chatId || !onToggleMessageReaction || reactionToggleLoadingByMessageId[messageId]) {
+        return;
+      }
+      const normalizedEmoji = emoji.trim();
+      if (!normalizedEmoji) {
+        return;
+      }
+      setReactionToggleLoadingByMessageId((prev) => ({ ...prev, [messageId]: true }));
+      try {
+        const data = await onToggleMessageReaction(chatId, messageId, normalizedEmoji);
+        setReactionsByMessageId((prev) => ({ ...prev, [messageId]: data }));
+      } finally {
+        setReactionToggleLoadingByMessageId((prev) => ({ ...prev, [messageId]: false }));
+      }
+    },
+    [chatId, onToggleMessageReaction, reactionToggleLoadingByMessageId]
+  );
+
+  const ensurePollLoaded = useCallback(
+    async (messageId: number) => {
+      if (
+        !chatId ||
+        !pollsEnabled ||
+        !onLoadPollByMessageId ||
+        pollLoadingByMessageId[messageId] ||
+        pollByMessageId[messageId]
+      ) {
+        return;
+      }
+      setPollLoadingByMessageId((prev) => ({ ...prev, [messageId]: true }));
+      try {
+        const poll = await onLoadPollByMessageId(chatId, messageId);
+        if (poll) {
+          setPollByMessageId((prev) => ({ ...prev, [messageId]: poll }));
+        }
+      } finally {
+        setPollLoadingByMessageId((prev) => ({ ...prev, [messageId]: false }));
+      }
+    },
+    [chatId, onLoadPollByMessageId, pollByMessageId, pollLoadingByMessageId, pollsEnabled]
+  );
+
+  const votePoll = useCallback(
+    async (messageId: number, pollId: number, optionIndexes: number[]) => {
+      if (!chatId || !onVotePoll || pollVoteLoadingByMessageId[messageId]) {
+        return;
+      }
+      setPollVoteLoadingByMessageId((prev) => ({ ...prev, [messageId]: true }));
+      try {
+        const updatedPoll = await onVotePoll(chatId, pollId, optionIndexes);
+        setPollByMessageId((prev) => ({ ...prev, [messageId]: updatedPoll }));
+      } finally {
+        setPollVoteLoadingByMessageId((prev) => ({ ...prev, [messageId]: false }));
+      }
+    },
+    [chatId, onVotePoll, pollVoteLoadingByMessageId]
+  );
+
+  const closePoll = useCallback(
+    async (messageId: number, pollId: number) => {
+      if (!chatId || !onClosePoll || pollCloseLoadingByMessageId[messageId]) {
+        return;
+      }
+      setPollCloseLoadingByMessageId((prev) => ({ ...prev, [messageId]: true }));
+      try {
+        await onClosePoll(chatId, pollId);
+        setPollByMessageId((prev) => {
+          const current = prev[messageId];
+          if (!current) return prev;
+          return { ...prev, [messageId]: { ...current, closed: true } };
+        });
+      } finally {
+        setPollCloseLoadingByMessageId((prev) => ({ ...prev, [messageId]: false }));
+      }
+    },
+    [chatId, onClosePoll, pollCloseLoadingByMessageId]
+  );
+
+  const ensurePollVotersLoaded = useCallback(
+    async (messageId: number, pollId: number) => {
+      if (
+        !chatId ||
+        !onLoadPollVoters ||
+        pollVotersLoadingByMessageId[messageId] ||
+        pollVotersByMessageId[messageId]
+      ) {
+        return;
+      }
+      setPollVotersLoadingByMessageId((prev) => ({ ...prev, [messageId]: true }));
+      try {
+        const payload = await onLoadPollVoters(chatId, pollId);
+        if (payload) {
+          setPollVotersByMessageId((prev) => ({ ...prev, [messageId]: payload }));
+        }
+      } finally {
+        setPollVotersLoadingByMessageId((prev) => ({ ...prev, [messageId]: false }));
+      }
+    },
+    [chatId, onLoadPollVoters, pollVotersByMessageId, pollVotersLoadingByMessageId]
+  );
+
+  const openPollVotersModal = useCallback(
+    (messageId: number, pollId: number, optionIndex?: number) => {
+      const loaded = pollVotersByMessageId[messageId];
+      const fallbackIndex = loaded?.items?.[0]?.optionIndex ?? 0;
+      const nextOptionIndex =
+        typeof optionIndex === 'number' && Number.isFinite(optionIndex) ? optionIndex : fallbackIndex;
+      setPollVotersModal({ messageId, pollId, optionIndex: nextOptionIndex });
+      void ensurePollVotersLoaded(messageId, pollId);
+    },
+    [ensurePollVotersLoaded, pollVotersByMessageId]
+  );
+
+  useEffect(() => {
+    if (!chatId || !isGroupChat || !reactionsEnabled || !onLoadMessageReactions) {
+      return;
+    }
+    const targetMessageIds = messages
+      .filter(
+        (message) =>
+          typeof message.messageId === 'number' &&
+          toGroupServiceMessageType(message.messageType) === null &&
+          message.messageType !== 'poll'
+      )
+      .slice(-24)
+      .map((message) => message.messageId as number);
+    targetMessageIds.forEach((messageId) => {
+      if (reactionLoadingByMessageId[messageId] || reactionsByMessageId[messageId]) {
+        return;
+      }
+      void ensureMessageReactionsLoaded(messageId);
+    });
+  }, [
+    chatId,
+    ensureMessageReactionsLoaded,
+    isGroupChat,
+    messages,
+    onLoadMessageReactions,
+    reactionLoadingByMessageId,
+    reactionsByMessageId,
+    reactionsEnabled,
+  ]);
+
+  useEffect(() => {
+    if (!chatId || !pollsEnabled || !onLoadPollByMessageId) {
+      return;
+    }
+    const pollMessageIds = messages
+      .filter((message) => message.messageType === 'poll' && typeof message.messageId === 'number')
+      .map((message) => message.messageId as number);
+
+    pollMessageIds.forEach((messageId) => {
+      if (pollLoadingByMessageId[messageId] || pollByMessageId[messageId]) {
+        return;
+      }
+      void ensurePollLoaded(messageId);
+    });
+  }, [
+    chatId,
+    ensurePollLoaded,
+    messages,
+    onLoadPollByMessageId,
+    pollByMessageId,
+    pollLoadingByMessageId,
+    pollsEnabled,
+  ]);
+
+  useEffect(() => {
+    setPollByMessageId((prev) => {
+      if (Object.keys(prev).length === 0) return prev;
+      let changed = false;
+      const next = { ...prev };
+      for (const message of messages) {
+        if (message.messageType !== 'poll_closed') continue;
+        const targetId = Number.parseInt((message.content || '').trim(), 10);
+        if (!Number.isFinite(targetId)) continue;
+        const existing = next[targetId];
+        if (!existing || existing.closed) continue;
+        next[targetId] = { ...existing, closed: true };
+        changed = true;
+      }
+      return changed ? next : prev;
+    });
+  }, [messages]);
 
   const rows = useMemo<ChatRenderRow[]>(() => {
     const output: ChatRenderRow[] = [];
@@ -3909,11 +4970,17 @@ export function ChatMessageList({
   const canEdit =
     !!contextMenu &&
     contextMenu.message.senderId === userId &&
-    typeof contextMenu.message.messageId === 'number';
+    typeof contextMenu.message.messageId === 'number' &&
+    contextMenu.message.messageType !== 'poll';
   const canDelete =
     !!contextMenu &&
     contextAlbumMessages.length > 0 &&
-    contextAlbumMessages.every((message) => message.senderId === userId);
+    contextAlbumMessages.every((message) => {
+      if (canDeleteMessage) {
+        return canDeleteMessage(message);
+      }
+      return message.senderId === userId;
+    });
   const canRetry =
     !!contextMenu &&
     !contextHasAlbumGroup &&
@@ -3924,6 +4991,15 @@ export function ChatMessageList({
   const menuCopyText = contextMenu
     ? (contextMenu.message.content || '').trim() || messagePreviewText(contextMenu.message)
     : '';
+  const activePollVoters = pollVotersModal ? pollVotersByMessageId[pollVotersModal.messageId] : undefined;
+  const activePollVotersLoading = pollVotersModal
+    ? !!pollVotersLoadingByMessageId[pollVotersModal.messageId]
+    : false;
+  const activePollVoterOption =
+    pollVotersModal && activePollVoters
+      ? activePollVoters.items.find((item) => item.optionIndex === pollVotersModal.optionIndex) ||
+        activePollVoters.items[0]
+      : undefined;
 
   return (
     <>
@@ -4022,6 +5098,11 @@ export function ChatMessageList({
               ) : (
                 <ChatMessageRow
                   message={row.message}
+                  chatId={chatId}
+                  isGroupChat={isGroupChat}
+                  reactionsEnabled={reactionsEnabled}
+                  pollsEnabled={pollsEnabled}
+                  canManagePolls={canManagePolls}
                   userId={userId}
                   bubbleMaxWidthPx={messageBubbleMaxWidthPx}
                   uploadingImages={uploadingImages}
@@ -4041,6 +5122,55 @@ export function ChatMessageList({
                     messageRowBottomGapByMessageId.get(messageId) ??
                     MESSAGE_ROW_BASE_GAP_PX
                   }
+                  messageReactions={
+                    typeof row.message.messageId === 'number'
+                      ? reactionsByMessageId[row.message.messageId]
+                      : undefined
+                  }
+                  reactionsLoading={
+                    typeof row.message.messageId === 'number'
+                      ? !!reactionLoadingByMessageId[row.message.messageId]
+                      : false
+                  }
+                  reactionToggleLoading={
+                    typeof row.message.messageId === 'number'
+                      ? !!reactionToggleLoadingByMessageId[row.message.messageId]
+                      : false
+                  }
+                  onToggleReaction={toggleReaction}
+                  pollData={
+                    typeof row.message.messageId === 'number'
+                      ? pollByMessageId[row.message.messageId]
+                      : undefined
+                  }
+                  pollLoading={
+                    typeof row.message.messageId === 'number'
+                      ? !!pollLoadingByMessageId[row.message.messageId]
+                      : false
+                  }
+                  pollVoting={
+                    typeof row.message.messageId === 'number'
+                      ? !!pollVoteLoadingByMessageId[row.message.messageId]
+                      : false
+                  }
+                  pollClosing={
+                    typeof row.message.messageId === 'number'
+                      ? !!pollCloseLoadingByMessageId[row.message.messageId]
+                      : false
+                  }
+                  pollVoters={
+                    typeof row.message.messageId === 'number'
+                      ? pollVotersByMessageId[row.message.messageId]
+                      : undefined
+                  }
+                  pollVotersLoading={
+                    typeof row.message.messageId === 'number'
+                      ? !!pollVotersLoadingByMessageId[row.message.messageId]
+                      : false
+                  }
+                  onOpenPollVoters={openPollVotersModal}
+                  onVotePoll={votePoll}
+                  onClosePoll={closePoll}
                   onOpenMediaViewer={(payload) => {
                     const anchorId = toMediaViewerAnchorId(payload.messageId, payload.attachmentIndex);
                     const index = mediaViewerTimeline.findIndex((entry) => entry.id === anchorId);
@@ -4140,6 +5270,76 @@ export function ChatMessageList({
           >
             {contextHasAlbumGroup ? 'Delete album' : 'Delete'}
           </button>
+        </div>
+      ) : null}
+
+      {pollVotersModal ? (
+        <div className="fixed inset-0 z-[88] flex items-center justify-center p-4">
+          <button
+            type="button"
+            aria-label="Close poll voters"
+            onClick={() => setPollVotersModal(null)}
+            className="absolute inset-0 bg-black/62"
+          />
+          <div className="relative z-[1] w-full max-w-[540px] rounded-[16px] border border-white/12 bg-[#1f1d27] p-4 shadow-[0_24px_56px_rgba(0,0,0,0.56)]">
+            <div className="mb-3 flex items-center justify-between">
+              <div className="text-[14px] font-[700] text-white/94">Poll voters</div>
+              <button
+                type="button"
+                onClick={() => setPollVotersModal(null)}
+                className="rounded-[8px] border border-white/14 px-2 py-1 text-[12px] text-white/78 hover:bg-white/10"
+              >
+                Close
+              </button>
+            </div>
+            {activePollVotersLoading ? (
+              <div className="text-[13px] text-white/66">Loading voters...</div>
+            ) : !activePollVoters || activePollVoters.items.length === 0 ? (
+              <div className="text-[13px] text-white/66">No voter data</div>
+            ) : (
+              <>
+                <div className="mb-3 flex flex-wrap gap-2">
+                  {activePollVoters.items.map((item) => (
+                    <button
+                      key={`poll-voters-opt-${item.optionIndex}`}
+                      type="button"
+                      onClick={() =>
+                        setPollVotersModal((prev) =>
+                          prev ? { ...prev, optionIndex: item.optionIndex } : prev
+                        )
+                      }
+                      className={`rounded-[8px] border px-2.5 py-1 text-[12px] ${
+                        activePollVoterOption?.optionIndex === item.optionIndex
+                          ? 'border-[#8d76ff]/70 bg-[#8d76ff33] text-white'
+                          : 'border-white/14 text-white/78 hover:bg-white/10'
+                      }`}
+                    >
+                      {item.optionIndex + 1}. {item.optionText} ({item.votes})
+                    </button>
+                  ))}
+                </div>
+                <div className="max-h-[320px] overflow-y-auto rounded-[10px] border border-white/10 bg-black/12 p-2">
+                  {activePollVoterOption && activePollVoterOption.voters.length > 0 ? (
+                    activePollVoterOption.voters.map((voter) => (
+                      <div
+                        key={`poll-voter-${activePollVoterOption.optionIndex}-${voter.userId}-${voter.votedAt || ''}`}
+                        className="flex items-center justify-between rounded-[8px] px-2 py-1.5 text-[13px] text-white/88"
+                      >
+                        <div className="truncate">
+                          {voter.displayName || voter.username || voter.userId}
+                        </div>
+                        <div className="ml-2 shrink-0 text-[11px] text-white/52">
+                          {voter.votedAt ? formatMessageTime(voter.votedAt) : ''}
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="px-2 py-2 text-[12px] text-white/62">No votes for this option</div>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
         </div>
       ) : null}
 

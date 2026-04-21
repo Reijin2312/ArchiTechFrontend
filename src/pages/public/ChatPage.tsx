@@ -3,8 +3,19 @@ import { useNavigate } from 'react-router-dom';
 import { http } from '@/shared/api/http';
 import { endpoints } from '@/shared/api/endpoints';
 import type {
+  ChatAdminRights,
+  ChatAdminLogItem,
+  ChatGroupMediaItem,
+  ChatGroupMediaItemsResponse,
+  ChatGroupMemberRole,
+  ChatGroupMembersResponse,
+  ChatGroupPermissions,
+  ChatGroupSettings,
+  ChatInviteLinksResponse,
+  ChatJoinRequestsResponse,
   ChatLinkItem,
   ChatLinksResponse,
+  ChatTopic,
   ChatPresenceState,
   UserSearchResponse,
 } from '@/shared/api/types';
@@ -188,9 +199,32 @@ export default function ChatPage() {
   const [groupInfoLinksCursor, setGroupInfoLinksCursor] = useState<number | null>(null);
   const [groupInfoLinksHasMore, setGroupInfoLinksHasMore] = useState(true);
   const [groupInfoLinksLoading, setGroupInfoLinksLoading] = useState(false);
+  const [groupSettings, setGroupSettings] = useState<ChatGroupSettings | null>(null);
+  const [groupPermissions, setGroupPermissions] = useState<ChatGroupPermissions | null>(null);
+  const [selectedGroupAdminRights, setSelectedGroupAdminRights] = useState<ChatAdminRights | null>(null);
+  const [groupInviteLinks, setGroupInviteLinks] = useState<ChatInviteLinksResponse['items']>([]);
+  const [groupJoinRequests, setGroupJoinRequests] = useState<ChatJoinRequestsResponse['items']>([]);
+  const [groupTopics, setGroupTopics] = useState<ChatTopic[]>([]);
+  const [groupAdminLogItems, setGroupAdminLogItems] = useState<ChatAdminLogItem[]>([]);
+  const [groupAdminLogCursor, setGroupAdminLogCursor] = useState<number | null>(null);
+  const [groupAdminLogHasMore, setGroupAdminLogHasMore] = useState(true);
+  const [groupAdminLogLoading, setGroupAdminLogLoading] = useState(false);
+  const [groupMediaItems, setGroupMediaItems] = useState<ChatGroupMediaItem[]>([]);
+  const [groupMediaCursor, setGroupMediaCursor] = useState<number | null>(null);
+  const [groupMediaHasMore, setGroupMediaHasMore] = useState(true);
+  const [groupMediaLoading, setGroupMediaLoading] = useState(false);
+  const [groupFileItems, setGroupFileItems] = useState<ChatGroupMediaItem[]>([]);
+  const [groupFilesCursor, setGroupFilesCursor] = useState<number | null>(null);
+  const [groupFilesHasMore, setGroupFilesHasMore] = useState(true);
+  const [groupFilesLoading, setGroupFilesLoading] = useState(false);
   const [groupAddMembersQuery, setGroupAddMembersQuery] = useState('');
   const [selectedGroupAddMemberIds, setSelectedGroupAddMemberIds] = useState<string[]>([]);
   const [isAddingGroupMembers, setIsAddingGroupMembers] = useState(false);
+  const [groupMembersByUserId, setGroupMembersByUserId] = useState<
+    Record<string, { role: ChatGroupMemberRole; joinedAt?: string | null }>
+  >({});
+  const [selectedGroupTopicId, setSelectedGroupTopicId] = useState<number | undefined>(undefined);
+  const [isGroupMembersLoading, setIsGroupMembersLoading] = useState(false);
   const [presenceNowMs, setPresenceNowMs] = useState(() => Date.now());
   const [isDocumentVisible, setIsDocumentVisible] = useState(
     () => typeof document === 'undefined' || document.visibilityState === 'visible'
@@ -206,6 +240,9 @@ export default function ChatPage() {
   const playbackHideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const playbackRef = useRef<ChatPlaybackState | null>(null);
   const groupInfoLinksLoadingRef = useRef(false);
+  const groupMediaLoadingRef = useRef(false);
+  const groupFilesLoadingRef = useRef(false);
+  const groupAdminLogLoadingRef = useRef(false);
   const [playback, setPlayback] = useState<ChatPlaybackState | null>(null);
   const [isPlaybackVisible, setIsPlaybackVisible] = useState(false);
   const [isNearBottom, setIsNearBottom] = useState(true);
@@ -774,14 +811,206 @@ export default function ChatPage() {
         ? 'typing'
         : formatPresenceLabel(selectedPresence);
   const selectedGroupChat = selectedChat?.chatType === 'GROUP' ? selectedChat : undefined;
+  const visibleMessages = useMemo(() => {
+    if (!selectedGroupChat || !selectedGroupTopicId) {
+      return model.messages;
+    }
+    return model.messages.filter((message) => {
+      if (typeof message.topicId !== 'number') {
+        return false;
+      }
+      return message.topicId === selectedGroupTopicId;
+    });
+  }, [model.messages, selectedGroupChat, selectedGroupTopicId]);
   const isGroupInfoVisible = isGroupInfoOpen && !!selectedGroupChat;
   const selectedGroupParticipantIdSet = useMemo(() => {
-    const ids = new Set<string>((selectedGroupChat?.participantIds || []).filter(Boolean));
+    const ids = new Set<string>([
+      ...(selectedGroupChat?.participantIds || []),
+      ...Object.keys(groupMembersByUserId),
+    ].filter(Boolean));
     if (model.userId) {
       ids.add(model.userId);
     }
     return ids;
-  }, [model.userId, selectedGroupChat]);
+  }, [groupMembersByUserId, model.userId, selectedGroupChat]);
+  const loadGroupMembers = useCallback(async (chatId: number) => {
+    if (!Number.isFinite(chatId) || chatId <= 0) {
+      setGroupMembersByUserId({});
+      return;
+    }
+
+    setIsGroupMembersLoading(true);
+    try {
+      const { data } = await http.get<ChatGroupMembersResponse>(endpoints.chatMembers(chatId));
+      const next: Record<string, { role: ChatGroupMemberRole; joinedAt?: string | null }> = {};
+      for (const member of data.members || []) {
+        if (!member?.userId) continue;
+        const role = (member.role || 'MEMBER').toUpperCase();
+        const normalizedRole: ChatGroupMemberRole =
+          role === 'OWNER' || role === 'ADMIN' || role === 'MEMBER' ? role : 'MEMBER';
+        next[member.userId] = {
+          role: normalizedRole,
+          joinedAt: member.joinedAt,
+        };
+      }
+      setGroupMembersByUserId(next);
+    } catch (error) {
+      console.error('Failed to load group members:', error);
+      setGroupMembersByUserId({});
+    } finally {
+      setIsGroupMembersLoading(false);
+    }
+  }, []);
+
+  const loadGroupMeta = useCallback(async (chatId: number) => {
+    if (!Number.isFinite(chatId) || chatId <= 0) {
+      setGroupSettings(null);
+      setGroupPermissions(null);
+      setGroupInviteLinks([]);
+      setGroupJoinRequests([]);
+      setGroupTopics([]);
+      setGroupAdminLogItems([]);
+      setGroupAdminLogCursor(null);
+      setGroupAdminLogHasMore(true);
+      setGroupAdminLogLoading(false);
+      return;
+    }
+
+    const [
+      settingsResult,
+      permissionsResult,
+      adminRightsResult,
+      inviteResult,
+      joinRequestsResult,
+      topicsResult,
+      adminLogResult,
+    ] = await Promise.allSettled([
+      model.getGroupSettings(chatId),
+      model.getGroupPermissions(chatId),
+      model.userId ? model.getAdminRights(chatId, model.userId) : Promise.resolve(null),
+      model.getInviteLinks(chatId),
+      model.getJoinRequests(chatId, 'PENDING'),
+      model.getTopics(chatId, false),
+      model.getGroupAdminLog(chatId, undefined, 40),
+    ]);
+
+    if (settingsResult.status === 'fulfilled') {
+      setGroupSettings(settingsResult.value);
+    } else {
+      setGroupSettings(null);
+    }
+
+    if (permissionsResult.status === 'fulfilled') {
+      setGroupPermissions(permissionsResult.value);
+    } else {
+      setGroupPermissions(null);
+    }
+
+    if (adminRightsResult.status === 'fulfilled') {
+      setSelectedGroupAdminRights(adminRightsResult.value);
+    } else {
+      setSelectedGroupAdminRights(null);
+    }
+
+    if (inviteResult.status === 'fulfilled') {
+      setGroupInviteLinks(inviteResult.value.items || []);
+    } else {
+      setGroupInviteLinks([]);
+    }
+
+    if (joinRequestsResult.status === 'fulfilled') {
+      setGroupJoinRequests(joinRequestsResult.value.items || []);
+    } else {
+      setGroupJoinRequests([]);
+    }
+
+    if (topicsResult.status === 'fulfilled') {
+      setGroupTopics(topicsResult.value.items || []);
+    } else {
+      setGroupTopics([]);
+    }
+
+    if (adminLogResult.status === 'fulfilled') {
+      const firstPage = adminLogResult.value.items || [];
+      setGroupAdminLogItems(firstPage);
+      setGroupAdminLogCursor(adminLogResult.value.nextBeforeId ?? null);
+      setGroupAdminLogHasMore(Boolean(adminLogResult.value.hasMore));
+    } else {
+      setGroupAdminLogItems([]);
+      setGroupAdminLogCursor(null);
+      setGroupAdminLogHasMore(false);
+    }
+  }, [model]);
+
+  useEffect(() => {
+    if (!selectedGroupChat) {
+      setGroupMembersByUserId({});
+      setIsGroupMembersLoading(false);
+      return;
+    }
+    void loadGroupMembers(selectedGroupChat.chatId);
+  }, [loadGroupMembers, selectedGroupChat]);
+
+  useEffect(() => {
+    if (!selectedGroupChat || !isGroupInfoVisible) {
+      return;
+    }
+    void loadGroupMeta(selectedGroupChat.chatId);
+  }, [isGroupInfoVisible, loadGroupMeta, selectedGroupChat]);
+
+  useEffect(() => {
+    if (!selectedGroupChat || !selectedGroupTopicId) {
+      return;
+    }
+    const exists = groupTopics.some((topic) => topic.id === selectedGroupTopicId && !topic.deleted);
+    if (exists) {
+      return;
+    }
+    setSelectedGroupTopicId(undefined);
+    model.setActiveTopicId(selectedGroupChat.chatId, undefined);
+    void model.loadMessages(selectedGroupChat.chatId, false, undefined);
+  }, [groupTopics, model, selectedGroupChat, selectedGroupTopicId]);
+
+  const selectedGroupCurrentRole = useMemo<ChatGroupMemberRole>(() => {
+    if (!selectedGroupChat || !model.userId) {
+      return 'MEMBER';
+    }
+    const fromApi = groupMembersByUserId[model.userId]?.role;
+    if (fromApi) {
+      return fromApi;
+    }
+    if (selectedGroupChat.ownerId && selectedGroupChat.ownerId === model.userId) {
+      return 'OWNER';
+    }
+    return 'MEMBER';
+  }, [groupMembersByUserId, model.userId, selectedGroupChat]);
+
+  const isGroupOwner = selectedGroupCurrentRole === 'OWNER';
+  const isGroupAdmin = selectedGroupCurrentRole === 'ADMIN';
+  const canManageGroupMembers =
+    isGroupOwner || (isGroupAdmin && !!selectedGroupAdminRights?.canManageMembers);
+  const canEditGroupInfo =
+    isGroupOwner || (isGroupAdmin && !!selectedGroupAdminRights?.canManageGroup);
+  const canManageInviteLinks =
+    isGroupOwner || (isGroupAdmin && !!selectedGroupAdminRights?.canManageInviteLinks);
+  const canManageJoinRequests = canManageInviteLinks || canManageGroupMembers;
+  const canBanGroupMembers =
+    isGroupOwner || (isGroupAdmin && !!selectedGroupAdminRights?.canBanUsers);
+  const canPinGroupMessages =
+    isGroupOwner || (isGroupAdmin && !!selectedGroupAdminRights?.canPinMessages);
+  const canManageTopics =
+    isGroupOwner || (isGroupAdmin && !!selectedGroupAdminRights?.canManageTopics);
+  const canManagePolls =
+    isGroupOwner || (isGroupAdmin && !!selectedGroupAdminRights?.canManagePolls);
+  const canDeleteAnyGroupMessage =
+    isGroupOwner || (isGroupAdmin && !!selectedGroupAdminRights?.canDeleteMessages);
+  const canViewAdminLog =
+    isGroupOwner || (isGroupAdmin && !!selectedGroupAdminRights?.canManageGroup);
+  const canCreatePollInGroup =
+    isGroupOwner ||
+    (isGroupAdmin && !!selectedGroupAdminRights?.canManagePolls) ||
+    (!!groupPermissions?.canSendMessages && !!groupPermissions?.canSendPolls);
+  const canAddGroupMembers = canManageGroupMembers;
   const groupAddMemberCandidates = useMemo<GroupAddMemberCandidate[]>(() => {
     if (!selectedGroupChat) {
       return [];
@@ -821,18 +1050,12 @@ export default function ChatPage() {
 
     setIsAddingGroupMembers(true);
     try {
-      await http.post(endpoints.chatAddMembers(selectedGroupChat.chatId), {
-        participantIds: selectedGroupAddMemberIds,
-      });
+      await model.addGroupMembers(selectedGroupChat.chatId, selectedGroupAddMemberIds);
 
       setSelectedGroupAddMemberIds([]);
       setGroupAddMembersQuery('');
       setIsGroupAddMembersOpen(false);
-
-      await model.loadChats();
-      if (model.selectedChat === selectedGroupChat.chatId) {
-        await model.loadMessages(selectedGroupChat.chatId, false);
-      }
+      await loadGroupMembers(selectedGroupChat.chatId);
     } catch (error) {
       alert(error instanceof Error ? error.message : 'Failed to add members to the group');
     } finally {
@@ -841,9 +1064,337 @@ export default function ChatPage() {
   }, [
     isAddingGroupMembers,
     model,
+    loadGroupMembers,
     selectedGroupAddMemberIds,
     selectedGroupChat,
   ]);
+  const updateGroupInfo = useCallback(
+    async (payload: { title?: string; avatarPath?: string }) => {
+      if (!selectedGroupChat) return;
+      await model.updateGroupChat(selectedGroupChat.chatId, payload);
+      await loadGroupMembers(selectedGroupChat.chatId);
+      await loadGroupMeta(selectedGroupChat.chatId);
+    },
+    [loadGroupMembers, loadGroupMeta, model, selectedGroupChat]
+  );
+
+  const updateGroupSettings = useCallback(
+    async (payload: {
+      description?: string;
+      isPublic?: boolean;
+      publicUsername?: string;
+      historyVisibleToNewMembers?: boolean;
+      slowModeSeconds?: number;
+      topicsEnabled?: boolean;
+      reactionsEnabled?: boolean;
+      reactionMode?: 'ALL' | 'SOME' | 'NONE';
+      allowedReactions?: string[];
+      pollsEnabled?: boolean;
+    }) => {
+      if (!selectedGroupChat) return;
+      const nextSettings = await model.updateGroupSettings(selectedGroupChat.chatId, payload);
+      setGroupSettings(nextSettings);
+      await loadGroupMeta(selectedGroupChat.chatId);
+    },
+    [loadGroupMeta, model, selectedGroupChat]
+  );
+
+  const updateGroupPermissions = useCallback(
+    async (payload: {
+      canSendMessages?: boolean;
+      canSendMedia?: boolean;
+      canSendPolls?: boolean;
+      canAddWebPagePreviews?: boolean;
+      canChangeInfo?: boolean;
+      canInviteUsers?: boolean;
+      canPinMessages?: boolean;
+    }) => {
+      if (!selectedGroupChat) return;
+      const nextPermissions = await model.updateGroupPermissions(selectedGroupChat.chatId, payload);
+      setGroupPermissions(nextPermissions);
+      await loadGroupMeta(selectedGroupChat.chatId);
+    },
+    [loadGroupMeta, model, selectedGroupChat]
+  );
+
+  const createInviteLink = useCallback(
+    async (payload: { name?: string; createsJoinRequest?: boolean; expiresAt?: string; usageLimit?: number }) => {
+      if (!selectedGroupChat) return;
+      await model.createInviteLink(selectedGroupChat.chatId, payload);
+      await loadGroupMeta(selectedGroupChat.chatId);
+    },
+    [loadGroupMeta, model, selectedGroupChat]
+  );
+
+  const updateInviteLink = useCallback(
+    async (
+      inviteId: number,
+      payload: {
+        name?: string;
+        createsJoinRequest?: boolean;
+        expiresAt?: string;
+        clearExpiresAt?: boolean;
+        usageLimit?: number;
+        clearUsageLimit?: boolean;
+      }
+    ) => {
+      if (!selectedGroupChat) return;
+      await model.updateInviteLink(selectedGroupChat.chatId, inviteId, payload);
+      await loadGroupMeta(selectedGroupChat.chatId);
+    },
+    [loadGroupMeta, model, selectedGroupChat]
+  );
+
+  const revokeInviteLink = useCallback(
+    async (inviteId: number) => {
+      if (!selectedGroupChat) return;
+      await model.revokeInviteLink(selectedGroupChat.chatId, inviteId);
+      await loadGroupMeta(selectedGroupChat.chatId);
+    },
+    [loadGroupMeta, model, selectedGroupChat]
+  );
+
+  const approveJoinRequest = useCallback(
+    async (requestId: number) => {
+      if (!selectedGroupChat) return;
+      await model.approveJoinRequest(selectedGroupChat.chatId, requestId);
+      await loadGroupMeta(selectedGroupChat.chatId);
+      await loadGroupMembers(selectedGroupChat.chatId);
+    },
+    [loadGroupMembers, loadGroupMeta, model, selectedGroupChat]
+  );
+
+  const declineJoinRequest = useCallback(
+    async (requestId: number) => {
+      if (!selectedGroupChat) return;
+      await model.declineJoinRequest(selectedGroupChat.chatId, requestId);
+      await loadGroupMeta(selectedGroupChat.chatId);
+    },
+    [loadGroupMeta, model, selectedGroupChat]
+  );
+
+  const createTopic = useCallback(
+    async (payload: { title: string; iconEmoji?: string }) => {
+      if (!selectedGroupChat) return;
+      await model.createTopic(selectedGroupChat.chatId, payload);
+      await loadGroupMeta(selectedGroupChat.chatId);
+    },
+    [loadGroupMeta, model, selectedGroupChat]
+  );
+
+  const toggleTopicClosed = useCallback(
+    async (topicId: number, closed: boolean) => {
+      if (!selectedGroupChat) return;
+      await model.updateTopic(selectedGroupChat.chatId, topicId, { closed });
+      await loadGroupMeta(selectedGroupChat.chatId);
+    },
+    [loadGroupMeta, model, selectedGroupChat]
+  );
+
+  const deleteTopic = useCallback(
+    async (topicId: number) => {
+      if (!selectedGroupChat) return;
+      await model.updateTopic(selectedGroupChat.chatId, topicId, { deleted: true });
+      await loadGroupMeta(selectedGroupChat.chatId);
+    },
+    [loadGroupMeta, model, selectedGroupChat]
+  );
+
+  const openTopicThread = useCallback(
+    async (topicId?: number) => {
+      if (!selectedGroupChat) return;
+      const normalizedTopicId =
+        typeof topicId === 'number' && Number.isFinite(topicId) && topicId > 0
+          ? Math.trunc(topicId)
+          : undefined;
+      setSelectedGroupTopicId(normalizedTopicId);
+      model.setActiveTopicId(selectedGroupChat.chatId, normalizedTopicId);
+      await model.loadMessages(selectedGroupChat.chatId, false, normalizedTopicId);
+    },
+    [model, selectedGroupChat]
+  );
+
+  const pinGroupMessage = useCallback(
+    async (messageId: number) => {
+      if (!selectedGroupChat) return;
+      await model.pinGroupMessage(selectedGroupChat.chatId, messageId);
+      await loadGroupMeta(selectedGroupChat.chatId);
+    },
+    [loadGroupMeta, model, selectedGroupChat]
+  );
+
+  const unpinGroupMessage = useCallback(async () => {
+    if (!selectedGroupChat) return;
+    await model.unpinGroupMessage(selectedGroupChat.chatId);
+    await loadGroupMeta(selectedGroupChat.chatId);
+  }, [loadGroupMeta, model, selectedGroupChat]);
+
+  const loadMessageReactions = useCallback(
+    async (chatId: number, messageId: number) => model.getMessageReactions(chatId, messageId),
+    [model]
+  );
+
+  const toggleMessageReaction = useCallback(
+    async (chatId: number, messageId: number, emoji: string) =>
+      model.toggleMessageReaction(chatId, messageId, emoji),
+    [model]
+  );
+
+  const loadPollByMessageId = useCallback(
+    async (chatId: number, messageId: number) => {
+      try {
+        return await model.getPollByMessageId(chatId, messageId);
+      } catch (error) {
+        console.error('Failed to load poll by message id:', error);
+        return null;
+      }
+    },
+    [model]
+  );
+
+  const votePoll = useCallback(
+    async (chatId: number, pollId: number, optionIndexes: number[]) =>
+      model.votePoll(chatId, pollId, optionIndexes),
+    [model]
+  );
+
+  const loadPollVoters = useCallback(
+    async (chatId: number, pollId: number) => model.getPollVoters(chatId, pollId),
+    [model]
+  );
+
+  const closePoll = useCallback(
+    async (chatId: number, pollId: number) => {
+      await model.closePoll(chatId, pollId);
+      if (selectedGroupChat?.chatId === chatId) {
+        await loadGroupMeta(chatId);
+      }
+    },
+    [loadGroupMeta, model, selectedGroupChat]
+  );
+
+  const createGroupPoll = useCallback(
+    async (payload: {
+      question: string;
+      allowsMultiple?: boolean;
+      quiz?: boolean;
+      correctOptionIndex?: number;
+      explanation?: string;
+      anonymousVotes?: boolean;
+      options: string[];
+    }) => {
+      if (!selectedGroupChat) return;
+      await model.createPoll(selectedGroupChat.chatId, {
+        ...payload,
+        topicId: selectedGroupTopicId,
+      });
+      await model.loadMessages(selectedGroupChat.chatId, false, selectedGroupTopicId);
+      await loadGroupMeta(selectedGroupChat.chatId);
+    },
+    [loadGroupMeta, model, selectedGroupChat, selectedGroupTopicId]
+  );
+
+  const muteGroupMember = useCallback(
+    async (userId: string) => {
+      if (!selectedGroupChat) return;
+      const mutedUntil = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+      await model.updateMemberRestrictions(selectedGroupChat.chatId, userId, {
+        mutedUntil,
+      });
+      await loadGroupMeta(selectedGroupChat.chatId);
+    },
+    [loadGroupMeta, model, selectedGroupChat]
+  );
+
+  const unmuteGroupMember = useCallback(
+    async (userId: string) => {
+      if (!selectedGroupChat) return;
+      await model.updateMemberRestrictions(selectedGroupChat.chatId, userId, {
+        clearMutedUntil: true,
+      });
+      await loadGroupMeta(selectedGroupChat.chatId);
+    },
+    [loadGroupMeta, model, selectedGroupChat]
+  );
+
+  const banGroupMember = useCallback(
+    async (userId: string) => {
+      if (!selectedGroupChat) return;
+      const bannedUntil = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+      await model.updateMemberRestrictions(selectedGroupChat.chatId, userId, {
+        bannedUntil,
+      });
+      await loadGroupMeta(selectedGroupChat.chatId);
+    },
+    [loadGroupMeta, model, selectedGroupChat]
+  );
+
+  const unbanGroupMember = useCallback(
+    async (userId: string) => {
+      if (!selectedGroupChat) return;
+      await model.updateMemberRestrictions(selectedGroupChat.chatId, userId, {
+        clearBannedUntil: true,
+      });
+      await loadGroupMeta(selectedGroupChat.chatId);
+    },
+    [loadGroupMeta, model, selectedGroupChat]
+  );
+
+  const removeGroupMember = useCallback(
+    async (userId: string) => {
+      if (!selectedGroupChat) return;
+      await model.removeGroupMembers(selectedGroupChat.chatId, [userId]);
+      await loadGroupMembers(selectedGroupChat.chatId);
+      await loadGroupMeta(selectedGroupChat.chatId);
+    },
+    [loadGroupMembers, loadGroupMeta, model, selectedGroupChat]
+  );
+
+  const promoteGroupMember = useCallback(
+    async (userId: string) => {
+      if (!selectedGroupChat) return;
+      await model.updateGroupMemberRole(selectedGroupChat.chatId, userId, 'ADMIN');
+      await loadGroupMembers(selectedGroupChat.chatId);
+      await loadGroupMeta(selectedGroupChat.chatId);
+    },
+    [loadGroupMembers, loadGroupMeta, model, selectedGroupChat]
+  );
+
+  const demoteGroupMember = useCallback(
+    async (userId: string) => {
+      if (!selectedGroupChat) return;
+      await model.updateGroupMemberRole(selectedGroupChat.chatId, userId, 'MEMBER');
+      await loadGroupMembers(selectedGroupChat.chatId);
+      await loadGroupMeta(selectedGroupChat.chatId);
+    },
+    [loadGroupMembers, loadGroupMeta, model, selectedGroupChat]
+  );
+
+  const transferGroupOwnership = useCallback(
+    async (userId: string) => {
+      if (!selectedGroupChat) return;
+      await model.updateGroupMemberRole(selectedGroupChat.chatId, userId, 'OWNER');
+      await loadGroupMembers(selectedGroupChat.chatId);
+      await loadGroupMeta(selectedGroupChat.chatId);
+    },
+    [loadGroupMembers, loadGroupMeta, model, selectedGroupChat]
+  );
+
+  const leaveSelectedGroup = useCallback(async () => {
+    if (!selectedGroupChat) return;
+    await model.leaveGroupChat(selectedGroupChat.chatId);
+    setIsGroupInfoOpen(false);
+  }, [model, selectedGroupChat]);
+
+  const deleteSelectedGroup = useCallback(async () => {
+    if (!selectedGroupChat) return;
+    await http.delete(endpoints.chatDelete(selectedGroupChat.chatId));
+    setIsGroupInfoOpen(false);
+    if (model.selectedChat === selectedGroupChat.chatId) {
+      model.setSelectedChat(null);
+    }
+    await model.loadChats();
+  }, [model, selectedGroupChat]);
 
   useEffect(() => {
     if (selectedGroupAddMemberIds.length === 0) return;
@@ -860,9 +1411,31 @@ export default function ChatPage() {
     setGroupInfoLinksHasMore(true);
     setGroupInfoLinksLoading(false);
     groupInfoLinksLoadingRef.current = false;
+    setGroupSettings(null);
+    setGroupPermissions(null);
+    setSelectedGroupAdminRights(null);
+    setGroupInviteLinks([]);
+    setGroupJoinRequests([]);
+    setGroupTopics([]);
+    setGroupAdminLogItems([]);
+    setGroupMediaItems([]);
+    setGroupMediaCursor(null);
+    setGroupMediaHasMore(true);
+    setGroupMediaLoading(false);
+    groupMediaLoadingRef.current = false;
+    setGroupFileItems([]);
+    setGroupFilesCursor(null);
+    setGroupFilesHasMore(true);
+    setGroupFilesLoading(false);
+    groupFilesLoadingRef.current = false;
     setGroupAddMembersQuery('');
     setSelectedGroupAddMemberIds([]);
     setIsAddingGroupMembers(false);
+    setGroupMembersByUserId({});
+    setIsGroupMembersLoading(false);
+    setSelectedGroupTopicId(
+      selectedChat?.chatId ? model.getActiveTopicId(selectedChat.chatId) : undefined
+    );
   }, [selectedChat?.chatId]);
 
   useEffect(() => {
@@ -876,12 +1449,12 @@ export default function ChatPage() {
   const normalizedMessageSearchQuery = messageSearchQuery.trim().toLowerCase();
   const messageSearchMatches = useMemo(() => {
     if (!normalizedMessageSearchQuery) return [];
-    return model.messages
+    return visibleMessages
       .filter((message) =>
         messagePreviewText(message).toLowerCase().includes(normalizedMessageSearchQuery)
       )
       .map((message) => String(message.messageId));
-  }, [model.messages, normalizedMessageSearchQuery]);
+  }, [visibleMessages, normalizedMessageSearchQuery]);
 
   useEffect(() => {
     if (messageSearchMatches.length === 0) {
@@ -945,13 +1518,17 @@ export default function ChatPage() {
       return [];
     }
 
-    const participantIds = [...(selectedChat.participantIds || [])];
+    const participantIds = [
+      ...(selectedChat.participantIds || []),
+      ...Object.keys(groupMembersByUserId),
+    ];
     if (model.userId && !participantIds.includes(model.userId)) {
       participantIds.unshift(model.userId);
     }
 
     const uniqueParticipantIds = Array.from(new Set(participantIds.filter(Boolean)));
     const ownerId =
+      Object.entries(groupMembersByUserId).find(([, value]) => value.role === 'OWNER')?.[0] ||
       selectedChat.ownerId ||
       selectedChat.participantIds?.[0] ||
       undefined;
@@ -974,6 +1551,20 @@ export default function ChatPage() {
           ? currentUserName
           : userMeta?.displayName || userMeta?.username || id.slice(0, 8);
       const isOnline = !!presence?.online;
+      const role =
+        groupMembersByUserId[id]?.role ||
+        (ownerId && id === ownerId ? 'OWNER' : 'MEMBER');
+      const canManageThisMember =
+        !isCurrentUser &&
+        ((isGroupOwner && role !== 'OWNER') ||
+          (canManageGroupMembers && selectedGroupCurrentRole === 'ADMIN' && role === 'MEMBER'));
+      const canTransferOwnership =
+        isGroupOwner && !isCurrentUser && role !== 'OWNER';
+      const canPromote =
+        isGroupOwner && !isCurrentUser && role === 'MEMBER';
+      const canDemote =
+        isGroupOwner && !isCurrentUser && role === 'ADMIN';
+      const canRemove = canManageThisMember;
 
       return {
         userId: id,
@@ -983,10 +1574,27 @@ export default function ChatPage() {
         avatarText: initialOf(userName),
         statusText: formatPresenceLabel(presence),
         isOnline,
-        isOwner: !!ownerId && id === ownerId,
+        role,
+        canTransferOwnership,
+        canPromote,
+        canDemote,
+        canRemove,
       };
     });
-  }, [currentUserProfile, currentUserVisualPresence, formatPresenceLabel, model.presenceByUser, model.user, model.userId, resolveUserMeta, selectedChat]);
+  }, [
+    currentUserProfile,
+    currentUserVisualPresence,
+    formatPresenceLabel,
+    groupMembersByUserId,
+    model.presenceByUser,
+    model.user,
+    model.userId,
+    resolveUserMeta,
+    selectedChat,
+    canManageGroupMembers,
+    isGroupOwner,
+    selectedGroupCurrentRole,
+  ]);
   const groupInfoMemberCount =
     selectedChat?.chatType === 'GROUP'
       ? Math.max(selectedMemberCount, groupInfoMembers.length)
@@ -1046,6 +1654,148 @@ export default function ChatPage() {
     void loadGroupInfoLinks(false);
   }, [loadGroupInfoLinks]);
 
+  const loadGroupMediaItems = useCallback(
+    async (reset = false) => {
+      const chatId = selectedGroupChat?.chatId;
+      if (!chatId || groupMediaLoadingRef.current || groupMediaLoading) {
+        return;
+      }
+      if (!reset && !groupMediaHasMore) {
+        return;
+      }
+
+      groupMediaLoadingRef.current = true;
+      setGroupMediaLoading(true);
+      try {
+        const before = reset ? undefined : groupMediaCursor ?? undefined;
+        const data: ChatGroupMediaItemsResponse = await model.getGroupMedia(chatId, before, 30);
+        const nextItems = data.items || [];
+        setGroupMediaItems((prev) => {
+          const merged = reset ? nextItems : [...prev, ...nextItems];
+          const deduplicated = new Map<string, ChatGroupMediaItem>();
+          merged.forEach((item) => {
+            deduplicated.set(`${item.messageId}-${item.attachmentPath}`, item);
+          });
+          return Array.from(deduplicated.values());
+        });
+        setGroupMediaCursor(data.nextBeforeMessageId ?? null);
+        setGroupMediaHasMore(Boolean(data.hasMore));
+      } catch (error) {
+        console.error('Failed to load group media:', error);
+        if (reset) {
+          setGroupMediaItems([]);
+        }
+        setGroupMediaHasMore(false);
+      } finally {
+        groupMediaLoadingRef.current = false;
+        setGroupMediaLoading(false);
+      }
+    },
+    [
+      groupMediaCursor,
+      groupMediaHasMore,
+      groupMediaLoading,
+      model,
+      selectedGroupChat?.chatId,
+    ]
+  );
+
+  const loadGroupFileItems = useCallback(
+    async (reset = false) => {
+      const chatId = selectedGroupChat?.chatId;
+      if (!chatId || groupFilesLoadingRef.current || groupFilesLoading) {
+        return;
+      }
+      if (!reset && !groupFilesHasMore) {
+        return;
+      }
+
+      groupFilesLoadingRef.current = true;
+      setGroupFilesLoading(true);
+      try {
+        const before = reset ? undefined : groupFilesCursor ?? undefined;
+        const data: ChatGroupMediaItemsResponse = await model.getGroupFiles(chatId, before, 30);
+        const nextItems = data.items || [];
+        setGroupFileItems((prev) => {
+          const merged = reset ? nextItems : [...prev, ...nextItems];
+          const deduplicated = new Map<string, ChatGroupMediaItem>();
+          merged.forEach((item) => {
+            deduplicated.set(`${item.messageId}-${item.attachmentPath}`, item);
+          });
+          return Array.from(deduplicated.values());
+        });
+        setGroupFilesCursor(data.nextBeforeMessageId ?? null);
+        setGroupFilesHasMore(Boolean(data.hasMore));
+      } catch (error) {
+        console.error('Failed to load group files:', error);
+        if (reset) {
+          setGroupFileItems([]);
+        }
+        setGroupFilesHasMore(false);
+      } finally {
+        groupFilesLoadingRef.current = false;
+        setGroupFilesLoading(false);
+      }
+    },
+    [
+      groupFilesCursor,
+      groupFilesHasMore,
+      groupFilesLoading,
+      model,
+      selectedGroupChat?.chatId,
+    ]
+  );
+
+  const loadGroupAdminLog = useCallback(
+    async (reset = false) => {
+      const chatId = selectedGroupChat?.chatId;
+      if (!chatId || groupAdminLogLoadingRef.current || groupAdminLogLoading) {
+        return;
+      }
+      if (!reset && !groupAdminLogHasMore) {
+        return;
+      }
+
+      groupAdminLogLoadingRef.current = true;
+      setGroupAdminLogLoading(true);
+      try {
+        const before = reset ? undefined : groupAdminLogCursor ?? undefined;
+        const data = await model.getGroupAdminLog(chatId, before, 40);
+        const nextItems = data.items || [];
+        setGroupAdminLogItems((prev) => {
+          const merged = reset ? nextItems : [...prev, ...nextItems];
+          const deduplicated = new Map<number, ChatAdminLogItem>();
+          merged.forEach((item) => {
+            deduplicated.set(item.id, item);
+          });
+          return Array.from(deduplicated.values());
+        });
+        setGroupAdminLogCursor(data.nextBeforeId ?? null);
+        setGroupAdminLogHasMore(Boolean(data.hasMore));
+      } catch (error) {
+        console.error('Failed to load admin log:', error);
+        if (reset) {
+          setGroupAdminLogItems([]);
+        }
+        setGroupAdminLogHasMore(false);
+      } finally {
+        groupAdminLogLoadingRef.current = false;
+        setGroupAdminLogLoading(false);
+      }
+    },
+    [
+      groupAdminLogCursor,
+      groupAdminLogHasMore,
+      groupAdminLogLoading,
+      model,
+      selectedGroupChat?.chatId,
+    ]
+  );
+
+  const handleGroupAdminLogLoadMore = useCallback(() => {
+    void loadGroupAdminLog(false);
+  }, [loadGroupAdminLog]);
+
   useEffect(() => {
     if (!isGroupInfoVisible || groupInfoTab !== 'links') {
       return;
@@ -1061,6 +1811,42 @@ export default function ChatPage() {
     groupInfoTab,
     isGroupInfoVisible,
     loadGroupInfoLinks,
+    selectedGroupChat?.chatId,
+  ]);
+
+  useEffect(() => {
+    if (!isGroupInfoVisible || groupInfoTab !== 'media') {
+      return;
+    }
+    if (groupMediaLoading || groupMediaItems.length > 0 || !groupMediaHasMore) {
+      return;
+    }
+    void loadGroupMediaItems(true);
+  }, [
+    groupInfoTab,
+    groupMediaHasMore,
+    groupMediaItems.length,
+    groupMediaLoading,
+    isGroupInfoVisible,
+    loadGroupMediaItems,
+    selectedGroupChat?.chatId,
+  ]);
+
+  useEffect(() => {
+    if (!isGroupInfoVisible || groupInfoTab !== 'files') {
+      return;
+    }
+    if (groupFilesLoading || groupFileItems.length > 0 || !groupFilesHasMore) {
+      return;
+    }
+    void loadGroupFileItems(true);
+  }, [
+    groupFileItems.length,
+    groupFilesHasMore,
+    groupFilesLoading,
+    groupInfoTab,
+    isGroupInfoVisible,
+    loadGroupFileItems,
     selectedGroupChat?.chatId,
   ]);
 
@@ -1384,7 +2170,12 @@ export default function ChatPage() {
                   >
                     <div className="w-full" style={{ maxWidth: MESSAGE_COLUMN_MAX_WIDTH }}>
                       <ChatMessageList
-                        messages={model.messages}
+                        messages={visibleMessages}
+                        chatId={selectedChat?.chatId ?? null}
+                        isGroupChat={selectedChat?.chatType === 'GROUP'}
+                        reactionsEnabled={selectedChat?.chatType === 'GROUP' ? (groupSettings?.reactionsEnabled ?? true) : true}
+                        pollsEnabled={selectedChat?.chatType === 'GROUP' ? (groupSettings?.pollsEnabled ?? true) : false}
+                        canManagePolls={canManagePolls}
                         userId={model.userId}
                         hasSelectedChat={model.selectedChat !== null}
                         messageBubbleMaxWidthPx={MESSAGE_BUBBLE_MAX_WIDTH}
@@ -1409,6 +2200,10 @@ export default function ChatPage() {
                         onDeleteMessage={(messageId) => {
                           void model.deleteMessage(messageId);
                         }}
+                        canDeleteMessage={(message) =>
+                          message.senderId === model.userId ||
+                          (selectedChat?.chatType === 'GROUP' && canDeleteAnyGroupMessage)
+                        }
                         onCopyMessage={(text) => {
                           model.copyMessageText(text);
                         }}
@@ -1418,6 +2213,12 @@ export default function ChatPage() {
                         onRetryMessage={(messageId) => {
                           void model.retryFailedMessage(messageId);
                         }}
+                        onLoadMessageReactions={loadMessageReactions}
+                        onToggleMessageReaction={toggleMessageReaction}
+                        onLoadPollByMessageId={loadPollByMessageId}
+                        onLoadPollVoters={loadPollVoters}
+                        onVotePoll={votePoll}
+                        onClosePoll={closePoll}
                       />
                     </div>
                   </div>
@@ -1482,6 +2283,60 @@ export default function ChatPage() {
                         onTabChange={setGroupInfoTab}
                         notificationsEnabled={groupNotificationsEnabled}
                         onNotificationsEnabledChange={setGroupNotificationsEnabled}
+                        canEditGroup={canEditGroupInfo}
+                        canAddMembers={canAddGroupMembers && !isGroupMembersLoading}
+                        isOwner={isGroupOwner}
+                        onUpdateGroup={canEditGroupInfo ? updateGroupInfo : undefined}
+                        onTransferOwnership={isGroupOwner ? transferGroupOwnership : undefined}
+                        onPromoteMember={isGroupOwner ? promoteGroupMember : undefined}
+                        onDemoteMember={isGroupOwner ? demoteGroupMember : undefined}
+                        onRemoveMember={canManageGroupMembers ? removeGroupMember : undefined}
+                        onLeaveGroup={leaveSelectedGroup}
+                        onDeleteGroup={deleteSelectedGroup}
+                        groupSettings={groupSettings}
+                        groupPermissions={groupPermissions}
+                        inviteLinks={groupInviteLinks}
+                        joinRequests={groupJoinRequests}
+                        topics={groupTopics}
+                        activeTopicId={selectedGroupTopicId}
+                        adminLogItems={canViewAdminLog ? groupAdminLogItems : []}
+                        adminLogLoading={canViewAdminLog ? groupAdminLogLoading : false}
+                        adminLogHasMore={canViewAdminLog ? groupAdminLogHasMore : false}
+                        onAdminLogLoadMore={canViewAdminLog ? handleGroupAdminLogLoadMore : undefined}
+                        mediaItems={groupMediaItems}
+                        mediaLoading={groupMediaLoading}
+                        mediaHasMore={groupMediaHasMore}
+                        onMediaLoadMore={() => {
+                          void loadGroupMediaItems(false);
+                        }}
+                        fileItems={groupFileItems}
+                        filesLoading={groupFilesLoading}
+                        filesHasMore={groupFilesHasMore}
+                        onFilesLoadMore={() => {
+                          void loadGroupFileItems(false);
+                        }}
+                        onUpdateGroupSettings={canEditGroupInfo ? updateGroupSettings : undefined}
+                        onUpdateGroupPermissions={canEditGroupInfo ? updateGroupPermissions : undefined}
+                        onCreateInviteLink={canManageInviteLinks ? createInviteLink : undefined}
+                        onUpdateInviteLink={canManageInviteLinks ? updateInviteLink : undefined}
+                        onRevokeInviteLink={canManageInviteLinks ? revokeInviteLink : undefined}
+                        onApproveJoinRequest={canManageJoinRequests ? approveJoinRequest : undefined}
+                        onDeclineJoinRequest={canManageJoinRequests ? declineJoinRequest : undefined}
+                        onCreateTopic={canManageTopics ? createTopic : undefined}
+                        onToggleTopicClosed={canManageTopics ? toggleTopicClosed : undefined}
+                        onDeleteTopic={canManageTopics ? deleteTopic : undefined}
+                        onOpenTopic={groupSettings?.topicsEnabled ? openTopicThread : undefined}
+                        onPinMessage={canPinGroupMessages ? pinGroupMessage : undefined}
+                        onUnpinMessage={canPinGroupMessages ? unpinGroupMessage : undefined}
+                        onMuteMember={canBanGroupMembers ? muteGroupMember : undefined}
+                        onUnmuteMember={canBanGroupMembers ? unmuteGroupMember : undefined}
+                        onBanMember={canBanGroupMembers ? banGroupMember : undefined}
+                        onUnbanMember={canBanGroupMembers ? unbanGroupMember : undefined}
+                        onCreatePoll={
+                          groupSettings?.pollsEnabled && canCreatePollInGroup
+                            ? createGroupPoll
+                            : undefined
+                        }
                         onAddMembersClick={() => {
                           setIsGroupAddMembersOpen(true);
                         }}
@@ -1541,6 +2396,60 @@ export default function ChatPage() {
                         onTabChange={setGroupInfoTab}
                         notificationsEnabled={groupNotificationsEnabled}
                         onNotificationsEnabledChange={setGroupNotificationsEnabled}
+                        canEditGroup={canEditGroupInfo}
+                        canAddMembers={canAddGroupMembers && !isGroupMembersLoading}
+                        isOwner={isGroupOwner}
+                        onUpdateGroup={canEditGroupInfo ? updateGroupInfo : undefined}
+                        onTransferOwnership={isGroupOwner ? transferGroupOwnership : undefined}
+                        onPromoteMember={isGroupOwner ? promoteGroupMember : undefined}
+                        onDemoteMember={isGroupOwner ? demoteGroupMember : undefined}
+                        onRemoveMember={canManageGroupMembers ? removeGroupMember : undefined}
+                        onLeaveGroup={leaveSelectedGroup}
+                        onDeleteGroup={deleteSelectedGroup}
+                        groupSettings={groupSettings}
+                        groupPermissions={groupPermissions}
+                        inviteLinks={groupInviteLinks}
+                        joinRequests={groupJoinRequests}
+                        topics={groupTopics}
+                        activeTopicId={selectedGroupTopicId}
+                        adminLogItems={canViewAdminLog ? groupAdminLogItems : []}
+                        adminLogLoading={canViewAdminLog ? groupAdminLogLoading : false}
+                        adminLogHasMore={canViewAdminLog ? groupAdminLogHasMore : false}
+                        onAdminLogLoadMore={canViewAdminLog ? handleGroupAdminLogLoadMore : undefined}
+                        mediaItems={groupMediaItems}
+                        mediaLoading={groupMediaLoading}
+                        mediaHasMore={groupMediaHasMore}
+                        onMediaLoadMore={() => {
+                          void loadGroupMediaItems(false);
+                        }}
+                        fileItems={groupFileItems}
+                        filesLoading={groupFilesLoading}
+                        filesHasMore={groupFilesHasMore}
+                        onFilesLoadMore={() => {
+                          void loadGroupFileItems(false);
+                        }}
+                        onUpdateGroupSettings={canEditGroupInfo ? updateGroupSettings : undefined}
+                        onUpdateGroupPermissions={canEditGroupInfo ? updateGroupPermissions : undefined}
+                        onCreateInviteLink={canManageInviteLinks ? createInviteLink : undefined}
+                        onUpdateInviteLink={canManageInviteLinks ? updateInviteLink : undefined}
+                        onRevokeInviteLink={canManageInviteLinks ? revokeInviteLink : undefined}
+                        onApproveJoinRequest={canManageJoinRequests ? approveJoinRequest : undefined}
+                        onDeclineJoinRequest={canManageJoinRequests ? declineJoinRequest : undefined}
+                        onCreateTopic={canManageTopics ? createTopic : undefined}
+                        onToggleTopicClosed={canManageTopics ? toggleTopicClosed : undefined}
+                        onDeleteTopic={canManageTopics ? deleteTopic : undefined}
+                        onOpenTopic={groupSettings?.topicsEnabled ? openTopicThread : undefined}
+                        onPinMessage={canPinGroupMessages ? pinGroupMessage : undefined}
+                        onUnpinMessage={canPinGroupMessages ? unpinGroupMessage : undefined}
+                        onMuteMember={canBanGroupMembers ? muteGroupMember : undefined}
+                        onUnmuteMember={canBanGroupMembers ? unmuteGroupMember : undefined}
+                        onBanMember={canBanGroupMembers ? banGroupMember : undefined}
+                        onUnbanMember={canBanGroupMembers ? unbanGroupMember : undefined}
+                        onCreatePoll={
+                          groupSettings?.pollsEnabled && canCreatePollInGroup
+                            ? createGroupPoll
+                            : undefined
+                        }
                         onAddMembersClick={() => {
                           setIsGroupAddMembersOpen(true);
                         }}

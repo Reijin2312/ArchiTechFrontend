@@ -121,6 +121,7 @@ export interface ChatMessageEntity {
 export interface ChatMessage {
   messageId: number | string
   chatId?: number
+  topicId?: number | null
   clientMessageId?: number
   localId?: string
   status?: 'pending' | 'failed' | 'sent' | 'delivered' | 'read'
@@ -141,6 +142,36 @@ export interface ChatMessage {
     | 'group_avatar_updated'
     | 'group_member_added'
     | 'group_members_added'
+    | 'group_member_removed'
+    | 'group_members_removed'
+    | 'group_member_left'
+    | 'group_admin_promoted'
+    | 'group_admin_demoted'
+    | 'group_owner_transferred'
+    | 'group_description_updated'
+    | 'group_public_username_updated'
+    | 'group_slow_mode_updated'
+    | 'group_history_visibility_updated'
+    | 'group_permissions_updated'
+    | 'group_admin_rights_updated'
+    | 'group_member_muted'
+    | 'group_member_unmuted'
+    | 'group_member_banned'
+    | 'group_member_unbanned'
+    | 'group_message_pinned'
+    | 'group_message_unpinned'
+    | 'group_invite_link_created'
+    | 'group_invite_link_revoked'
+    | 'group_join_request_created'
+    | 'group_join_request_approved'
+    | 'group_join_request_declined'
+    | 'group_topic_created'
+    | 'group_topic_closed'
+    | 'group_topic_reopened'
+    | 'group_topic_deleted'
+    | 'reaction'
+    | 'poll'
+    | 'poll_closed'
   entities?: ChatMessageEntity[]
   images?: Array<{
     imagePath: string
@@ -171,6 +202,13 @@ export interface ChatMessage {
 }
 
 export type ChatType = 'PRIVATE' | 'GROUP'
+export type ChatGroupMemberRole = 'OWNER' | 'ADMIN' | 'MEMBER'
+
+export interface ChatGroupMember {
+  userId: string
+  role: ChatGroupMemberRole
+  joinedAt?: string | null
+}
 
 export interface ChatConversation {
   chatId: number
@@ -179,6 +217,15 @@ export interface ChatConversation {
   title?: string
   avatarPath?: string
   ownerId?: string
+  description?: string
+  isPublic?: boolean
+  publicUsername?: string
+  historyVisibleToNewMembers?: boolean
+  slowModeSeconds?: number
+  pinnedMessageId?: number | null
+  topicsEnabled?: boolean
+  reactionsEnabled?: boolean
+  pollsEnabled?: boolean
   memberCount?: number
   participantIds?: string[]
   lastMessage?: ChatMessage
@@ -209,8 +256,230 @@ export interface ChatLinksResponse {
   nextBeforeMessageId?: number | null
 }
 
+export interface ChatGroupMembersResponse {
+  members: ChatGroupMember[]
+}
+
+export interface ChatGroupSettings {
+  chatId: number
+  ownerId?: string
+  title?: string
+  avatarPath?: string
+  description?: string
+  isPublic: boolean
+  publicUsername?: string
+  historyVisibleToNewMembers: boolean
+  slowModeSeconds: number
+  pinnedMessageId?: number | null
+  topicsEnabled: boolean
+  reactionsEnabled: boolean
+  pollsEnabled: boolean
+  reactionMode?: 'ALL' | 'SOME' | 'NONE'
+  allowedReactions?: string[]
+}
+
+export interface ChatGroupPermissions {
+  chatId: number
+  canSendMessages: boolean
+  canSendMedia: boolean
+  canSendPolls: boolean
+  canAddWebPagePreviews: boolean
+  canChangeInfo: boolean
+  canInviteUsers: boolean
+  canPinMessages: boolean
+  updatedBy?: string
+  updatedAt?: string
+}
+
+export interface ChatInviteLink {
+  id: number
+  chatId: number
+  code: string
+  link: string
+  name?: string
+  createdBy?: string
+  createsJoinRequest: boolean
+  expiresAt?: string | null
+  usageLimit?: number | null
+  usageCount: number
+  revoked: boolean
+  createdAt?: string
+  updatedAt?: string
+}
+
+export interface ChatInviteLinksResponse {
+  items: ChatInviteLink[]
+}
+
+export type ChatJoinRequestStatus = 'PENDING' | 'APPROVED' | 'DECLINED'
+
+export interface ChatJoinRequest {
+  id: number
+  chatId: number
+  userId: string
+  inviteLinkId?: number | null
+  status: ChatJoinRequestStatus
+  requestedAt?: string
+  resolvedAt?: string | null
+  resolvedBy?: string | null
+}
+
+export interface ChatJoinRequestsResponse {
+  items: ChatJoinRequest[]
+  hasMore?: boolean
+  nextBeforeId?: number | null
+}
+
+export interface ChatMemberRestrictions {
+  chatId: number
+  userId: string
+  mutedUntil?: string | null
+  bannedUntil?: string | null
+  canSendMessages: boolean
+  canSendMedia: boolean
+  canSendPolls: boolean
+  reason?: string | null
+  updatedBy?: string | null
+  updatedAt?: string | null
+}
+
+export interface ChatAdminRights {
+  chatId: number
+  userId: string
+  canManageGroup: boolean
+  canManageMembers: boolean
+  canManageInviteLinks: boolean
+  canPinMessages: boolean
+  canDeleteMessages: boolean
+  canBanUsers: boolean
+  canManageTopics: boolean
+  canManageReactions: boolean
+  canManagePolls: boolean
+  isAnonymous?: boolean
+  customTitle?: string | null
+  updatedBy?: string | null
+  updatedAt?: string | null
+}
+
+export interface ChatGroupMediaItem {
+  messageId: number
+  senderId: string
+  messageType: string
+  createdAt: string
+  attachmentPath: string
+  attachmentUrl?: string
+  thumbnailUrl?: string
+  strippedThumbnailUrl?: string
+  fileName?: string
+  contentType?: string
+  sizeBytes?: number
+  isImage: boolean
+  imageKeyVersion?: number
+}
+
+export interface ChatGroupMediaItemsResponse {
+  items: ChatGroupMediaItem[]
+  hasMore: boolean
+  nextBeforeMessageId?: number | null
+}
+
+export interface ChatAdminLogItem {
+  id: number
+  chatId: number
+  actorUserId?: string
+  targetUserId?: string | null
+  eventType: string
+  detailsJson?: string
+  createdAt: string
+}
+
+export interface ChatAdminLogResponse {
+  items: ChatAdminLogItem[]
+  hasMore: boolean
+  nextBeforeId?: number | null
+}
+
+export interface ChatTopic {
+  id: number
+  chatId: number
+  topMessageId?: number | null
+  title: string
+  iconEmoji?: string | null
+  createdBy?: string
+  closed: boolean
+  pinned: boolean
+  deleted: boolean
+  createdAt?: string
+  updatedAt?: string
+}
+
+export interface ChatTopicsResponse {
+  items: ChatTopic[]
+}
+
+export interface ChatReactionItem {
+  userId: string
+  emoji: string
+  createdAt?: string
+}
+
+export interface ChatMessageReactionsResponse {
+  messageId: number
+  total: number
+  items: ChatReactionItem[]
+}
+
+export interface ChatPollOptionResult {
+  optionIndex: number
+  optionText: string
+  votes: number
+  votedByMe: boolean
+  correct?: boolean | null
+}
+
+export interface ChatPoll {
+  pollId: number
+  messageId: number
+  chatId: number
+  createdBy?: string
+  question: string
+  allowsMultiple: boolean
+  quiz?: boolean
+  correctOptionIndex?: number | null
+  explanation?: string | null
+  anonymousVotes?: boolean
+  closed: boolean
+  createdAt?: string
+  updatedAt?: string
+  totalVotes: number
+  votedByMe?: boolean
+  myAnswerCorrect?: boolean | null
+  options: ChatPollOptionResult[]
+}
+
+export interface ChatPollOptionVoter {
+  userId: string
+  username?: string | null
+  displayName?: string | null
+  votedAt?: string
+}
+
+export interface ChatPollOptionVoters {
+  optionIndex: number
+  optionText: string
+  votes: number
+  voters: ChatPollOptionVoter[]
+}
+
+export interface ChatPollVotersResponse {
+  pollId: number
+  anonymousVotes: boolean
+  items: ChatPollOptionVoters[]
+}
+
 export interface SendMessageRequest {
   chatId: number
+  topicId?: number
   content: string
   messageType?: 'text' | 'image' | 'images' | 'file' | 'files' | 'voice' | 'circle'
   images?: Array<{
