@@ -1,6 +1,4 @@
 import type { ChatMessage } from '@/shared/api/types';
-import { endpoints } from '@/shared/api/endpoints';
-import { http } from '@/shared/api/http';
 import {
   getMessageMediaAttachments,
   type ChatMediaAttachment,
@@ -211,9 +209,6 @@ export const messagePreviewText = (message?: ChatMessage) => {
   if (hasImageAttachment) return 'Photo';
 
   if (message.messageType === 'image' || message.messageType === 'images') return 'Photo';
-  if (message.messageType === 'voice') return 'Voice message';
-  if (message.messageType === 'circle') return 'Video message';
-  if (message.messageType === 'file' || message.messageType === 'files') return 'File';
   return 'Message';
 };
 
@@ -324,7 +319,6 @@ export const buildWaveformFromAudioSamples = (samples: Float32Array, bars = 56):
 };
 
 const voiceWaveformCache = new Map<string, { waveform: number[]; durationSec?: number }>();
-const voiceTranscriptCache = new Map<string, string>();
 
 export const loadWaveformFromAudioUrl = async ({
   fileUrl,
@@ -374,83 +368,4 @@ export const loadWaveformFromAudioUrl = async ({
   } finally {
     await audioContext.close().catch(() => undefined);
   }
-};
-
-const extractTranscriptText = (payload: unknown): string => {
-  const data = payload as Record<string, unknown> | null | undefined;
-  if (!data || typeof data !== 'object') return '';
-
-  const directText = [
-    data.text,
-    data.transcript,
-    (data.data as Record<string, unknown> | undefined)?.text,
-    (data.data as Record<string, unknown> | undefined)?.transcript,
-    (data.result as Record<string, unknown> | undefined)?.text,
-    (data.result as Record<string, unknown> | undefined)?.transcript,
-  ].find((value) => typeof value === 'string' && value.trim().length > 0) as string | undefined;
-
-  return directText?.trim() || '';
-};
-
-export const transcribeVoiceMessageFromUrl = async ({
-  fileUrl,
-  fileName,
-  contentType,
-  signal,
-}: {
-  fileUrl: string;
-  fileName?: string;
-  contentType?: string;
-  signal?: AbortSignal;
-}): Promise<string> => {
-  if (!fileUrl) {
-    throw new Error('Voice file URL is empty');
-  }
-
-  const cachedTranscript = voiceTranscriptCache.get(fileUrl);
-  if (cachedTranscript) return cachedTranscript;
-
-  const response = await fetch(fileUrl, { signal, cache: 'force-cache' });
-  if (!response.ok) {
-    throw new Error(`Voice file download failed with status ${response.status}`);
-  }
-
-  const blob = await response.blob();
-  if (!blob.size) {
-    throw new Error('Voice file is empty');
-  }
-
-  const normalizedType = (contentType || blob.type || 'audio/webm').toLowerCase();
-  const extension = normalizedType.includes('ogg')
-    ? 'ogg'
-    : normalizedType.includes('mp4')
-      ? 'mp4'
-      : normalizedType.includes('mpeg')
-        ? 'mp3'
-        : 'webm';
-  const resolvedFileName = fileName || `voice-${Date.now()}.${extension}`;
-  const file = new File([blob], resolvedFileName, {
-    type: blob.type || contentType || 'audio/webm',
-  });
-
-  const sendTranscriptionRequest = async (fieldName: 'file' | 'audio') => {
-    const formData = new FormData();
-    formData.append(fieldName, file);
-    return http.post(endpoints.chatTranscribe, formData, { signal });
-  };
-
-  let transcriptionResponse;
-  try {
-    transcriptionResponse = await sendTranscriptionRequest('file');
-  } catch (error) {
-    transcriptionResponse = await sendTranscriptionRequest('audio');
-  }
-
-  const transcript = extractTranscriptText(transcriptionResponse.data);
-  if (!transcript) {
-    throw new Error('Transcription response does not contain text');
-  }
-
-  voiceTranscriptCache.set(fileUrl, transcript);
-  return transcript;
 };

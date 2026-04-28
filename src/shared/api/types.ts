@@ -133,10 +133,6 @@ export interface ChatMessage {
     | 'text'
     | 'image'
     | 'images'
-    | 'file'
-    | 'files'
-    | 'voice'
-    | 'circle'
     | 'group_created'
     | 'group_title_updated'
     | 'group_avatar_updated'
@@ -341,8 +337,6 @@ export interface ChatMemberRestrictions {
   canSendVideos?: boolean
   canSendStickersAndGifs?: boolean
   canSendMusic?: boolean
-  canSendFiles?: boolean
-  canSendVoiceMessages?: boolean
   canSendVideoMessages?: boolean
   canEmbedLinks?: boolean
   canSendPolls: boolean
@@ -494,7 +488,7 @@ export interface SendMessageRequest {
   chatId: number
   topicId?: number
   content: string
-  messageType?: 'text' | 'image' | 'images' | 'file' | 'files' | 'voice' | 'circle'
+  messageType?: 'text' | 'image' | 'images'
   images?: Array<{
     imagePath: string
     imageEncrypted?: boolean

@@ -85,9 +85,6 @@ export function useSocialFloatingModel(options: SocialFloatingModelOptions = {})
   const [pendingMediaPreviewUrls, setPendingMediaPreviewUrls] = useState<Map<string, string>>(
     new Map()
   );
-  const [isRecordingVoice, setIsRecordingVoice] = useState(false);
-  const [isRecordingCircle, setIsRecordingCircle] = useState(false);
-  const [recordingCircleStream, setRecordingCircleStream] = useState<MediaStream | null>(null);
 
   const [attachedImages, setAttachedImages] = useState<Array<{
     id: string;
@@ -100,7 +97,6 @@ export function useSocialFloatingModel(options: SocialFloatingModelOptions = {})
     aspectRatio?: number;
     isImage?: boolean;
     groupWithOthers?: boolean;
-    forcedMessageType?: 'voice' | 'circle';
     contentType?: string;
     sizeBytes?: number;
     uploadedData?: UploadImageResponse;
@@ -298,20 +294,6 @@ export function useSocialFloatingModel(options: SocialFloatingModelOptions = {})
     const text = typeof msg.content === 'string' ? msg.content.trim() : '';
     if (text) return text;
 
-    if (msg.messageType === 'files') {
-      const count = Array.isArray(msg.images) ? msg.images.length : 0;
-      return count > 1 ? `${count} файлов` : 'Файл';
-    }
-    if (msg.messageType === 'file') {
-      return 'Файл';
-    }
-    if (msg.messageType === 'voice') {
-      return 'Голосовое сообщение';
-    }
-    if (msg.messageType === 'circle') {
-      return 'Видеосообщение';
-    }
-
     if (msg.messageType === 'images') {
       const count = Array.isArray(msg.images) ? msg.images.length : 0;
       return count > 1 ? `${count} изображений` : 'Изображение';
@@ -416,7 +398,6 @@ export function useSocialFloatingModel(options: SocialFloatingModelOptions = {})
     pinGroupMessage,
     unpinGroupMessage,
     getGroupMedia,
-    getGroupFiles,
     getGroupAdminLog,
     sendTypingState,
     sendMessageToUser,
@@ -589,12 +570,6 @@ export function useSocialFloatingModel(options: SocialFloatingModelOptions = {})
     setUploadingImages,
     pendingMediaPreviewUrls,
     setPendingMediaPreviewUrls,
-    isRecordingVoice,
-    setIsRecordingVoice,
-    isRecordingCircle,
-    setIsRecordingCircle,
-    recordingCircleStream,
-    setRecordingCircleStream,
     attachedImages,
     setAttachedImages,
     user,
@@ -670,7 +645,6 @@ export function useSocialFloatingModel(options: SocialFloatingModelOptions = {})
     pinGroupMessage,
     unpinGroupMessage,
     getGroupMedia,
-    getGroupFiles,
     getGroupAdminLog,
     sendTypingState,
     sendMessageToUser,

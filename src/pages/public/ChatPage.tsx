@@ -26,8 +26,6 @@ import { routesMeta } from '@/shared/seo/routesMeta';
 import { useSocialFloatingModel } from '@/shared/ui/button/social/useSocialFloatingModel';
 import { ChatComposer } from './chat/components/ChatComposer';
 import { ChatHeader } from './chat/components/ChatHeader';
-import { ChatPlaybackBanner } from './chat/components/ChatPlaybackBanner';
-import { CircleRecordingOverlay } from './chat/components/CircleRecordingOverlay';
 import { ChatMessageList } from './chat/components/ChatMessageList';
 import {
   GroupInfoPanel,
@@ -41,7 +39,7 @@ import {
 } from './chat/components/GroupAddMembersPanel';
 import { ChatSidebar, type ChatSidebarContact } from './chat/components/ChatSidebar';
 import { chatPageStyles, chatWallpaperSvg } from './chat/styles';
-import type { ChatPlaybackState, SidebarChat } from './chat/types';
+import type { SidebarChat } from './chat/types';
 import {
   formatChatTime,
   hashColor,
@@ -49,7 +47,6 @@ import {
   messagePreviewText,
 } from './chat/utils';
 
-const PLAYBACK_BANNER_HEIGHT = 66;
 const SIDEBAR_MAX_WIDTH = 422;
 const SIDEBAR_MIN_WIDTH = 92;
 const GROUP_INFO_PANEL_WIDTH = 360;
@@ -214,10 +211,6 @@ export default function ChatPage() {
   const [groupMediaCursor, setGroupMediaCursor] = useState<number | null>(null);
   const [groupMediaHasMore, setGroupMediaHasMore] = useState(true);
   const [groupMediaLoading, setGroupMediaLoading] = useState(false);
-  const [groupFileItems, setGroupFileItems] = useState<ChatGroupMediaItem[]>([]);
-  const [groupFilesCursor, setGroupFilesCursor] = useState<number | null>(null);
-  const [groupFilesHasMore, setGroupFilesHasMore] = useState(true);
-  const [groupFilesLoading, setGroupFilesLoading] = useState(false);
   const [groupAddMembersQuery, setGroupAddMembersQuery] = useState('');
   const [selectedGroupAddMemberIds, setSelectedGroupAddMemberIds] = useState<string[]>([]);
   const [isAddingGroupMembers, setIsAddingGroupMembers] = useState(false);
@@ -236,16 +229,10 @@ export default function ChatPage() {
   const [sidebarWidth, setSidebarWidth] = useState(SIDEBAR_MAX_WIDTH);
   const [isSidebarResizing, setIsSidebarResizing] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
-  const lastCircleReloadAtRef = useRef(0);
   const sidebarResizeRef = useRef<{ startX: number; startWidth: number } | null>(null);
-  const playbackHideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const playbackRef = useRef<ChatPlaybackState | null>(null);
   const groupInfoLinksLoadingRef = useRef(false);
   const groupMediaLoadingRef = useRef(false);
-  const groupFilesLoadingRef = useRef(false);
   const groupAdminLogLoadingRef = useRef(false);
-  const [playback, setPlayback] = useState<ChatPlaybackState | null>(null);
-  const [isPlaybackVisible, setIsPlaybackVisible] = useState(false);
   const [isNearBottom, setIsNearBottom] = useState(true);
   const [pendingIncomingCount, setPendingIncomingCount] = useState(0);
   const lastSeenIncomingMessageIdRef = useRef(0);
@@ -418,24 +405,6 @@ export default function ChatPage() {
     setPendingIncomingCount(0);
     setIsNearBottom(true);
   }, [model, getMaxIncomingServerMessageId]);
-
-  useEffect(() => {
-    playbackRef.current = playback;
-  }, [playback]);
-
-  const clearPlaybackHideTimer = useCallback(() => {
-    if (playbackHideTimerRef.current) {
-      clearTimeout(playbackHideTimerRef.current);
-      playbackHideTimerRef.current = null;
-    }
-  }, []);
-
-  useEffect(
-    () => () => {
-      clearPlaybackHideTimer();
-    },
-    [clearPlaybackHideTimer]
-  );
 
   useEffect(() => {
     const onPointerDown = (event: MouseEvent) => {
@@ -1552,11 +1521,6 @@ export default function ChatPage() {
     setGroupMediaHasMore(true);
     setGroupMediaLoading(false);
     groupMediaLoadingRef.current = false;
-    setGroupFileItems([]);
-    setGroupFilesCursor(null);
-    setGroupFilesHasMore(true);
-    setGroupFilesLoading(false);
-    groupFilesLoadingRef.current = false;
     setGroupAddMembersQuery('');
     setSelectedGroupAddMemberIds([]);
     setIsAddingGroupMembers(false);
@@ -1802,9 +1766,7 @@ export default function ChatPage() {
       try {
         const before = reset ? undefined : groupMediaCursor ?? undefined;
         const data: ChatGroupMediaItemsResponse = await model.getGroupMedia(chatId, before, 30);
-        const nextItems = (data.items || []).filter(
-          (item) => (item.messageType || '').toLowerCase() !== 'circle'
-        );
+        const nextItems = data.items || [];
         setGroupMediaItems((prev) => {
           const merged = reset ? nextItems : [...prev, ...nextItems];
           const deduplicated = new Map<string, ChatGroupMediaItem>();
@@ -1830,55 +1792,6 @@ export default function ChatPage() {
       groupMediaCursor,
       groupMediaHasMore,
       groupMediaLoading,
-      model,
-      selectedGroupChat?.chatId,
-    ]
-  );
-
-  const loadGroupFileItems = useCallback(
-    async (reset = false) => {
-      const chatId = selectedGroupChat?.chatId;
-      if (!chatId || groupFilesLoadingRef.current || groupFilesLoading) {
-        return;
-      }
-      if (!reset && !groupFilesHasMore) {
-        return;
-      }
-
-      groupFilesLoadingRef.current = true;
-      setGroupFilesLoading(true);
-      try {
-        const before = reset ? undefined : groupFilesCursor ?? undefined;
-        const data: ChatGroupMediaItemsResponse = await model.getGroupFiles(chatId, before, 30);
-        const nextItems = (data.items || []).filter((item) => {
-          const type = (item.messageType || '').toLowerCase();
-          return type === 'file' || type === 'files';
-        });
-        setGroupFileItems((prev) => {
-          const merged = reset ? nextItems : [...prev, ...nextItems];
-          const deduplicated = new Map<string, ChatGroupMediaItem>();
-          merged.forEach((item) => {
-            deduplicated.set(`${item.messageId}-${item.attachmentPath}`, item);
-          });
-          return Array.from(deduplicated.values());
-        });
-        setGroupFilesCursor(data.nextBeforeMessageId ?? null);
-        setGroupFilesHasMore(Boolean(data.hasMore));
-      } catch (error) {
-        console.error('Failed to load group files:', error);
-        if (reset) {
-          setGroupFileItems([]);
-        }
-        setGroupFilesHasMore(false);
-      } finally {
-        groupFilesLoadingRef.current = false;
-        setGroupFilesLoading(false);
-      }
-    },
-    [
-      groupFilesCursor,
-      groupFilesHasMore,
-      groupFilesLoading,
       model,
       selectedGroupChat?.chatId,
     ]
@@ -1970,24 +1883,6 @@ export default function ChatPage() {
     selectedGroupChat?.chatId,
   ]);
 
-  useEffect(() => {
-    if (!isGroupInfoVisible || groupInfoTab !== 'files') {
-      return;
-    }
-    if (groupFilesLoading || groupFileItems.length > 0 || !groupFilesHasMore) {
-      return;
-    }
-    void loadGroupFileItems(true);
-  }, [
-    groupFileItems.length,
-    groupFilesHasMore,
-    groupFilesLoading,
-    groupInfoTab,
-    isGroupInfoVisible,
-    loadGroupFileItems,
-    selectedGroupChat?.chatId,
-  ]);
-
   const messageSearchResultItems = useMemo(() => {
     if (!normalizedMessageSearchQuery) return [];
 
@@ -2032,14 +1927,6 @@ export default function ChatPage() {
       })
       .filter((item): item is NonNullable<typeof item> => item !== null);
   }, [model.messages, model.userId, normalizedMessageSearchQuery, resolveUserMeta, selectedChat]);
-
-  const refreshSignedMediaUrls = () => {
-    if (!model.selectedChat) return;
-    const now = Date.now();
-    if (now - lastCircleReloadAtRef.current < 1500) return;
-    lastCircleReloadAtRef.current = now;
-    void model.loadMessages(model.selectedChat, false);
-  };
 
   const closeMessageSearch = useCallback(() => {
     setIsMessageSearchOpen(false);
@@ -2108,53 +1995,9 @@ export default function ChatPage() {
     );
   }, [messageSearchMatches.length]);
 
-  const schedulePlaybackHide = useCallback(() => {
-    setIsPlaybackVisible(false);
-    clearPlaybackHideTimer();
-    playbackHideTimerRef.current = setTimeout(() => {
-      setPlayback((prev) => (prev && prev.isPlaying ? prev : null));
-      playbackHideTimerRef.current = null;
-    }, 280);
-  }, [clearPlaybackHideTimer]);
-
-  const handlePlaybackStateChange = useCallback((state: ChatPlaybackState | null) => {
-    if (state && state.isPlaying) {
-      clearPlaybackHideTimer();
-      setPlayback(state);
-      setIsPlaybackVisible(true);
-      return;
-    }
-
-    if (!state) {
-      schedulePlaybackHide();
-      return;
-    }
-
-    const active = playbackRef.current;
-    if (!active || active.mediaId !== state.mediaId) return;
-
-    const next = { ...active, ...state };
-    const shouldHide =
-      !next.isPlaying &&
-      next.durationSec > 0 &&
-      next.currentSec <= 0.05;
-
-    setPlayback(next);
-
-    if (shouldHide) {
-      schedulePlaybackHide();
-      return;
-    }
-
-    clearPlaybackHideTimer();
-    setIsPlaybackVisible(true);
-  }, [clearPlaybackHideTimer, schedulePlaybackHide]);
-
   useEffect(() => {
-    schedulePlaybackHide();
-    setPlayback(null);
     closeMessageSearch();
-  }, [closeMessageSearch, model.selectedChat, schedulePlaybackHide]);
+  }, [closeMessageSearch, model.selectedChat]);
 
   return (
     <>
@@ -2220,28 +2063,7 @@ export default function ChatPage() {
           </div>
 
           <main className="relative flex min-w-0 flex-1 flex-col bg-[#0a0910]">
-            <div className="pointer-events-none absolute left-0 right-0 top-0 z-[36]">
-              <div className="pointer-events-auto">
-                <ChatPlaybackBanner
-                  playback={playback}
-                  visible={isPlaybackVisible}
-                  onClose={() => {
-                    playback?.stop();
-                    schedulePlaybackHide();
-                  }}
-                />
-              </div>
-            </div>
-
-            <div
-              className="relative z-[28] transition-transform duration-300"
-              style={{
-                transform:
-                  isPlaybackVisible && playback
-                    ? `translateY(${PLAYBACK_BANNER_HEIGHT}px)`
-                    : 'translateY(0)',
-              }}
-            >
+            <div className="relative z-[28] transition-transform duration-300">
               <ChatHeader
                 selectedChat={selectedChat}
                 selectedStatus={selectedStatus}
@@ -2390,8 +2212,6 @@ export default function ChatPage() {
                           messagesEndRef={model.messagesEndRef}
                           matchedMessageIds={isMessageSearchOpen ? messageSearchMatches : []}
                           activeMatchedMessageId={activeMessageSearchId}
-                          onCircleMediaError={refreshSignedMediaUrls}
-                          onPlaybackStateChange={handlePlaybackStateChange}
                           resolveUserName={resolveMessageUserName}
                           resolveUserAvatar={resolveMessageUserAvatar}
                           onReplyMessage={(message) => {
@@ -2518,12 +2338,6 @@ export default function ChatPage() {
                         onMediaLoadMore={() => {
                           void loadGroupMediaItems(false);
                         }}
-                        fileItems={groupFileItems}
-                        filesLoading={groupFilesLoading}
-                        filesHasMore={groupFilesHasMore}
-                        onFilesLoadMore={() => {
-                          void loadGroupFileItems(false);
-                        }}
                         onUpdateGroupSettings={canEditGroupInfo ? updateGroupSettings : undefined}
                         onUpdateGroupPermissions={canEditGroupInfo ? updateGroupPermissions : undefined}
                         onCreateInviteLink={canManageInviteLinks ? createInviteLink : undefined}
@@ -2637,12 +2451,6 @@ export default function ChatPage() {
                         onMediaLoadMore={() => {
                           void loadGroupMediaItems(false);
                         }}
-                        fileItems={groupFileItems}
-                        filesLoading={groupFilesLoading}
-                        filesHasMore={groupFilesHasMore}
-                        onFilesLoadMore={() => {
-                          void loadGroupFileItems(false);
-                        }}
                         onUpdateGroupSettings={canEditGroupInfo ? updateGroupSettings : undefined}
                         onUpdateGroupPermissions={canEditGroupInfo ? updateGroupPermissions : undefined}
                         onCreateInviteLink={canManageInviteLinks ? createInviteLink : undefined}
@@ -2681,10 +2489,6 @@ export default function ChatPage() {
                     )}
                   </div>
                 </div>
-              ) : null}
-
-              {model.isRecordingCircle ? (
-                <CircleRecordingOverlay stream={model.recordingCircleStream} />
               ) : null}
             </div>
 

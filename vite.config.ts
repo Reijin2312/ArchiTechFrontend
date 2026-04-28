@@ -4,7 +4,7 @@ import { fileURLToPath, URL } from 'node:url'
 import fs from 'node:fs'
 
 const outDir = 'dist'
-const apiUrl = 'http://localhost:34947'
+const apiUrl = process.env.VITE_API_PROXY_TARGET || 'http://localhost:51788'
 
 export default defineConfig({
   plugins: [react()],

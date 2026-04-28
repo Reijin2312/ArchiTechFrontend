@@ -100,9 +100,6 @@ export function ChatsList({
     if (hasImageAttachment) return 'Photo';
 
     if (lastMsg.messageType === 'image' || lastMsg.messageType === 'images') return 'Photo';
-    if (lastMsg.messageType === 'file' || lastMsg.messageType === 'files') return 'File';
-    if (lastMsg.messageType === 'voice') return 'Voice message';
-    if (lastMsg.messageType === 'circle') return 'Video message';
     return 'Message';
   };
 

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent, type RefObject } from 'react';
+﻿import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent, type RefObject } from 'react';
 import type {
   ChatMessage,
   ChatMessageReactionsResponse,
@@ -13,8 +13,7 @@ import {
   renderMessageContent,
   type ChatResolvedLink,
 } from '@/shared/utils/chatTextEntities';
-import { CheckCheckIcon, DownloadIcon, FileIcon, PauseIcon, PlayIcon } from '../icons';
-import type { ChatPlaybackState } from '../types';
+import { CheckCheckIcon, PlayIcon } from '../icons';
 import {
   type ImageBubbleMediaItem,
   MultiImageBubble,
@@ -28,10 +27,8 @@ import {
   getCachedVideoAspectRatio,
   getCachedVideoPosterUrl,
 } from './messageTypes/videoPoster';
-import { isManagedMediaSourceUrl, useManagedMediaDownload } from '../hooks/useManagedMediaDownload';
 import { useViewportPresence } from '../hooks/useViewportPresence';
 import {
-  buildFallbackWaveform,
   formatDivider,
   formatDuration,
   formatFileSize,
@@ -39,14 +36,11 @@ import {
   getMessageAttachments,
   hashColor,
   initialOf,
-  isAudioContentType,
   isMessageRead,
   isVideoContentType,
-  loadWaveformFromAudioUrl,
   messagePreviewText,
   resolveAttachmentUrl,
   resolveMediaUrl,
-  transcribeVoiceMessageFromUrl,
 } from '../utils';
 
 type PendingUploadState = {
@@ -73,10 +67,8 @@ type ChatMessageListProps = {
   messagesEndRef: RefObject<HTMLDivElement | null>;
   matchedMessageIds: string[];
   activeMatchedMessageId: string | null;
-  onCircleMediaError?: () => void;
   resolveUserName: (userId: string) => string;
   resolveUserAvatar?: (userId: string) => string | undefined;
-  onPlaybackStateChange?: (state: ChatPlaybackState | null) => void;
   onReplyMessage: (message: ChatMessage) => void;
   onEditMessage: (message: ChatMessage) => void;
   onDeleteMessage: (messageId: number | string) => void;
@@ -123,56 +115,6 @@ type VideoLinkPreview = {
   embedUrl?: string;
   directVideoUrl?: string;
   durationLabel?: string;
-};
-
-type VoiceMessageBubbleProps = {
-  mediaId: string;
-  author: string;
-  fileUrl?: string;
-  fileName?: string;
-  contentType?: string;
-  sizeBytes?: number;
-  createdAt: string;
-  isRead: boolean;
-  status?: string;
-  isOwn: boolean;
-  isEdited: boolean;
-  hideTail?: boolean;
-  onPlaybackStateChange?: (state: ChatPlaybackState) => void;
-};
-
-type CircleMessageBubbleProps = {
-  mediaId: string;
-  author: string;
-  fileUrl?: string;
-  previewUrl?: string;
-  strippedPreviewUrl?: string;
-  contentType?: string;
-  sizeBytes?: number;
-  createdAt: string;
-  isRead: boolean;
-  isEdited: boolean;
-  status?: string;
-  isOwn: boolean;
-  isMuted: boolean;
-  onToggleMuted: () => void;
-  onMediaError?: () => void;
-  onPlaybackStateChange?: (state: ChatPlaybackState) => void;
-  uploadState?: PendingUploadState;
-  onCancelUpload?: () => void;
-};
-
-type FileMessageBubbleProps = {
-  fileItem: FileAttachmentItem;
-  createdAt: string;
-  isRead: boolean;
-  status?: string;
-  isOwn: boolean;
-  isEdited: boolean;
-  hideTail?: boolean;
-  uploadState?: PendingUploadState;
-  onCancelUpload?: () => void;
-  onOpenMedia?: () => void;
 };
 
 type OpenMediaViewerPayload = {
@@ -364,7 +306,7 @@ function parseAddedMembers(content: string): string[] {
 
   if (!trimmed.startsWith('{') || !trimmed.endsWith('}')) {
     const lowered = trimmed.toLowerCase();
-    if (lowered.includes('добав') || lowered.includes('added')) {
+    if (lowered.includes('РґРѕР±Р°РІ') || lowered.includes('added')) {
       return [];
     }
     return trimmed
@@ -415,7 +357,7 @@ type ReactionSummaryItem = {
   reactedByMe: boolean;
 };
 
-const QUICK_REACTION_EMOJIS = ['👍', '❤️', '🔥', '😂', '😮', '👏'];
+const QUICK_REACTION_EMOJIS = ['рџ‘Ќ', 'вќ¤пёЏ', 'рџ”Ґ', 'рџ‚', 'рџ®', 'рџ‘Џ'];
 
 function parsePollMessageContent(rawContent: string): ParsedPollContent | null {
   const trimmed = rawContent.trim();
@@ -709,7 +651,6 @@ const toMessageDomId = (messageId: string | number) =>
 
 const isTailBubbleMessage = (message: ChatMessage) =>
   toGroupServiceMessageType(message.messageType) === null &&
-  message.messageType !== 'circle' &&
   message.messageType !== 'poll';
 
 const normalizeGroupingKey = (value?: string) => {
@@ -778,18 +719,6 @@ type VisualMediaAttachmentItem = {
   mediaItem: ImageBubbleMediaItem;
 };
 
-type FileAttachmentItem = {
-  attachment: MessageAttachmentItem;
-  attachmentIndex: number;
-  resolvedUrl: string;
-  fileName: string;
-  sizeBytes?: number;
-  contentType?: string;
-  isImageFile: boolean;
-  previewUrl?: string;
-  strippedPreviewUrl?: string;
-};
-
 const resolveAttachmentPreviewUrl = (value?: string) => {
   const normalized = resolveMediaUrl(value);
   if (!normalized) return '';
@@ -827,15 +756,6 @@ const toVisualMediaAttachmentItems = (
   attachments: MessageAttachmentItem[],
   resolvePendingUploadUrl?: (attachmentIndex: number) => string
 ): VisualMediaAttachmentItem[] => {
-  if (
-    messageType === 'voice' ||
-    messageType === 'circle' ||
-    messageType === 'file' ||
-    messageType === 'files'
-  ) {
-    return [];
-  }
-
   return attachments.flatMap((attachment, attachmentIndex) => {
     const pendingUploadUrl = resolvePendingUploadUrl?.(attachmentIndex) || '';
     const previewUrl =
@@ -886,80 +806,6 @@ const toVisualMediaAttachmentItems = (
         attachmentIndex,
         resolvedUrl,
         mediaItem,
-      },
-    ];
-  });
-};
-
-const toFileAttachmentItems = (
-  messageType: ChatMessage['messageType'],
-  attachments: MessageAttachmentItem[],
-  resolvePendingUploadUrl?: (attachmentIndex: number) => string
-): FileAttachmentItem[] => {
-  if (messageType === 'voice' || messageType === 'circle') {
-    return [];
-  }
-  const forceFilePresentation = messageType === 'file' || messageType === 'files';
-
-  return attachments.flatMap((attachment, attachmentIndex) => {
-    const pendingUploadUrl = resolvePendingUploadUrl?.(attachmentIndex) || '';
-    const resolvedUrl = resolveAttachmentUrl(attachment) || pendingUploadUrl;
-    if (!resolvedUrl) {
-      return [];
-    }
-
-    const contentType = (attachment.contentType || '').toLowerCase();
-    const isVideo =
-      isVideoContentType(contentType) ||
-      (!attachment.isImage && VIDEO_FILE_PATTERN.test(resolvedUrl));
-    const isImage =
-      attachment.isImage === true ||
-      contentType.startsWith('image/') ||
-      IMAGE_FILE_PATTERN.test(resolvedUrl);
-    const isAudio = isAudioContentType(contentType);
-
-    if (!forceFilePresentation && (isVideo || isAudio || isImage)) {
-      return [];
-    }
-
-    const fileName =
-      attachment.fileName?.trim() ||
-      (() => {
-        const baseOrigin =
-          typeof window !== 'undefined' ? window.location.origin : 'http://localhost';
-        try {
-          const parsed = new URL(resolvedUrl, baseOrigin);
-          const segments = parsed.pathname.split('/').filter(Boolean);
-          return segments[segments.length - 1] || 'file';
-        } catch {
-          const normalized = resolvedUrl.split('?')[0];
-          const segments = normalized.split('/').filter(Boolean);
-          return segments[segments.length - 1] || 'file';
-        }
-      })();
-
-    const previewUrl =
-      isImage && typeof attachment.thumbnailUrl === 'string'
-        ? resolveAttachmentPreviewUrl(attachment.thumbnailUrl)
-        : isImage
-          ? pendingUploadUrl
-          : undefined;
-    const strippedPreviewUrl =
-      isImage && typeof attachment.strippedThumbnailUrl === 'string'
-        ? resolveAttachmentPreviewUrl(attachment.strippedThumbnailUrl)
-        : undefined;
-
-    return [
-      {
-        attachment,
-        attachmentIndex,
-        resolvedUrl,
-        fileName,
-        sizeBytes: attachment.sizeBytes,
-        contentType: attachment.contentType,
-        isImageFile: isImage,
-        previewUrl: previewUrl || undefined,
-        strippedPreviewUrl: strippedPreviewUrl || undefined,
       },
     ];
   });
@@ -1761,1521 +1607,6 @@ function InlineDownloadControl({
   );
 }
 
-function FileMessageBubble({
-  fileItem,
-  createdAt,
-  isRead,
-  status,
-  isOwn,
-  isEdited,
-  hideTail = false,
-  uploadState,
-  onCancelUpload,
-  onOpenMedia,
-}: FileMessageBubbleProps) {
-  const shouldManageFileMedia =
-    !isOwn &&
-    !uploadState &&
-    isManagedMediaSourceUrl(fileItem.resolvedUrl);
-  const { ref: viewportRef, isInViewport } = useViewportPresence<HTMLDivElement>({
-    disabled: !shouldManageFileMedia,
-    rootMargin: '260px',
-  });
-
-  const fileDownload = useManagedMediaDownload({
-    url: fileItem.resolvedUrl,
-    kind: 'file',
-    sizeBytes: fileItem.sizeBytes,
-    priority: isInViewport ? 74 : 10,
-    autoStart: isInViewport,
-    managed: shouldManageFileMedia,
-    inViewport: isInViewport,
-  });
-
-  const resolvedFileUrl =
-    (shouldManageFileMedia ? fileDownload.resolvedUrl : fileItem.resolvedUrl) || '';
-  const managedPhase = toManagedDownloadPhase(
-    fileDownload.phase,
-    fileDownload.snapshot.manual
-  );
-  const isDownloadReady = !uploadState && !!resolvedFileUrl && (!shouldManageFileMedia || managedPhase === 'ready');
-  const isDownloadLoading =
-    !uploadState &&
-    shouldManageFileMedia &&
-    managedPhase === 'loading';
-  const isDownloadManual =
-    !uploadState &&
-    shouldManageFileMedia &&
-    managedPhase === 'manual';
-  const isDownloadRetryable =
-    !uploadState &&
-    shouldManageFileMedia &&
-    (managedPhase === 'error' || managedPhase === 'canceled');
-
-  const timeText = formatMessageTime(createdAt);
-  const sizeText = formatFileSize(fileItem.sizeBytes);
-  const bubbleClass = isOwn
-    ? 'tg-right bg-[#8b79e8] text-white'
-    : 'tg-left bg-[#335f88] text-white/95';
-  const statusText = uploadState
-    ? `${Math.max(0, Math.min(100, Math.round(uploadState.progress)))}%`
-    : isDownloadLoading
-      ? fileDownload.indeterminate
-        ? 'loading'
-        : `${Math.max(0, Math.min(100, Math.round(fileDownload.progress)))}%`
-      : isDownloadManual
-        ? 'tap to load'
-      : isDownloadRetryable
-        ? 'tap to retry'
-        : '';
-
-  const handleOpenResolved = () => {
-    if (!resolvedFileUrl) return;
-    if (onOpenMedia) {
-      onOpenMedia();
-      return;
-    }
-    const link = document.createElement('a');
-    link.href = resolvedFileUrl;
-    link.target = '_blank';
-    link.rel = 'noopener noreferrer';
-    if (fileItem.fileName) {
-      link.download = fileItem.fileName;
-    }
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-  };
-
-  const handleAction = () => {
-    if (uploadState) {
-      onCancelUpload?.();
-      return;
-    }
-    if (isDownloadReady || !shouldManageFileMedia) {
-      handleOpenResolved();
-      return;
-    }
-    if (isDownloadRetryable) {
-      if (managedPhase === 'error') {
-        fileDownload.retry();
-      } else {
-        fileDownload.start();
-      }
-      return;
-    }
-    if (isDownloadManual) {
-      fileDownload.start();
-      return;
-    }
-    if (isDownloadLoading) {
-      fileDownload.cancel();
-    }
-  };
-
-  const actionLabel = uploadState
-    ? 'Cancel upload'
-    : isDownloadLoading
-      ? 'Cancel download'
-      : isDownloadManual
-        ? 'Download'
-      : isDownloadRetryable
-        ? 'Retry download'
-        : 'Open file';
-
-  const previewBaseSrc = fileItem.previewUrl || fileItem.strippedPreviewUrl || '';
-  const fullPreviewSrc = isDownloadReady ? resolvedFileUrl : '';
-  const previewVisible = fileItem.isImageFile && (!!previewBaseSrc || !!fullPreviewSrc);
-  const [isFullPreviewVisible, setIsFullPreviewVisible] = useState(false);
-  useEffect(() => {
-    setIsFullPreviewVisible(false);
-  }, [fullPreviewSrc]);
-
-  return (
-    <div ref={viewportRef}>
-      <div className={`tg-bubble relative ${bubbleClass} ${hideTail ? 'tg-tail-none' : ''}`}>
-        <button
-          type="button"
-          onClick={handleAction}
-          className="group flex min-w-[290px] max-w-[560px] items-center gap-3 rounded-[16px] p-[10px] text-left transition-transform duration-150 hover:scale-[1.01]"
-          aria-label={actionLabel}
-        >
-          <div className="relative h-[72px] w-[72px] shrink-0 overflow-hidden rounded-[14px] bg-black/24">
-            {previewVisible ? (
-              <>
-                {previewBaseSrc ? (
-                  <img
-                    src={previewBaseSrc}
-                    alt=""
-                    aria-hidden="true"
-                    className={`h-full w-full object-cover transition-[filter,opacity] duration-300 ${
-                      isFullPreviewVisible
-                        ? 'opacity-0 blur-[2px]'
-                        : 'opacity-95 blur-[2px]'
-                    }`}
-                    loading="lazy"
-                    decoding="async"
-                    draggable={false}
-                  />
-                ) : (
-                  <span
-                    aria-hidden="true"
-                    className="absolute inset-0 bg-[#1f2129]"
-                  />
-                )}
-                {fullPreviewSrc ? (
-                  <img
-                    src={fullPreviewSrc}
-                    alt={fileItem.fileName}
-                    className={`absolute inset-0 h-full w-full object-cover transition-[filter,opacity] duration-300 ${
-                      isFullPreviewVisible ? 'opacity-100 blur-0' : 'opacity-0 blur-[2px]'
-                    }`}
-                    loading="lazy"
-                    decoding="async"
-                    draggable={false}
-                    onLoad={() => setIsFullPreviewVisible(true)}
-                  />
-                ) : null}
-              </>
-            ) : (
-              <div className="grid h-full w-full place-items-center">
-                <span className="grid h-[42px] w-[42px] place-items-center rounded-full bg-[#5ba1df] text-white">
-                  <FileIcon size={20} />
-                </span>
-              </div>
-            )}
-          </div>
-
-          <div className="min-w-0 flex-1">
-            <div className="truncate pr-2 text-[16px] font-[700] leading-[1.12]">
-              {fileItem.fileName}
-            </div>
-            <div className={`mt-1 text-[15px] ${isOwn ? 'text-white/82' : 'text-white/72'}`}>
-              {sizeText || 'file'}
-              {statusText ? ` • ${statusText}` : ''}
-            </div>
-          </div>
-
-          <span
-            className={`grid h-[34px] w-[34px] shrink-0 place-items-center rounded-full ${
-              isOwn ? 'bg-white/20 text-white' : 'bg-black/18 text-white/95'
-            }`}
-          >
-            <InlineDownloadControl
-              loading={isDownloadLoading || !!uploadState}
-              manual={isDownloadManual}
-              retryable={isDownloadRetryable}
-              progress={uploadState ? uploadState.progress : fileDownload.progress}
-              indeterminate={uploadState ? false : fileDownload.indeterminate}
-              idleIcon={<DownloadIcon size={16} strokeWidth={2.3} />}
-            />
-          </span>
-        </button>
-
-        <div
-          className={`pointer-events-none absolute bottom-[7px] right-[10px] flex items-center gap-[2px] text-[14px] ${
-            isOwn ? 'text-white/74' : 'text-white/55'
-          }`}
-        >
-          {isEdited ? <span className="italic">edited</span> : null}
-          <span>{timeText}</span>
-          {isOwn ? (
-            <span className="ml-[4px] inline-flex h-[12px] w-[12px] items-center justify-center">
-              {status === 'pending' ? (
-                <span className="h-3 w-3 animate-pulse rounded-full border border-white/82" />
-              ) : status === 'failed' ? (
-                <span className="text-[14px] leading-none text-[#ffb0ba]">!</span>
-              ) : (
-                <CheckCheckIcon
-                  size={14}
-                  strokeWidth={2.25}
-                  className={`origin-center scale-[1.85] ${isRead ? 'text-[#d8fff0]' : 'text-white/72'}`}
-                />
-              )}
-            </span>
-          ) : null}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function VoiceMessageBubble({
-  mediaId,
-  author,
-  fileUrl,
-  fileName,
-  contentType,
-  sizeBytes,
-  createdAt,
-  isRead,
-  status,
-  isOwn,
-  isEdited,
-  hideTail = false,
-  onPlaybackStateChange,
-}: VoiceMessageBubbleProps) {
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const transcribeAbortRef = useRef<AbortController | null>(null);
-  const shouldManageVoiceMedia = !isOwn && isManagedMediaSourceUrl(fileUrl);
-  const { ref: viewportRef, isInViewport } = useViewportPresence<HTMLDivElement>({
-    disabled: !shouldManageVoiceMedia,
-    rootMargin: '280px',
-  });
-  const voiceDownload = useManagedMediaDownload({
-    url: fileUrl,
-    kind: 'audio',
-    sizeBytes,
-    priority: isInViewport ? 72 : 8,
-    autoStart: isInViewport,
-    managed: shouldManageVoiceMedia,
-    inViewport: isInViewport,
-  });
-  const playbackFileUrl =
-    (shouldManageVoiceMedia ? voiceDownload.resolvedUrl : fileUrl) || '';
-  const managedVoicePhase = toManagedDownloadPhase(
-    voiceDownload.phase,
-    voiceDownload.snapshot.manual
-  );
-  const isVoiceDownloadLoading =
-    shouldManageVoiceMedia &&
-    !playbackFileUrl &&
-    managedVoicePhase === 'loading';
-  const isVoiceDownloadManual =
-    shouldManageVoiceMedia &&
-    !playbackFileUrl &&
-    managedVoicePhase === 'manual';
-  const isVoiceDownloadRetryable =
-    shouldManageVoiceMedia &&
-    !playbackFileUrl &&
-    (managedVoicePhase === 'error' || managedVoicePhase === 'canceled');
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [durationSec, setDurationSec] = useState(0);
-  const [currentSec, setCurrentSec] = useState(0);
-  const [isTranscribing, setIsTranscribing] = useState(false);
-  const [transcript, setTranscript] = useState<string | null>(null);
-  const [transcriptionError, setTranscriptionError] = useState<string | null>(null);
-  const fallbackWaveform = useMemo(
-    () => buildFallbackWaveform(`${fileUrl || ''}|${fileName || ''}|${sizeBytes || 0}`),
-    [fileName, fileUrl, sizeBytes]
-  );
-  const [waveform, setWaveform] = useState<number[]>(fallbackWaveform);
-
-  const getDuration = () => {
-    const audio = audioRef.current;
-    if (!audio) return durationSec;
-    return Number.isFinite(audio.duration) && audio.duration > 0 ? audio.duration : durationSec;
-  };
-
-  const seekBy = (deltaSec: number) => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    const duration = getDuration();
-    const current = audio.currentTime || 0;
-    const next = duration > 0 ? Math.min(duration, Math.max(0, current + deltaSec)) : Math.max(0, current + deltaSec);
-    audio.currentTime = next;
-    setCurrentSec(next);
-    if (!audio.paused) {
-      onPlaybackStateChange?.({
-        mediaId,
-        kind: 'voice',
-        author,
-        createdAt,
-        currentSec: next,
-        durationSec: duration,
-        isPlaying: true,
-        togglePlay: () => {
-          void togglePlayback();
-        },
-        seekBy,
-        stop: stopPlayback,
-      });
-    }
-  };
-
-  const stopPlayback = () => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    audio.pause();
-    audio.currentTime = 0;
-    setCurrentSec(0);
-    setIsPlaying(false);
-    onPlaybackStateChange?.({
-      mediaId,
-      kind: 'voice',
-      author,
-      createdAt,
-      currentSec: 0,
-      durationSec: getDuration(),
-      isPlaying: false,
-      togglePlay: () => {
-        void togglePlayback();
-      },
-      seekBy,
-      stop: stopPlayback,
-    });
-  };
-
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
-
-    const onLoadedMetadata = () => {
-      if (Number.isFinite(audio.duration)) {
-        setDurationSec(audio.duration);
-      }
-    };
-    const onTimeUpdate = () => {
-      const current = audio.currentTime || 0;
-      const duration = Number.isFinite(audio.duration) && audio.duration > 0 ? audio.duration : durationSec;
-      setCurrentSec(current);
-      if (!audio.paused) {
-        onPlaybackStateChange?.({
-          mediaId,
-          kind: 'voice',
-          author,
-          createdAt,
-          currentSec: current,
-          durationSec: duration,
-          isPlaying: true,
-          togglePlay: () => {
-            void togglePlayback();
-          },
-          seekBy,
-          stop: stopPlayback,
-        });
-      }
-    };
-    const onPlay = () => {
-      const current = audio.currentTime || 0;
-      const duration = Number.isFinite(audio.duration) && audio.duration > 0 ? audio.duration : durationSec;
-      setIsPlaying(true);
-      onPlaybackStateChange?.({
-        mediaId,
-        kind: 'voice',
-        author,
-        createdAt,
-        currentSec: current,
-        durationSec: duration,
-        isPlaying: true,
-        togglePlay: () => {
-          void togglePlayback();
-        },
-        seekBy,
-        stop: stopPlayback,
-      });
-    };
-    const onPause = () => {
-      const current = audio.currentTime || 0;
-      const duration = Number.isFinite(audio.duration) && audio.duration > 0 ? audio.duration : durationSec;
-      setIsPlaying(false);
-      onPlaybackStateChange?.({
-        mediaId,
-        kind: 'voice',
-        author,
-        createdAt,
-        currentSec: current,
-        durationSec: duration,
-        isPlaying: false,
-        togglePlay: () => {
-          void togglePlayback();
-        },
-        seekBy,
-        stop: stopPlayback,
-      });
-    };
-    const onEnded = () => {
-      setIsPlaying(false);
-      setCurrentSec(0);
-      onPlaybackStateChange?.({
-        mediaId,
-        kind: 'voice',
-        author,
-        createdAt,
-        currentSec: 0,
-        durationSec: Number.isFinite(audio.duration) && audio.duration > 0 ? audio.duration : durationSec,
-        isPlaying: false,
-        togglePlay: () => {
-          void togglePlayback();
-        },
-        seekBy,
-        stop: stopPlayback,
-      });
-    };
-
-    audio.addEventListener('loadedmetadata', onLoadedMetadata);
-    audio.addEventListener('timeupdate', onTimeUpdate);
-    audio.addEventListener('play', onPlay);
-    audio.addEventListener('pause', onPause);
-    audio.addEventListener('ended', onEnded);
-
-    return () => {
-      audio.removeEventListener('loadedmetadata', onLoadedMetadata);
-      audio.removeEventListener('timeupdate', onTimeUpdate);
-      audio.removeEventListener('play', onPlay);
-      audio.removeEventListener('pause', onPause);
-      audio.removeEventListener('ended', onEnded);
-    };
-  }, [author, createdAt, durationSec, mediaId, onPlaybackStateChange, playbackFileUrl]);
-
-  useEffect(() => {
-    setWaveform(fallbackWaveform);
-    setCurrentSec(0);
-    setDurationSec(0);
-    setIsPlaying(false);
-  }, [fallbackWaveform, playbackFileUrl]);
-
-  useEffect(() => {
-    transcribeAbortRef.current?.abort();
-    transcribeAbortRef.current = null;
-    setTranscript(null);
-    setTranscriptionError(null);
-    setIsTranscribing(false);
-  }, [fileUrl]);
-
-  useEffect(
-    () => () => {
-      transcribeAbortRef.current?.abort();
-      transcribeAbortRef.current = null;
-    },
-    []
-  );
-
-  useEffect(() => {
-    if (!playbackFileUrl) return;
-
-    let cancelled = false;
-    const abortController = new AbortController();
-
-    const buildRealWaveform = async () => {
-      try {
-        const result = await loadWaveformFromAudioUrl({
-          fileUrl: playbackFileUrl,
-          bars: fallbackWaveform.length,
-          signal: abortController.signal,
-        });
-        if (cancelled || !result || result.waveform.length === 0) return;
-
-        setWaveform(result.waveform);
-        if (result.durationSec) {
-          setDurationSec((prev) => (prev > 0 ? prev : result.durationSec || 0));
-        }
-      } catch (error) {
-        if (!cancelled && !abortController.signal.aborted) {
-          console.debug('Voice waveform fallback is used', error);
-        }
-      }
-    };
-
-    void buildRealWaveform();
-
-    return () => {
-      cancelled = true;
-      abortController.abort();
-    };
-  }, [fallbackWaveform.length, playbackFileUrl]);
-
-  const playbackProgress = durationSec > 0 ? Math.min(1, Math.max(0, currentSec / durationSec)) : 0;
-  const activeBars = Math.round(playbackProgress * waveform.length);
-  const timeText = formatMessageTime(createdAt);
-  const durationText = formatDuration(isPlaying ? currentSec : durationSec);
-  const sizeText = formatFileSize(sizeBytes);
-  const voiceStatusText = playbackFileUrl
-    ? durationText
-    : shouldManageVoiceMedia
-      ? isVoiceDownloadManual
-        ? 'Tap to load'
-        : isVoiceDownloadRetryable
-          ? 'Tap to retry'
-          : voiceDownload.indeterminate
-            ? 'Loading...'
-            : `Loading ${Math.max(0, Math.min(100, Math.round(voiceDownload.progress)))}%`
-      : 'Preparing';
-
-  const togglePlayback = async () => {
-    if (!playbackFileUrl) {
-      if (!shouldManageVoiceMedia) return;
-      if (isVoiceDownloadLoading) {
-        voiceDownload.cancel();
-        return;
-      }
-      if (managedVoicePhase === 'error') {
-        voiceDownload.retry();
-        return;
-      }
-      voiceDownload.start();
-      return;
-    }
-    const audio = audioRef.current;
-    if (!audio) return;
-
-    try {
-      if (audio.paused) {
-        await audio.play();
-      } else {
-        audio.pause();
-      }
-    } catch (error) {
-      console.warn('Voice playback failed', error);
-    }
-  };
-
-  const handleTranscribe = async () => {
-    if (!playbackFileUrl || isTranscribing) return;
-
-    transcribeAbortRef.current?.abort();
-    const abortController = new AbortController();
-    transcribeAbortRef.current = abortController;
-
-    setIsTranscribing(true);
-    setTranscriptionError(null);
-
-    try {
-      const transcriptText = await transcribeVoiceMessageFromUrl({
-        fileUrl: playbackFileUrl,
-        fileName,
-        contentType,
-        signal: abortController.signal,
-      });
-      setTranscript(transcriptText || 'Speech was not recognized.');
-      setTranscriptionError(null);
-    } catch (error) {
-      if (abortController.signal.aborted) {
-        return;
-      }
-      console.warn('Voice transcription failed', error);
-      setTranscriptionError('Failed to transcribe this voice message.');
-    } finally {
-      if (transcribeAbortRef.current === abortController) {
-        transcribeAbortRef.current = null;
-      }
-      setIsTranscribing(false);
-    }
-  };
-
-  const seek = (event: ReactMouseEvent<HTMLDivElement>) => {
-    const audio = audioRef.current;
-    if (!audio || !durationSec) return;
-    const rect = event.currentTarget.getBoundingClientRect();
-    const ratio = (event.clientX - rect.left) / Math.max(1, rect.width);
-    const next = Math.max(0, Math.min(1, ratio));
-    audio.currentTime = next * durationSec;
-    setCurrentSec(audio.currentTime);
-  };
-
-  const bubbleClass = isOwn ? 'tg-right bg-[#967ef0] text-white' : 'tg-left bg-[#222327] text-white/95';
-  const activeBarClass = isOwn ? 'bg-white/95' : 'bg-white/85';
-  const inactiveBarClass = isOwn ? 'bg-white/35' : 'bg-white/25';
-  const playButtonClass = isOwn
-    ? 'grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/18 text-white transition-colors hover:bg-white/28'
-    : 'grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/12 text-white transition-colors hover:bg-white/22';
-  const transcribeButtonClass = isOwn
-    ? 'grid h-9 w-9 shrink-0 place-items-center rounded-[10px] bg-white/18 text-white transition-colors hover:bg-white/28 disabled:cursor-not-allowed disabled:opacity-70'
-    : 'grid h-9 w-9 shrink-0 place-items-center rounded-[10px] bg-[#8e77ef]/65 text-white transition-colors hover:bg-[#8e77ef]/85 disabled:cursor-not-allowed disabled:opacity-70';
-  const transcriptClass = isOwn
-    ? 'mt-2 rounded-[10px] bg-white/18 px-3 py-2 text-[13px] leading-[1.25] text-white/95'
-    : 'mt-2 rounded-[10px] bg-white/10 px-3 py-2 text-[13px] leading-[1.25] text-white/88';
-  const transcriptErrorClass = isOwn
-    ? 'mt-2 rounded-[10px] bg-[#4f2c44]/85 px-3 py-2 text-[12px] leading-[1.25] text-[#ffd2e1]'
-    : 'mt-2 rounded-[10px] bg-[#4a2e3e]/82 px-3 py-2 text-[12px] leading-[1.25] text-[#ffcbda]';
-
-  return (
-    <div ref={viewportRef} className={`tg-bubble relative ${bubbleClass} ${hideTail ? 'tg-tail-none' : ''}`}>
-      {playbackFileUrl ? (
-        <audio ref={audioRef} preload="metadata">
-          <source src={playbackFileUrl} type={contentType || 'audio/webm'} />
-        </audio>
-      ) : null}
-
-      <div className="flex min-w-[280px] items-center gap-3">
-        <button
-          type="button"
-          onClick={togglePlayback}
-          className={playButtonClass}
-          disabled={!playbackFileUrl && !shouldManageVoiceMedia}
-          aria-label={
-            !playbackFileUrl
-              ? isVoiceDownloadLoading
-                ? 'Cancel voice download'
-                : isVoiceDownloadRetryable
-                  ? 'Retry voice download'
-                  : 'Download voice message'
-              : isPlaying
-                ? 'Pause voice message'
-                : 'Play voice message'
-          }
-        >
-          {!playbackFileUrl ? (
-            <span className="h-[18px] w-[18px]">
-              <InlineDownloadControl
-                loading={isVoiceDownloadLoading}
-                manual={isVoiceDownloadManual}
-                retryable={isVoiceDownloadRetryable}
-                progress={voiceDownload.progress}
-                indeterminate={voiceDownload.indeterminate}
-                idleIcon={<DownloadIcon size={17} strokeWidth={2.2} />}
-              />
-            </span>
-          ) : isPlaying ? (
-            <PauseIcon size={19} />
-          ) : (
-            <PlayIcon size={19} className="translate-x-[1px]" />
-          )}
-        </button>
-
-        <div className="min-w-0 flex-1">
-          <div
-            className={`flex h-4 items-end gap-[2px] ${playbackFileUrl ? 'cursor-pointer' : 'cursor-default'}`}
-            onClick={playbackFileUrl ? seek : undefined}
-            role={playbackFileUrl ? 'slider' : undefined}
-            aria-label="Voice playback position"
-          >
-            {waveform.map((value, index) => {
-              const barHeight = Math.max(3, Math.round(value * 13));
-              const isActive = index < activeBars;
-              return (
-                <span
-                  key={`voice-bar-${index}`}
-                  className={`w-[3px] rounded-full ${isActive ? activeBarClass : inactiveBarClass}`}
-                  style={{ height: `${barHeight}px` }}
-                />
-              );
-            })}
-          </div>
-
-          <div className={`mt-[5px] flex items-center justify-between text-[12px] ${isOwn ? 'text-white/78' : 'text-white/62'}`}>
-            <span>
-              {voiceStatusText}
-              {sizeText ? ` | ${sizeText}` : ''}
-            </span>
-            <span className="inline-flex items-center gap-1">
-              {isEdited ? (
-                <span className={`italic ${isOwn ? 'text-white/62' : 'text-white/40'}`}>
-                  edited
-                </span>
-              ) : null}
-              {timeText}
-              {isOwn ? (
-                <span className="ml-[4px] inline-flex h-[11px] w-[11px] items-center justify-center">
-                  {status === 'pending' ? (
-                    <span className="h-3 w-3 animate-pulse rounded-full border border-white/80" />
-                  ) : status === 'failed' ? (
-                    <span className="text-[14px] leading-none text-[#ffb0ba]">!</span>
-                  ) : (
-                    <CheckCheckIcon
-                      size={13}
-                      strokeWidth={2.2}
-                      className={`origin-center scale-[1.9] ${isRead ? 'text-[#d8fff0]' : 'text-white/65'}`}
-                    />
-                  )}
-                </span>
-              ) : null}
-            </span>
-          </div>
-        </div>
-
-        <button
-          type="button"
-          onClick={handleTranscribe}
-          disabled={!playbackFileUrl || isTranscribing}
-          className={transcribeButtonClass}
-          title="Transcribe voice to text"
-          aria-label="Transcribe voice to text"
-        >
-          {isTranscribing ? (
-            <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-r-transparent" />
-          ) : (
-            <span className="text-[12px] font-[700] leading-none">→A</span>
-          )}
-        </button>
-      </div>
-
-      {transcript ? <div className={transcriptClass}>{transcript}</div> : null}
-      {!transcript && transcriptionError ? <div className={transcriptErrorClass}>{transcriptionError}</div> : null}
-    </div>
-  );
-}
-
-function CircleUploadOverlay({
-  uploadState,
-  onCancelUpload,
-}: {
-  uploadState: PendingUploadState;
-  onCancelUpload?: () => void;
-}) {
-  const safeProgress = Math.max(0, Math.min(100, uploadState.progress));
-  const radius = 17;
-  const circumference = 2 * Math.PI * radius;
-  const dashOffset = circumference - (safeProgress / 100) * circumference;
-  const canCancel = !!onCancelUpload && uploadState.cancelable;
-
-  return (
-    <div className="pointer-events-none absolute inset-0 z-30 grid place-items-center rounded-full bg-black/26 backdrop-blur-[1px]">
-      <button
-        type="button"
-        aria-label="Cancel upload"
-        onClick={(event) => {
-          event.preventDefault();
-          event.stopPropagation();
-          if (!canCancel) return;
-          onCancelUpload();
-        }}
-        disabled={!canCancel}
-        className={`pointer-events-auto relative grid h-[44px] w-[44px] place-items-center rounded-full bg-black/64 text-white shadow-[0_10px_22px_rgba(0,0,0,0.48)] ${
-          canCancel ? 'hover:bg-black/78' : 'cursor-default'
-        }`}
-      >
-        <svg className="pointer-events-none absolute inset-0 h-full w-full -rotate-90" viewBox="0 0 44 44" aria-hidden="true">
-          <circle
-            cx="22"
-            cy="22"
-            r={radius}
-            fill="none"
-            stroke="rgba(255,255,255,0.32)"
-            strokeWidth="2.3"
-          />
-          <circle
-            cx="22"
-            cy="22"
-            r={radius}
-            fill="none"
-            stroke="rgba(255,255,255,0.96)"
-            strokeWidth="2.7"
-            strokeLinecap="round"
-            strokeDasharray={circumference}
-            strokeDashoffset={dashOffset}
-          />
-        </svg>
-        <span className="relative block h-[15px] w-[15px]">
-          <span className="absolute left-1/2 top-0 h-full w-[2px] -translate-x-1/2 rotate-45 rounded-full bg-white" />
-          <span className="absolute left-1/2 top-0 h-full w-[2px] -translate-x-1/2 -rotate-45 rounded-full bg-white" />
-        </span>
-      </button>
-    </div>
-  );
-}
-
-type CircleManagedDownloadPhase = 'loading' | 'manual' | 'canceled' | 'error';
-
-function toCircleManagedDownloadPhase(
-  phase: string,
-  manual: boolean
-): CircleManagedDownloadPhase {
-  if (phase === 'error') return 'error';
-  if (phase === 'paused') return manual ? 'manual' : 'canceled';
-  if (phase === 'canceled') return 'canceled';
-  return 'loading';
-}
-
-function CircleManagedDownloadOverlay({
-  phase,
-  progress,
-  indeterminate,
-  onCancel,
-  onAction,
-}: {
-  phase: CircleManagedDownloadPhase;
-  progress: number;
-  indeterminate: boolean;
-  onCancel: () => void;
-  onAction: () => void;
-}) {
-  const safeProgress = Math.max(0, Math.min(100, progress));
-  const radius = 17;
-  const circumference = 2 * Math.PI * radius;
-  const dashOffset = circumference - (safeProgress / 100) * circumference;
-  const loading = phase === 'loading';
-  const manual = phase === 'manual' || phase === 'canceled';
-  const retryable = phase === 'error';
-
-  return (
-    <div className="pointer-events-none absolute inset-0 z-30 grid place-items-center rounded-full bg-black/26 backdrop-blur-[1px]">
-      <button
-        type="button"
-        aria-label={
-          loading
-            ? 'Cancel media loading'
-            : manual
-              ? 'Download media'
-              : 'Retry media loading'
-        }
-        onClick={(event) => {
-          event.preventDefault();
-          event.stopPropagation();
-          if (loading) {
-            onCancel();
-          } else {
-            onAction();
-          }
-        }}
-        className="pointer-events-auto relative grid h-[44px] w-[44px] place-items-center rounded-full bg-black/64 text-white shadow-[0_10px_22px_rgba(0,0,0,0.48)] transition-colors hover:bg-black/78"
-      >
-        <svg
-          className={`pointer-events-none absolute inset-0 h-full w-full -rotate-90 ${loading && indeterminate ? 'animate-spin' : ''}`}
-          viewBox="0 0 44 44"
-          aria-hidden="true"
-        >
-          <circle
-            cx="22"
-            cy="22"
-            r={radius}
-            fill="none"
-            stroke="rgba(255,255,255,0.32)"
-            strokeWidth="2.3"
-          />
-          {loading ? (
-            indeterminate ? (
-              <circle
-                cx="22"
-                cy="22"
-                r={radius}
-                fill="none"
-                stroke="rgba(255,255,255,0.96)"
-                strokeWidth="2.7"
-                strokeLinecap="round"
-                strokeDasharray={`${circumference * 0.3} ${circumference}`}
-              />
-            ) : (
-              <circle
-                cx="22"
-                cy="22"
-                r={radius}
-                fill="none"
-                stroke="rgba(255,255,255,0.96)"
-                strokeWidth="2.7"
-                strokeLinecap="round"
-                strokeDasharray={circumference}
-                strokeDashoffset={dashOffset}
-              />
-            )
-          ) : retryable ? (
-            <circle
-              cx="22"
-              cy="22"
-              r={radius}
-              fill="none"
-              stroke="rgba(255,255,255,0.96)"
-              strokeWidth="2.7"
-              strokeLinecap="round"
-              strokeDasharray={`${circumference * 0.24} ${circumference}`}
-            />
-          ) : null}
-        </svg>
-
-        {loading ? (
-          <span className="relative block h-[15px] w-[15px]">
-            <span className="absolute left-1/2 top-0 h-full w-[2px] -translate-x-1/2 rotate-45 rounded-full bg-white" />
-            <span className="absolute left-1/2 top-0 h-full w-[2px] -translate-x-1/2 -rotate-45 rounded-full bg-white" />
-          </span>
-        ) : manual ? (
-          <span className="relative block h-[15px] w-[15px]">
-            <span className="absolute left-1/2 top-[1px] h-[8px] w-[2px] -translate-x-1/2 rounded-full bg-white" />
-            <span className="absolute left-1/2 top-[7px] h-[6px] w-[6px] -translate-x-1/2 rotate-45 border-b-[2px] border-r-[2px] border-white" />
-            <span className="absolute left-1/2 bottom-[-1px] h-[2px] w-[8px] -translate-x-1/2 rounded-full bg-white" />
-          </span>
-        ) : (
-          <span className="relative block h-[15px] w-[15px]">
-            <span className="absolute left-1/2 top-[1px] h-[8px] w-[2px] -translate-x-1/2 rounded-full bg-white" />
-            <span className="absolute left-1/2 top-[6px] h-[8px] w-[8px] -translate-x-1/2 rotate-45 border-b-[2px] border-r-[2px] border-white" />
-          </span>
-        )}
-      </button>
-    </div>
-  );
-}
-
-function CircleMessageBubble({
-  mediaId,
-  author,
-  fileUrl,
-  previewUrl,
-  strippedPreviewUrl,
-  contentType,
-  sizeBytes,
-  createdAt,
-  isRead,
-  isEdited,
-  status,
-  isOwn,
-  isMuted,
-  onToggleMuted,
-  onMediaError,
-  onPlaybackStateChange,
-  uploadState,
-  onCancelUpload,
-}: CircleMessageBubbleProps) {
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-  const progressRafRef = useRef<number | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [durationSec, setDurationSec] = useState(0);
-  const [currentSec, setCurrentSec] = useState(0);
-  const [hasPlaybackError, setHasPlaybackError] = useState(false);
-  const [generatedPosterUrl, setGeneratedPosterUrl] = useState<string | undefined>(undefined);
-  const [posterAspectRatio, setPosterAspectRatio] = useState<number | undefined>(undefined);
-  const [posterFailed, setPosterFailed] = useState(false);
-  const hasUploadState = !!uploadState;
-  const shouldManageCircleMedia =
-    !hasUploadState && !isOwn && isManagedMediaSourceUrl(fileUrl);
-  const { ref: viewportRef, isInViewport } = useViewportPresence<HTMLDivElement>({
-    disabled: !shouldManageCircleMedia,
-    rootMargin: '300px',
-  });
-  const circleDownload = useManagedMediaDownload({
-    url: fileUrl,
-    kind: 'video',
-    sizeBytes,
-    priority: isInViewport ? 78 : 10,
-    autoStart: true,
-    managed: shouldManageCircleMedia,
-    inViewport: isInViewport,
-  });
-  const resolvedFileUrl =
-    (shouldManageCircleMedia ? circleDownload.resolvedUrl : fileUrl) || null;
-  const mediaSourceForPoster = resolvedFileUrl || fileUrl || '';
-  const cachedPosterUrl = getCachedVideoPosterUrl(mediaSourceForPoster);
-  const hasHighQualityPoster = !!(previewUrl || generatedPosterUrl || cachedPosterUrl);
-  const resolvedPosterUrl =
-    previewUrl || generatedPosterUrl || cachedPosterUrl || strippedPreviewUrl;
-  const usesOnlyStrippedPoster = !!(resolvedPosterUrl && strippedPreviewUrl && !hasHighQualityPoster);
-  const downloadPhase = toCircleManagedDownloadPhase(
-    circleDownload.phase,
-    circleDownload.snapshot.manual
-  );
-  const resolvedCircleAspectRatio =
-    getCachedVideoAspectRatio(mediaSourceForPoster) ||
-    posterAspectRatio ||
-    1;
-  const mediaPhase: 'processing' | 'ready' | 'manual' | 'error' = hasUploadState
-    ? 'processing'
-    : hasPlaybackError || circleDownload.phase === 'error'
-      ? 'error'
-      : resolvedFileUrl
-        ? 'ready'
-        : shouldManageCircleMedia && downloadPhase === 'manual'
-          ? 'manual'
-          : 'processing';
-  const circleDisplaySize = 'min(36vw, 280px)';
-  const circleSize = 176;
-  const ringStrokeWidth = 4;
-  const ringCenter = circleSize / 2;
-  const radius = ringCenter - ringStrokeWidth / 2;
-  const circumference = 2 * Math.PI * radius;
-  const progressDasharray = `${circumference} ${circumference}`;
-  const playbackProgress = durationSec > 0 ? Math.min(1, Math.max(0, currentSec / durationSec)) : 0;
-  const ringProgress = mediaPhase === 'ready' ? playbackProgress : 0;
-  const hasRingProgress = ringProgress > 0;
-  const dashOffset = circumference * (1 - ringProgress);
-  const ringColor = isOwn ? 'rgb(214, 202, 255)' : 'rgb(196, 203, 223)';
-
-  useEffect(() => {
-    setPosterFailed(false);
-    if (previewUrl || strippedPreviewUrl) {
-      setGeneratedPosterUrl(undefined);
-      setPosterAspectRatio(undefined);
-      return;
-    }
-    if (!mediaSourceForPoster) {
-      setGeneratedPosterUrl(undefined);
-      setPosterAspectRatio(undefined);
-      return;
-    }
-
-    const cached = getCachedVideoPosterUrl(mediaSourceForPoster);
-    const cachedAspectRatio = getCachedVideoAspectRatio(mediaSourceForPoster);
-    if (cachedAspectRatio) {
-      setPosterAspectRatio(cachedAspectRatio);
-    }
-    if (cached) {
-      setGeneratedPosterUrl(cached);
-      return;
-    }
-
-    setGeneratedPosterUrl(undefined);
-  }, [mediaSourceForPoster, previewUrl, strippedPreviewUrl]);
-
-  useEffect(() => {
-    if (previewUrl || strippedPreviewUrl || !mediaSourceForPoster) {
-      return;
-    }
-    if (shouldManageCircleMedia && !resolvedFileUrl) {
-      return;
-    }
-
-    const cached = getCachedVideoPosterUrl(mediaSourceForPoster);
-    if (cached) {
-      setGeneratedPosterUrl(cached);
-      const cachedAspectRatio = getCachedVideoAspectRatio(mediaSourceForPoster);
-      if (cachedAspectRatio) {
-        setPosterAspectRatio(cachedAspectRatio);
-      }
-      return;
-    }
-
-    let cancelled = false;
-    void (async () => {
-      const meta = await ensureVideoPosterMeta(mediaSourceForPoster);
-      if (cancelled || !meta) return;
-      setGeneratedPosterUrl(meta.posterDataUrl);
-      setPosterAspectRatio(meta.aspectRatio);
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    mediaSourceForPoster,
-    previewUrl,
-    strippedPreviewUrl,
-    shouldManageCircleMedia,
-    resolvedFileUrl,
-  ]);
-
-  const getDuration = () => {
-    const video = videoRef.current;
-    if (!video) return durationSec;
-    return Number.isFinite(video.duration) && video.duration > 0 ? video.duration : durationSec;
-  };
-
-  const seekBy = (deltaSec: number) => {
-    const video = videoRef.current;
-    if (!video) return;
-    const duration = getDuration();
-    const current = video.currentTime || 0;
-    const next = duration > 0 ? Math.min(duration, Math.max(0, current + deltaSec)) : Math.max(0, current + deltaSec);
-    video.currentTime = next;
-    setCurrentSec(next);
-    if (!video.paused) {
-      onPlaybackStateChange?.({
-        mediaId,
-        kind: 'circle',
-        author,
-        createdAt,
-        currentSec: next,
-        durationSec: duration,
-        isPlaying: true,
-        togglePlay: () => {
-          void togglePlayback();
-        },
-        seekBy,
-        stop: stopPlayback,
-      });
-    }
-  };
-
-  const stopPlayback = () => {
-    const video = videoRef.current;
-    if (!video) return;
-    if (progressRafRef.current !== null) {
-      cancelAnimationFrame(progressRafRef.current);
-      progressRafRef.current = null;
-    }
-    video.pause();
-    video.currentTime = 0;
-    setCurrentSec(0);
-    setIsPlaying(false);
-    onPlaybackStateChange?.({
-      mediaId,
-      kind: 'circle',
-      author,
-      createdAt,
-      currentSec: 0,
-      durationSec: getDuration(),
-      isPlaying: false,
-      togglePlay: () => {
-        void togglePlayback();
-      },
-      seekBy,
-      stop: stopPlayback,
-    });
-  };
-
-  useEffect(() => {
-    if (progressRafRef.current !== null) {
-      cancelAnimationFrame(progressRafRef.current);
-      progressRafRef.current = null;
-    }
-    setIsPlaying(false);
-    setDurationSec(0);
-    setCurrentSec(0);
-    setHasPlaybackError(false);
-  }, [resolvedFileUrl]);
-
-  useEffect(() => {
-    if (mediaPhase !== 'ready' || !isPlaying) {
-      if (progressRafRef.current !== null) {
-        cancelAnimationFrame(progressRafRef.current);
-        progressRafRef.current = null;
-      }
-      return;
-    }
-
-    const tick = () => {
-      const video = videoRef.current;
-      if (!video || video.paused) {
-        progressRafRef.current = null;
-        return;
-      }
-
-      const next = video.currentTime || 0;
-      setCurrentSec((prev) => (Math.abs(prev - next) < 0.004 ? prev : next));
-      progressRafRef.current = requestAnimationFrame(tick);
-    };
-
-    progressRafRef.current = requestAnimationFrame(tick);
-    return () => {
-      if (progressRafRef.current !== null) {
-        cancelAnimationFrame(progressRafRef.current);
-        progressRafRef.current = null;
-      }
-    };
-  }, [isPlaying, mediaPhase]);
-
-  useEffect(() => {
-    return () => {
-      if (progressRafRef.current !== null) {
-        cancelAnimationFrame(progressRafRef.current);
-        progressRafRef.current = null;
-      }
-    };
-  }, []);
-
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video || mediaPhase !== 'ready' || !resolvedFileUrl) return;
-
-    const onLoadedMetadata = () => {
-      if (Number.isFinite(video.duration)) {
-        setDurationSec(video.duration);
-      }
-    };
-    const onTimeUpdate = () => {
-      const current = video.currentTime || 0;
-      const duration = Number.isFinite(video.duration) && video.duration > 0 ? video.duration : durationSec;
-      setCurrentSec(current);
-      if (!video.paused) {
-        onPlaybackStateChange?.({
-          mediaId,
-          kind: 'circle',
-          author,
-          createdAt,
-          currentSec: current,
-          durationSec: duration,
-          isPlaying: true,
-          togglePlay: () => {
-            void togglePlayback();
-          },
-          seekBy,
-          stop: stopPlayback,
-        });
-      }
-    };
-    const onPlay = () => {
-      const current = video.currentTime || 0;
-      const duration = Number.isFinite(video.duration) && video.duration > 0 ? video.duration : durationSec;
-      setIsPlaying(true);
-      onPlaybackStateChange?.({
-        mediaId,
-        kind: 'circle',
-        author,
-        createdAt,
-        currentSec: current,
-        durationSec: duration,
-        isPlaying: true,
-        togglePlay: () => {
-          void togglePlayback();
-        },
-        seekBy,
-        stop: stopPlayback,
-      });
-    };
-    const onPause = () => {
-      const current = video.currentTime || 0;
-      const duration = Number.isFinite(video.duration) && video.duration > 0 ? video.duration : durationSec;
-      setIsPlaying(false);
-      onPlaybackStateChange?.({
-        mediaId,
-        kind: 'circle',
-        author,
-        createdAt,
-        currentSec: current,
-        durationSec: duration,
-        isPlaying: false,
-        togglePlay: () => {
-          void togglePlayback();
-        },
-        seekBy,
-        stop: stopPlayback,
-      });
-    };
-    const onEnded = () => {
-      setIsPlaying(false);
-      setCurrentSec(0);
-      video.currentTime = 0;
-      onPlaybackStateChange?.({
-        mediaId,
-        kind: 'circle',
-        author,
-        createdAt,
-        currentSec: 0,
-        durationSec: Number.isFinite(video.duration) && video.duration > 0 ? video.duration : durationSec,
-        isPlaying: false,
-        togglePlay: () => {
-          void togglePlayback();
-        },
-        seekBy,
-        stop: stopPlayback,
-      });
-    };
-    const onError = () => {
-      setHasPlaybackError(true);
-      setIsPlaying(false);
-      onMediaError?.();
-      onPlaybackStateChange?.({
-        mediaId,
-        kind: 'circle',
-        author,
-        createdAt,
-        currentSec: 0,
-        durationSec: 0,
-        isPlaying: false,
-        togglePlay: () => {
-          void togglePlayback();
-        },
-        seekBy,
-        stop: stopPlayback,
-      });
-    };
-
-    video.addEventListener('loadedmetadata', onLoadedMetadata);
-    video.addEventListener('timeupdate', onTimeUpdate);
-    video.addEventListener('play', onPlay);
-    video.addEventListener('pause', onPause);
-    video.addEventListener('ended', onEnded);
-    video.addEventListener('error', onError);
-
-    return () => {
-      video.removeEventListener('loadedmetadata', onLoadedMetadata);
-      video.removeEventListener('timeupdate', onTimeUpdate);
-      video.removeEventListener('play', onPlay);
-      video.removeEventListener('pause', onPause);
-      video.removeEventListener('ended', onEnded);
-      video.removeEventListener('error', onError);
-    };
-  }, [author, createdAt, durationSec, mediaId, mediaPhase, onMediaError, onPlaybackStateChange, resolvedFileUrl]);
-
-  useEffect(() => {
-    if (videoRef.current) {
-      videoRef.current.muted = isMuted;
-    }
-  }, [isMuted]);
-
-  const togglePlayback = async () => {
-    if (hasUploadState) return;
-    if (mediaPhase !== 'ready') return;
-    const video = videoRef.current;
-    if (!video) return;
-    try {
-      if (video.paused) {
-        await video.play();
-      } else {
-        video.pause();
-      }
-    } catch (error) {
-      console.warn('Circle playback failed', error);
-    }
-  };
-
-  const messageTime = formatMessageTime(createdAt);
-  const duration = formatDuration(isPlaying ? currentSec : durationSec);
-  const metaDuration =
-    mediaPhase === 'ready'
-      ? duration
-      : mediaPhase === 'error'
-        ? 'Not ready'
-        : mediaPhase === 'manual'
-          ? 'Tap to load'
-        : shouldManageCircleMedia
-          ? `Loading ${circleDownload.indeterminate ? '...' : `${circleDownload.progress}%`}`
-          : 'Preparing';
-  const showVideoLayer = isPlaying || !resolvedPosterUrl || posterFailed;
-
-  return (
-    <div
-      ref={viewportRef}
-      className="relative inline-flex max-w-full overflow-visible"
-      style={{
-        width: circleDisplaySize,
-        height: circleDisplaySize,
-      }}
-    >
-      <button
-        type="button"
-        onClick={togglePlayback}
-        className="group relative h-full w-full overflow-hidden rounded-full border-2 border-white/24 bg-transparent p-0 shadow-[0_16px_36px_rgba(0,0,0,0.35)]"
-        aria-label={
-          hasUploadState
-            ? 'Uploading video note'
-            : isPlaying
-              ? 'Pause video note'
-              : 'Play video note'
-        }
-      >
-        {mediaPhase === 'ready' && resolvedFileUrl ? (
-          <video
-            ref={videoRef}
-            src={resolvedFileUrl}
-            preload={resolvedPosterUrl ? 'metadata' : 'auto'}
-            playsInline
-            muted={isMuted}
-            poster={resolvedPosterUrl}
-            className={`h-full w-full rounded-full object-cover transition-opacity duration-200 ${
-              showVideoLayer ? 'opacity-100' : 'opacity-0'
-            }`}
-          >
-            <source src={resolvedFileUrl} type={contentType || 'video/webm'} />
-          </video>
-        ) : null}
-        {resolvedPosterUrl && !posterFailed ? (
-          <img
-            src={resolvedPosterUrl}
-            alt="Video note preview"
-            className={`pointer-events-none absolute inset-0 h-full w-full rounded-full object-cover transition-opacity duration-200 ${
-              mediaPhase === 'ready' && showVideoLayer ? 'opacity-0' : 'opacity-100'
-            } ${usesOnlyStrippedPoster ? 'scale-[1.04] blur-[10px]' : ''}`}
-            loading="lazy"
-            decoding="async"
-            draggable={false}
-            onError={() => setPosterFailed(true)}
-          />
-        ) : (
-          <div
-            className={`pointer-events-none absolute inset-0 rounded-full bg-[#222327] transition-opacity duration-200 ${
-              mediaPhase === 'ready' && showVideoLayer ? 'opacity-0' : 'opacity-100'
-            }`}
-            style={{ aspectRatio: resolvedCircleAspectRatio }}
-          >
-            <div className="absolute inset-0 animate-pulse bg-white/5" />
-          </div>
-        )}
-
-        <svg
-          viewBox={`0 0 ${circleSize} ${circleSize}`}
-          className="pointer-events-none absolute inset-0 h-full w-full"
-          aria-hidden="true"
-        >
-          <circle
-            cx={ringCenter}
-            cy={ringCenter}
-            r={radius}
-            fill="none"
-            stroke="rgba(255,255,255,0.33)"
-            strokeWidth={ringStrokeWidth}
-          />
-          <circle
-            cx={ringCenter}
-            cy={ringCenter}
-            r={radius}
-            fill="none"
-            stroke={ringColor}
-            strokeWidth={ringStrokeWidth}
-            strokeLinecap={hasRingProgress ? 'round' : 'butt'}
-            strokeDasharray={progressDasharray}
-            strokeDashoffset={dashOffset}
-            transform={`rotate(-90 ${ringCenter} ${ringCenter})`}
-            className="will-change-[stroke-dashoffset]"
-          />
-        </svg>
-
-        {mediaPhase === 'ready' && !hasUploadState ? (
-          <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100">
-            <div className="grid h-[50px] w-[50px] place-items-center rounded-full bg-black/45 text-white shadow-[0_8px_16px_rgba(0,0,0,0.35)]">
-              {isPlaying ? <PauseIcon size={22} /> : <PlayIcon size={22} className="translate-x-[1px]" />}
-            </div>
-          </div>
-        ) : null}
-        {hasUploadState ? (
-          <CircleUploadOverlay
-            uploadState={uploadState}
-            onCancelUpload={uploadState.cancelable ? onCancelUpload : undefined}
-          />
-        ) : null}
-        {!hasUploadState && shouldManageCircleMedia && !resolvedFileUrl ? (
-          <CircleManagedDownloadOverlay
-            phase={downloadPhase}
-            progress={circleDownload.progress}
-            indeterminate={circleDownload.indeterminate}
-            onCancel={() => circleDownload.cancel()}
-            onAction={() => {
-              if (circleDownload.phase === 'error') {
-                circleDownload.retry();
-              } else {
-                circleDownload.start();
-              }
-            }}
-          />
-        ) : null}
-
-      </button>
-
-      <div className="absolute left-[-16px] top-[-2px] z-10 inline-flex items-center rounded-full bg-[#4e2b63]/92 px-[8px] py-[3px] text-[12px] font-[700] leading-none text-white shadow-[0_8px_18px_rgba(0,0,0,0.34)] backdrop-blur-sm">
-        <span>{metaDuration}</span>
-        <button
-          type="button"
-          onClick={(event) => {
-            event.stopPropagation();
-            onToggleMuted();
-          }}
-          className="ml-[4px] grid h-[16px] w-[16px] place-items-center rounded-full bg-black/25 text-white/95 transition-colors hover:bg-black/40"
-          aria-label={isMuted ? 'Enable circle audio' : 'Disable circle audio'}
-          title={isMuted ? 'Enable audio for circles' : 'Disable audio for circles'}
-        >
-          <span className="relative block h-[12px] w-[12px]">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" className="h-[12px] w-[12px]">
-              <path d="M5 9v6h4l5 4V5L9 9H5Z" fill="currentColor" />
-            </svg>
-            {isMuted ? (
-              <svg
-                width="6"
-                height="6"
-                viewBox="0 0 24 24"
-                fill="none"
-                className="absolute -right-[1px] top-1/2 h-[6px] w-[6px] -translate-y-1/2"
-              >
-                <path d="M6 6 18 18M18 6 6 18" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" />
-              </svg>
-            ) : null}
-          </span>
-        </button>
-      </div>
-
-      {isOwn ? (
-        <div className="pointer-events-none absolute bottom-[-12px] right-[6px] z-10 inline-flex items-center gap-[3px] rounded-full bg-[#7c60db]/95 px-[8px] py-[4px] text-[14px] font-[600] leading-none text-white shadow-[0_8px_18px_rgba(33,20,64,0.42)]">
-          {isEdited ? <span className="italic text-white/68">edited</span> : null}
-          {messageTime}
-          <span className="ml-[4px] inline-flex">
-            {status === 'pending' ? (
-              <span className="h-3 w-3 animate-pulse rounded-full border border-white/80" />
-            ) : status === 'failed' ? (
-              <span className="text-[14px] leading-none text-[#ffb0ba]">!</span>
-            ) : (
-              <CheckCheckIcon
-                size={13}
-                strokeWidth={2.2}
-                className={`origin-center scale-[1.9] ${isRead ? 'text-[#e2fff4]' : 'text-white/78'}`}
-              />
-            )}
-          </span>
-        </div>
-      ) : (
-        <div className="pointer-events-none absolute bottom-[-12px] right-[6px] z-10 rounded-full bg-black/55 px-[8px] py-[4px] text-[13px] font-[600] leading-none text-white/88 backdrop-blur-sm">
-          {isEdited ? <span className="mr-1 italic text-white/64">edited</span> : null}
-          {messageTime}
-        </div>
-      )}
-    </div>
-  );
-}
-
 function PollMessageBubble({
   question,
   options,
@@ -3488,7 +1819,7 @@ function PollMessageBubble({
           }`}
         >
           {myAnswerCorrect ? 'Correct answer' : 'Wrong answer'}
-          {typeof correctOptionIndex === 'number' ? ` • correct option #${correctOptionIndex + 1}` : ''}
+          {typeof correctOptionIndex === 'number' ? ` вЂў correct option #${correctOptionIndex + 1}` : ''}
         </div>
       ) : null}
       {quiz && explanation ? (
@@ -3644,12 +1975,8 @@ function ChatMessageRow({
   bubbleMaxWidthPx,
   uploadingImages,
   resolvePendingUploadPreviewUrl,
-  onCircleMediaError,
-  isCircleMuted,
-  onToggleCircleMuted,
   resolveUserName,
   resolveUserAvatar,
-  onPlaybackStateChange,
   onCancelPendingUpload,
   isSearchMatch,
   isSearchActive,
@@ -3681,12 +2008,8 @@ function ChatMessageRow({
   bubbleMaxWidthPx: number;
   uploadingImages?: ChatMessageListProps['uploadingImages'];
   resolvePendingUploadPreviewUrl?: (localId: string, attachmentIndex: number, file?: File) => string;
-  onCircleMediaError?: () => void;
-  isCircleMuted: boolean;
-  onToggleCircleMuted: () => void;
   resolveUserName: (userId: string) => string;
   resolveUserAvatar?: (userId: string) => string | undefined;
-  onPlaybackStateChange?: (state: ChatPlaybackState) => void;
   onCancelPendingUpload?: (localId: string, attachmentIndex: number) => void;
   isSearchMatch: boolean;
   isSearchActive: boolean;
@@ -3733,39 +2056,13 @@ function ChatMessageRow({
   const renderEntities = message.entities && message.entities.length > 0 ? message.entities : fallbackParsed.entities;
   const videoPreview = hasTextContent ? getPrimaryVideoPreview(renderContent, renderEntities) : null;
 
-  const fallbackAttachment = attachments[0];
-  const voiceAttachment =
-    message.messageType === 'voice'
-      ? attachments.find((attachment) => isAudioContentType(attachment.contentType)) || fallbackAttachment
-      : undefined;
-  const circleAttachmentItem =
-    message.messageType === 'circle'
-      ? (() => {
-          const indexed = attachments.map((attachment, attachmentIndex) => ({
-            attachment,
-            attachmentIndex,
-            resolvedUrl: resolveAttachmentUrl(attachment),
-          }));
-          const byVideoType = indexed.find((item) => isVideoContentType(item.attachment.contentType));
-          return byVideoType ?? indexed[0];
-        })()
-      : undefined;
-  const circleAttachment = circleAttachmentItem?.attachment;
   const mediaAttachmentItems = toVisualMediaAttachmentItems(
     message.messageType,
     attachments,
     resolvePendingUploadUrlByAttachmentIndex
   );
-  const fileAttachmentItems = toFileAttachmentItems(
-    message.messageType,
-    attachments,
-    resolvePendingUploadUrlByAttachmentIndex
-  );
   const groupServiceMessageType = toGroupServiceMessageType(message.messageType);
-  const isCircleMessage = message.messageType === 'circle' && !!circleAttachment;
   const numericMessageId = typeof message.messageId === 'number' ? message.messageId : null;
-  const mediaId = `${message.messageType}-${String(message.messageId)}`;
-  const author = isOwn ? 'You' : resolveUserName(message.senderId);
   const edgeAvatarName =
     message.senderDisplayName?.trim() ||
     message.senderUsername?.trim() ||
@@ -3832,31 +2129,8 @@ function ChatMessageRow({
     message.messageType !== 'poll' &&
     numericMessageId !== null;
 
-  const voiceUrl = voiceAttachment ? resolveAttachmentUrl(voiceAttachment) : '';
-  const circlePendingPreviewUrl = circleAttachmentItem
-    ? resolvePendingUploadUrlByAttachmentIndex(circleAttachmentItem.attachmentIndex)
-    : '';
-  const circleUrl = circleAttachmentItem?.resolvedUrl || circlePendingPreviewUrl || '';
-  const circlePreviewUrl =
-    circleAttachment && typeof circleAttachment.thumbnailUrl === 'string'
-      ? resolveAttachmentPreviewUrl(circleAttachment.thumbnailUrl) || undefined
-      : circlePendingPreviewUrl || undefined;
-  const circleStrippedPreviewUrl =
-    circleAttachment && typeof circleAttachment.strippedThumbnailUrl === 'string'
-      ? resolveAttachmentPreviewUrl(circleAttachment.strippedThumbnailUrl) || undefined
-      : undefined;
   const mediaItems = mediaAttachmentItems.map((item) => item.mediaItem);
   const imageUploadStates = mediaAttachmentItems.map((item) => {
-    if (!messageLocalId || !uploadingImages) {
-      return undefined;
-    }
-    return uploadingImages.get(`${messageLocalId}-${item.attachmentIndex}`);
-  });
-  const circleUploadState =
-    messageLocalId && uploadingImages && circleAttachmentItem
-      ? uploadingImages.get(`${messageLocalId}-${circleAttachmentItem.attachmentIndex}`)
-      : undefined;
-  const fileUploadStates = fileAttachmentItems.map((item) => {
     if (!messageLocalId || !uploadingImages) {
       return undefined;
     }
@@ -3889,56 +2163,14 @@ function ChatMessageRow({
 
   return (
     <div
-      className={`${isCircleMessage ? 'my-[20px]' : ''} flex ${
-        isOwn ? 'justify-end' : 'justify-start'
-      }`}
-      style={isCircleMessage ? undefined : { marginBottom: rowBottomGapPx }}
+      className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}
+      style={{ marginBottom: rowBottomGapPx }}
     >
       <div
         className={`${rowHighlightClass} relative`}
         style={{ maxWidth: bubbleMaxWidthPx }}
       >
-        {message.messageType === 'voice' && voiceAttachment ? (
-          <VoiceMessageBubble
-            mediaId={mediaId}
-            author={author}
-            fileUrl={voiceUrl || undefined}
-            fileName={voiceAttachment.fileName}
-            contentType={voiceAttachment.contentType}
-            sizeBytes={voiceAttachment.sizeBytes}
-            createdAt={message.createdAt}
-            isRead={isRead}
-            status={message.status}
-            isOwn={isOwn}
-            isEdited={isEdited}
-            hideTail={hideTail}
-            onPlaybackStateChange={onPlaybackStateChange}
-          />
-        ) : message.messageType === 'circle' && circleAttachment ? (
-          <CircleMessageBubble
-            mediaId={mediaId}
-            author={author}
-            fileUrl={circleUrl || undefined}
-            previewUrl={circlePreviewUrl}
-            strippedPreviewUrl={circleStrippedPreviewUrl}
-            contentType={circleAttachment.contentType}
-            sizeBytes={circleAttachment.sizeBytes}
-            createdAt={message.createdAt}
-            isRead={isRead}
-            isEdited={isEdited}
-            status={message.status}
-            isOwn={isOwn}
-            isMuted={isCircleMuted}
-            onToggleMuted={onToggleCircleMuted}
-            onMediaError={onCircleMediaError}
-            onPlaybackStateChange={onPlaybackStateChange}
-            uploadState={circleUploadState}
-            onCancelUpload={() => {
-              if (!onCancelPendingUpload || !messageLocalId || !circleAttachmentItem) return;
-              onCancelPendingUpload(messageLocalId, circleAttachmentItem.attachmentIndex);
-            }}
-          />
-        ) : message.messageType === 'poll' ? (
+        {message.messageType === 'poll' ? (
           <PollMessageBubble
             question={pollQuestion}
             options={effectivePollOptions}
@@ -3982,26 +2214,6 @@ function ChatMessageRow({
                 : undefined
             }
           />
-        ) : fileAttachmentItems.length > 0 ? (
-          <div className="flex flex-col gap-2">
-            {fileAttachmentItems.map((fileItem, index) => (
-              <FileMessageBubble
-                key={`${String(message.messageId)}-file-${fileItem.attachmentIndex}`}
-                fileItem={fileItem}
-                createdAt={message.createdAt}
-                isRead={isRead}
-                status={message.status}
-                isOwn={isOwn}
-                isEdited={isEdited}
-                hideTail={hideTail && index === fileAttachmentItems.length - 1}
-                uploadState={fileUploadStates[index]}
-                onCancelUpload={() => {
-                  if (!onCancelPendingUpload || !messageLocalId) return;
-                  onCancelPendingUpload(messageLocalId, fileItem.attachmentIndex);
-                }}
-              />
-            ))}
-          </div>
         ) : mediaItems.length > 1 ? (
           <MultiImageBubble
             mediaItems={mediaItems}
@@ -4076,11 +2288,7 @@ function ChatMessageRow({
           />
         )}
 
-        {(
-          message.messageType === 'voice' ||
-          message.messageType === 'circle' ||
-          fileAttachmentItems.length > 0
-        ) && hasTextContent ? (
+        {mediaItems.length > 0 && hasTextContent ? (
           <div
             className={`mt-1 px-2 text-[15px] leading-[1.2] ${
               isOwn ? 'text-white/88 text-right' : 'text-white/75 text-left'
@@ -4348,10 +2556,8 @@ export function ChatMessageList({
   messagesEndRef,
   matchedMessageIds,
   activeMatchedMessageId,
-  onCircleMediaError,
   resolveUserName,
   resolveUserAvatar,
-  onPlaybackStateChange,
   onReplyMessage,
   onEditMessage,
   onDeleteMessage,
@@ -4366,7 +2572,6 @@ export function ChatMessageList({
   onVotePoll,
   onClosePoll,
 }: ChatMessageListProps) {
-  const [isCircleMuted, setIsCircleMuted] = useState(true);
   const [contextMenu, setContextMenu] = useState<MessageContextMenuState | null>(null);
   const [mediaViewerIndex, setMediaViewerIndex] = useState<number | null>(null);
   const [reactionsByMessageId, setReactionsByMessageId] = useState<
@@ -4831,10 +3036,9 @@ export function ChatMessageList({
 
   useEffect(() => {
     if (!hasSelectedChat) {
-      onPlaybackStateChange?.(null);
       setMediaViewerIndex(null);
     }
-  }, [hasSelectedChat, onPlaybackStateChange]);
+  }, [hasSelectedChat]);
 
   useEffect(() => {
     const activeKeys = new Set<string>();
@@ -5108,12 +3312,8 @@ export function ChatMessageList({
                   bubbleMaxWidthPx={messageBubbleMaxWidthPx}
                   uploadingImages={uploadingImages}
                   resolvePendingUploadPreviewUrl={resolvePendingUploadPreviewUrl}
-                  onCircleMediaError={onCircleMediaError}
-                  isCircleMuted={isCircleMuted}
-                  onToggleCircleMuted={() => setIsCircleMuted((prev) => !prev)}
                   resolveUserName={resolveUserName}
                   resolveUserAvatar={resolveUserAvatar}
-                  onPlaybackStateChange={onPlaybackStateChange || undefined}
                   onCancelPendingUpload={onCancelPendingUpload}
                   isSearchMatch={isSearchMatch}
                   isSearchActive={isSearchActive}

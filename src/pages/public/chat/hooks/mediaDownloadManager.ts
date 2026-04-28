@@ -1,6 +1,6 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
 
-export type ManagedMediaKind = 'image' | 'video' | 'audio' | 'file';
+export type ManagedMediaKind = 'image' | 'video';
 export type ManagedMediaPhase =
   | 'idle'
   | 'queued'
@@ -36,8 +36,6 @@ type MediaKindPolicy = {
 export type MediaAutoDownloadPolicy = {
   image: MediaKindPolicy;
   video: MediaKindPolicy;
-  audio: MediaKindPolicy;
-  file: MediaKindPolicy;
 };
 
 type MediaDownloadTask = {
@@ -97,16 +95,6 @@ const DEFAULT_POLICY: MediaAutoDownloadPolicy = {
     wifiMaxBytes: 20 * MB,
     cellularMaxBytes: 3 * MB,
   },
-  audio: {
-    enabled: true,
-    wifiMaxBytes: 16 * MB,
-    cellularMaxBytes: 3 * MB,
-  },
-  file: {
-    enabled: true,
-    wifiMaxBytes: 10 * MB,
-    cellularMaxBytes: 2 * MB,
-  },
 };
 
 interface MediaCacheDB extends DBSchema {
@@ -136,8 +124,6 @@ function clonePolicy(policy: MediaAutoDownloadPolicy): MediaAutoDownloadPolicy {
   return {
     image: { ...policy.image },
     video: { ...policy.video },
-    audio: { ...policy.audio },
-    file: { ...policy.file },
   };
 }
 
@@ -179,8 +165,6 @@ function sanitizePolicy(policy: unknown): MediaAutoDownloadPolicy {
   return {
     image: sanitizeKind('image', fallback.image),
     video: sanitizeKind('video', fallback.video),
-    audio: sanitizeKind('audio', fallback.audio),
-    file: sanitizeKind('file', fallback.file),
   };
 }
 
@@ -304,8 +288,6 @@ class ChatMediaDownloadManager {
       ...partial,
       image: { ...this.policy.image, ...(partial.image || {}) },
       video: { ...this.policy.video, ...(partial.video || {}) },
-      audio: { ...this.policy.audio, ...(partial.audio || {}) },
-      file: { ...this.policy.file, ...(partial.file || {}) },
     });
     this.policy = nextPolicy;
     savePolicyToStorage(nextPolicy);
@@ -323,13 +305,13 @@ class ChatMediaDownloadManager {
         retries: 0,
         fromCache: false,
         loadedBytes: 0,
-        kind: 'file',
+        kind: 'image',
         manual: false,
       });
       return () => undefined;
     }
 
-    const task = this.getOrCreateTask(url, 'file');
+    const task = this.getOrCreateTask(url, 'image');
     task.lastTouchedAt = Date.now();
     const listenerSet = this.listeners.get(url) || new Set<Listener>();
     listenerSet.add(listener);

@@ -358,25 +358,16 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
     attachments.length > 1 && attachments.every((attachment) => attachment.groupWithOthers === false);
 
   const isGroupedAlbumAttachment = (attachment: AttachedImage) =>
-    (attachment.groupWithOthers ?? true) &&
-    !attachment.sendAsFile &&
-    attachment.forcedMessageType !== 'voice' &&
-    attachment.forcedMessageType !== 'circle' &&
-    isVisualMediaAttachment(attachment);
+    (attachment.groupWithOthers ?? true) && isVisualMediaAttachment(attachment);
 
   const shouldSendAsGroupedAlbum = (attachments: AttachedImage[]) =>
     attachments.length > 1 && attachments.every(isGroupedAlbumAttachment);
 
   const isImageAttachment = (attachment: {
     isImage?: boolean;
-    sendAsFile?: boolean;
-    forcedMessageType?: 'voice' | 'circle';
     contentType?: string;
     file?: File;
   }) => {
-    if (attachment.forcedMessageType === 'voice' || attachment.forcedMessageType === 'circle') {
-      return false;
-    }
     if (attachment.isImage !== undefined) {
       return attachment.isImage;
     }
@@ -385,41 +376,10 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
     return contentType.startsWith('image/');
   };
 
-  const isAudioAttachment = (attachment: {
-    sendAsFile?: boolean;
-    forcedMessageType?: 'voice' | 'circle';
-    contentType?: string;
-    file?: File;
-  }) => {
-    if (attachment.forcedMessageType === 'voice') {
-      return true;
-    }
-    const contentType =
-      (attachment.contentType || attachment.file?.type || '').trim().toLowerCase();
-    return contentType.startsWith('audio/');
-  };
-
-  const isCircleAttachment = (attachment: {
-    sendAsFile?: boolean;
-    forcedMessageType?: 'voice' | 'circle';
-    contentType?: string;
-    file?: File;
-  }) => {
-    return attachment.forcedMessageType === 'circle';
-  };
-
   const isVideoAttachment = (attachment: {
-    sendAsFile?: boolean;
-    forcedMessageType?: 'voice' | 'circle';
     contentType?: string;
     file?: File;
   }) => {
-    if (attachment.forcedMessageType === 'voice' || attachment.forcedMessageType === 'circle') {
-      return false;
-    }
-    if (attachment.sendAsFile) {
-      return false;
-    }
     const contentType =
       (attachment.contentType || attachment.file?.type || '').trim().toLowerCase();
     return contentType.startsWith('video/');
@@ -442,65 +402,28 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
 
   const isVisualMediaAttachment = (attachment: {
     isImage?: boolean;
-    sendAsFile?: boolean;
-    forcedMessageType?: 'voice' | 'circle';
     contentType?: string;
     file?: File;
   }) => isImageAttachment(attachment) || isVideoAttachment(attachment);
 
-  const resolveSingleAttachmentMessageType = (
-    attachment: {
-      isImage?: boolean;
-      sendAsFile?: boolean;
-      forcedMessageType?: 'voice' | 'circle';
-      contentType?: string;
-      file?: File;
-    }
-  ): 'image' | 'file' | 'voice' | 'circle' => {
-    if (attachment.forcedMessageType === 'voice') return 'voice';
-    if (attachment.forcedMessageType === 'circle') return 'circle';
-    if (isImageAttachment(attachment)) {
-      return 'image';
-    }
-    if (isAudioAttachment(attachment)) {
-      return 'voice';
-    }
-    if (isCircleAttachment(attachment)) {
-      return 'circle';
-    }
-    if (isVideoAttachment(attachment)) {
-      return 'image';
-    }
-    return 'file';
-  };
-
   const resolveAttachmentMessageType = (
     attachments: Array<{
       isImage?: boolean;
-      sendAsFile?: boolean;
-      forcedMessageType?: 'voice' | 'circle';
       contentType?: string;
       file?: File;
     }>
-  ): 'image' | 'images' | 'file' | 'files' | 'voice' | 'circle' => {
-    if (attachments.length === 1) {
-      return resolveSingleAttachmentMessageType(attachments[0]);
-    }
+  ): 'image' | 'images' => {
     const allVisualMedia = attachments.length > 0 && attachments.every(isVisualMediaAttachment);
-    if (allVisualMedia) {
-      return 'images';
+    if (!allVisualMedia) {
+      throw new Error('Only image/video attachments are supported');
     }
-    return 'files';
+    return attachments.length > 1 ? 'images' : 'image';
   };
 
   const toRetryableUploadedAttachments = (message: ChatMessage) => {
     const fallbackMediaType =
       message.messageType === 'image' ||
-      message.messageType === 'images' ||
-      message.messageType === 'voice' ||
-      message.messageType === 'circle'
-        ? message.messageType !== 'voice' && message.messageType !== 'circle'
-        : false;
+      message.messageType === 'images';
 
     const source = getMessageMediaAttachments(message).map((attachment) => ({
       ...attachment,
@@ -1764,12 +1687,6 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
     return data;
   };
 
-  const getGroupFiles = async (chatId: number, before?: number, limit = 30) => {
-    ensureValidChatId(chatId);
-    const { data } = await http.get<ChatGroupMediaItemsResponse>(endpoints.chatFiles(chatId, before, limit));
-    return data;
-  };
-
   const getGroupAdminLog = async (
     chatId: number,
     before?: number,
@@ -1885,25 +1802,14 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
 
   const toSyntheticAttachmentFromPreuploaded = (params: {
     imagePath: string;
-    messageType: 'text' | 'image' | 'images' | 'file' | 'files' | 'voice' | 'circle';
+    messageType: 'text' | 'image' | 'images';
     imageEncrypted?: boolean;
     imageEncryptionIv?: string;
     imageKeyVersion?: number;
   }): AttachedImage => {
     const normalizedType: ChatMessage['messageType'] =
-      params.messageType === 'images'
-        ? 'image'
-        : params.messageType === 'files'
-          ? 'file'
-          : params.messageType;
-    const normalizedContentType =
-      normalizedType === 'voice'
-        ? 'audio/ogg'
-        : normalizedType === 'circle'
-          ? 'video/mp4'
-          : normalizedType === 'file'
-            ? 'application/octet-stream'
-            : 'image/jpeg';
+      params.messageType === 'images' ? 'image' : params.messageType;
+    const normalizedContentType = 'image/jpeg';
     const inferredFileName = params.imagePath.split('/').pop() || `attachment-${Date.now()}`;
 
     const uploadedData: UploadImageResponse = {
@@ -1923,10 +1829,7 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
       id: `preuploaded-${Date.now()}-${Math.random().toString(16).slice(2)}`,
       file: new File([], inferredFileName, { type: normalizedContentType }),
       isImage: normalizedType === 'image',
-      sendAsFile: normalizedType === 'file',
       groupWithOthers: false,
-      forcedMessageType:
-        normalizedType === 'voice' || normalizedType === 'circle' ? normalizedType : undefined,
       contentType: normalizedContentType,
       sizeBytes: 0,
       uploadedData,
@@ -1937,7 +1840,7 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
   const sendMessageToUser = async (
     recipientId: string,
     message: string,
-    messageType: 'text' | 'image' | 'images' | 'file' | 'files' | 'voice' | 'circle' = 'text',
+    messageType: 'text' | 'image' | 'images' = 'text',
     imagePath?: string,
     imageEncrypted?: boolean,
     imageEncryptionIv?: string,
@@ -2114,10 +2017,6 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
       'text',
       'image',
       'images',
-      'file',
-      'files',
-      'voice',
-      'circle',
     ]);
     if (!sendableMessageTypes.has(messageType)) {
       return;
@@ -2125,17 +2024,14 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
 
     await enqueueByChat(chatId, async () => {
       const clientMessageId = failedMessage.clientMessageId ?? nextClientMessageId();
-      const isVoiceOrCircle = messageType === 'voice' || messageType === 'circle';
       const parsed = buildMessageTextAndEntities(failedMessage.content || '');
-      const normalizedContent = isVoiceOrCircle ? '' : failedMessage.content || parsed.content;
+      const normalizedContent = failedMessage.content || parsed.content;
       const normalizedEntities =
-        !isVoiceOrCircle
-          ? failedMessage.entities && failedMessage.entities.length > 0
-            ? failedMessage.entities
-            : parsed.entities.length > 0
-              ? parsed.entities
-              : undefined
-          : undefined;
+        failedMessage.entities && failedMessage.entities.length > 0
+          ? failedMessage.entities
+          : parsed.entities.length > 0
+            ? parsed.entities
+            : undefined;
       const replyToMessageId =
         typeof failedMessage.replyToId === 'number' ? failedMessage.replyToId : undefined;
       const uploadedAttachments = toRetryableUploadedAttachments(failedMessage);
@@ -2277,15 +2173,9 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
     const clearComposerDraft = options?.clearComposerDraft ?? true;
     const resetReplyTo = options?.resetReplyTo ?? true;
     const tempMessageType = resolveAttachmentMessageType(attachmentsToSend);
-    const isVoiceOrCircle = tempMessageType === 'voice' || tempMessageType === 'circle';
     const parsed = buildMessageTextAndEntities(textContent);
-    const normalizedContent = isVoiceOrCircle ? '' : parsed.content;
-    const normalizedEntities =
-      !isVoiceOrCircle && parsed.entities.length > 0 ? parsed.entities : undefined;
-
-    if (isVoiceOrCircle && attachmentsToSend.length !== 1) {
-      throw new Error('Voice/circle message must contain exactly one attachment');
-    }
+    const normalizedContent = parsed.content;
+    const normalizedEntities = parsed.entities.length > 0 ? parsed.entities : undefined;
 
     const localId = `local-img-${Date.now()}-${Math.random().toString(16).slice(2)}`;
     const groupingKey =
@@ -2370,8 +2260,7 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
       if (!attachment || attachment.uploadedData) {
         return;
       }
-      const isCircleAttachmentForPreview = attachment.forcedMessageType === 'circle';
-      if (!isVisualMediaAttachment(attachment) && !isCircleAttachmentForPreview) {
+      if (!isVisualMediaAttachment(attachment)) {
         return;
       }
 
@@ -2384,10 +2273,7 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
         return;
       }
 
-      const forceMediaType =
-        isCircleAttachmentForPreview || isVideoAttachment(attachment)
-          ? 'video'
-          : 'image';
+      const forceMediaType = isVideoAttachment(attachment) ? 'video' : 'image';
 
       void buildLocalMediaPreviewMeta(attachment.file, {
         preferredPreviewUrl: attachment.preview,
@@ -2508,8 +2394,7 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
       }
       const uploadKey = toUploadStateKey(localId, attachmentIndex);
       const existingPreviewUrl = pendingMediaPreviewUrls.get(uploadKey);
-      const shouldTrackPreview =
-        isVisualMediaAttachment(attachment) || attachment.forcedMessageType === 'circle';
+      const shouldTrackPreview = isVisualMediaAttachment(attachment);
       if (!existingPreviewUrl && shouldTrackPreview) {
         upsertPendingMediaPreviewUrl(uploadKey, URL.createObjectURL(attachment.file));
       }
@@ -2589,9 +2474,7 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
         const uploadKey = toUploadStateKey(localId, attachmentIndex);
         const form = new FormData();
         form.append('file', attachment.file);
-
-        const uploadAsFile = !!attachment.sendAsFile && !attachment.forcedMessageType;
-        const uploadUrl = `${endpoints.chatUpload}?chatId=${finalChatId}${uploadAsFile ? '&asFile=true' : ''}`;
+        const uploadUrl = `${endpoints.chatUpload}?chatId=${finalChatId}`;
 
         const uploadDebugMeta = {
           chatId: finalChatId,
@@ -2603,7 +2486,6 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
           fileSize: attachment.file.size,
           attachmentContentType: attachment.contentType,
           attachmentIsImage: isImageAttachment(attachment),
-          uploadAsFile,
         };
 
         logger.info('[chat.upload] start', uploadDebugMeta);
@@ -2908,14 +2790,12 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
   const attachImage = async (
     file: File,
     options?: {
-      forcedMessageType?: 'voice' | 'circle';
       preview?: string;
       thumbnailUrl?: string;
       strippedThumbnailUrl?: string;
       width?: number;
       height?: number;
       aspectRatio?: number;
-      sendAsFile?: boolean;
       groupWithOthers?: boolean;
     }
   ) => {
@@ -2923,20 +2803,18 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
     
     const id = `attached-${Date.now()}-${Math.random()}`;
     const fileType = (file.type || '').toLowerCase();
-    const forcedMessageType = options?.forcedMessageType;
     const isRawImage = fileType.startsWith('image/');
     const isRawVideo = fileType.startsWith('video/');
-    const sendAsFile = !forcedMessageType && !!options?.sendAsFile;
-    const isImage = !sendAsFile && isRawImage;
+    if (!isRawImage && !isRawVideo) {
+      throw new Error('Only image/video attachments are supported');
+    }
+    const isImage = isRawImage;
     let preview: string | undefined = options?.preview;
-    const shouldGenerateVisualPreview =
-      !sendAsFile &&
-      (isRawImage || isRawVideo || forcedMessageType === 'circle');
+    const shouldGenerateVisualPreview = isRawImage || isRawVideo;
     const generatedPreviewMeta = shouldGenerateVisualPreview
       ? await buildLocalMediaPreviewMeta(file, {
           preferredPreviewUrl: preview,
-          forceMediaType:
-            forcedMessageType === 'circle' || isRawVideo ? 'video' : 'image',
+          forceMediaType: isRawVideo ? 'video' : 'image',
         })
       : null;
 
@@ -2963,18 +2841,13 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
       height: options?.height || generatedPreviewMeta?.height,
       aspectRatio: options?.aspectRatio || generatedPreviewMeta?.aspectRatio,
       isImage,
-      sendAsFile,
       groupWithOthers: options?.groupWithOthers ?? true,
-      forcedMessageType,
       contentType: file.type || 'application/octet-stream',
       sizeBytes: file.size,
       uploading: false
     };
 
-    setAttachedImages(prev => forcedMessageType ? [nextAttachment] : [...prev, nextAttachment]);
-    if (forcedMessageType) {
-      setMessageInput('');
-    }
+    setAttachedImages(prev => [...prev, nextAttachment]);
   };
 
   // рџ–јпёЏ РЈРґР°Р»РµРЅРёРµ РїСЂРёРєСЂРµРїР»РµРЅРЅРѕРіРѕ РёР·РѕР±СЂР°Р¶РµРЅРёСЏ
@@ -3034,10 +2907,7 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
     });
   };
 
-  const uploadImage = async (
-    file: File,
-    options?: { forcedMessageType?: 'voice' | 'circle' }
-  ) => {
+  const uploadImage = async (file: File) => {
     if (!selectedChat || !file) return;
 
     await sendMessagesWithImages(selectedChat, '', {
@@ -3045,9 +2915,7 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
         {
           id: `direct-${Date.now()}-${Math.random().toString(16).slice(2)}`,
           file,
-          forcedMessageType: options?.forcedMessageType,
-          isImage: !options?.forcedMessageType && (file.type || '').toLowerCase().startsWith('image/'),
-          sendAsFile: !options?.forcedMessageType && !(file.type || '').toLowerCase().startsWith('image/'),
+          isImage: (file.type || '').toLowerCase().startsWith('image/'),
           contentType: file.type || 'application/octet-stream',
           sizeBytes: file.size,
           groupWithOthers: false,
@@ -3103,7 +2971,6 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
     pinGroupMessage,
     unpinGroupMessage,
     getGroupMedia,
-    getGroupFiles,
     getGroupAdminLog,
     sendTypingState,
     sendMessageToUser,

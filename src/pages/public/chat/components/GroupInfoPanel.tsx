@@ -16,9 +16,8 @@ import type { SidebarChat } from '../types';
 import { CloseIcon, PenSquareIcon } from '../icons';
 import { Avatar } from './Avatar';
 import { MediaViewerModal, type MediaViewerItem } from './messageTypes/MediaViewerModal';
-import { formatFileSize } from '../utils';
 
-export type GroupInfoTab = 'members' | 'media' | 'files' | 'links';
+export type GroupInfoTab = 'members' | 'media' | 'links';
 
 export type GroupInfoMember = {
   userId: string;
@@ -87,10 +86,6 @@ type GroupInfoPanelProps = {
   mediaLoading?: boolean;
   mediaHasMore?: boolean;
   onMediaLoadMore?: () => void;
-  fileItems?: ChatGroupMediaItem[];
-  filesLoading?: boolean;
-  filesHasMore?: boolean;
-  onFilesLoadMore?: () => void;
   onUpdateGroupSettings?: (payload: {
     description?: string;
     isPublic?: boolean;
@@ -157,8 +152,6 @@ type GroupInfoPanelProps = {
       canSendVideos?: boolean;
       canSendStickersAndGifs?: boolean;
       canSendMusic?: boolean;
-      canSendFiles?: boolean;
-      canSendVoiceMessages?: boolean;
       canSendVideoMessages?: boolean;
       canEmbedLinks?: boolean;
       canSendPolls?: boolean;
@@ -214,7 +207,6 @@ type BackendLinkPreviewMeta = {
 const GROUP_INFO_TABS: Array<{ id: GroupInfoTab; label: string }> = [
   { id: 'members', label: 'Members' },
   { id: 'media', label: 'Media' },
-  { id: 'files', label: 'Files' },
   { id: 'links', label: 'Links' },
 ];
 
@@ -227,37 +219,6 @@ const MEDIA_MONTH_WITH_YEAR_FORMATTER = new Intl.DateTimeFormat('en-US', {
   month: 'long',
   year: 'numeric',
 });
-const FILE_LIST_DAY_FORMATTER = new Intl.DateTimeFormat('en-US', {
-  month: 'short',
-  day: 'numeric',
-});
-const FILE_LIST_TIME_FORMATTER = new Intl.DateTimeFormat('ru-RU', {
-  hour: '2-digit',
-  minute: '2-digit',
-});
-
-const formatFileListDate = (value: string) => {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '';
-  return `${FILE_LIST_DAY_FORMATTER.format(date)} at ${FILE_LIST_TIME_FORMATTER.format(date)}`;
-};
-
-const formatFileListSize = (size?: number) => {
-  const raw = formatFileSize(size);
-  if (!raw) return '';
-  return raw.replace(/\.0\s(?=(?:K|M|G)B\b)/, ' ');
-};
-
-const resolveFileExtensionLabel = (value?: string) => {
-  const source = (value || '').trim();
-  if (!source) return 'FILE';
-  const withoutQuery = source.split(/[?#]/, 1)[0];
-  const filename = withoutQuery.split('/').pop() || withoutQuery;
-  const dotIndex = filename.lastIndexOf('.');
-  if (dotIndex < 0 || dotIndex === filename.length - 1) return 'FILE';
-  return filename.slice(dotIndex + 1, dotIndex + 5).toUpperCase();
-};
-
 async function fileToAvatarDataUrl(file: File): Promise<string> {
   const objectUrl = URL.createObjectURL(file);
 
@@ -478,8 +439,6 @@ type RestrictionMediaDraft = {
   sendVideos: boolean;
   sendStickersAndGifs: boolean;
   sendMusic: boolean;
-  sendFiles: boolean;
-  sendVoiceMessages: boolean;
   sendVideoMessages: boolean;
   embedLinks: boolean;
   sendPolls: boolean;
@@ -503,8 +462,6 @@ const DEFAULT_RESTRICTION_MEDIA_DRAFT: RestrictionMediaDraft = {
   sendVideos: true,
   sendStickersAndGifs: true,
   sendMusic: true,
-  sendFiles: true,
-  sendVoiceMessages: true,
   sendVideoMessages: true,
   embedLinks: true,
   sendPolls: true,
@@ -515,8 +472,6 @@ const RESTRICTION_MEDIA_ITEMS: Array<{ key: keyof RestrictionMediaDraft; label: 
   { key: 'sendVideos', label: 'Send Videos' },
   { key: 'sendStickersAndGifs', label: 'Send Stickers and GIFs' },
   { key: 'sendMusic', label: 'Send Music' },
-  { key: 'sendFiles', label: 'Send Files' },
-  { key: 'sendVoiceMessages', label: 'Send Voice Messages' },
   { key: 'sendVideoMessages', label: 'Send Video Messages' },
   { key: 'embedLinks', label: 'Embed Links' },
   { key: 'sendPolls', label: 'Send Polls' },
@@ -614,8 +569,6 @@ const mapRestrictionsToDraft = (restrictions: ChatMemberRestrictions | null): Re
     sendVideos: restrictions?.canSendVideos ?? mediaEnabled,
     sendStickersAndGifs: restrictions?.canSendStickersAndGifs ?? mediaEnabled,
     sendMusic: restrictions?.canSendMusic ?? mediaEnabled,
-    sendFiles: restrictions?.canSendFiles ?? mediaEnabled,
-    sendVoiceMessages: restrictions?.canSendVoiceMessages ?? mediaEnabled,
     sendVideoMessages: restrictions?.canSendVideoMessages ?? mediaEnabled,
     embedLinks: restrictions?.canEmbedLinks ?? mediaEnabled,
     sendPolls: restrictions?.canSendPolls ?? true,
@@ -647,8 +600,6 @@ const areRestrictionDraftsEqual = (left: RestrictionDraft | null, right: Restric
     left.media.sendVideos === right.media.sendVideos &&
     left.media.sendStickersAndGifs === right.media.sendStickersAndGifs &&
     left.media.sendMusic === right.media.sendMusic &&
-    left.media.sendFiles === right.media.sendFiles &&
-    left.media.sendVoiceMessages === right.media.sendVoiceMessages &&
     left.media.sendVideoMessages === right.media.sendVideoMessages &&
     left.media.embedLinks === right.media.embedLinks &&
     left.media.sendPolls === right.media.sendPolls &&
@@ -1064,48 +1015,6 @@ function GroupMediaGridThumb({
   );
 }
 
-function GroupFileListRow({ item }: { item: ChatGroupMediaItem }) {
-  const fileUrl = item.attachmentUrl || `/media/${item.attachmentPath}`;
-  const previewUrl =
-    item.thumbnailUrl ||
-    (item.isImage ? item.attachmentUrl || `/media/${item.attachmentPath}` : undefined);
-  const sizeLabel = formatFileListSize(item.sizeBytes);
-  const dateLabel = formatFileListDate(item.createdAt);
-  const extensionLabel = resolveFileExtensionLabel(item.fileName || item.attachmentPath);
-  const metaLine = [sizeLabel, dateLabel].filter(Boolean).join(' · ');
-
-  return (
-    <a
-      href={fileUrl}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="group flex items-center gap-4 px-4 py-2.5 transition-colors hover:bg-white/[0.045]"
-    >
-      <div className="relative h-[64px] w-[64px] shrink-0 overflow-hidden rounded-[12px] bg-[#262833]">
-        {previewUrl ? (
-          <img
-            src={previewUrl}
-            alt={item.fileName || item.attachmentPath}
-            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
-            loading="lazy"
-          />
-        ) : (
-          <div className="grid h-full w-full place-items-center bg-[linear-gradient(160deg,#2f3240_0%,#21242d_100%)] text-[12px] font-[700] tracking-[0.35px] text-white/70">
-            {extensionLabel}
-          </div>
-        )}
-      </div>
-
-      <div className="min-w-0 flex-1">
-        <div className="truncate text-[17px] font-[500] leading-tight text-white/95">
-          {item.fileName || item.attachmentPath}
-        </div>
-        <div className="truncate text-[15px] text-white/56">{metaLine || (item.contentType || item.messageType)}</div>
-      </div>
-    </a>
-  );
-}
-
 export function GroupInfoPanel({
   chat,
   isOpen = false,
@@ -1144,10 +1053,6 @@ export function GroupInfoPanel({
   mediaLoading = false,
   mediaHasMore = false,
   onMediaLoadMore,
-  fileItems = [],
-  filesLoading = false,
-  filesHasMore = false,
-  onFilesLoadMore,
   onUpdateGroupSettings,
   onUpdateGroupPermissions,
   onCreateInviteLink,
@@ -1613,8 +1518,6 @@ export function GroupInfoPanel({
           canSendVideos: restrictionDraft.media.sendVideos,
           canSendStickersAndGifs: restrictionDraft.media.sendStickersAndGifs,
           canSendMusic: restrictionDraft.media.sendMusic,
-          canSendFiles: restrictionDraft.media.sendFiles,
-          canSendVoiceMessages: restrictionDraft.media.sendVoiceMessages,
           canSendVideoMessages: restrictionDraft.media.sendVideoMessages,
           canEmbedLinks: restrictionDraft.media.embedLinks,
           canSendPolls: restrictionDraft.media.sendPolls,
@@ -2001,20 +1904,14 @@ export function GroupInfoPanel({
         onMediaLoadMore();
         return;
       }
-      if (activeTab === 'files' && !filesLoading && filesHasMore && onFilesLoadMore) {
-        onFilesLoadMore();
-      }
     },
     [
       activeTab,
-      filesHasMore,
-      filesLoading,
       linksHasMore,
       linksLoading,
       memberContextMenu,
       mediaHasMore,
       mediaLoading,
-      onFilesLoadMore,
       onLinksLoadMore,
       onMediaLoadMore,
       isDurationMenuOpen,
@@ -2043,20 +1940,6 @@ export function GroupInfoPanel({
     }
     onMediaLoadMore();
   }, [activeTab, mediaHasMore, mediaItems.length, mediaLoading, onMediaLoadMore]);
-
-  useEffect(() => {
-    if (activeTab !== 'files' || filesLoading || !filesHasMore || !onFilesLoadMore) {
-      return;
-    }
-    const hasRenderableFiles = fileItems.some((item) => {
-      const type = (item.messageType || '').toLowerCase();
-      return type === 'file' || type === 'files';
-    });
-    if (hasRenderableFiles) {
-      return;
-    }
-    onFilesLoadMore();
-  }, [activeTab, fileItems, filesHasMore, filesLoading, onFilesLoadMore]);
 
   const memberEditorTitle =
     memberEditor?.mode === 'restrict-user' ? 'User Permissions' : memberEditor ? 'Admin Rights' : '';
@@ -2143,18 +2026,7 @@ export function GroupInfoPanel({
     () => Object.keys(permissionsDraft).length,
     [permissionsDraft]
   );
-  const visibleMediaItems = useMemo(
-    () => mediaItems.filter((item) => (item.messageType || '').toLowerCase() !== 'circle'),
-    [mediaItems]
-  );
-  const visibleFileItems = useMemo(
-    () =>
-      fileItems.filter((item) => {
-        const type = (item.messageType || '').toLowerCase();
-        return type === 'file' || type === 'files';
-      }),
-    [fileItems]
-  );
+  const visibleMediaItems = useMemo(() => mediaItems, [mediaItems]);
   const mediaViewerItems = useMemo<MediaViewerItem[]>(() => {
     const memberById = new Map(members.map((member) => [member.userId, member]));
     return visibleMediaItems.map((item) => {
@@ -3126,28 +2998,6 @@ export function GroupInfoPanel({
                 )}
               </div>
             )
-          ) : activeTab === 'files' ? (
-            visibleFileItems.length === 0 ? (
-              <div className="px-6 py-8 text-[14px] text-white/52">
-                {filesLoading ? 'Loading files...' : 'No files yet.'}
-              </div>
-            ) : (
-              <div className="pb-2 pt-2">
-                {visibleFileItems.map((item) => (
-                  <GroupFileListRow
-                    key={`${item.messageId}-${item.attachmentPath}`}
-                    item={item}
-                  />
-                ))}
-                {filesLoading ? (
-                  <div className="px-4 py-3 text-[13px] text-white/46">Loading more...</div>
-                ) : filesHasMore ? (
-                  <div className="px-4 py-3 text-[13px] text-white/46">Scroll to load more</div>
-                ) : (
-                  <div className="px-4 py-3 text-[13px] text-white/38">All files loaded</div>
-                )}
-              </div>
-            )
           ) : (
             <div className="px-6 py-8 text-[14px] text-white/52">No data.</div>
           )}
@@ -3584,8 +3434,6 @@ export function GroupInfoPanel({
                                 sendVideos: next,
                                 sendStickersAndGifs: next,
                                 sendMusic: next,
-                                sendFiles: next,
-                                sendVoiceMessages: next,
                                 sendVideoMessages: next,
                                 embedLinks: next,
                                 sendPolls: next,

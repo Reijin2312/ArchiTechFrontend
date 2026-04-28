@@ -23,18 +23,3 @@ export type SidebarChat = {
 export type MessageRow =
   | { type: 'divider'; key: string; label: string }
   | { type: 'message'; key: string; message: ChatMessage };
-
-export type ChatPlaybackKind = 'voice' | 'circle';
-
-export type ChatPlaybackState = {
-  mediaId: string;
-  kind: ChatPlaybackKind;
-  author: string;
-  createdAt: string;
-  currentSec: number;
-  durationSec: number;
-  isPlaying: boolean;
-  togglePlay: () => void;
-  seekBy: (deltaSec: number) => void;
-  stop: () => void;
-};

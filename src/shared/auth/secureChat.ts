@@ -11,7 +11,7 @@ export interface TextEntity {
 export interface ChatMessage {
   chatId: number
   content: string
-  messageType?: 'text' | 'image' | 'images' | 'file' | 'files' | 'voice' | 'circle'
+  messageType?: 'text' | 'image' | 'images'
   replyToId?: number
   images?: Array<{
     imagePath: string
@@ -34,7 +34,7 @@ export interface ReceivedMessage {
   chatId: number
   senderId: string
   content: string
-  messageType: 'text' | 'image' | 'images' | 'file' | 'files' | 'voice' | 'circle'
+  messageType: 'text' | 'image' | 'images'
   entities?: TextEntity[]
   images?: Array<{
     imagePath: string

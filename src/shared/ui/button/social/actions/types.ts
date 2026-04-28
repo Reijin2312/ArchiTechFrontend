@@ -33,9 +33,7 @@ export type AttachedImage = {
   height?: number;
   aspectRatio?: number;
   isImage?: boolean;
-  sendAsFile?: boolean;
   groupWithOthers?: boolean;
-  forcedMessageType?: 'voice' | 'circle';
   contentType?: string;
   sizeBytes?: number;
   uploadedData?: UploadImageResponse;
@@ -43,14 +41,12 @@ export type AttachedImage = {
 };
 
 export type AttachImageOptions = {
-  forcedMessageType?: 'voice' | 'circle';
   preview?: string;
   thumbnailUrl?: string;
   strippedThumbnailUrl?: string;
   width?: number;
   height?: number;
   aspectRatio?: number;
-  sendAsFile?: boolean;
   groupWithOthers?: boolean;
 };
 
@@ -238,8 +234,6 @@ export type SocialChatActions = {
       canSendVideos?: boolean;
       canSendStickersAndGifs?: boolean;
       canSendMusic?: boolean;
-      canSendFiles?: boolean;
-      canSendVoiceMessages?: boolean;
       canSendVideoMessages?: boolean;
       canEmbedLinks?: boolean;
       canSendPolls?: boolean;
@@ -317,7 +311,6 @@ export type SocialChatActions = {
   pinGroupMessage: (chatId: number, messageId: number) => Promise<void>;
   unpinGroupMessage: (chatId: number) => Promise<void>;
   getGroupMedia: (chatId: number, before?: number, limit?: number) => Promise<ChatGroupMediaItemsResponse>;
-  getGroupFiles: (chatId: number, before?: number, limit?: number) => Promise<ChatGroupMediaItemsResponse>;
   getGroupAdminLog: (
     chatId: number,
     before?: number,
@@ -332,7 +325,7 @@ export type SocialChatActions = {
   sendMessageToUser: (
     recipientId: string,
     message: string,
-    messageType?: 'text' | 'image' | 'images' | 'file' | 'files' | 'voice' | 'circle',
+    messageType?: 'text' | 'image' | 'images',
     imagePath?: string,
     imageEncrypted?: boolean,
     imageEncryptionIv?: string,
@@ -352,10 +345,7 @@ export type SocialChatActions = {
   deleteMessage: (messageId: number | string) => Promise<void>;
   copyMessageText: (text: string) => void;
   uploadImage: (
-    file: File,
-    options?: {
-      forcedMessageType?: 'voice' | 'circle';
-    }
+    file: File
   ) => Promise<void>;
 };
 
