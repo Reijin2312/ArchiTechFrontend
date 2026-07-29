@@ -1,10 +1,11 @@
+// auto-generated
 export type ImgVariant = { w:number; path:string };
 export type ImgEntry = { original:{ w:number; h:number; png:string; avif:string; webp:string }; avif:ImgVariant[]; webp:ImgVariant[] };
 export const IMAGES: Record<string, ImgEntry> = {
   "bg.png": {
     "original": {
-      "w": 4140,
-      "h": 2016,
+      "w": 1672,
+      "h": 941,
       "png": "/images/bg.png",
       "avif": "/images/bg.avif",
       "webp": "/images/bg.webp"
@@ -29,10 +30,6 @@ export const IMAGES: Record<string, ImgEntry> = {
       {
         "w": 1600,
         "path": "/images/bg-1600.avif"
-      },
-      {
-        "w": 1920,
-        "path": "/images/bg-1920.avif"
       }
     ],
     "webp": [
@@ -55,10 +52,6 @@ export const IMAGES: Record<string, ImgEntry> = {
       {
         "w": 1600,
         "path": "/images/bg-1600.webp"
-      },
-      {
-        "w": 1920,
-        "path": "/images/bg-1920.webp"
       }
     ]
   },

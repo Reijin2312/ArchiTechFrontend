@@ -513,10 +513,15 @@ export default function HomePage() {
         transition={{ duration: 0.5, ease: 'easeOut' }}
       >
         <div className="grid md:grid-cols-2 gap-10 md:gap-14 items-stretch">
-          <div className="md:flex md:flex-col md:h-full">
-            <h1 className="mb-3 text-[22px] md:text-[24px] font-bold leading-tight text-left! font-techno text-techno-glow">
-              Присоединяйся к <span className="text-indigo-400">{SERVER_NAME}!</span>
-            </h1>
+          <div className="md:flex md:flex-col md:h-full md:justify-between">
+            <div>
+              <img
+                src="/images/logo-steel-wings.png"
+                alt={`${SERVER_NAME} Steel Wings`}
+                className="mb-6 block w-[420px] max-w-full select-none object-contain drop-shadow-[0_0_28px_rgba(99,102,241,0.42)] md:translate-x-16"
+                draggable={false}
+              />
+
             <p className="mt-4 text-slate-300 max-w-prose">
               Модифицированный техномагический сервер c упором на строительство и творчество. Без вайпов и с уникальными самописными модами. Добрая администрация и отсутствие гриферов.
             </p>
@@ -650,15 +655,21 @@ export default function HomePage() {
                 {typeof status?.tps === 'number' && <span>TPS: <strong className="text-slate-100">{status.tps.toFixed(1)}</strong></span>}
                 {typeof status?.latencyMs === 'number' && <span>Пинг: <strong className="text-slate-100">{status.latencyMs}ms</strong></span>}
               </div>
+            </div>
+            </div>
 
-              <div>
-                <a href={LAUNCHER_DOWNLOAD_URL} className="inline-flex rounded-xl px-5 py-3 bg-indigo-600 hover:bg-indigo-500 text-center">Скачать лаунчер</a>
-              </div>
+            <div className="mt-7 md:mt-0">
+              <a
+                href={LAUNCHER_DOWNLOAD_URL}
+                className="inline-flex rounded-xl bg-indigo-600 px-5 py-3 text-center shadow-[0_0_24px_rgba(79,70,229,0.45)] transition hover:bg-indigo-500"
+              >
+                Скачать лаунчер
+              </a>
             </div>
           </div>
 
         <div
-          className="relative max-w-full overflow-x-hidden"
+          className="relative flex h-full max-w-full flex-col overflow-x-hidden"
           onMouseEnter={() => {
             setSliderPaused(true)
             setGalleryHover(true)

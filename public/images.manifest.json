@@ -1,8 +1,8 @@
 {
   "bg.png": {
     "original": {
-      "w": 4140,
-      "h": 2016,
+      "w": 1672,
+      "h": 941,
       "png": "/images/bg.png",
       "avif": "/images/bg.avif",
       "webp": "/images/bg.webp"
@@ -27,10 +27,6 @@
       {
         "w": 1600,
         "path": "/images/bg-1600.avif"
-      },
-      {
-        "w": 1920,
-        "path": "/images/bg-1920.avif"
       }
     ],
     "webp": [
@@ -53,10 +49,6 @@
       {
         "w": 1600,
         "path": "/images/bg-1600.webp"
-      },
-      {
-        "w": 1920,
-        "path": "/images/bg-1920.webp"
       }
     ]
   },
