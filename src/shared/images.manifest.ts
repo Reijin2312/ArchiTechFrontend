@@ -2,6 +2,29 @@
 export type ImgVariant = { w:number; path:string };
 export type ImgEntry = { original:{ w:number; h:number; png:string; avif:string; webp:string }; avif:ImgVariant[]; webp:ImgVariant[] };
 export const IMAGES: Record<string, ImgEntry> = {
+  "bg.png": {
+    "original": {
+      "w": 1672,
+      "h": 941,
+      "png": "/images/bg.png",
+      "avif": "/images/bg.avif",
+      "webp": "/images/bg.webp"
+    },
+    "avif": [
+      { "w": 320, "path": "/images/bg-320.avif" },
+      { "w": 640, "path": "/images/bg-640.avif" },
+      { "w": 960, "path": "/images/bg-960.avif" },
+      { "w": 1280, "path": "/images/bg-1280.avif" },
+      { "w": 1600, "path": "/images/bg-1600.avif" }
+    ],
+    "webp": [
+      { "w": 320, "path": "/images/bg-320.webp" },
+      { "w": 640, "path": "/images/bg-640.webp" },
+      { "w": 960, "path": "/images/bg-960.webp" },
+      { "w": 1280, "path": "/images/bg-1280.webp" },
+      { "w": 1600, "path": "/images/bg-1600.webp" }
+    ]
+  },
   "screen1.png": {
     "original": {
       "w": 1280,

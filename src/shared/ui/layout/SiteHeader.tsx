@@ -12,7 +12,7 @@ import {
   RULES_URL,
   SHOP_URL,
   WIKI_URL,
-  CHAT_URL,
+  // CHAT_URL,
   CONTACTS_URL,
   DISCORD_URL,
   TELEGRAM_URL,
@@ -181,6 +181,7 @@ export default function SiteHeader() {
             >
               Вики
             </a>
+            {/* Messenger is intentionally hidden; keep the link here for an easy rollback.
             <a
               href={CHAT_URL}
               className={linkCls(isActive(CHAT_URL))}
@@ -188,6 +189,7 @@ export default function SiteHeader() {
             >
               Chat
             </a>
+            */}
             <a
               href={TELEGRAM_URL}
               rel="noopener noreferrer"
@@ -384,6 +386,7 @@ export default function SiteHeader() {
             >
               Вики
             </a>
+            {/* Messenger is intentionally hidden; keep the mobile link here for an easy rollback.
             <a
               href={CHAT_URL}
               onClick={() => setMobileOpen(false)}
@@ -393,6 +396,7 @@ export default function SiteHeader() {
             >
               Chat
             </a>
+            */}
           </nav>
 
           {/* Блок профиля / логина */}
