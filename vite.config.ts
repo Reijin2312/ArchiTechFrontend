@@ -9,7 +9,9 @@ const apiUrl = process.env.VITE_API_PROXY_TARGET || 'http://localhost:51788'
 export default defineConfig({
   plugins: [react()],
   server: {
-    host: 'localhost',
+    // Bind explicitly to IPv4. On Windows, `localhost` can resolve to ::1,
+    // which leaves the dev server unreachable for IPv4-only clients/webviews.
+    host: '127.0.0.1',
     port: 5173,
     //https: {
     //key: fs.readFileSync('./certs/localhost-key.pem'),

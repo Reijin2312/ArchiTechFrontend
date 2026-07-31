@@ -21,6 +21,7 @@ import PrivacyPolicyPage from '@/pages/legal/PrivacyPolicyPage';
 import EmailChangeStartPage from '@/pages/settings/EmailChangeStartPage';
 import ChangeEmailNewPage from '@/pages/settings/ChangeEmailNewPage';
 import ContactsPage from '@/pages/public/ContactsPage';
+import MapPage from '@/pages/public/MapPage';
 import AboutServerPage from '@/pages/public/AboutServerPage';
 import TgBotLoginWebApp from '@/features/auth/pages/TgBotLoginWebApp';
 import DeviceLoginDonePage from '@/features/auth/pages/DeviceLoginDonePage';
@@ -54,6 +55,7 @@ export const router = createBrowserRouter([
       { path: '/wiki', element: <WikiPage/>},
       { path: '/about', element: <AboutServerPage />},
       { path: '/contacts', element: <ContactsPage />},
+      { path: '/map', element: <MapPage />},
       { path: '/terms', element: <UserAgreementPage/>},
       { path: '/privacy', element: <PrivacyPolicyPage/>},
       { path: '/settings/profile', element: <SettingsProfilePage/>},

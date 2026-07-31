@@ -10,10 +10,9 @@ import { SvgTelegram, SvgDiscord, SvgMenu, SvgX } from '@/shared/ui/image/Icons'
 import {
   SERVER_NAME,
   RULES_URL,
-  SHOP_URL,
   WIKI_URL,
   // CHAT_URL,
-  CONTACTS_URL,
+  MAP_URL,
   DISCORD_URL,
   TELEGRAM_URL,
 } from '@/shared/constants';
@@ -154,13 +153,6 @@ export default function SiteHeader() {
               О сервере
             </a>
             <a
-              href={SHOP_URL}
-              className={linkCls(isActive(SHOP_URL))}
-              aria-current={isActive(SHOP_URL) ? 'page' : undefined}
-            >
-              Проходка
-            </a>
-            <a
               href={RULES_URL}
               className={linkCls(isActive(RULES_URL))}
               aria-current={isActive(RULES_URL) ? 'page' : undefined}
@@ -168,11 +160,11 @@ export default function SiteHeader() {
               Правила
             </a>
             <a
-              href={CONTACTS_URL}
-              className={linkCls(isActive(CONTACTS_URL))}
-              aria-current={isActive(CONTACTS_URL) ? 'page' : undefined}
+              href={MAP_URL}
+              className={linkCls(isActive(MAP_URL))}
+              aria-current={isActive(MAP_URL) ? 'page' : undefined}
             >
-              Контакты
+              Карта
             </a>
             <a
               href={WIKI_URL}
@@ -351,15 +343,6 @@ export default function SiteHeader() {
               О сервере
             </a>
             <a
-              href={SHOP_URL}
-              onClick={() => setMobileOpen(false)}
-              className={`rounded-lg px-3 py-2 ${
-                isActive(SHOP_URL) ? 'bg-slate-800 text-sky-300' : 'text-slate-200 hover:bg-slate-900'
-              }`}
-            >
-              Проходка
-            </a>
-            <a
               href={RULES_URL}
               onClick={() => setMobileOpen(false)}
               className={`rounded-lg px-3 py-2 ${
@@ -369,13 +352,13 @@ export default function SiteHeader() {
               Правила
             </a>
             <a
-              href={CONTACTS_URL}
+              href={MAP_URL}
               onClick={() => setMobileOpen(false)}
               className={`rounded-lg px-3 py-2 ${
-                isActive(CONTACTS_URL) ? 'bg-slate-800 text-sky-300' : 'text-slate-200 hover:bg-slate-900'
+                isActive(MAP_URL) ? 'bg-slate-800 text-sky-300' : 'text-slate-200 hover:bg-slate-900'
               }`}
             >
-              Контакты
+              Карта
             </a>
             <a
               href={WIKI_URL}

@@ -1,5 +1,5 @@
 export const SERVER_NAME = 'ArchiTech MC';
-export const SERVER_IP = 'architech-mc.online';
+export const SERVER_IP = 'architech-mc.com';
 
 export const DISCORD_URL = 'https://discord.gg/x6JwVPwPtw';
 export const TELEGRAM_URL = 'https://t.me/archi_tech_official';
@@ -10,6 +10,8 @@ export const SHOP_URL = '/shop';
 export const WIKI_URL = '/wiki';
 export const CHAT_URL = '/chat';
 export const CONTACTS_URL = '/contacts';
+export const MAP_URL = '/map';
+export const ONLINE_MAP_URL = 'https://map.architech-mc.com';
 
 export const SUPPORT_EMAIL = 'hello@architech-mc.ru';
 

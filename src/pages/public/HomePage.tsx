@@ -1,13 +1,13 @@
 import React, { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { SERVER_NAME, SERVER_IP, DISCORD_URL, TELEGRAM_URL, RULES_URL, SHOP_URL, LAUNCHER_DOWNLOAD_URL } from '@/shared/constants'
+import { SERVER_NAME, SERVER_IP, RULES_URL, SHOP_URL, WIKI_URL, LAUNCHER_DOWNLOAD_URL } from '@/shared/constants'
 import { useWallpaper } from '@/shared/ui/wallpaper/useWallpaper';
 import { AnimatePresence, motion, useReducedMotion, type Variants, type Transition, } from 'framer-motion'
 import { Seo } from '@/shared/seo/seo';
 import { routesMeta } from '@/shared/seo/routesMeta';
 import { ResponsiveImage } from '@/shared/ui/image/ResponsiveImage'
 import { IMAGES } from '@/shared/images.manifest'
-import { SvgTelegram, SvgDiscord, SvgUserPlus, SvgMcBlockGrass, SvgCheck, SvgCopy, SvgChevronDown, SvgCrown } from '@/shared/ui/image/Icons'
+import { SvgUserPlus, SvgSkin, SvgMcBlockGrass, SvgServer, SvgModpack, SvgRoute, SvgLauncher, SvgDownload, SvgShield, SvgGitHub, SvgCheck, SvgCopy, SvgChevronDown, SvgCrown } from '@/shared/ui/image/Icons'
 import { useIsMobile } from '@/shared/ui/utils/useIsMobile';
 import { TEAM_MEMBERS } from '@/shared/data/team';
 import { useTeamAvatars } from '@/shared/hooks/useTeamAvatars';
@@ -30,6 +30,16 @@ type OnlineHistoryPoint = {
 
 type OnlineRange = '24h' | '7d' | '30d'
 type LeaderboardRange = '7d' | '30d' | 'all'
+
+// The historical online chart is temporarily hidden from the landing page.
+// Keep its code below for an easy return when it becomes marketing-positive.
+const ONLINE_TREND_ENABLED = false
+
+// The player counter is temporarily hidden from the hero.
+// Keep the complete UI below so it can be restored with one flag.
+const ONLINE_COUNTER_ENABLED = false
+
+const NEOFORGE_LOGO_URL = 'https://raw.githubusercontent.com/neoforged/Documentation/main/static/img/logo.svg'
 
 type OnlineTrendResponse = {
   range?: OnlineRange
@@ -93,7 +103,10 @@ export default function HomePage() {
   const [playersListPosition, setPlayersListPosition] = useState({ top: 0 })
   const [onlinePoints, setOnlinePoints] = useState<OnlineHistoryPoint[]>([])
   const [onlineRange, setOnlineRange] = useState<OnlineRange>('7d')
-  const [leaderboardRange, setLeaderboardRange] = useState<LeaderboardRange>('7d')
+  // Range switching is temporarily disabled. Keep the previous stateful version
+  // here so it can be restored together with the tabs in TopPlayersSection.
+  // const [leaderboardRange, setLeaderboardRange] = useState<LeaderboardRange>('7d')
+  const leaderboardRange: LeaderboardRange = 'all'
   const [leaderboardPlayers, setLeaderboardPlayers] = useState<LeaderboardPlayer[]>([])
   const [leaderboardAvatars, setLeaderboardAvatars] = useState<Record<string, string>>({})
   const [leaderboardLoading, setLeaderboardLoading] = useState(true)
@@ -280,6 +293,8 @@ export default function HomePage() {
   }, [])
 
   useEffect(() => {
+    if (!ONLINE_TREND_ENABLED) return
+
     let stop = false
 
     async function loadOnlineTrend() {
@@ -522,7 +537,7 @@ export default function HomePage() {
                 draggable={false}
               />
               <p className="mt-4 text-slate-300 max-w-prose">
-                Небольшой ламповый техномагический сервер c упором на строительство и творчество. Без вайпов и с уникальными самописными модами. Добрая администрация и отсутствие гриферов.
+                Небольшой ламповый техномагический сервер c упором на строительство и творчество, где можно возвести завод, улететь на собственном дирижабле и случайно стать магом. В основе — Create, Create: Aeronautics и Ars Nouveau с аддонами. Без вайпов и с авторскими портами BetterEnd & BetterNether.
               </p>
 
             <div className="mt-6 grid gap-3">
@@ -558,11 +573,13 @@ export default function HomePage() {
 
               <div className="flex flex-wrap items-center gap-4 text-sm text-slate-300">
                 <Badge label={status?.online ? 'Онлайн' : 'Офлайн'} ok={!!status?.online} reduceMotion={disableInteractiveMotion} />
-                <div
-                  className="relative"
-                  onMouseEnter={() => !isMobile && setShowPlayersList(true)}
-                  onMouseLeave={() => !isMobile && setShowPlayersList(false)}
-                >
+                {/* Online player counter is temporarily disabled. */}
+                {ONLINE_COUNTER_ENABLED && (
+                  <div
+                    className="relative"
+                    onMouseEnter={() => !isMobile && setShowPlayersList(true)}
+                    onMouseLeave={() => !isMobile && setShowPlayersList(false)}
+                  >
                   <button
                     ref={playersButtonRef}
                     type="button"
@@ -649,8 +666,20 @@ export default function HomePage() {
                       </>
                     )}
                   </AnimatePresence>
-                </div>
-                {status?.version && <span>Версия: <strong className="text-slate-100">{status.version} Neoforge</strong></span>}
+                  </div>
+                )}
+                <span className="inline-flex items-center gap-2">
+                  <img
+                    src={NEOFORGE_LOGO_URL}
+                    alt=""
+                    aria-hidden="true"
+                    className="size-6 shrink-0 object-contain"
+                  />
+                  <span>Версия: <strong className="text-slate-100">1.21.1 NeoForge</strong></span>
+                </span>
+                {/* Dynamic server version is intentionally kept disabled.
+                {status?.version && <span>Версия: <strong className="text-slate-100">{status.version} NeoForge</strong></span>}
+                */}
                 {typeof status?.tps === 'number' && <span>TPS: <strong className="text-slate-100">{status.tps.toFixed(1)}</strong></span>}
                 {typeof status?.latencyMs === 'number' && <span>Пинг: <strong className="text-slate-100">{status.latencyMs}ms</strong></span>}
               </div>
@@ -658,12 +687,23 @@ export default function HomePage() {
             </div>
             </div>
 
-            <div className="mt-7 md:mt-0">
+            <div className="mt-7 flex flex-wrap items-center gap-2 md:mt-0 md:mb-2">
               <a
                 href={LAUNCHER_DOWNLOAD_URL}
-                className="inline-flex rounded-xl bg-indigo-600 px-5 py-3 text-center shadow-[0_0_24px_rgba(79,70,229,0.45)] transition hover:bg-indigo-500"
+                className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-3 text-center shadow-[0_0_24px_rgba(79,70,229,0.45)] transition hover:bg-indigo-500"
               >
+                <SvgDownload className="size-5" />
                 Скачать лаунчер
+              </a>
+              <a
+                href="https://github.com/Reijin2312/ArchiTech_Launcher"
+                target="_blank"
+                rel="noreferrer noopener"
+                aria-label="Исходный код лаунчера на GitHub"
+                title="Исходный код лаунчера"
+                className="inline-flex size-11 items-center justify-center text-slate-400 transition hover:scale-110 hover:text-white"
+              >
+                <SvgGitHub className="size-6" />
               </a>
             </div>
           </div>
@@ -725,7 +765,7 @@ export default function HomePage() {
                     : { type: 'spring', stiffness: 280, damping: 28, mass: 0.65 }
                 }
               >
-                <div className="w-fit max-w-[90%] rounded-xl border border-slate-700/80 bg-slate-950/75 px-4 py-2.5 backdrop-blur-md shadow-[0_10px_30px_rgba(2,6,23,0.62)]">
+                <div className="w-fit max-w-[90%] rounded-xl border border-slate-700/80 bg-slate-950/90 px-4 py-2.5 shadow-[0_10px_30px_rgba(2,6,23,0.62)]">
                   <div className="text-[10px] uppercase tracking-[0.14em] text-indigo-300/95">Галерея</div>
                   <div className="mt-1 text-sm font-semibold text-slate-100">{activeShotMeta.title}</div>
                   <div className="text-xs text-slate-300">{activeShotMeta.subtitle}</div>
@@ -786,32 +826,32 @@ export default function HomePage() {
         transition={{ duration: 0.5, ease: 'easeOut' }}
       >
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <CardCTA 
-            title={<span className="inline-flex items-center gap-2"><SvgMcBlockGrass className="h-5" />Лаунчер</span>}
-            text="Автоматическое обновление модов" 
+          <CardCTA
+            title={<span className="inline-flex items-center gap-2"><SvgServer className="h-5" />О сервере</span>}
+            text="Что такое этот ваш ArchiTech, про что он и с чем его едят"
+            href="/about"
+            button="Узнать больше"
+            reduceMotion={disableInteractiveMotion}
+          />
+          <CardCTA
+            title={<span className="inline-flex items-center gap-2"><SvgModpack className="h-5" />Посмотреть сборку</span>}
+            text="Щепотка техники, щепотка магии, вуаля - это техномагия!"
+            href={`${WIKI_URL}#mods`}
+            button="Открыть вики"
+            reduceMotion={disableInteractiveMotion}
+          />
+          <CardCTA
+            title={<span className="inline-flex items-center gap-2"><SvgRoute className="h-5" />Как начать играть</span>}
+            text="Пара шагов и правильный ник — добро пожаловать в Сити-17"
+            href={SHOP_URL}
+            button="Начать играть"
+            reduceMotion={disableInteractiveMotion}
+          />
+          <CardCTA
+            title={<span className="inline-flex items-center gap-2"><SvgLauncher className="h-5" />Скачать лаунчер</span>}
+            text="Скачал и забыл про ручные обновления. Магия вне Хогвартса"
             href={LAUNCHER_DOWNLOAD_URL}
             button="Скачать"
-            reduceMotion={disableInteractiveMotion}
-          />
-          <CardCTA 
-            title={<span className="inline-flex items-center gap-2"><SvgUserPlus className="h-5" />Доступ на сервер</span>}
-            text="Получить проходку в Telegram-боте" 
-            href={SHOP_URL} 
-            button="Перейти"
-            reduceMotion={disableInteractiveMotion}
-          />
-          <CardCTA
-            title={<span className="inline-flex items-center gap-2"><SvgDiscord className="h-5" />Discord</span>}
-            text="Посиделки в голосовых каналах"
-            href={DISCORD_URL}
-            button="Вступить"
-            reduceMotion={disableInteractiveMotion}
-          />
-          <CardCTA
-            title={<span className="inline-flex items-center gap-2"><SvgTelegram className="h-5" />Telegram</span>}
-            text="Новости, уведомления, анонсы"
-            href={TELEGRAM_URL}
-            button="Подписаться"
             reduceMotion={disableInteractiveMotion}
           />
         </div>
@@ -845,7 +885,7 @@ export default function HomePage() {
           className="text-2xl font-semibold mb-6 font-techno"
           variants={disableEntranceMotion ? undefined : faqItem}
         >
-          {'\u0422\u043e\u043f \u0438\u0433\u0440\u043e\u043a\u043e\u0432'}
+          {'\u041b\u0435\u0433\u0435\u043d\u0434\u044b \u0441\u0435\u0440\u0432\u0435\u0440\u0430'}
         </motion.h2>
 
         <TopPlayersSection
@@ -853,11 +893,11 @@ export default function HomePage() {
           avatars={leaderboardAvatars}
           loading={leaderboardLoading}
           range={leaderboardRange}
-          onRangeChange={setLeaderboardRange}
           disableMotion={disableInteractiveMotion}
         />
       </motion.section>
 
+      {/* Historical online trend is temporarily hidden from the landing page.
       <motion.section
         className="mx-auto max-w-7xl px-4 py-10"
         variants={faqContainer}
@@ -882,6 +922,7 @@ export default function HomePage() {
           disableMotion={disableInteractiveMotion}
         />
       </motion.section>
+      */}
 
       <motion.section
         className="mx-auto max-w-7xl px-4 py-10"
@@ -899,12 +940,102 @@ export default function HomePage() {
 
         <motion.div className="grid gap-3">
           <motion.div variants={disableEntranceMotion ? undefined : faqItem}>
-          <Faq q="Как попасть на сервер?" a={<StepsGuide version={status?.version} disableMotion={disableEntranceMotion} />} />
+          <Faq icon={<SvgRoute className="size-5" />} q="Как начать играть?" a={<StepsGuide disableMotion={disableEntranceMotion} />} />
+          </motion.div>
+
+          <motion.div variants={disableEntranceMotion ? undefined : faqItem}>
+            <Faq
+              q="Нужен ли лаунчер?"
+              icon={<SvgLauncher className="size-5" />}
+              a={
+                <FaqInfoCard label="Установка и обновления">
+                  Да, лаунчер сам установит игру, Neoforge и моды, а в случае обновления автономно поменяет сборку — моды не придётся искать и собирать вручную. Также он выступает в роли системы авторизации.
+                </FaqInfoCard>
+              }
+            />
+          </motion.div>
+
+          <motion.div variants={disableEntranceMotion ? undefined : faqItem}>
+            <Faq
+              q="Безопасен ли лаунчер?"
+              icon={<SvgShield className="size-5" />}
+              a={
+                <FaqInfoCard label="Открытый исходный код">
+                  Исходный код лаунчера открыт и прозрачен: его можно самостоятельно проверить в{' '}
+                  <a
+                    href="https://github.com/Reijin2312/ArchiTech_Launcher"
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    className="text-sky-300 underline decoration-sky-400/60 underline-offset-2 hover:text-sky-200"
+                  >
+                    официальном репозитории GitHub
+                  </a>
+                  . Скачивайте лаунчер только с официального сайта проекта и не переходите по подозрительным ссылкам.
+                </FaqInfoCard>
+              }
+            />
+          </motion.div>
+
+          <motion.div variants={disableEntranceMotion ? undefined : faqItem}>
+            <Faq
+              q="Сервер бесплатный?"
+              icon={<SvgUserPlus className="size-5" />}
+              a={
+                <FaqInfoCard label="Свободный вход">
+                  Да, вход полностью бесплатный. Зарегистрируйтесь на сайте и войдите в аккаунт через лаунчер, после чего сервер сам появится в списке игры.
+                </FaqInfoCard>
+              }
+            />
+          </motion.div>
+
+          <motion.div variants={disableEntranceMotion ? undefined : faqItem}>
+            <Faq
+              q="Нужна ли лицензия Minecraft?"
+              icon={<SvgShield className="size-5" />}
+              a={
+                <FaqInfoCard label="Система аккаунтов">
+                  Нет. Экосистема ArchiTech использует собственную систему аккаунтов, поэтому отдельная лицензия для входа через лаунчер не требуется.
+                </FaqInfoCard>
+              }
+            />
+          </motion.div>
+
+          <motion.div variants={disableEntranceMotion ? undefined : faqItem}>
+            <Faq
+              q="Какие моды и версия?"
+              icon={<SvgModpack className="size-5" />}
+              a={
+                <FaqInfoCard label="Состав сборки">
+                  <>
+                    <span>Minecraft 1.21.1 NeoForge. Основные моды: Create, Create: Aeronautics, Ars Nouveau, их аддоны и авторские порты BetterEnd и BetterNether.</span>{' '}
+                    <a
+                      href={`${WIKI_URL}#mods`}
+                      className="mt-2 inline-flex text-sky-300 underline decoration-sky-400/60 underline-offset-2 hover:text-sky-200"
+                    >
+                      Полный состав сборки — в вики.
+                    </a>
+                  </>
+                </FaqInfoCard>
+              }
+            />
+          </motion.div>
+
+          <motion.div variants={disableEntranceMotion ? undefined : faqItem}>
+            <Faq
+              q="Можно ли поставить свой скин?"
+              icon={<SvgSkin className="size-5" />}
+              a={
+                <FaqInfoCard label="Скины игроков">
+                  Да. Можно добавить несколько своих скинов и переключать их в реальном времени прямо в профиле.
+                </FaqInfoCard>
+              }
+            />
           </motion.div>
 
           <motion.div variants={disableEntranceMotion ? undefined : faqItem}>
           <Faq
             q="Проводятся ли вайпы?"
+            icon={<SvgMcBlockGrass className="size-5" />}
             a={
               <div className="relative overflow-hidden rounded-2xl border border-slate-800 bg-linear-to-br from-slate-950/80 via-slate-900/60 to-slate-900/20 backdrop-blur-md backdrop-saturate-150 px-4 py-4 sm:px-5 sm:py-5 group transition">
                 <div className="pointer-events-none absolute -top-20 -right-16 h-40 w-40 rounded-full bg-emerald-500/10 blur-3xl" />
@@ -913,9 +1044,6 @@ export default function HomePage() {
                 <div className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-indigo-500/40 via-sky-500/60 to-emerald-500/40 opacity-80" />
 
                 <div className="flex items-start gap-3">
-                  <div className="mt-0.5 size-9 shrink-0 grid place-items-center rounded-xl bg-indigo-600/20 text-indigo-300">
-                    <SvgMcBlockGrass className="h-5" />
-                  </div>
                   <div className="space-y-1">
                     <div className="inline-flex items-center gap-2 text-[11px] uppercase tracking-wide text-slate-400">
                       <span className="rounded-full border border-slate-700/80 bg-slate-950/60 px-2 py-0.5">
@@ -956,7 +1084,8 @@ export default function HomePage() {
 
             <motion.div variants={disableEntranceMotion ? undefined : faqItem}>
             <Faq
-              q="Правила?"
+              q="Какие правила?"
+              icon={<SvgShield className="size-5" />}
               a={
                 <div className="relative overflow-hidden rounded-2xl border border-slate-800 bg-linear-to-br from-slate-950/80 via-slate-900/60 to-slate-900/20 backdrop-blur-md backdrop-saturate-150 px-4 py-4 sm:px-5 sm:py-5 group transition">
                   <div className="pointer-events-none absolute -top-24 -left-16 h-40 w-40 rounded-full bg-rose-500/12 blur-3xl" />
@@ -1368,29 +1497,32 @@ function TopPlayersSection({
   avatars,
   loading,
   range,
-  onRangeChange,
+  // onRangeChange,
   disableMotion,
 }: {
   players: LeaderboardPlayer[]
   avatars: Record<string, string>
   loading: boolean
   range: LeaderboardRange
-  onRangeChange: (range: LeaderboardRange) => void
+  // onRangeChange: (range: LeaderboardRange) => void
   disableMotion?: boolean
 }) {
   const rangeLabel = range === 'all' ? '\u0432\u0441\u0451 \u0432\u0440\u0435\u043c\u044f' : range === '7d' ? '7\u0434' : '30\u0434'
+  /* Range tabs are temporarily hidden while the leaderboard is fixed to `all`.
   const rangeTabs: Array<{ value: LeaderboardRange; label: string }> = [
     { value: '7d', label: '7\u0434' },
     { value: '30d', label: '30\u0434' },
     { value: 'all', label: '\u0432\u0441\u0451' },
   ]
   const rangePillLayoutId = `leaderboard-range-pill-${useId().replace(/:/g, '')}`
+  */
 
   if (loading) {
     return (
       <div className="rounded-2xl border border-slate-800 bg-linear-to-b from-slate-900/70 to-slate-900/20 p-5 backdrop-blur-md backdrop-saturate-150">
         <div className="mb-4 flex items-center justify-between gap-2">
           <div className="text-sm text-slate-300 font-arcane uppercase">{'\u041b\u0438\u0434\u0435\u0440\u044b \u043f\u043e \u0438\u0433\u0440\u043e\u0432\u043e\u043c\u0443 \u0432\u0440\u0435\u043c\u0435\u043d\u0438 \u0437\u0430'} {rangeLabel}</div>
+          {/* Range switch is temporarily disabled.
           <div className="inline-flex rounded-xl border border-slate-700 bg-slate-950/60 p-1">
             {rangeTabs.map((tab) => (
               <button
@@ -1405,6 +1537,7 @@ function TopPlayersSection({
               </button>
             ))}
           </div>
+          */}
         </div>
         <div className="space-y-2">
           {[0, 1, 2].map((idx) => (
@@ -1419,6 +1552,7 @@ function TopPlayersSection({
     <div className="rounded-2xl border border-slate-800 bg-linear-to-b from-slate-900/70 to-slate-900/20 p-5 backdrop-blur-md backdrop-saturate-150">
       <div className="mb-4 flex items-center justify-between gap-2">
         <div className="text-sm text-slate-300 font-arcane uppercase">{'\u041b\u0438\u0434\u0435\u0440\u044b \u043f\u043e \u0438\u0433\u0440\u043e\u0432\u043e\u043c\u0443 \u0432\u0440\u0435\u043c\u0435\u043d\u0438 \u0437\u0430'} {rangeLabel}</div>
+        {/* Range switch is temporarily disabled.
         <div className="inline-flex rounded-xl border border-slate-700 bg-slate-950/60 p-1">
           {rangeTabs.map((tab) => {
             const active = range === tab.value
@@ -1445,6 +1579,7 @@ function TopPlayersSection({
             )
           })}
         </div>
+        */}
       </div>
 
       {players.length === 0 ? (
@@ -1645,17 +1780,7 @@ function CardCTA({
 }
 
 
-function StepsGuide({ version, disableMotion }: { version?: string; disableMotion?: boolean }) {
-  const [copied, setCopied] = useState<'idle' | 'ok' | 'err'>('idle')
-  async function copy() {
-    try {
-      await navigator.clipboard.writeText(SERVER_IP)
-      setCopied('ok'); setTimeout(() => setCopied('idle'), 1500)
-    } catch {
-      setCopied('err'); setTimeout(() => setCopied('idle'), 1500)
-    }
-  }
-
+function StepsGuide({ disableMotion }: { disableMotion?: boolean }) {
   const spring: Transition = { type: 'spring', stiffness: 380, damping: 26, mass: 0.6 }
 
   const container: Variants = {
@@ -1697,7 +1822,7 @@ function StepsGuide({ version, disableMotion }: { version?: string; disableMotio
         <SvgUserPlus className="h-5" />
       </div>
       <div className="text-lg font-semibold mb-2">Зарегистрируйтесь на сайте</div>
-      <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+      <div className="min-h-[112px] rounded-xl border border-slate-800 bg-slate-900/60 p-4">
         <Link to="/auth/login" className="inline-flex rounded-xl px-4 py-2 bg-indigo-600 hover:bg-indigo-500">
           Войти или зарегистрироваться
         </Link>
@@ -1722,15 +1847,15 @@ function StepsGuide({ version, disableMotion }: { version?: string; disableMotio
     />
 
     <div className="p-5">
-      <div className="size-10 rounded-xl bg-emerald-600/20 grid place-items-center text-emerald-300 mb-3">
-        <SvgTelegram className="h-5" />
+      <div className="size-10 rounded-xl bg-indigo-600/20 grid place-items-center text-indigo-300 mb-3">
+        <SvgLauncher className="h-5" />
       </div>
-      <div className="text-lg font-semibold mb-2">Получите доступ</div>
-      <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
-        <a href={TELEGRAM_URL} className="inline-flex rounded-xl px-4 py-2 bg-sky-600 hover:bg-sky-500">
-          Перейти в бота
+      <div className="text-lg font-semibold mb-2">Скачайте лаунчер</div>
+      <div className="min-h-[112px] rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+        <a href={LAUNCHER_DOWNLOAD_URL} className="inline-flex rounded-xl px-4 py-2 bg-indigo-600 hover:bg-indigo-500">
+          Скачать лаунчер
         </a>
-        <div className="text-xs text-slate-400 mt-3">Введите ваш ник на сайте, чтобы получить проходку</div>
+        <div className="text-xs text-slate-400 mt-3">Откройте его и войдите в аккаунт ArchiTech</div>
       </div>
     </div>
   </motion.div>
@@ -1751,48 +1876,14 @@ function StepsGuide({ version, disableMotion }: { version?: string; disableMotio
   />
 
   <div className="p-5">
-    <div className="size-10 rounded-xl bg-teal-600/20 grid place-items-center text-teal-300 mb-3">
-      <SvgMcBlockGrass className="h-5" />
-    </div>
-    <div className="text-lg font-semibold mb-2">Зайдите на сервер</div>
-    <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
-      <div className="flex w-full items-stretch overflow-hidden rounded-xl border border-slate-800">
-        <div className="px-3 hidden sm:grid place-items-center bg-slate-900/60 border-r border-slate-800 text-xs text-slate-300">
-          IP
-        </div>
-        <div className="px-3 py-2 font-mono flex-1 truncate flex items-center justify-center text-center">
-          {SERVER_IP}
-        </div>
-        <button
-          onClick={copy}
-          className="px-3 py-2 bg-slate-900/60 hover:bg-slate-800 border-l border-slate-800 text-sm grid place-items-center"
-          aria-label={copied === 'ok' ? 'Скопировано' : copied === 'err' ? 'Ошибка' : 'Копировать IP'}
-          title={copied === 'ok' ? 'Скопировано' : copied === 'err' ? 'Ошибка' : 'Копировать IP'}
-          type="button"
-        >
-          <motion.div
-            animate={
-              copied === 'ok'
-                ? { scale: [1, 1.2, 1], rotate: [0, -8, 0] }
-                : copied === 'err'
-                ? { x: [-2, 2, -2, 2, 0] }
-                : { scale: 1, rotate: 0, x: 0 }
-            }
-            transition={{ duration: 0.3 }}
-            className="grid place-items-center"
-          >
-            {copied === 'ok' ? (
-              <SvgCheck className="size-5" />
-            ) : (
-              <SvgCopy className="size-5" />
-            )}
-          </motion.div>
-        </button>
+      <div className="size-10 rounded-xl bg-teal-600/20 grid place-items-center text-teal-300 mb-3">
+        <SvgMcBlockGrass className="h-5" />
       </div>
-      <div className="text-xs text-slate-400 mt-3 text-center">
-        Откройте Minecraft: Java Edition
-        {version ? <> <b className="text-slate-300">{version}</b></> : null} и вставьте IP
-      </div>
+      <div className="text-lg font-semibold mb-2">Зайдите на сервер</div>
+      <div className="min-h-[112px] rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+        <div className="rounded-xl border border-teal-500/30 bg-teal-500/10 px-4 py-3 text-center text-sm text-teal-100">
+          После входа сервер автоматически появится в списке — останется только нажать «Играть».
+        </div>
     </div>
   </div>
   </motion.div>
@@ -1800,7 +1891,23 @@ function StepsGuide({ version, disableMotion }: { version?: string; disableMotio
   )
 }
 
-function Faq({ q, a }: { q: string; a: React.ReactNode }) {
+function FaqInfoCard({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="relative overflow-hidden rounded-2xl border border-slate-800 bg-linear-to-br from-slate-950/80 via-slate-900/60 to-slate-900/20 px-4 py-4 sm:px-5 sm:py-5">
+      <div className="pointer-events-none absolute -right-16 -top-20 h-40 w-40 rounded-full bg-sky-500/10 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-24 -left-20 h-40 w-40 rounded-full bg-indigo-500/10 blur-3xl" />
+      <div className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-indigo-500/40 via-sky-500/60 to-emerald-500/40" />
+      <div className="relative">
+        <div className="mb-2 inline-flex rounded-full border border-slate-700/80 bg-slate-950/60 px-2 py-0.5 text-[11px] uppercase tracking-wide text-slate-400">
+          {label}
+        </div>
+        <div className="text-sm text-slate-300">{children}</div>
+      </div>
+    </div>
+  )
+}
+
+function Faq({ q, a, icon }: { q: string; a: React.ReactNode; icon?: React.ReactNode }) {
   const [open, setOpen] = useState(false)
 
   return (
@@ -1809,7 +1916,10 @@ function Faq({ q, a }: { q: string; a: React.ReactNode }) {
         onClick={() => setOpen(v => !v)}
         className="w-full text-left px-4 py-3 bg-slate-900/50 hover:bg-slate-900/70 flex items-center justify-between"
       >
-        <span className="font-medium">{q}</span>
+        <span className="flex items-center gap-3 font-medium">
+          {icon && <span className="shrink-0 text-sky-300" aria-hidden="true">{icon}</span>}
+          <span>{q}</span>
+        </span>
         <motion.span
           className="text-slate-400 inline-block"
           animate={{ rotate: open ? 180 : 0 }}

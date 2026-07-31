@@ -34,7 +34,7 @@ export default function SiteFooter() {
           </div>
         </div>
 
-        <div className="mt-4 text-xs text-slate-500">© ArchiTech MC. 2024–2025. Все права защищены.</div>
+        <div className="mt-4 text-xs text-slate-500">© ArchiTech MC. 2024–2026. Все права защищены.</div>
       </div>
     </footer>
   );

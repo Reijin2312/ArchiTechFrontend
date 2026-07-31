@@ -146,18 +146,18 @@ export const routesMeta: Record<string, any> = {
     ]
   },
   "/shop": {
-    title: "Донат-магазин ArchiTech MC - привилегии техномагия",
-    description: "Донат и привилегии на техно-магическом сервере ArchiTech MC: поддержи проект и получи бонусы на магию и индустрию.",
-    keywords: [...BASE_KEYWORDS, 'донат minecraft сервер', 'привилегии техно магия', 'donate architech mc', 'донат арчи тек'],
+    title: "Как начать играть на ArchiTech MC",
+    description: "Бесплатный вход на ArchiTech MC: регистрация, лаунчер и автоматическое подключение к серверу.",
+    keywords: [...BASE_KEYWORDS, 'как начать играть minecraft', 'лаунчер ArchiTech MC', 'сборка ArchiTech MC'],
     canonical: `${ORIGIN}/shop`,
     og: { url: `${ORIGIN}/shop`, type: "website", image: OG },
     twitterCard: "summary_large_image",
     jsonLd: [
-      breadcrumb([{ name: "Главная", url: ORIGIN + "/" }, { name: "Магазин", url: ORIGIN + "/shop" }]),
+      breadcrumb([{ name: "Главная", url: ORIGIN + "/" }, { name: "Как начать играть", url: ORIGIN + "/shop" }]),
       {
         "@context": "https://schema.org",
-        "@type": "Product",
-        "name": "Донат-магазин ArchiTech MC",
+        "@type": "WebPage",
+        "name": "Как начать играть на ArchiTech MC",
         "brand": "ArchiTech MC",
         "url": `${ORIGIN}/shop`,
         "image": OG
@@ -188,6 +188,17 @@ export const routesMeta: Record<string, any> = {
         ],
         "sameAs": [DISCORD_URL, TELEGRAM_URL]
       }
+    ]
+  },
+  "/map": {
+    title: "Онлайн-карта ArchiTech MC",
+    description: "Интерактивная онлайн-карта мира ArchiTech MC.",
+    keywords: [...BASE_KEYWORDS, 'онлайн карта minecraft', 'карта ArchiTech MC'],
+    canonical: `${ORIGIN}/map`,
+    og: { url: `${ORIGIN}/map`, type: "website", image: OG },
+    twitterCard: "summary_large_image",
+    jsonLd: [
+      breadcrumb([{ name: "Главная", url: ORIGIN + "/" }, { name: "Карта", url: `${ORIGIN}/map` }]),
     ]
   },
   "/terms": {

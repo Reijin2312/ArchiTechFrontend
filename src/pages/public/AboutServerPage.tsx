@@ -6,7 +6,7 @@ import { Seo } from '@/shared/seo/seo'
 import { routesMeta } from '@/shared/seo/routesMeta'
 import { ResponsiveImage } from '@/shared/ui/image/ResponsiveImage'
 import { IMAGES } from '@/shared/images.manifest'
-import { SvgMcBlockGrass, SvgChevronDown } from '@/shared/ui/image/Icons'
+import { SvgMcBlockGrass, SvgModpack, SvgShield, SvgGitHub, SvgChevronDown } from '@/shared/ui/image/Icons'
 import { useIsMobile } from '@/shared/ui/utils/useIsMobile'
 import { SERVER_NAME, DISCORD_URL, TELEGRAM_URL, LAUNCHER_DOWNLOAD_URL } from '@/shared/constants'
 
@@ -229,8 +229,7 @@ export default function AboutServerPage() {
                 О сервере <span className="text-indigo-400">{SERVER_NAME}</span>
               </h1>
               <p className="text-lg text-slate-300">
-                Это сервер, который вырос из простой игры с друзьями в долгий общий мир... Общий путь.
-                Тут развивают технику и магию, строят то, что нравится, от простых коробок из грязи до огромных дворцов, и не боятся, что завтра мир поглотит очередной вайп.
+                Ламповый сервер про большие проекты без вечного старта с нуля. Здесь можно возвести фабрику, улететь на собственном дирижабле, освоить магию Ars Nouveau. Мир развивается годами: строй, экспериментируй и оставляй постройки, которые не исчезнут после очередного вайпа.
               </p>
             </div>
 
@@ -243,34 +242,30 @@ export default function AboutServerPage() {
               <motion.div className="h-full" variants={disableEntranceMotion ? undefined : itemVariants}>
                 <GlassCard className="flex h-full flex-col p-6 bg-slate-900/16 backdrop-blur-2xl backdrop-saturate-200 border-slate-600/80 ring-1 ring-white/12 shadow-[0_20px_40px_-24px_rgba(0,0,0,.85)]">
                   <div className="size-12 rounded-xl bg-indigo-600/20 grid place-items-center text-indigo-300 mb-4 ring-1 ring-white/10">
-                    <SvgMcBlockGrass className="h-6" />
+                    <SvgShield className="h-6" />
                   </div>
                   <h3 className="text-xl font-semibold mb-2">Без вайпов</h3>
-                  <p className="text-slate-300 text-sm">С четвёртого сезона полные вайпы отменены навсегда. Если вложил все силы в базу, можешь быть уверен, что она не исчезнет после обновления</p>
+                  <p className="text-slate-300 text-sm">Полные вайпы отменены. Мир и базы остаются с нами надолго, так что большие проекты действительно имеют смысл.</p>
                 </GlassCard>
               </motion.div>
 
               <motion.div className="h-full" variants={disableEntranceMotion ? undefined : itemVariants}>
                 <GlassCard className="flex h-full flex-col p-6 bg-slate-900/16 backdrop-blur-2xl backdrop-saturate-200 border-slate-600/80 ring-1 ring-white/12 shadow-[0_20px_40px_-24px_rgba(0,0,0,.85)]">
                   <div className="size-12 rounded-xl bg-emerald-600/20 grid place-items-center text-emerald-300 mb-4 ring-1 ring-white/10">
-                    <span className="text-2xl" aria-hidden>
-                      🔧
-                    </span>
+                    <SvgModpack className="h-6" />
                   </div>
-                  <h3 className="text-xl font-semibold mb-2">Техномагия</h3>
-                  <p className="text-slate-300 text-sm">В сборке спокойно соседствуют Create и Ars Nouveau. Можно погрузиться с головой в технику и машины, а можно в ритуалы и заклинания, но кто запретит оба сразу?</p>
+                  <h3 className="text-xl font-semibold mb-2">Техника, полёты и магия</h3>
+                  <p className="text-slate-300 text-sm">Create, Create: Aeronautics и Ars Nouveau: механизмы, воздушные корабли и заклинания в одной сборке.</p>
                 </GlassCard>
               </motion.div>
 
               <motion.div className="h-full" variants={disableEntranceMotion ? undefined : itemVariants}>
                 <GlassCard className="flex h-full flex-col p-6 bg-slate-900/16 backdrop-blur-2xl backdrop-saturate-200 border-slate-600/80 ring-1 ring-white/12 shadow-[0_20px_40px_-24px_rgba(0,0,0,.85)]">
                   <div className="size-12 rounded-xl bg-sky-600/20 grid place-items-center text-sky-300 mb-4 ring-1 ring-white/10">
-                    <span className="text-2xl" aria-hidden>
-                      👥
-                    </span>
+                    <SvgGitHub className="h-6" />
                   </div>
-                  <h3 className="text-xl font-semibold mb-2">Сообщество</h3>
-                  <p className="text-slate-300 text-sm">Люди здесь и вправду играют вместе: помогают со стройкой проектов, делятся ресурсами и идеями, стоит лишь попросить</p>
+                  <h3 className="text-xl font-semibold mb-2">Авторская сборка</h3>
+                  <p className="text-slate-300 text-sm">Самописные системы и авторские NeoForge-порты BetterEnd и BetterNether от владельца проекта.</p>
                 </GlassCard>
               </motion.div>
             </motion.div>
@@ -481,7 +476,7 @@ export default function AboutServerPage() {
               <div className="relative z-10">
                 <h2 className="text-2xl md:text-3xl font-bold mb-4">Можно начать прямо сейчас</h2>
                 <p className="text-lg text-slate-300 mb-6 max-w-2xl mx-auto">
-                  Если хочется спокойный долгий сервер без вечного старта с нуля, просто скачай лаунчер и получи проходку через бота
+                  Хочешь оставить след в мире, который не обнулят через пару месяцев? Зарегистрируйся, скачай лаунчер и нажми «Играть».
                 </p>
 
                 <div className="flex flex-wrap gap-4 justify-center">

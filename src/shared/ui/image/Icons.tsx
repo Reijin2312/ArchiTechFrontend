@@ -65,6 +65,72 @@ export const SvgMcBlockGrass: React.FC<IconProps> = ({ className, ...props }) =>
   </svg>
 );
 
+export const SvgServer: React.FC<IconProps> = ({ className, ...props }) => (
+  <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" aria-hidden {...props}>
+    <rect x="4" y="4" width="16" height="16" rx="2.5" />
+    <path d="M4 10h16M4 15h16" />
+    <path d="M7.5 7h.01M7.5 12h.01M7.5 17h.01M11 7h5M11 12h5M11 17h5" />
+  </svg>
+);
+
+export const SvgSkin: React.FC<IconProps> = ({ className, ...props }) => (
+  <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" aria-hidden {...props}>
+    <path d="M8 4.5 10 3h4l2 1.5v5.25A4 4 0 0 1 12 13a4 4 0 0 1-4-3.25V4.5Z" />
+    <path d="M5 21v-3.25A4.75 4.75 0 0 1 9.75 13h4.5A4.75 4.75 0 0 1 19 17.75V21" />
+    <path d="M8 6.5h1M15 6.5h1M10 9.5h4" />
+  </svg>
+);
+
+export const SvgCurseForge: React.FC<IconProps> = ({ className, ...props }) => (
+  <svg viewBox="0 0 24 24" className={className} fill="currentColor" aria-hidden {...props}>
+    <path d="M18.326 9.2145S23.2261 8.4418 24 6.1882h-7.5066V4.4H0l2.0318 2.3576V9.173s5.1267-.2665 7.1098 1.2372c2.7146 2.516-3.053 5.917-3.053 5.917L5.0995 19.6c1.5465-1.4726 4.494-3.3775 9.8983-3.2857-2.0565.65-4.1245 1.6651-5.7344 3.2857h10.9248l-1.0288-3.2726s-7.918-4.6688-.8336-7.1127z" />
+  </svg>
+);
+
+export const SvgModrinth: React.FC<IconProps> = ({ className, ...props }) => (
+  <svg viewBox="0 0 24 24" className={className} fill="currentColor" aria-hidden {...props}>
+    <path d="M12.252.004a11.78 11.768 0 0 0-8.92 3.73 11 10.999 0 0 0-2.17 3.11 11.37 11.359 0 0 0-1.16 5.169c0 1.42.17 2.5.6 3.77.24.759.77 1.899 1.17 2.529a12.3 12.298 0 0 0 8.85 5.639c.44.05 2.54.07 2.76.02.2-.04.22.1-.26-1.7l-.36-1.37-1.01-.06a8.5 8.489 0 0 1-5.18-1.8 5.34 5.34 0 0 1-1.3-1.26c0-.05.34-.28.74-.5a37.572 37.545 0 0 1 2.88-1.629c.03 0 .5.45 1.06.98l1 .97 2.07-.43 2.06-.43 1.47-1.47c.8-.8 1.48-1.5 1.48-1.52 0-.09-.42-1.63-.46-1.7-.04-.06-.2-.03-1.02.18-.53.13-1.2.3-1.45.4l-.48.15-.53.53-.53.53-.93.1-.93.07-.52-.5a2.7 2.7 0 0 1-.96-1.7l-.13-.6.43-.57c.68-.9.68-.9 1.46-1.1.4-.1.65-.2.83-.33.13-.099.65-.579 1.14-1.069l.9-.9-.7-.7-.7-.7-1.95.54c-1.07.3-1.96.53-1.97.53-.03 0-2.23 2.48-2.63 2.97l-.29.35.28 1.03c.16.56.3 1.16.31 1.34l.03.3-.34.23c-.37.23-2.22 1.3-2.84 1.63-.36.2-.37.2-.44.1-.08-.1-.23-.6-.32-1.03-.18-.86-.17-2.75.02-3.73a8.84 8.839 0 0 1 7.9-6.93c.43-.03.77-.08.78-.1.06-.17.5-2.999.47-3.039-.01-.02-.1-.02-.2-.03Zm3.68.67c-.2 0-.3.1-.37.38-.06.23-.46 2.42-.46 2.52 0 .04.1.11.22.16a8.51 8.499 0 0 1 2.99 2 8.38 8.379 0 0 1 2.16 3.449 6.9 6.9 0 0 1 .4 2.8c0 1.07 0 1.27-.1 1.73a9.37 9.369 0 0 1-1.76 3.769c-.32.4-.98 1.06-1.37 1.38-.38.32-1.54 1.1-1.7 1.14-.1.03-.1.06-.07.26.03.18.64 2.56.7 2.78l.06.06a12.07 12.058 0 0 0 7.27-9.4c.13-.77.13-2.58 0-3.4a11.96 11.948 0 0 0-5.73-8.578c-.7-.42-2.05-1.06-2.25-1.06Z" />
+  </svg>
+);
+
+export const SvgGitHub: React.FC<IconProps> = ({ className, ...props }) => (
+  <svg viewBox="0 0 24 24" className={className} fill="currentColor" aria-hidden {...props}>
+    <path d="M12 .5a12 12 0 0 0-3.79 23.39c.6.11.82-.26.82-.58v-2.04c-3.34.73-4.04-1.61-4.04-1.61-.55-1.4-1.34-1.77-1.34-1.77-1.09-.75.08-.74.08-.74 1.2.08 1.84 1.23 1.84 1.23 1.07 1.83 2.8 1.3 3.48.99.11-.77.42-1.3.76-1.6-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.12-.3-.54-1.52.12-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 0 1 6 0c2.29-1.55 3.3-1.23 3.3-1.23.66 1.66.24 2.88.12 3.18.77.84 1.24 1.91 1.24 3.22 0 4.61-2.8 5.62-5.48 5.92.43.37.81 1.1.81 2.22v3.29c0 .32.22.7.83.58A12 12 0 0 0 12 .5Z" />
+  </svg>
+);
+
+export const SvgModpack: React.FC<IconProps> = ({ className, ...props }) => (
+  <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden {...props}>
+    <path d="m12 2.75 8.25 4.5v9.5L12 21.25l-8.25-4.5v-9.5L12 2.75Z" />
+    <path d="m3.75 7.25 8.25 4.5 8.25-4.5" />
+    <path d="M12 11.75v9.5" />
+  </svg>
+);
+
+export const SvgRoute: React.FC<IconProps> = ({ className, ...props }) => (
+  <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden {...props}>
+    <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+    <path d="M10 17l5-5-5-5" />
+    <path d="M15 12H3" />
+  </svg>
+);
+
+export const SvgLauncher: React.FC<IconProps> = ({ className, ...props }) => (
+  <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" aria-hidden {...props}>
+    <rect x="4" y="3" width="16" height="18" rx="2.5" />
+    <path d="M4 8h16M8 5.5h.01M11 5.5h.01" />
+    <path d="M12 11v6M9.5 14.5 12 17l2.5-2.5M8.5 19h7" />
+  </svg>
+);
+
+export const SvgDownload: React.FC<IconProps> = ({ className, ...props }) => (
+  <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round" aria-hidden {...props}>
+    <path d="M12 3v12" />
+    <path d="m7 10 5 5 5-5" />
+    <path d="M5 21h14" />
+  </svg>
+);
+
 export const SvgCheck: React.FC<IconProps> = (props) => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" {...props}>
     <path d="M5 13l4 4L19 7" />
