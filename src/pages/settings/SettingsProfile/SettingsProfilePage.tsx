@@ -23,8 +23,12 @@ import { AccountSection } from './AccountSection';
 import { SessionsSection } from './SessionsSection';
 import { DangerZoneSection } from './DangerZoneSection';
 import { ToastStack } from './ToastStack';
+import { useI18n } from '@/shared/i18n/I18nProvider';
+import { fill, profileTranslations } from '@/shared/i18n/profileTranslations';
 
 export default function SettingsProfilePage() {
+  const { language } = useI18n();
+  const copy = profileTranslations[language];
   useWallpaper();
   const nav = useNavigate();
 
@@ -193,7 +197,7 @@ export default function SettingsProfilePage() {
     });
 
     if (result.success) {
-      setNotice('Профиль сохранён');
+      setNotice(copy.settings.profileSaved);
       const p = result.data;
       if (p?.bannerUrl) setBannerUrl(p.bannerUrl);
       if (p?.profileTheme) setProfileTheme(p.profileTheme);
@@ -204,7 +208,7 @@ export default function SettingsProfilePage() {
       if (p?.customStatus) setCustomStatus(p.customStatus);
       if (p?.socialLinks) setSocialLinks(p.socialLinks);
     } else {
-      setError(result.error || 'Ошибка сохранения');
+      setError(result.error || copy.settings.saveError);
     }
 
     setBusy(null);
@@ -250,10 +254,10 @@ export default function SettingsProfilePage() {
 
       setProfile((m) => (m ? { ...m, avatarUrl: data.avatarUrl } : m));
       syncAuth({ avatarUrl: bust(data.avatarUrl) });
-      setNotice('Аватар обновлён');
+      setNotice(copy.settings.avatarUpdated);
     } catch (e: unknown) {
       const err = e as { response?: { data?: unknown }; message?: string };
-      setError(err?.response?.data as string || err?.message || 'Ошибка загрузки аватара');
+      setError(err?.response?.data as string || err?.message || copy.settings.avatarError);
     } finally {
       setBusy(null);
     }
@@ -263,7 +267,7 @@ export default function SettingsProfilePage() {
     const u = newUsername.trim().toLowerCase();
     if (!u || usernameOk !== true) return;
     if (u === (profile?.username || '').toLowerCase()) {
-      setNotice('Логин уже установлен');
+      setNotice(copy.settings.usernameSame);
       return;
     }
     setBusy('username');
@@ -275,25 +279,25 @@ export default function SettingsProfilePage() {
         { withCredentials: true, headers: { 'Content-Type': 'application/json' }, validateStatus: () => true },
       );
       if (status === 200) {
-        setNotice('Логин обновлён');
+        setNotice(copy.settings.usernameUpdated);
         nav(`/u/${encodeURIComponent(u)}`, { replace: true });
         return;
       }
       if (status === 409) {
         setUsernameOk(false);
-        setError(data?.message || 'Логин уже занят');
+        setError(data?.message || copy.settings.usernameTaken);
         return;
       }
       if (status === 400) {
         setUsernameOk(false);
-        setError(data?.message || 'Некорректное имя пользователя');
+        setError(data?.message || copy.settings.usernameInvalid);
         return;
       }
       if (status === 401 || status === 403) {
-        setError('Нужен вход в аккаунт');
+        setError(copy.settings.loginRequired);
         return;
       }
-      setError(data?.message || `Ошибка смены логина (${status})`);
+      setError(data?.message || fill(copy.settings.usernameError, { status }));
     } finally {
       setBusy(null);
     }
@@ -325,7 +329,7 @@ export default function SettingsProfilePage() {
       URL.revokeObjectURL(url);
     } catch (e: unknown) {
       const err = e as { response?: { data?: unknown }; message?: string };
-      setError(err?.response?.data as string || err?.message || 'Ошибка экспорта');
+      setError(err?.response?.data as string || err?.message || copy.settings.exportError);
     } finally {
       setBusy(null);
     }
@@ -333,7 +337,7 @@ export default function SettingsProfilePage() {
 
   return (
     <>
-      <Seo title="Настройки — ArchiTech MC" robots="noindex,follow" />
+      <Seo title={copy.settings.seo} robots="noindex,follow" />
       <ProfileThemeProvider themeId={profileTheme} customColor1={customThemeColor1} customColor2={customThemeColor2}>
         <div className="min-h-dvh flex flex-col">
           <main className="mx-auto grid w-full max-w-6xl grow grid-cols-12 gap-6 px-4 py-6">
@@ -342,8 +346,8 @@ export default function SettingsProfilePage() {
               <Card>
                 <div className="flex items-center justify-between mb-3">
                   <div>
-                    <h2 className="text-sm font-semibold text-sky-300">Заполненность профиля</h2>
-                    <p className="text-xs text-slate-500">Заполните все поля для максимального прогресса</p>
+                    <h2 className="text-sm font-semibold text-sky-300">{copy.settings.completion}</h2>
+                    <p className="text-xs text-slate-500">{copy.settings.completionHint}</p>
                   </div>
                   <div className="text-2xl font-bold text-sky-400">{profileCompletion}%</div>
                 </div>
@@ -354,7 +358,7 @@ export default function SettingsProfilePage() {
             {/* Левый столбец */}
             <section className="col-span-12 md:col-span-4">
               <Card>
-                <h2 className="mb-3 text-sm font-semibold text-sky-300">Аватар</h2>
+                <h2 className="mb-3 text-sm font-semibold text-sky-300">{copy.avatar}</h2>
                 <AvatarPicker
                   value={profile?.avatarUrl || ''}
                   busy={busy === 'avatar-file'}
@@ -380,13 +384,13 @@ export default function SettingsProfilePage() {
               />
 
               <Card className="mt-6">
-                <h2 className="mb-3 text-sm font-semibold text-sky-300">Экспорт аккаунта</h2>
+                <h2 className="mb-3 text-sm font-semibold text-sky-300">{copy.settings.export}</h2>
                 <button
                   disabled={busy === 'export'}
                   onClick={exportAccount}
                   className="rounded-xl border border-slate-700 px-3 py-1.5 text-sm hover:border-slate-500 disabled:opacity-50"
                 >
-                  Скачать JSON
+                  {copy.settings.downloadJson}
                 </button>
               </Card>
             </section>
@@ -424,7 +428,7 @@ export default function SettingsProfilePage() {
               />
 
               <Card className="mt-6 relative z-40">
-                <h2 className="mb-4 text-sm font-semibold text-sky-300">Статус</h2>
+                <h2 className="mb-4 text-sm font-semibold text-sky-300">{copy.settings.status}</h2>
                 <StatusSelect
                   value={userStatus}
                   customStatus={customStatus}
@@ -436,7 +440,7 @@ export default function SettingsProfilePage() {
               </Card>
 
               <Card className="mt-6">
-                <h2 className="mb-4 text-sm font-semibold text-sky-300">Социальные сети</h2>
+                <h2 className="mb-4 text-sm font-semibold text-sky-300">{copy.settings.socials}</h2>
                 <SocialLinks links={socialLinks as never} onChange={(links) => setSocialLinks(links as never)} editable />
               </Card>
 
@@ -454,9 +458,9 @@ export default function SettingsProfilePage() {
               </Card>
 
               <Card className="mt-6">
-                <h2 className="mb-4 text-sm font-semibold text-sky-300">Обои профиля</h2>
+                <h2 className="mb-4 text-sm font-semibold text-sky-300">{copy.settings.wallpaper}</h2>
                 <p className="mb-3 text-xs text-slate-400">
-                  Большое изображение, которое заменит фон сайта на вашей странице профиля
+                  {copy.settings.wallpaperHint}
                 </p>
                 <WallpaperPicker
                   value={profileWallpaper}
@@ -471,10 +475,10 @@ export default function SettingsProfilePage() {
                       });
                       setProfileWallpaper(data.url);
                       setProfile((m) => (m ? ({ ...m, profileWallpaper: data.url } as never) : m));
-                      pushToast('success', 'Обои обновлены');
+                      pushToast('success', copy.settings.wallpaperUpdated);
                     } catch (e: unknown) {
                       const err = e as { response?: { data?: unknown }; message?: string };
-                      pushToast('error', (err?.response?.data as string) || 'Ошибка загрузки обоев');
+                      pushToast('error', (err?.response?.data as string) || copy.settings.wallpaperError);
                     } finally {
                       setBusy(null);
                     }
@@ -484,8 +488,8 @@ export default function SettingsProfilePage() {
               </Card>
 
               <Card className="mt-6">
-                <h2 className="mb-4 text-sm font-semibold text-sky-300">Баннер профиля</h2>
-                <p className="mb-3 text-xs text-slate-400">Широкое изображение в шапке вашего профиля</p>
+                <h2 className="mb-4 text-sm font-semibold text-sky-300">{copy.settings.banner}</h2>
+                <p className="mb-3 text-xs text-slate-400">{copy.settings.bannerHint}</p>
                 <BannerPicker
                   value={bannerUrl}
                   busy={busy === 'banner'}
@@ -499,10 +503,10 @@ export default function SettingsProfilePage() {
                       });
                       setBannerUrl(data.bannerUrl);
                       setProfile((m) => (m ? ({ ...m, bannerUrl: data.bannerUrl } as never) : m));
-                      pushToast('success', 'Баннер обновлён');
+                      pushToast('success', copy.settings.bannerUpdated);
                     } catch (e: unknown) {
                       const err = e as { response?: { data?: unknown }; message?: string };
-                      pushToast('error', (err?.response?.data as string) || 'Ошибка загрузки баннера');
+                      pushToast('error', (err?.response?.data as string) || copy.settings.bannerError);
                     } finally {
                       setBusy(null);
                     }
@@ -513,7 +517,7 @@ export default function SettingsProfilePage() {
 
               <DangerZoneSection onLogout={logout} />
 
-              {since && <div className="mt-3 text-center text-xs text-slate-500">Вы с нами с {since}</div>}
+              {since && <div className="mt-3 text-center text-xs text-slate-500">{fill(copy.settings.withUsSince, { date: since })}</div>}
             </section>
 
             {avatarCropOpen && avatarCropSrc && (

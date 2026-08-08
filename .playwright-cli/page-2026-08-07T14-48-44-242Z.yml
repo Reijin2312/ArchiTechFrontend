@@ -1,0 +1,131 @@
+- generic [ref=f2e2]:
+  - region "Notifications alt+T"
+  - generic [ref=f2e3]:
+    - banner [ref=f2e4]:
+      - navigation [ref=f2e5]:
+        - link "На главную" [ref=f2e6] [cursor=pointer]:
+          - /url: /
+          - img "Логотип ArchiTech MC" [ref=f2e7]
+          - generic [ref=f2e8]: ArchiTech MC
+        - generic [ref=f2e9]:
+          - link "Главная" [ref=f2e10] [cursor=pointer]:
+            - /url: /
+          - link "О сервере" [ref=f2e11] [cursor=pointer]:
+            - /url: /about
+          - link "Правила" [ref=f2e12] [cursor=pointer]:
+            - /url: /rules
+          - link "Карта" [ref=f2e13] [cursor=pointer]:
+            - /url: /map
+          - link "Вики" [ref=f2e14] [cursor=pointer]:
+            - /url: /wiki
+          - link "Telegram" [ref=f2e15] [cursor=pointer]:
+            - /url: https://t.me/archi_tech_official
+          - link "Discord" [ref=f2e18] [cursor=pointer]:
+            - /url: https://discord.gg/x6JwVPwPtw
+          - button "Язык" [ref=f2e22]
+          - link "Войти" [ref=f2e27] [cursor=pointer]:
+            - /url: /auth/login?next=%2Fstart
+    - main [ref=f2e28]:
+      - generic [ref=f2e29]:
+        - complementary [ref=f2e30]:
+          - navigation [ref=f2e31]:
+            - generic [ref=f2e32]:
+              - heading "Разделы" [level=2] [ref=f2e33]
+              - list [ref=f2e34]:
+                - listitem [ref=f2e35]:
+                  - link "Доступ" [ref=f2e36] [cursor=pointer]:
+                    - /url: "#price"
+                - listitem [ref=f2e37]:
+                  - link "Как начать" [ref=f2e38] [cursor=pointer]:
+                    - /url: "#how"
+                - listitem [ref=f2e39]:
+                  - link "Лаунчер" [ref=f2e40] [cursor=pointer]:
+                    - /url: "#discounts"
+                - listitem [ref=f2e41]:
+                  - link "Сборка" [ref=f2e42] [cursor=pointer]:
+                    - /url: "#policy"
+                - listitem [ref=f2e43]:
+                  - link "Безопасность" [ref=f2e44] [cursor=pointer]:
+                    - /url: "#faq"
+        - main [ref=f2e45]:
+          - heading "Как начать играть" [level=1] [ref=f2e46]
+          - generic [ref=f2e47]:
+            - generic [ref=f2e48]: Бесплатный вход на ArchiTech MC
+            - paragraph [ref=f2e49]: Зарегистрируйтесь на сайте, скачайте лаунчер и войдите в аккаунт. Сервер сам появится в списке — останется нажать «Играть».
+          - generic [ref=f2e51]:
+            - heading "1 Регистрация и вход" [level=2] [ref=f2e52]:
+              - generic [ref=f2e53]: "1"
+              - text: Регистрация и вход
+            - list [ref=f2e55]:
+              - listitem [ref=f2e56]:
+                - link "Зарегистрируйтесь на сайте ArchiTech" [ref=f2e57] [cursor=pointer]:
+                  - /url: /auth/register
+                - text: .
+              - listitem [ref=f2e58]:
+                - link "Скачайте лаунчер" [ref=f2e59] [cursor=pointer]:
+                  - /url: https://launcher.architech-mc.ru/download/launcher/latest
+                - text: и войдите в аккаунт.
+              - listitem [ref=f2e60]: Запустите сборку через лаунчер.
+              - listitem [ref=f2e61]: Нажмите «Играть» — сервер появится автоматически.
+          - generic [ref=f2e63]:
+            - heading "2 Лаунчер" [level=2] [ref=f2e64]:
+              - generic [ref=f2e65]: "2"
+              - text: Лаунчер
+            - generic [ref=f2e66]:
+              - paragraph [ref=f2e67]: Лаунчер сам установит и обновит моды, чтобы не собирать клиент вручную.
+              - link "Скачать лаунчер" [ref=f2e68] [cursor=pointer]:
+                - /url: https://launcher.architech-mc.ru/download/launcher/latest
+          - generic [ref=f2e70]:
+            - heading "3 Сборка и сервер" [level=2] [ref=f2e71]:
+              - generic [ref=f2e72]: "3"
+              - text: Сборка и сервер
+            - generic [ref=f2e73]:
+              - paragraph [ref=f2e74]: "Minecraft 1.21.1 NeoForge. В основе — Create, Create: Aeronautics, Ars Nouveau, аддоны и авторские порты BetterEnd и BetterNether."
+              - link "Полный состав сборки — в вики" [ref=f2e75] [cursor=pointer]:
+                - /url: /wiki#mods
+          - generic [ref=f2e77]:
+            - heading "4 Безопасность" [level=2] [ref=f2e78]:
+              - generic [ref=f2e79]: "4"
+              - text: Безопасность
+            - generic [ref=f2e81]:
+              - generic [ref=f2e82]:
+                - generic [ref=f2e83]: Нужна ли лицензия Minecraft?
+                - generic [ref=f2e84]: Нет. Экосистема ArchiTech использует собственную систему аккаунтов для входа через лаунчер.
+              - generic [ref=f2e85]:
+                - generic [ref=f2e86]: Можно проверить исходный код?
+                - generic [ref=f2e87]:
+                  - text: Да, исходный код лаунчера открыт в
+                  - link "официальном GitHub" [ref=f2e88] [cursor=pointer]:
+                    - /url: https://github.com/Reijin2312/ArchiTech_Launcher
+                  - text: .
+        - complementary [ref=f2e89]:
+          - generic [ref=f2e90]:
+            - generic [ref=f2e91]:
+              - generic [ref=f2e92]: Готовы начать?
+              - generic [ref=f2e93]: Скачайте лаунчер
+              - paragraph [ref=f2e94]: После входа сервер появится в списке автоматически.
+            - generic [ref=f2e95]:
+              - generic [ref=f2e96]: Без ручной настройки
+              - text: Лаунчер установит сборку и обновления сам.
+    - contentinfo [ref=f2e97]:
+      - generic [ref=f2e98]:
+        - generic [ref=f2e99]:
+          - generic [ref=f2e100]:
+            - img "Логотип ArchiTech MC" [ref=f2e101]
+            - generic [ref=f2e102]: ArchiTech MC
+          - generic [ref=f2e103]:
+            - link "Telegram" [ref=f2e104] [cursor=pointer]:
+              - /url: https://t.me/archi_tech_official
+            - link "Discord" [ref=f2e107] [cursor=pointer]:
+              - /url: https://discord.gg/x6JwVPwPtw
+        - generic [ref=f2e110]:
+          - link "О сервере" [ref=f2e111] [cursor=pointer]:
+            - /url: /about
+          - link "Контакты" [ref=f2e112] [cursor=pointer]:
+            - /url: /contacts
+          - link "Пользовательское соглашение" [ref=f2e113] [cursor=pointer]:
+            - /url: /terms
+          - link "Политика конфиденциальности" [ref=f2e114] [cursor=pointer]:
+            - /url: /privacy
+        - generic [ref=f2e115]: Не является официальным продуктом Minecraft. Мы никак не связаны с Mojang Synergies AB, Microsoft Corporation или другими правообладателями.
+        - generic [ref=f2e117]: © ArchiTech MC. 2024–2026. Все права защищены.

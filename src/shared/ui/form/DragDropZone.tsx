@@ -1,4 +1,5 @@
 import { useState, useCallback, type DragEvent } from 'react'
+import { useI18n } from '@/shared/i18n/I18nProvider'
 
 type DragDropZoneProps = {
   onFile: (file: File) => void
@@ -9,6 +10,7 @@ type DragDropZoneProps = {
 }
 
 export function DragDropZone({ onFile, accept, maxSize = 2 * 1024 * 1024, children, className = '' }: DragDropZoneProps) {
+  const { language } = useI18n()
   const [isDragging, setIsDragging] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -55,20 +57,20 @@ export function DragDropZone({ onFile, accept, maxSize = 2 * 1024 * 1024, childr
           )
 
           if (!isAccepted) {
-            setError(`Разрешены только: ${accept}`)
+            setError(language === 'ru' ? `Разрешены только: ${accept}` : `Allowed formats: ${accept}`)
             return
           }
         }
 
         if (file.size > maxSize) {
-          setError(`Файл слишком большой (макс. ${(maxSize / 1024 / 1024).toFixed(1)} МБ)`)
+          setError(language === 'ru' ? `Файл слишком большой (макс. ${(maxSize / 1024 / 1024).toFixed(1)} МБ)` : `File is too large (${(maxSize / 1024 / 1024).toFixed(1)} MB max)`)
           return
         }
 
         onFile(file)
       }
     },
-    [onFile, accept, maxSize]
+    [onFile, accept, maxSize, language]
   )
 
   return (
@@ -83,7 +85,7 @@ export function DragDropZone({ onFile, accept, maxSize = 2 * 1024 * 1024, childr
         <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-xl border-2 border-dashed border-sky-500 bg-sky-500/10 backdrop-blur-sm">
           <div className="text-center">
             <div className="text-2xl mb-2">📁</div>
-            <div className="text-sm font-medium text-sky-300">Отпустите файл</div>
+            <div className="text-sm font-medium text-sky-300">{language === 'ru' ? 'Отпустите файл' : 'Drop the file'}</div>
           </div>
         </div>
       )}

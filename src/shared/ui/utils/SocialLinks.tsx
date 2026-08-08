@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { SvgDiscord, SvgTelegram } from '../image/Icons'
+import { useI18n } from '@/shared/i18n/I18nProvider'
 
 type SocialLink = {
   type: 'discord' | 'telegram' | 'vk' | 'youtube' | 'twitch' | 'github' | 'custom'
@@ -26,6 +27,7 @@ const SOCIAL_ICONS: Record<string, { icon: React.ReactNode; placeholder: string;
 }
 
 export function SocialLinks({ links, onChange, editable = false, readOnly = false, className = '' }: SocialLinksProps) {
+  const { language } = useI18n()
   const [editing, setEditing] = useState(false)
   
   const normalizedLinks: SocialLink[] = Array.isArray(links)
@@ -111,14 +113,14 @@ export function SocialLinks({ links, onChange, editable = false, readOnly = fals
             }}
             className="rounded-lg border border-slate-700 px-3 py-1.5 text-sm hover:border-slate-500"
           >
-            Отмена
+            {language === 'ru' ? 'Отмена' : 'Cancel'}
           </button>
           <button
             type="button"
             onClick={handleSave}
             className="rounded-lg bg-sky-600 px-3 py-1.5 text-sm hover:bg-sky-500"
           >
-            Сохранить
+            {language === 'ru' ? 'Сохранить' : 'Save'}
           </button>
         </div>
       </div>
@@ -134,10 +136,10 @@ export function SocialLinks({ links, onChange, editable = false, readOnly = fals
             onClick={() => setEditing(true)}
             className="w-full rounded-xl border border-dashed border-slate-700 py-3 text-sm text-slate-400 hover:border-slate-500 hover:text-slate-300"
           >
-            + Добавить соцсети
+            + {language === 'ru' ? 'Добавить соцсети' : 'Add social links'}
           </button>
         ) : (
-          <div className="text-sm text-slate-500">Не указаны</div>
+          <div className="text-sm text-slate-500">{language === 'ru' ? 'Не указаны' : 'Not specified'}</div>
         )
       ) : (
         <div className="flex flex-wrap justify-center gap-2">

@@ -16,6 +16,7 @@ import {
 } from '@/shared/ui/image/Icons';
 
 import { DISCORD_URL, TELEGRAM_URL, SUPPORT_EMAIL } from '@/shared/constants';
+import { useI18n } from '@/shared/i18n/I18nProvider';
 
 type ContactAction = {
   label: string;
@@ -82,6 +83,13 @@ const CONTACT_CARDS: ContactCardConfig[] = [
   },
 ];
 
+const CONTACT_CARDS_EN: ContactCardConfig[] = [
+  { id: 'support', title: 'Support', description: 'Launcher will not start, the server rejects your login, or something broke in-game? Contact us here.', icon: 'support', badge: 'Technical help', meta: 'Include a screenshot and tell us what you have already tried.', actions: [{ label: 'Open support', href: DISCORD_URL, external: true, variant: 'primary' }, { label: 'Send an email', href: `mailto:${SUPPORT_EMAIL}`, variant: 'secondary' }] },
+  { id: 'moderation', title: 'Moderation', description: 'Player reports, rule disputes, and appeals against penalties.', icon: 'moderation', badge: 'Reports and appeals', meta: 'Reports need evidence such as screenshots, video, or logs.', actions: [{ label: 'Read the guide', href: '/rules#penalties', variant: 'primary' }, { label: 'Contact moderators', href: DISCORD_URL, external: true, variant: 'secondary' }] },
+  { id: 'telegram', title: 'Telegram channel', description: 'Project updates, maintenance notices, and short server news.', icon: 'telegram', badge: 'Server announcements', actions: [{ label: 'Open channel', href: TELEGRAM_URL, external: true, variant: 'primary' }] },
+  { id: 'discord', title: 'Discord server', description: 'The main community hub for text channels, voice chat, help, and quick contact with the team.', icon: 'discord', badge: 'Voice and chat', meta: 'Discord is usually the fastest place to get in-game help.', actions: [{ label: 'Open Discord', href: DISCORD_URL, external: true, variant: 'primary' }] },
+];
+
 const cardVariants: Variants = {
   hidden: { opacity: 0, y: 18, scale: 0.98 },
   show: {
@@ -126,6 +134,8 @@ function ContactActionButton({ action }: { action: ContactAction }) {
 
 export default function ContactsPage() {
   useWallpaper();
+  const { language } = useI18n();
+  const cards = language === 'en' ? CONTACT_CARDS_EN : CONTACT_CARDS;
   const isMobile = useIsMobile();
   const reduceMotion = useReducedMotion();
   const disableMotion = Boolean(reduceMotion) || isMobile;
@@ -141,13 +151,12 @@ export default function ContactsPage() {
           animate={disableMotion ? undefined : { opacity: 1, y: 0, filter: 'blur(0px)' }}
           transition={{ duration: 0.5, ease: 'easeOut' }}
         >
-          <p className="text-sm uppercase tracking-[0.35em] text-slate-400">Связь</p>
+          <p className="text-sm uppercase tracking-[0.35em] text-slate-400">{language === 'ru' ? 'Связь' : 'Get in touch'}</p>
           <h1 className="mt-3 text-3xl font-semibold leading-tight">
-            Контакты ArchiTech MC
+            {language === 'ru' ? 'Контакты ArchiTech MC' : 'ArchiTech MC contacts'}
           </h1>
           <p className="mt-4 text-base text-slate-300">
-            Здесь всё, что нужно для связи: техподдержка, модерация, Discord и Telegram.
-            Без лишнего — просто выбирайте нужный канал.
+            {language === 'ru' ? 'Здесь всё, что нужно для связи: техподдержка, модерация, Discord и Telegram. Без лишнего — просто выбирайте нужный канал.' : 'Everything you need to reach us: technical support, moderation, Discord, and Telegram. Pick the channel that fits your question.'}
           </p>
         </motion.section>
 
@@ -157,7 +166,7 @@ export default function ContactsPage() {
           initial={disableMotion ? undefined : 'hidden'}
           animate={disableMotion ? undefined : 'show'}
         >
-          {CONTACT_CARDS.map((card) => (
+          {cards.map((card) => (
             <motion.article
               key={card.id}
               variants={disableMotion ? undefined : cardVariants}
@@ -196,8 +205,8 @@ export default function ContactsPage() {
           transition={{ duration: 0.5, ease: 'easeOut' }}
         >
           <div className="flex flex-col gap-3 mb-6 text-center">
-            <p className="text-sm uppercase tracking-[0.35em] text-slate-400">Команда</p>
-            <h2 className="text-2xl font-semibold">Администрация и команда</h2>
+            <p className="text-sm uppercase tracking-[0.35em] text-slate-400">{language === 'ru' ? 'Команда' : 'Team'}</p>
+            <h2 className="text-2xl font-semibold">{language === 'ru' ? 'Администрация и команда' : 'Staff and project team'}</h2>
           </div>
           <TeamGrid team={TEAM_MEMBERS} avatars={avatars} disableMotion={disableMotion} />
         </motion.section>

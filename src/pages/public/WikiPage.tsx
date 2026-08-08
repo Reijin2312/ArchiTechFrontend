@@ -7,6 +7,10 @@ import { routesMeta } from '@/shared/seo/routesMeta';
 import { motion } from 'framer-motion';
 import { LeftNav as BaseLeftNav, RightToc as BaseRightToc, Section as BaseSection, Kbd, Callout, pageVariants } from '@/shared/ui/layout/PageSidebar';
 import { useIsMobile } from '@/shared/ui/utils/useIsMobile';
+import { ModCatalogSection } from '@/pages/public/wiki/ModCatalogSection';
+import { useI18n } from '@/shared/i18n/I18nProvider';
+import { LAUNCHER_DOWNLOAD_URL } from '@/shared/constants';
+import type { TranslationKey } from '@/shared/i18n/translations';
 
 export type WikiTocItem = { id: string; title: string; n: number };
 export const WIKI_SECTIONS: WikiTocItem[] = [
@@ -21,8 +25,8 @@ export const WIKI_SECTIONS: WikiTocItem[] = [
   { id: 'links', title: 'Ссылки', n: 9 },
 ];
 
-type Mod = { name: string; cat: 'Tech' | 'Magic' | 'Decoration' | 'Food' | 'QoL' | 'World' | 'Optimization' | 'Core'; brief: string; wiki?: string };
-const MODS: Mod[] = [
+export type LegacyMod = { name: string; cat: 'Tech' | 'Magic' | 'Decoration' | 'Food' | 'QoL' | 'World' | 'Optimization' | 'Core'; brief: string; wiki?: string };
+export const LEGACY_MODS: LegacyMod[] = [
   { name: 'Ars Nouveau', cat: 'Magic', brief: 'Модульная магия и собственные заклинания' },
   { name: 'Ars Elemental', cat: 'Magic', brief: 'Элементальные школы для Ars Nouveau' },
   { name: 'Ars Additions', cat: 'Magic', brief: 'QoL-добавки и иммерсия для Ars Nouveau' },
@@ -109,22 +113,20 @@ const MODS: Mod[] = [
   { name: 'More Delight (for Farmers Delight)', cat: 'Food', brief: 'Ещё больше еды!' }
 ];
 
-type Cmd = { cmd: string; desc: string; scope: 'server' | 'bot' };
+type Cmd = { cmd: string; descKey: TranslationKey };
 const CMDS: Cmd[] = [
-  { cmd: '/spawn', desc: 'Телепорт на спавн', scope: 'server' },
-  { cmd: '/home, /sethome, /delhome', desc: 'Дом, установка и удаление', scope: 'server' },
-  { cmd: '/msg <ник> <текст>', desc: 'Личные сообщения', scope: 'server' },
-  { cmd: '/rtp', desc: 'Случайный телепорт (если включено)', scope: 'server' },
-  { cmd: '/claim, /map', desc: 'Клейм и карта чанков (FTB Chunks)', scope: 'server' },
-  { cmd: 'Бот: старт', desc: 'Начало, меню оплаты проходки', scope: 'bot' },
-  { cmd: 'Бот: привязать ник', desc: 'Связка Telegram ↔ ник', scope: 'bot' },
-  { cmd: 'Бот: моя проходка', desc: 'Срок действия, дата окончания', scope: 'bot' },
-  { cmd: 'Бот: пригласить друга', desc: 'Реферальная ссылка и скидки', scope: 'bot' },
+  { cmd: '/spawn', descKey: 'wiki.cmdSpawn' },
+  { cmd: '/home, /sethome, /delhome', descKey: 'wiki.cmdHome' },
+  { cmd: '/msg <nickname> <text>', descKey: 'wiki.cmdMessage' },
+  { cmd: '/rtp', descKey: 'wiki.cmdRtp' },
+  { cmd: '/claim, /map', descKey: 'wiki.cmdClaim' },
 ];
 
 export default function WikiPage() {
   useWallpaper();
   const isMobile = useIsMobile();
+  const { t } = useI18n();
+  const sections = useMemo(() => WIKI_SECTIONS.map((item) => ({ ...item, title: wikiSectionTitle(item.id, t) })), [t]);
 
   const Section = (props: ComponentProps<typeof BaseSection>) => (
     <BaseSection {...props} disableMotion={isMobile} />
@@ -146,109 +148,90 @@ export default function WikiPage() {
       animate={isMobile ? false : 'show'}
     >
       <aside className="hidden md:block md:col-span-3">
-        <LeftNav items={WIKI_SECTIONS} blurIntensity="xl" bgOpacity="60" />
+        <LeftNav items={sections} blurIntensity="xl" bgOpacity="60" />
       </aside>
 
       <main className="col-span-12 md:col-span-6">
-        <h1 className="mb-4 text-3xl font-bold text-[22px] md:text-[24px] text-center">Вики сервера</h1>
-        <Callout title="Как пользоваться вики">
+        <h1 className="mb-4 text-3xl font-bold text-[22px] md:text-[24px] text-center">{t('wiki.title')}</h1>
+        <Callout title={t('wiki.howToUse')}>
           <ul className="text-sm text-slate-300 space-y-1">
-            <li>Переходите по разделам слева или используйте быстрый поиск по странице: <Kbd>Ctrl</Kbd> + <Kbd>F</Kbd> (Windows / Linux), <Kbd>Cmd</Kbd> + <Kbd>F</Kbd> (macOS).</li>
-            <li>Список модов можно фильтровать по названию или категории.</li>
+            <li>{t('wiki.howToUseNavigation')} <Kbd>Ctrl</Kbd> + <Kbd>F</Kbd> (Windows / Linux), <Kbd>Cmd</Kbd> + <Kbd>F</Kbd> (macOS).</li>
+            <li>{t('wiki.howToUseMods')}</li>
           </ul>
         </Callout>
 
-        <Section id="intro" title="О сервере и тематика" n={1}>
+        <Section id="intro" title={t('wiki.sectionIntro')} n={1}>
           <p className="text-slate-300 ">
-            Сервер состоит из <span className="text-sky-400">одного мира</span>. Тематикой является <span className="text-sky-400">техномагия с особым упором на строительство</span>. 
-            Наша цель — создать комфортное и стабильное место для общения и взаимодействия. 
+            {t('wiki.introFirstBefore')} <span className="text-sky-400">{t('wiki.introOneWorld')}</span>. {t('wiki.introThemeBefore')} <span className="text-sky-400">{t('wiki.introTheme')}</span>. {t('wiki.introGoal')}
           </p>
           <p className="text-slate-300">
-            Спавн расположен на острове, окружённым со всех сторон океаном. Атмосферно, не находите?
+            {t('wiki.introSpawn')}
           </p>
         </Section>
 
-        <Section id="start" title="Как начать играть" n={2}>
+        <Section id="start" title={t('wiki.sectionStart')} n={2}>
+          <p className="mb-3 text-slate-300">{t('wiki.startIntro')}</p>
           <ol className="list-decimal pl-6 space-y-2 text-slate-300">
-            <li>
-              <Link to="/api/auth/register" className="text-sky-400 hover:text-sky-300 hover:underline">
-                Зарегистрируйтесь
-              </Link>{" "}
-              или{" "}
-              <Link to="/api/auth/login" className="text-sky-400 hover:text-sky-300 hover:underline">
-                войдите
-              </Link>{" "}
-              на сайте.
-            </li>
-            <li>Получите проходку в {" "}
-              <a href="https://telegram.me/@Archi_payment_bot" className="text-sky-400 hover:text-sky-300 hover:underline">
-              телеграм-боте.
-              </a>
-            </li>
-            <li>Скачайте лаунчер {" "}
-              <a href="https://launcher.architech-mc.ru/download/launcher/latest" className="text-sky-400 hover:text-sky-300 hover:underline">
-               отсюда
-              </a>
-              .
-            </li>
-            <li>Установите игру. Сервер автоматически появится в списке серверов сетевой игры.</li>
-            <li> Начинайте играть! </li>
+            <li><Link to="/auth/register" className="text-sky-400 hover:text-sky-300 hover:underline">{t('start.step1Link')}</Link>.</li>
+            <li><a href={LAUNCHER_DOWNLOAD_URL} className="text-sky-400 hover:text-sky-300 hover:underline">{t('start.step2Link')}</a> {t('start.step2Tail')}</li>
+            <li>{t('start.step3')}</li>
+            <li>{t('start.step4')}</li>
           </ol>
         </Section>
 
-        <ModsSection disableMotion={isMobile} />
+        <ModCatalogSection disableMotion={isMobile} />
 
-        <Section id="progress" title="Прогрессия техномагии" n={4}>
+        <Section id="progress" title={t('wiki.sectionProgress')} n={4}>
           <ul className="space-y-3 text-slate-300">
             <li>
-              <b>I. Старт:</b> Железо → медь → базовые Create механизмы, руда-обработка. Инструменты раннего тира.
+              <b>{t('wiki.progress1Title')}</b> {t('wiki.progress1')}
             </li>
             <li>
-              <b>II. Склад:</b> AE2 начальная сеть, энергия, автокрафт простых деталей. Лёгкие фермы ресурсов.
+              <b>{t('wiki.progress2Title')}</b> {t('wiki.progress2')}
             </li>
             <li>
-              <b>III. Магия:</b> Botania/Occultism: мана-инфраструктура, ритуалы, утилитарные предметы.
+              <b>{t('wiki.progress3Title')}</b> {t('wiki.progress3')}
             </li>
             <li>
-              <b>IV. Индастриал:</b> Mekanism/электрика Create C&A, мультиблоки, генерация.
+              <b>{t('wiki.progress4Title')}</b> {t('wiki.progress4')}
             </li>
             <li>
-              <b>V. Поздняя игра:</b> Полный автокрафт, высокие ритуалы, автоматизация босс-ресурсов (если есть).
+              <b>{t('wiki.progress5Title')}</b> {t('wiki.progress5')}
             </li>
           </ul>
         </Section>
 
         <CommandsSection disableMotion={isMobile} />
 
-        <Section id="economy" title="Экономика" n={6}>
+        <Section id="economy" title={t('wiki.sectionEconomy')} n={6}>
           <ul className="list-disc pl-5 space-y-1 text-slate-300">
-            <li>Бартер/торговые станции на базах. Рекламу магазинов — в спец. каналах.</li>
-            <li>Крупные сделки фиксируйте книгой-договором.</li>
+            <li>{t('wiki.economy1')}</li>
+            <li>{t('wiki.economy2')}</li>
           </ul>
         </Section>
 
-        <Section id="perf" title="Производительность" n={7}>
+        <Section id="perf" title={t('wiki.sectionPerformance')} n={7}>
           <ul className="list-disc pl-5 space-y-1 text-slate-300">
-            <li>Ставьте выключатели на фермы. Ограничивайте скорость подачи предметов.</li>
-            <li>Не создавайте бесконечные сущности и «лаг-машины». Админы могут отключить источник лагов.</li>
-            <li>Клиент: снизьте рендер-дистанцию, включите VBO, используйте легковесные шейдеры/ресурс-пак.</li>
+            <li>{t('wiki.performance1')}</li>
+            <li>{t('wiki.performance2')}</li>
+            <li>{t('wiki.performance3')}</li>
           </ul>
         </Section>
 
         <FaqSection disableMotion={isMobile} />
 
-        <Section id="links" title="Ссылки" n={9}>
+        <Section id="links" title={t('wiki.sectionLinks')} n={9}>
           <ul className="list-disc pl-5 text-slate-300">
-            <li><Link to="/rules" className="text-sky-300 hover:text-sky-200" > Правила сервера</Link></li>
-            <li><Link to="/shop" className="text-sky-300 hover:text-sky-200" > Получение проходки</Link></li>
-            <li><Link to="/privacy" className="text-sky-300 hover:text-sky-200" > Политика конфиденциальности</Link></li>
-            <li><Link to="/terms" className="text-sky-300 hover:text-sky-200" > Пользовательское соглашение</Link></li>
+            <li><Link to="/rules" className="text-sky-300 hover:text-sky-200">{t('wiki.rulesLink')}</Link></li>
+            <li><Link to="/start" className="text-sky-300 hover:text-sky-200">{t('wiki.startLink')}</Link></li>
+            <li><Link to="/privacy" className="text-sky-300 hover:text-sky-200">{t('footer.privacy')}</Link></li>
+            <li><Link to="/terms" className="text-sky-300 hover:text-sky-200">{t('footer.terms')}</Link></li>
           </ul>
         </Section>
       </main>
 
       <aside className="hidden md:block md:col-span-3">
-        <RightToc items={WIKI_SECTIONS} blurIntensity="xl" bgOpacity="60" linkTransition />
+        <RightToc items={sections} blurIntensity="xl" bgOpacity="60" linkTransition />
       </aside>
     </motion.div>
     </>
@@ -257,83 +240,28 @@ export default function WikiPage() {
 
 type SectionComponentProps = ComponentProps<typeof BaseSection>;
 
-function ModsSection({ disableMotion }: { disableMotion: SectionComponentProps['disableMotion'] }) {
-  const [q, setQ] = useState('');
-  const data = useMemo(
-    () =>
-      MODS.filter(
-        (m) =>
-          m.name.toLowerCase().includes(q.toLowerCase()) ||
-          m.cat.toLowerCase().includes(q.toLowerCase())
-      ),
-    [q]
-  );
-
-  return (
-    <BaseSection id="mods" title="Список модов" n={3} disableMotion={disableMotion}>
-      <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-slate-300">Основные категории: Tech, Magic, QoL, World, Core.</p>
-        <input
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Поиск по модам…"
-          className="w-full sm:w-64 rounded-lg border border-slate-700 bg-slate-900 px-2 py-1 text-sm outline-none focus:border-slate-500"
-        />
-      </div>
-      <div className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-900/50 backdrop-blur-md backdrop-saturate-150">
-        <table className="min-w-full text-left text-sm">
-          <thead className="bg-slate-900/70 text-slate-300">
-            <tr>
-              <th className="px-3 py-2">Мод</th>
-              <th className="px-3 py-2">Категория</th>
-              <th className="px-3 py-2">Краткое описание</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.map((m) => (
-              <tr key={m.name} className="border-t border-slate-800">
-                <td className="px-3 py-2 text-sky-300">{m.name}</td>
-                <td className="px-3 py-2 text-slate-300">{m.cat}</td>
-                <td className="px-3 py-2 text-slate-300">{m.brief}</td>
-              </tr>
-            ))}
-            {data.length === 0 && (
-              <tr>
-                <td colSpan={3} className="px-3 py-6 text-center text-slate-400">
-                  Ничего не найдено
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-    </BaseSection>
-  );
-}
-
 function CommandsSection({ disableMotion }: { disableMotion: SectionComponentProps['disableMotion'] }) {
-  const server = CMDS.filter((c) => c.scope === 'server');
-  const bot = CMDS.filter((c) => c.scope === 'bot');
+  const { t } = useI18n();
 
   return (
-    <BaseSection id="commands" title="Команды сервера и бота" n={5} disableMotion={disableMotion}>
-      <div className="grid gap-4 md:grid-cols-2">
-        <CmdTable title="Сервер" items={server} />
-        <CmdTable title="Telegram-бот" items={bot} />
+    <BaseSection id="commands" title={t('wiki.sectionCommands')} n={5} disableMotion={disableMotion}>
+      <div className="grid gap-4">
+        <CmdTable title={t('wiki.server')} items={CMDS} />
       </div>
     </BaseSection>
   );
 }
 
 function FaqSection({ disableMotion }: { disableMotion: SectionComponentProps['disableMotion'] }) {
+  const { t } = useI18n();
   const qa = [
-    { q: 'Как попасть на сервер?', a: 'Купить проходку в Telegram-боте, привязать ник, дождаться записи в whitelist.' },
-    { q: 'Список модов фиксированный?', a: 'Да. Клиентские QoL-моды без преимущества допустимы, если не нарушают античит.' },
-    { q: 'Разрешён PVP?', a: 'По взаимному согласию или в специальных зонах/ивентах.' },
-    { q: 'Можно переносить базу?', a: 'Да. Предупредите соседей и снимите клеймы перед переездом.' },
+    { q: t('wiki.faqJoinQ'), a: t('wiki.faqJoinA') },
+    { q: t('wiki.faqModsQ'), a: t('wiki.faqModsA') },
+    { q: t('wiki.faqPvpQ'), a: t('wiki.faqPvpA') },
+    { q: t('wiki.faqMoveQ'), a: t('wiki.faqMoveA') },
   ];
   return (
-    <BaseSection id="faq" title="FAQ" n={8} disableMotion={disableMotion}>
+    <BaseSection id="faq" title={t('wiki.faqTitle')} n={8} disableMotion={disableMotion}>
       <div className="space-y-3">
         {qa.map((x) => (
           <div key={x.q} className="rounded-xl border border-slate-800 bg-slate-900/60 p-3 backdrop-blur-md backdrop-saturate-150">
@@ -347,6 +275,7 @@ function FaqSection({ disableMotion }: { disableMotion: SectionComponentProps['d
 }
 
 function CmdTable({ title, items }: { title: string; items: Cmd[] }) {
+  const { t } = useI18n();
   return (
     <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 backdrop-blur-md backdrop-saturate-150">
       <div className="mb-2 text-sm font-semibold text-sky-300">{title}</div>
@@ -354,15 +283,15 @@ function CmdTable({ title, items }: { title: string; items: Cmd[] }) {
         <table className="min-w-full text-left text-sm">
           <thead className="bg-slate-900/70 text-slate-300">
             <tr>
-              <th className="px-3 py-2">Команда</th>
-              <th className="px-3 py-2">Описание</th>
+              <th className="px-3 py-2">{t('wiki.command')}</th>
+              <th className="px-3 py-2">{t('wiki.description')}</th>
             </tr>
           </thead>
           <tbody>
             {items.map((c) => (
               <tr key={c.cmd} className="border-t border-slate-800">
                 <td className="px-3 py-2 text-sky-300">{c.cmd}</td>
-                <td className="px-3 py-2 text-slate-300">{c.desc}</td>
+                <td className="px-3 py-2 text-slate-300">{t(c.descKey)}</td>
               </tr>
             ))}
           </tbody>
@@ -370,4 +299,19 @@ function CmdTable({ title, items }: { title: string; items: Cmd[] }) {
       </div>
     </div>
   );
+}
+
+function wikiSectionTitle(id: string, t: (key: TranslationKey) => string) {
+  const keys: Record<string, TranslationKey> = {
+    intro: 'wiki.sectionIntro',
+    start: 'wiki.sectionStart',
+    mods: 'wiki.sectionMods',
+    progress: 'wiki.sectionProgress',
+    commands: 'wiki.sectionCommands',
+    economy: 'wiki.sectionEconomy',
+    perf: 'wiki.sectionPerformance',
+    faq: 'wiki.faqTitle',
+    links: 'wiki.sectionLinks',
+  };
+  return t(keys[id] ?? 'wiki.title');
 }

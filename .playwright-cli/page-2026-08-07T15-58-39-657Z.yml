@@ -1,0 +1,61 @@
+- generic [ref=f4e2]:
+  - region "Notifications alt+T"
+  - generic [ref=f4e3]:
+    - banner [ref=f4e4]:
+      - navigation [ref=f4e5]:
+        - link "Go to homepage" [ref=f4e6] [cursor=pointer]:
+          - /url: /
+          - img "ArchiTech MC logo" [ref=f4e7]
+          - generic [ref=f4e8]: ArchiTech MC
+        - generic [ref=f4e9]:
+          - link "Home" [ref=f4e10] [cursor=pointer]:
+            - /url: /
+          - link "About" [ref=f4e11] [cursor=pointer]:
+            - /url: /about
+          - link "Rules" [ref=f4e12] [cursor=pointer]:
+            - /url: /rules
+          - link "Map" [ref=f4e13] [cursor=pointer]:
+            - /url: /map
+          - link "Wiki" [ref=f4e14] [cursor=pointer]:
+            - /url: /wiki
+          - link "Telegram" [ref=f4e15] [cursor=pointer]:
+            - /url: https://t.me/archi_tech_official
+          - link "Discord" [ref=f4e18] [cursor=pointer]:
+            - /url: https://discord.gg/x6JwVPwPtw
+          - button "Language" [ref=f4e22]
+          - link "Log in" [ref=f4e29] [cursor=pointer]:
+            - /url: /auth/login?next=%2Fu%2FReijin2312%2Fskins
+    - main [ref=f4e30]:
+      - main [ref=f4e32]:
+        - generic [ref=f4e34]:
+          - generic [ref=f4e35]:
+            - generic [ref=f4e36]: R
+            - generic [ref=f4e38]:
+              - generic [ref=f4e39]: Skin gallery
+              - heading "Reijin2312" [level=1] [ref=f4e40]
+          - link "Back to profile" [ref=f4e41] [cursor=pointer]:
+            - /url: /u/Reijin2312
+            - generic [ref=f4e42]: ←
+            - text: Back to profile
+    - contentinfo [ref=f4e44]:
+      - generic [ref=f4e45]:
+        - generic [ref=f4e46]:
+          - generic [ref=f4e47]:
+            - img "ArchiTech MC logo" [ref=f4e48]
+            - generic [ref=f4e49]: ArchiTech MC
+          - generic [ref=f4e50]:
+            - link "Telegram" [ref=f4e51] [cursor=pointer]:
+              - /url: https://t.me/archi_tech_official
+            - link "Discord" [ref=f4e54] [cursor=pointer]:
+              - /url: https://discord.gg/x6JwVPwPtw
+        - generic [ref=f4e57]:
+          - link "About" [ref=f4e58] [cursor=pointer]:
+            - /url: /about
+          - link "Contacts" [ref=f4e59] [cursor=pointer]:
+            - /url: /contacts
+          - link "Terms of Service" [ref=f4e60] [cursor=pointer]:
+            - /url: /terms
+          - link "Privacy Policy" [ref=f4e61] [cursor=pointer]:
+            - /url: /privacy
+        - generic [ref=f4e62]: Not an official Minecraft product. We are not affiliated with Mojang Synergies AB, Microsoft Corporation, or any other rights holders.
+        - generic [ref=f4e64]: © ArchiTech MC. 2024–2026. All rights reserved.

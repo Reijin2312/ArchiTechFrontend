@@ -4,6 +4,8 @@ import { http } from '@/shared/api/http';
 import { endpoints } from '@/shared/api/endpoints';
 import type { TwoFactorStatusRes } from '@/shared/api/types';
 import { Card, InputRow, inp } from './components';
+import { useI18n } from '@/shared/i18n/I18nProvider';
+import { profileTranslations } from '@/shared/i18n/profileTranslations';
 
 interface AccountSectionProps {
   email: string;
@@ -32,6 +34,8 @@ export function AccountSection({
   onUsernameChange,
   onError,
 }: AccountSectionProps) {
+  const { language } = useI18n();
+  const copy = profileTranslations[language].settings;
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -47,7 +51,7 @@ export function AccountSection({
     onError('');
     const emailVal = email.trim();
     if (!emailVal) {
-      onError('Введите email для сброса пароля');
+      onError(copy.emailRequired);
       return;
     }
 
@@ -61,7 +65,7 @@ export function AccountSection({
       const qs = new URLSearchParams({ ticket: data.ticket, email: emailVal, next }).toString();
       navigate('/auth/reset/code?' + qs, { replace: true });
     } catch (e: unknown) {
-      onError(normalizeAccountError(e, 'Не удалось начать сброс пароля'));
+      onError(normalizeAccountError(e, copy.resetError));
     }
   };
 
@@ -72,7 +76,7 @@ export function AccountSection({
       const { data } = await http.get<TwoFactorStatusRes>(endpoints.account2faStatus, { withCredentials: true });
       setTwoFaStatus(data);
     } catch (e) {
-      setTwoFaError(normalizeTwoFaError(e, 'Не удалось загрузить состояние 2FA'));
+      setTwoFaError(normalizeTwoFaError(e, copy.twoFaLoadError, language));
     } finally {
       setTwoFaLoading(false);
     }
@@ -90,7 +94,7 @@ export function AccountSection({
 
   return (
     <Card className="mt-6">
-      <h2 className="mb-4 text-sm font-semibold text-sky-300">Учётная запись</h2>
+      <h2 className="mb-4 text-sm font-semibold text-sky-300">{copy.account}</h2>
 
       <InputRow label="Email">
         <div className="flex w-full items-stretch gap-2">
@@ -105,7 +109,7 @@ export function AccountSection({
             type="button"
             onClick={() => navigate('/settings/email')}
             className="flex items-center justify-center rounded-xl border border-slate-700 px-3 py-2 text-sm hover:border-slate-500 hover:bg-slate-800"
-            title="Изменить email"
+            title={copy.changeEmail}
           >
             <svg
               className="h-4 w-4"
@@ -123,7 +127,7 @@ export function AccountSection({
         </div>
       </InputRow>
 
-      <InputRow label="Пароль">
+      <InputRow label={copy.password}>
         <div className="flex w-full items-stretch gap-2">
           <input
             type="password"
@@ -137,7 +141,7 @@ export function AccountSection({
             disabled={busy === 'pwd'}
             onClick={handlePasswordReset}
             className="flex items-center justify-center rounded-xl border border-slate-700 px-3 py-2 text-sm hover:border-slate-500 hover:bg-slate-800 disabled:opacity-50"
-            title="Изменить пароль"
+            title={copy.changePassword}
           >
             <svg
               className="h-4 w-4"
@@ -155,7 +159,7 @@ export function AccountSection({
         </div>
       </InputRow>
 
-      <InputRow label="Логин">
+      <InputRow label={copy.username}>
         <div className="flex w-full items-stretch gap-2">
           <input value={newUsername} onChange={(e) => setNewUsername(e.target.value)} className={inp() + ' flex-1'} />
           <button
@@ -167,7 +171,7 @@ export function AccountSection({
             }
             onClick={onUsernameChange}
             className="flex items-center justify-center rounded-xl border border-slate-700 px-3 py-2 text-sm hover:border-slate-500 hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            title="Сменить логин"
+            title={copy.changeUsername}
           >
             <svg
               viewBox="0 0 24 24"
@@ -183,16 +187,16 @@ export function AccountSection({
             </svg>
           </button>
         </div>
-        {usernameOk === false && <p className="mt-1 text-xs text-red-400">Логин занят или некорректен</p>}
+        {usernameOk === false && <p className="mt-1 text-xs text-red-400">{copy.usernameUnavailable}</p>}
         {usernameOk === true && newUsername.toLowerCase() !== currentUsername.toLowerCase() && (
-          <p className="mt-1 text-xs text-green-400">Доступен</p>
+          <p className="mt-1 text-xs text-green-400">{copy.available}</p>
         )}
       </InputRow>
 
       <div className="mt-6 rounded-xl border border-slate-800 bg-slate-900/50 p-3">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h3 className="text-sm font-semibold text-sky-300">Двухфакторная аутентификация</h3>
+            <h3 className="text-sm font-semibold text-sky-300">{copy.twoFa}</h3>
             <p className="mt-1 text-xs text-slate-400">Google Authenticator (TOTP)</p>
           </div>
           {!twoFaLoading && (
@@ -203,13 +207,13 @@ export function AccountSection({
                   : 'bg-slate-700/60 text-slate-300 border border-slate-600'
               }`}
             >
-              {isTwoFaEnabled ? 'Включено' : 'Выключено'}
+              {isTwoFaEnabled ? copy.enabled : copy.disabled}
             </span>
           )}
         </div>
 
         {twoFaError && <p className="mt-3 text-xs text-red-400">{twoFaError}</p>}
-        {twoFaLoading && <p className="mt-3 text-xs text-slate-400">Загрузка состояния 2FA...</p>}
+        {twoFaLoading && <p className="mt-3 text-xs text-slate-400">{copy.twoFaLoading}</p>}
 
         {!twoFaLoading && (
           <div className="mt-3 space-y-3">
@@ -219,7 +223,7 @@ export function AccountSection({
                 onClick={openTwoFaDisablePage}
                 className="rounded-xl border border-red-500/60 px-3 py-2 text-sm text-red-200 hover:bg-red-500/10"
               >
-                Открыть мастер отключения 2FA
+                {copy.twoFaDisable}
               </button>
             ) : (
               <>
@@ -228,11 +232,11 @@ export function AccountSection({
                   onClick={openTwoFaSetupPage}
                   className="rounded-xl border border-slate-700 px-3 py-2 text-sm hover:border-slate-500 hover:bg-slate-800"
                 >
-                  Открыть мастер настройки 2FA
+                  {copy.twoFaSetup}
                 </button>
                 {twoFaStatus?.pendingSetup && (
                   <p className="text-xs text-amber-300">
-                    Настройка уже начата, но не завершена. Откройте мастер и подтвердите код.
+                    {copy.twoFaPending}
                   </p>
                 )}
               </>
@@ -254,15 +258,15 @@ function normalizeAccountError(error: unknown, fallback: string): string {
   return fallback;
 }
 
-function normalizeTwoFaError(error: unknown, fallback: string): string {
+function normalizeTwoFaError(error: unknown, fallback: string, language: 'ru' | 'en'): string {
   const status = (error as { response?: { status?: unknown } })?.response?.status;
   const data = (error as { response?: { data?: unknown } })?.response?.data;
   const code = typeof data === 'object' && data !== null ? (data as { error?: unknown }).error : null;
 
-  if (code === 'bad_password' || status === 403) return 'Неверный пароль';
-  if (code === 'invalid_2fa_code') return 'Неверный код из Google Authenticator';
-  if (code === '2fa_not_enabled') return '2FA уже отключена';
-  if (code === 'bad_request' || status === 400) return 'Проверьте введённые данные';
+  if (code === 'bad_password' || status === 403) return language === 'ru' ? 'Неверный пароль' : 'Incorrect password';
+  if (code === 'invalid_2fa_code') return language === 'ru' ? 'Неверный код из Google Authenticator' : 'Invalid Google Authenticator code';
+  if (code === '2fa_not_enabled') return language === 'ru' ? '2FA уже отключена' : '2FA is already disabled';
+  if (code === 'bad_request' || status === 400) return language === 'ru' ? 'Проверьте введённые данные' : 'Check the entered data';
 
   const message = normalizeAccountError(error, fallback);
   if (/^Request failed with status code \d+$/i.test(message)) return fallback;

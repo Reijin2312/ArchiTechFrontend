@@ -1,0 +1,7 @@
+import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+import { motion } from 'framer-motion';
+export function Badge({ icon, title, description, unlocked = false, unlockedAt, onClick, className = '' }) {
+    return (_jsxs(motion.button, { type: "button", onClick: onClick, disabled: !unlocked, whileHover: unlocked ? { scale: 1.05, y: -2 } : undefined, whileTap: unlocked ? { scale: 0.98 } : undefined, className: `group relative rounded-xl border p-3 text-left transition-all ${unlocked
+            ? 'border-amber-700/50 bg-linear-to-br from-amber-900/30 to-slate-900/30 hover:border-amber-600 cursor-pointer'
+            : 'border-slate-800 bg-slate-900/40 opacity-60 cursor-not-allowed'} ${className}`, title: unlocked && unlockedAt ? `Получено: ${new Date(unlockedAt).toLocaleDateString()}` : undefined, children: [!unlocked && (_jsx("div", { className: "absolute inset-0 flex items-center justify-center rounded-xl bg-slate-950/60 backdrop-blur-sm", children: _jsx("div", { className: "text-2xl", children: "\uD83D\uDD12" }) })), _jsxs("div", { className: "flex items-start gap-3", children: [_jsx("div", { className: "text-3xl", children: icon }), _jsxs("div", { className: "flex-1 min-w-0", children: [_jsx("div", { className: `text-sm font-semibold truncate ${unlocked ? 'text-amber-300' : 'text-slate-400'}`, children: title }), _jsx("div", { className: "mt-0.5 text-xs text-slate-400 line-clamp-2", children: description })] })] })] }));
+}

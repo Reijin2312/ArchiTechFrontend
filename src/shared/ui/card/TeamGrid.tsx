@@ -2,6 +2,8 @@ import { motion, type Variants } from 'framer-motion';
 import type { TeamMember } from '@/shared/data/team';
 import { TEAM_AVATAR_FALLBACK } from '@/shared/data/team';
 import { SvgCurseForge, SvgModrinth, SvgGitHub } from '@/shared/ui/image/Icons';
+import { useI18n } from '@/shared/i18n/I18nProvider';
+import { teamTranslations } from '@/shared/i18n/translations';
 
 type TeamGridProps = {
   team: TeamMember[];
@@ -30,6 +32,8 @@ const teamItem: Variants = {
 };
 
 export function TeamGrid({ team, avatars, disableMotion, className }: TeamGridProps) {
+  const { language } = useI18n();
+  const copy = teamTranslations[language];
   if (!team.length) return null;
 
   const [leader, ...otherMembers] = team;
@@ -72,10 +76,10 @@ export function TeamGrid({ team, avatars, disableMotion, className }: TeamGridPr
           </a>
 
           <div className="flex min-w-0 flex-1 flex-col justify-center">
-            <div className="text-[10px] uppercase tracking-[0.16em] text-sky-300/90">Координация развития проекта</div>
+            <div className="text-[10px] uppercase tracking-[0.16em] text-sky-300/90">{copy.lead}</div>
             <a href={`/u/${encodeURIComponent(leader.name)}`} className="mt-2 block min-w-0">
               <div className="truncate text-lg font-semibold text-slate-100">{leader.name}</div>
-              <div className="text-sm text-slate-300">{leader.role}</div>
+              <div className="text-sm text-slate-300">{localizedRole(leader.name, leader.role, copy)}</div>
             </a>
 
             {(leader.curseForgeUrl || leader.modrinthUrl || leader.githubUrl) && (
@@ -86,7 +90,7 @@ export function TeamGrid({ team, avatars, disableMotion, className }: TeamGridPr
                     target="_blank"
                     rel="noreferrer noopener"
                     className="grid size-9 place-items-center text-[#f16436] transition-transform hover:scale-110 hover:text-[#ff8158]"
-                    aria-label="Проекты Raijin2312 на CurseForge"
+                    aria-label={copy.curseForge}
                     title="CurseForge"
                   >
                     <SvgCurseForge className="size-8" />
@@ -98,7 +102,7 @@ export function TeamGrid({ team, avatars, disableMotion, className }: TeamGridPr
                     target="_blank"
                     rel="noreferrer noopener"
                     className="grid size-9 place-items-center text-[#00af5c] transition-transform hover:scale-110 hover:text-[#36d17b]"
-                    aria-label="Профиль Raijin2312 на Modrinth"
+                    aria-label={copy.modrinth}
                     title="Modrinth"
                   >
                     <SvgModrinth className="size-8" />
@@ -143,7 +147,7 @@ export function TeamGrid({ team, avatars, disableMotion, className }: TeamGridPr
                   decoding="async"
                   title={
                     member.retiredSince
-                      ? `Жив. ${member.retirementReason ?? 'Просто вышел из админки'} в ${member.retiredSince}.`
+                      ? copy.retiredTitle.replace('{reason}', language === 'ru' ? (member.retirementReason ?? copy.left) : copy.left).replace('{year}', String(member.retiredSince))
                       : undefined
                   }
                   className={`size-12 rounded-xl border border-slate-700 bg-slate-800 object-cover transition duration-300 ${
@@ -160,12 +164,12 @@ export function TeamGrid({ team, avatars, disableMotion, className }: TeamGridPr
                   <div className="truncate font-medium">{member.name}</div>
                   <div className="flex flex-wrap items-center gap-1.5 text-sm text-slate-400">
                     <span className={member.retiredSince ? 'line-through decoration-slate-500' : undefined}>
-                      {member.role}
+                      {localizedRole(member.name, member.role, copy)}
                     </span>
                     {member.retiredSince && (
                       <span
                         className="rounded-md bg-slate-800/80 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-slate-500"
-                        title={`Жив. ${member.retirementReason ?? 'Просто вышел из админки'} в ${member.retiredSince}.`}
+                        title={copy.retiredTitle.replace('{reason}', language === 'ru' ? (member.retirementReason ?? copy.left) : copy.left).replace('{year}', String(member.retiredSince))}
                       >
                         retired {member.retiredSince}
                       </span>
@@ -179,4 +183,13 @@ export function TeamGrid({ team, avatars, disableMotion, className }: TeamGridPr
       </div>
     </motion.div>
   );
+}
+
+function localizedRole(name: string, fallback: string, copy: typeof teamTranslations.ru | typeof teamTranslations.en) {
+  if (name === 'Raijin') return copy.owner;
+  if (name === 'Kelbor_Hal') return copy.juniorAdmin;
+  if (name === 'Wolle') return copy.techAdmin;
+  if (name === 'Sile_Scorp') return copy.designer;
+  if (name === 'Explyp') return copy.python;
+  return fallback;
 }

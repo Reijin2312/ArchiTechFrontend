@@ -1,0 +1,173 @@
+- generic [ref=e2]:
+  - region "Notifications alt+T"
+  - generic [ref=e3]:
+    - banner [ref=e4]:
+      - navigation [ref=e5]:
+        - link "На главную" [ref=e6] [cursor=pointer]:
+          - /url: /
+          - img "Логотип ArchiTech MC" [ref=e7]
+          - generic [ref=e8]: ArchiTech MC
+        - generic [ref=e9]:
+          - link "Главная" [ref=e10] [cursor=pointer]:
+            - /url: /
+          - link "О сервере" [ref=e11] [cursor=pointer]:
+            - /url: /about
+          - link "Правила" [ref=e12] [cursor=pointer]:
+            - /url: /rules
+          - link "Карта" [ref=e13] [cursor=pointer]:
+            - /url: /map
+          - link "Вики" [ref=e14] [cursor=pointer]:
+            - /url: /wiki
+          - link "Telegram" [ref=e15] [cursor=pointer]:
+            - /url: https://t.me/archi_tech_official
+          - link "Discord" [ref=e18] [cursor=pointer]:
+            - /url: https://discord.gg/x6JwVPwPtw
+          - button "Язык" [ref=e22]
+          - link "Войти" [ref=e27] [cursor=pointer]:
+            - /url: /auth/login?next=%2F
+    - main [ref=e28]:
+      - generic [ref=e29]:
+        - generic [ref=e31]:
+          - generic [ref=e32]:
+            - generic [ref=e33]:
+              - img "ArchiTech MC" [ref=e35]
+              - paragraph [ref=e36]: "Небольшой ламповый техномагический сервер c упором на строительство и творчество, где можно возвести завод, улететь на собственном дирижабле и случайно стать магом. В основе — Create, Create: Aeronautics и Ars Nouveau с аддонами. Без вайпов и с авторскими портами BetterEnd & BetterNether."
+              - generic [ref=e37]:
+                - generic [ref=e38]:
+                  - generic [ref=e39]: IP
+                  - generic [ref=e40]: architech-mc.com
+                  - button "Копировать IP" [ref=e41]
+                - generic [ref=e46]:
+                  - generic [ref=e47]: Проверяем…
+                  - generic [ref=e51]:
+                    - text: "Версия:"
+                    - strong [ref=e52]: 1.21.1 NeoForge
+            - generic [ref=e53]:
+              - link "Скачать лаунчер" [ref=e54] [cursor=pointer]:
+                - /url: https://launcher.architech-mc.ru/download/launcher/latest
+              - link "Исходный код лаунчера на GitHub" [ref=e57] [cursor=pointer]:
+                - /url: https://github.com/Reijin2312/ArchiTech_Launcher
+          - generic [ref=e60]:
+            - generic [ref=e62]:
+              - img "Скриншот мира ArchiTech MC" [ref=e65]
+              - generic:
+                - generic:
+                  - generic: Галерея
+                  - generic: Ходячий замок
+                  - generic: Нестареющая классика
+            - generic [ref=e66]:
+              - button "Показать скриншот" [ref=e67]
+              - button "Показать скриншот" [ref=e69]
+              - button "Показать скриншот" [ref=e71]
+              - button "Показать скриншот" [ref=e73]
+              - button "Показать скриншот" [ref=e75]
+              - button "Показать скриншот" [ref=e77]
+              - button "Показать скриншот" [ref=e79]
+              - button "Показать скриншот" [ref=e81]
+        - generic [ref=e85]:
+          - generic [ref=e86]:
+            - generic [ref=e87]: О сервере
+            - generic [ref=e93]: Что такое этот ваш ArchiTech, про что он и с чем его едят
+            - link "Узнать больше" [ref=e94] [cursor=pointer]:
+              - /url: /about
+          - generic [ref=e95]:
+            - generic [ref=e96]: Посмотреть сборку
+            - generic [ref=e101]: Щепотка техники, щепотка магии, вуаля — это техномагия!
+            - link "Открыть вики" [ref=e102] [cursor=pointer]:
+              - /url: /wiki#mods
+          - generic [ref=e103]:
+            - generic [ref=e104]: Как начать играть
+            - generic [ref=e109]: Пара шагов и правильный ник — добро пожаловать в Сити-17
+            - link "Начать играть" [ref=e110] [cursor=pointer]:
+              - /url: /start
+          - generic [ref=e111]:
+            - generic [ref=e112]: Скачать лаунчер
+            - generic [ref=e118]: Скачал и забыл про ручные обновления. Магия вне Хогвартса
+            - link "Скачать" [ref=e119] [cursor=pointer]:
+              - /url: https://launcher.architech-mc.ru/download/launcher/latest
+        - generic [ref=e120]:
+          - heading "Команда проекта" [level=2] [ref=e121]
+          - generic [ref=e122]:
+            - generic [ref=e124]:
+              - link [ref=e125] [cursor=pointer]:
+                - /url: /u/Raijin
+                - img "Raijin" [ref=e126]
+              - generic [ref=e127]:
+                - generic [ref=e128]: Координация развития проекта
+                - link "Raijin Владелец & Майнкрафт моддер" [ref=e129] [cursor=pointer]:
+                  - /url: /u/Raijin
+                  - generic [ref=e130]: Raijin
+                  - generic [ref=e131]: Владелец & Майнкрафт моддер
+                - generic [ref=e132]:
+                  - link "Проекты Raijin2312 на CurseForge" [ref=e133] [cursor=pointer]:
+                    - /url: https://www.curseforge.com/members/raijin2312/projects
+                  - link "Профиль Raijin2312 на Modrinth" [ref=e136] [cursor=pointer]:
+                    - /url: https://modrinth.com/user/Raijin2312
+                  - link "GitHub Reijin2312" [ref=e139] [cursor=pointer]:
+                    - /url: https://github.com/Reijin2312
+            - generic [ref=e142]:
+              - link "Kelbor_Hal Kelbor_Hal Мл. Админ" [ref=e144] [cursor=pointer]:
+                - /url: /u/Kelbor_Hal
+                - img "Kelbor_Hal" [ref=e145]
+                - generic [ref=e146]:
+                  - generic [ref=e147]: Kelbor_Hal
+                  - generic [ref=e148]: Мл. Админ
+              - link "Wolle Wolle Тех. Админ retired 2025" [ref=e151] [cursor=pointer]:
+                - /url: /u/Wolle
+                - img "Wolle" [ref=e152]
+                - generic [ref=e153]:
+                  - generic [ref=e154]: Wolle
+                  - generic [ref=e155]:
+                    - generic [ref=e156]: Тех. Админ
+                    - generic "Жив. Вышел из-за смены хоста в 2025 г." [ref=e157]: retired 2025
+              - link "Sile_Scorp Sile_Scorp Дизайнер" [ref=e159] [cursor=pointer]:
+                - /url: /u/Sile_Scorp
+                - img "Sile_Scorp" [ref=e160]
+                - generic [ref=e161]:
+                  - generic [ref=e162]: Sile_Scorp
+                  - generic [ref=e163]: Дизайнер
+              - link "Explyp Explyp Python-программист" [ref=e166] [cursor=pointer]:
+                - /url: /u/Explyp
+                - img "Explyp" [ref=e167]
+                - generic [ref=e168]:
+                  - generic [ref=e169]: Explyp
+                  - generic [ref=e170]: Python-программист
+        - generic [ref=e172]:
+          - heading "Легенды сервера" [level=2] [ref=e173]
+          - generic [ref=e174]:
+            - generic [ref=e175]: Лидеры по игровому времени за всё время
+            - generic [ref=e177]: Пока нет данных для рейтинга.
+        - generic [ref=e178]:
+          - heading "Популярные вопросы" [level=2] [ref=e179]
+          - generic [ref=e180]:
+            - button "Как начать играть?" [ref=e183]
+            - button "Нужен ли лаунчер?" [ref=e195]
+            - button "Безопасен ли лаунчер?" [ref=e208]
+            - button "Сервер бесплатный?" [ref=e220]
+            - button "Нужна ли лицензия Minecraft?" [ref=e231]
+            - button "Какие моды и версия?" [ref=e243]
+            - button "Можно ли поставить свой скин?" [ref=e255]
+            - button "Проводятся ли вайпы?" [ref=e268]
+            - button "Какие правила?" [ref=e279]
+    - contentinfo [ref=e289]:
+      - generic [ref=e290]:
+        - generic [ref=e291]:
+          - generic [ref=e292]:
+            - img "Логотип ArchiTech MC" [ref=e293]
+            - generic [ref=e294]: ArchiTech MC
+          - generic [ref=e295]:
+            - link "Telegram" [ref=e296] [cursor=pointer]:
+              - /url: https://t.me/archi_tech_official
+            - link "Discord" [ref=e299] [cursor=pointer]:
+              - /url: https://discord.gg/x6JwVPwPtw
+        - generic [ref=e302]:
+          - link "О сервере" [ref=e303] [cursor=pointer]:
+            - /url: /about
+          - link "Контакты" [ref=e304] [cursor=pointer]:
+            - /url: /contacts
+          - link "Пользовательское соглашение" [ref=e305] [cursor=pointer]:
+            - /url: /terms
+          - link "Политика конфиденциальности" [ref=e306] [cursor=pointer]:
+            - /url: /privacy
+        - generic [ref=e307]: Не является официальным продуктом Minecraft. Мы никак не связаны с Mojang Synergies AB, Microsoft Corporation или другими правообладателями.
+        - generic [ref=e309]: © ArchiTech MC. 2024–2026. Все права защищены.

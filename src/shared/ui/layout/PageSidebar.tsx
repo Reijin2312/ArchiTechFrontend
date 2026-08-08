@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion, type Variants } from 'framer-motion';
+import { useI18n } from '@/shared/i18n/I18nProvider';
 
 export type TocItem = { id: string; title: string; n?: number };
 
@@ -44,6 +45,7 @@ type LeftNavProps = {
 };
 
 export function LeftNav({ items, blurIntensity = 'md', bgOpacity = '40', disableMotion = false }: LeftNavProps) {
+  const { language } = useI18n();
   const blurClass = blurIntensity === 'xl' ? 'backdrop-blur-xl' : 'backdrop-blur-md';
   const bgClass = bgOpacity === '60' ? 'bg-slate-950/60' : 'bg-slate-950/40';
   
@@ -54,7 +56,7 @@ export function LeftNav({ items, blurIntensity = 'md', bgOpacity = '40', disable
         initial={disableMotion ? false : 'hidden'}
         animate={disableMotion ? false : 'show'}
       >
-        <h2 className="mb-3 text-sky-400 text-sm font-semibold">Разделы</h2>
+        <h2 className="mb-3 text-sky-400 text-sm font-semibold">{language === 'ru' ? 'Разделы' : 'Sections'}</h2>
         <ul className="space-y-2 text-sm">
           {items.map((s) => (
             <li key={s.id}>
@@ -84,6 +86,7 @@ export function RightToc({
   linkTransition = false,
   disableMotion = false,
 }: RightTocProps) {
+  const { language } = useI18n();
   const [active, setActive] = useState(items[0]?.id);
   const observer = useRef<IntersectionObserver | null>(null);
 
@@ -117,7 +120,7 @@ export function RightToc({
         initial={disableMotion ? false : 'hidden'}
         animate={disableMotion ? false : 'show'}
       >
-        <div className="mb-2 text-slate-300 text-sm">На этой странице</div>
+        <div className="mb-2 text-slate-300 text-sm">{language === 'ru' ? 'На этой странице' : 'On this page'}</div>
         <ol className="space-y-2 text-sm">
           {items.map((it, i) => {
             const on = active === it.id;

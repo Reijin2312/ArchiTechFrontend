@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { useI18n } from '@/shared/i18n/I18nProvider';
 
 type JsonLd = Record<string, unknown>;
 type SeoProps = {
@@ -23,11 +24,17 @@ function upsert(name: string, selector: string, attrs: Record<string,string>) {
 }
 
 export function Seo(props: SeoProps) {
-  useEffect(() => {
-    document.title = props.title;
+  const { language } = useI18n();
+  const route = props.canonical ? new URL(props.canonical).pathname : undefined;
+  const english = language === 'en' && route ? ENGLISH_META[route] : undefined;
+  const title = english?.title ?? props.title;
+  const description = english?.description ?? props.description;
 
-    if (props.description) {
-      upsert('meta', 'meta[name="description"]', { name: 'description', content: props.description });
+  useEffect(() => {
+    document.title = title;
+
+    if (description) {
+      upsert('meta', 'meta[name="description"]', { name: 'description', content: description });
     }
 
     if (props.keywords && (Array.isArray(props.keywords) ? props.keywords.length : true)) {
@@ -44,8 +51,8 @@ export function Seo(props: SeoProps) {
     }
 
     const og = props.og || {};
-    upsert('meta', 'meta[property="og:title"]', { property: 'og:title', content: props.title });
-    if (props.description) upsert('meta', 'meta[property="og:description"]', { property: 'og:description', content: props.description });
+    upsert('meta', 'meta[property="og:title"]', { property: 'og:title', content: title });
+    if (description) upsert('meta', 'meta[property="og:description"]', { property: 'og:description', content: description });
     if (og.url) upsert('meta', 'meta[property="og:url"]', { property: 'og:url', content: og.url });
     upsert('meta', 'meta[property="og:type"]', { property: 'og:type', content: og.type || 'website' });
     if (og.image) upsert('meta', 'meta[property="og:image"]', { property: 'og:image', content: og.image });
@@ -64,7 +71,18 @@ export function Seo(props: SeoProps) {
     return () => {
       
     };
-  }, [props.title, props.description, props.keywords, props.canonical, props.robots, JSON.stringify(props.og), props.twitterCard, JSON.stringify(props.jsonLd)]);
+  }, [title, description, props.keywords, props.canonical, props.robots, JSON.stringify(props.og), props.twitterCard, JSON.stringify(props.jsonLd)]);
 
   return null;
 }
+
+const ENGLISH_META: Record<string, { title: string; description: string }> = {
+  '/': { title: 'ArchiTech MC — modded Minecraft tech and magic server', description: 'A cozy Minecraft 1.21.1 NeoForge server with Create, Create: Aeronautics, Ars Nouveau, long-running worlds, and free access.' },
+  '/wiki': { title: 'ArchiTech MC Wiki — modpack, guides, and commands', description: 'Current ArchiTech MC mod list, getting-started guide, server commands, progression, and performance tips.' },
+  '/about': { title: 'About ArchiTech MC — a persistent modded Minecraft world', description: 'Learn about ArchiTech MC, its no-wipe world, tech-and-magic modpack, custom ports, and season history.' },
+  '/rules': { title: 'ArchiTech MC server rules', description: 'Rules for fair play, communication, building, automation, trading, and account safety on ArchiTech MC.' },
+  '/start': { title: 'How to start playing on ArchiTech MC', description: 'Create a free account, download the official launcher, and join ArchiTech MC without manual server setup.' },
+  '/contacts': { title: 'ArchiTech MC contacts and support', description: 'Official ArchiTech MC support contacts, Discord, Telegram, and email.' },
+  '/privacy': { title: 'ArchiTech MC Privacy Policy', description: 'How ArchiTech MC collects, uses, stores, and protects personal data.' },
+  '/terms': { title: 'ArchiTech MC Terms of Use', description: 'Terms governing use of the ArchiTech MC website, launcher, accounts, and game services.' },
+};

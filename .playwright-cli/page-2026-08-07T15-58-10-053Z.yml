@@ -1,0 +1,79 @@
+- generic [ref=f2e2]:
+  - region "Notifications alt+T"
+  - generic [ref=f2e3]:
+    - banner [ref=f2e4]:
+      - navigation [ref=f2e5]:
+        - link "На главную" [ref=f2e6] [cursor=pointer]:
+          - /url: /
+          - img "Логотип ArchiTech MC" [ref=f2e7]
+          - generic [ref=f2e8]: ArchiTech MC
+        - generic [ref=f2e9]:
+          - link "Главная" [ref=f2e10] [cursor=pointer]:
+            - /url: /
+          - link "О сервере" [ref=f2e11] [cursor=pointer]:
+            - /url: /about
+          - link "Правила" [ref=f2e12] [cursor=pointer]:
+            - /url: /rules
+          - link "Карта" [ref=f2e13] [cursor=pointer]:
+            - /url: /map
+          - link "Вики" [ref=f2e14] [cursor=pointer]:
+            - /url: /wiki
+          - link "Telegram" [ref=f2e15] [cursor=pointer]:
+            - /url: https://t.me/archi_tech_official
+          - link "Discord" [ref=f2e18] [cursor=pointer]:
+            - /url: https://discord.gg/x6JwVPwPtw
+          - generic [ref=f2e21]:
+            - button "Язык" [expanded] [active] [ref=f2e22]
+            - menu [ref=f2e92]:
+              - menuitemradio "Русский" [checked] [ref=f2e93]
+              - menuitemradio "English" [ref=f2e99]
+          - link "Войти" [ref=f2e27] [cursor=pointer]:
+            - /url: /auth/login?next=%2Fu%2FReijin2312
+    - main [ref=f2e28]:
+      - main [ref=f2e30]:
+        - generic [ref=f2e31]:
+          - generic [ref=f2e33]:
+            - generic [ref=f2e34]:
+              - heading "Скин" [level=2] [ref=f2e35]
+              - link "Открыть галерею скинов" [ref=f2e37] [cursor=pointer]:
+                - /url: /u/Reijin2312/skins
+            - generic "3D-просмотр скина" [ref=f2e43]
+          - generic [ref=f2e46]:
+            - generic [ref=f2e47]: AVA
+            - generic [ref=f2e50]:
+              - heading "—" [level=1] [ref=f2e90]
+              - paragraph [ref=f2e53]: О себе пока ничего не указано
+              - generic [ref=f2e54]:
+                - button "Написать" [ref=f2e55]
+                - button "Пожаловаться" [ref=f2e56]
+        - generic [ref=f2e57]:
+          - generic [ref=f2e58]:
+            - generic [ref=f2e59]:
+              - heading "Достижения" [level=3] [ref=f2e60]
+              - link "Открыть все достижения" [ref=f2e61] [cursor=pointer]:
+                - /url: /u/Reijin2312/achievements
+            - generic [ref=f2e66]: У игрока пока нет достижений
+          - generic [ref=f2e67]: Не удалось загрузить сессии
+        - generic [ref=f2e91]: Request failed with status code 500
+    - contentinfo [ref=f2e69]:
+      - generic [ref=f2e70]:
+        - generic [ref=f2e71]:
+          - generic [ref=f2e72]:
+            - img "Логотип ArchiTech MC" [ref=f2e73]
+            - generic [ref=f2e74]: ArchiTech MC
+          - generic [ref=f2e75]:
+            - link "Telegram" [ref=f2e76] [cursor=pointer]:
+              - /url: https://t.me/archi_tech_official
+            - link "Discord" [ref=f2e79] [cursor=pointer]:
+              - /url: https://discord.gg/x6JwVPwPtw
+        - generic [ref=f2e82]:
+          - link "О сервере" [ref=f2e83] [cursor=pointer]:
+            - /url: /about
+          - link "Контакты" [ref=f2e84] [cursor=pointer]:
+            - /url: /contacts
+          - link "Пользовательское соглашение" [ref=f2e85] [cursor=pointer]:
+            - /url: /terms
+          - link "Политика конфиденциальности" [ref=f2e86] [cursor=pointer]:
+            - /url: /privacy
+        - generic [ref=f2e87]: Не является официальным продуктом Minecraft. Мы никак не связаны с Mojang Synergies AB, Microsoft Corporation или другими правообладателями.
+        - generic [ref=f2e89]: © ArchiTech MC. 2024–2026. Все права защищены.

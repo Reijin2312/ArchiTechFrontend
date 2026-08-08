@@ -1,0 +1,109 @@
+- generic [ref=f3e2]:
+  - region "Notifications alt+T"
+  - generic [ref=f3e3]:
+    - banner [ref=f3e4]:
+      - navigation [ref=f3e5]:
+        - link "Go to homepage" [ref=f3e6] [cursor=pointer]:
+          - /url: /
+          - img "ArchiTech MC logo" [ref=f3e7]
+          - generic [ref=f3e8]: ArchiTech MC
+        - generic [ref=f3e9]:
+          - link "Home" [ref=f3e10] [cursor=pointer]:
+            - /url: /
+          - link "About" [ref=f3e11] [cursor=pointer]:
+            - /url: /about
+          - link "Rules" [ref=f3e12] [cursor=pointer]:
+            - /url: /rules
+          - link "Map" [ref=f3e13] [cursor=pointer]:
+            - /url: /map
+          - link "Wiki" [ref=f3e14] [cursor=pointer]:
+            - /url: /wiki
+          - link "Telegram" [ref=f3e15] [cursor=pointer]:
+            - /url: https://t.me/archi_tech_official
+          - link "Discord" [ref=f3e18] [cursor=pointer]:
+            - /url: https://discord.gg/x6JwVPwPtw
+          - button "Language" [ref=f3e22]
+          - link "Log in" [ref=f3e29] [cursor=pointer]:
+            - /url: /auth/login?next=%2Fu%2FReijin2312%2Fachievements
+    - main [ref=f3e30]:
+      - main [ref=f3e32]:
+        - generic [ref=f3e33]:
+          - generic [ref=f3e34]:
+            - generic [ref=f3e35]:
+              - generic [ref=f3e36]: R
+              - generic [ref=f3e38]:
+                - generic [ref=f3e39]: Player achievements
+                - heading "Reijin2312" [level=1] [ref=f3e40]
+            - link "Back to profile" [ref=f3e41] [cursor=pointer]:
+              - /url: /u/Reijin2312
+              - generic [ref=f3e42]: ↩
+              - text: Back to profile
+          - generic [ref=f3e43]:
+            - generic [ref=f3e44]:
+              - article [ref=f3e45]:
+                - generic [ref=f3e46]:
+                  - generic [ref=f3e47]: ⚔️
+                  - generic [ref=f3e48]: Mobs killed
+                - generic [ref=f3e49]: —
+              - article [ref=f3e50]:
+                - generic [ref=f3e51]:
+                  - generic [ref=f3e52]: 🧱
+                  - generic [ref=f3e53]: Blocks placed
+                - generic [ref=f3e54]: —
+              - article [ref=f3e55]:
+                - generic [ref=f3e56]:
+                  - generic [ref=f3e57]: ⛏️
+                  - generic [ref=f3e58]: Blocks mined
+                - generic [ref=f3e59]: —
+            - generic [ref=f3e60]:
+              - generic [ref=f3e61]: Archive rating
+              - generic [ref=f3e63]:
+                - generic [ref=f3e64]: 🏆
+                - generic [ref=f3e65]: 0/0
+            - generic [ref=f3e66]:
+              - article [ref=f3e67]:
+                - generic [ref=f3e68]:
+                  - generic [ref=f3e69]: ☠️
+                  - generic [ref=f3e70]: Deaths
+                - generic [ref=f3e71]: —
+              - article [ref=f3e72]:
+                - generic [ref=f3e73]:
+                  - generic [ref=f3e74]: ⌛
+                  - generic [ref=f3e75]: Hours played
+                - generic [ref=f3e76]: —
+              - article [ref=f3e77]:
+                - generic [ref=f3e78]:
+                  - generic [ref=f3e79]: 🧭
+                  - generic [ref=f3e80]: Distance walked, km
+                - generic [ref=f3e81]: —
+        - heading "Pinned awards" [level=2] [ref=f3e84]
+        - generic [ref=f3e93]:
+          - generic [ref=f3e94]:
+            - heading "Achievement catalog" [level=2] [ref=f3e95]
+            - generic [ref=f3e96]:
+              - button "All" [ref=f3e97]
+              - button "Unlocked" [ref=f3e98]
+              - button "Locked" [ref=f3e99]
+          - textbox "Search by title or description" [ref=f3e101]
+    - contentinfo [ref=f3e109]:
+      - generic [ref=f3e110]:
+        - generic [ref=f3e111]:
+          - generic [ref=f3e112]:
+            - img "ArchiTech MC logo" [ref=f3e113]
+            - generic [ref=f3e114]: ArchiTech MC
+          - generic [ref=f3e115]:
+            - link "Telegram" [ref=f3e116] [cursor=pointer]:
+              - /url: https://t.me/archi_tech_official
+            - link "Discord" [ref=f3e119] [cursor=pointer]:
+              - /url: https://discord.gg/x6JwVPwPtw
+        - generic [ref=f3e122]:
+          - link "About" [ref=f3e123] [cursor=pointer]:
+            - /url: /about
+          - link "Contacts" [ref=f3e124] [cursor=pointer]:
+            - /url: /contacts
+          - link "Terms of Service" [ref=f3e125] [cursor=pointer]:
+            - /url: /terms
+          - link "Privacy Policy" [ref=f3e126] [cursor=pointer]:
+            - /url: /privacy
+        - generic [ref=f3e127]: Not an official Minecraft product. We are not affiliated with Mojang Synergies AB, Microsoft Corporation, or any other rights holders.
+        - generic [ref=f3e129]: © ArchiTech MC. 2024–2026. All rights reserved.

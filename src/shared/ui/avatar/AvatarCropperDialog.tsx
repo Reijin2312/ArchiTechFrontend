@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import Cropper, { type Area } from 'react-easy-crop';
+import { useI18n } from '@/shared/i18n/I18nProvider';
 
 type Props = {
   src: string;
@@ -49,6 +50,7 @@ async function getCroppedImg(imageSrc: string, crop: Area): Promise<Blob> {
 }
 
 export function AvatarCropperDialog({ src, onClose, onCropped }: Props) {
+  const { language } = useI18n();
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1.2);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
@@ -71,7 +73,7 @@ export function AvatarCropperDialog({ src, onClose, onCropped }: Props) {
       />
       <div className="relative z-10 w-full max-w-md rounded-2xl border border-slate-800 bg-slate-950 p-4 shadow-xl">
         <h2 className="mb-3 text-sm font-semibold text-sky-300">
-          Обрезка аватара
+          {language === 'ru' ? 'Обрезка аватара' : 'Crop avatar'}
         </h2>
 
         <div className="relative h-72 w-full overflow-hidden rounded-xl bg-slate-900">
@@ -106,14 +108,14 @@ export function AvatarCropperDialog({ src, onClose, onCropped }: Props) {
             onClick={onClose}
             className="rounded-xl border border-slate-700 px-3 py-1.5 text-sm hover:border-slate-500"
           >
-            Отмена
+            {language === 'ru' ? 'Отмена' : 'Cancel'}
           </button>
           <button
             type="button"
             onClick={handleConfirm}
             className="rounded-xl border border-sky-700 px-3 py-1.5 text-sm text-sky-300 hover:border-sky-500"
           >
-            Обрезать и сохранить
+            {language === 'ru' ? 'Обрезать и сохранить' : 'Crop and save'}
           </button>
         </div>
       </div>

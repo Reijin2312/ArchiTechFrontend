@@ -1,0 +1,249 @@
+- generic [ref=f3e2]:
+  - region "Notifications alt+T"
+  - generic [ref=f3e3]:
+    - banner [ref=f3e4]:
+      - navigation [ref=f3e5]:
+        - link "На главную" [ref=f3e6] [cursor=pointer]:
+          - /url: /
+          - img "Логотип ArchiTech MC" [ref=f3e7]
+          - generic [ref=f3e8]: ArchiTech MC
+        - generic [ref=f3e9]:
+          - link "Главная" [ref=f3e10] [cursor=pointer]:
+            - /url: /
+          - link "О сервере" [ref=f3e11] [cursor=pointer]:
+            - /url: /about
+          - link "Правила" [ref=f3e12] [cursor=pointer]:
+            - /url: /rules
+          - link "Карта" [ref=f3e13] [cursor=pointer]:
+            - /url: /map
+          - link "Вики" [ref=f3e14] [cursor=pointer]:
+            - /url: /wiki
+          - link "Telegram" [ref=f3e15] [cursor=pointer]:
+            - /url: https://t.me/archi_tech_official
+          - link "Discord" [ref=f3e18] [cursor=pointer]:
+            - /url: https://discord.gg/x6JwVPwPtw
+          - button "Язык" [ref=f3e22]
+          - link "Войти" [ref=f3e27] [cursor=pointer]:
+            - /url: /auth/login?next=%2Fwiki
+    - main [ref=f3e28]:
+      - generic [ref=f3e29]:
+        - complementary [ref=f3e30]:
+          - navigation [ref=f3e31]:
+            - generic [ref=f3e32]:
+              - heading "Разделы" [level=2] [ref=f3e33]
+              - list [ref=f3e34]:
+                - listitem [ref=f3e35]:
+                  - link "О сервере и тематика" [ref=f3e36] [cursor=pointer]:
+                    - /url: "#intro"
+                - listitem [ref=f3e37]:
+                  - link "Как начать играть" [ref=f3e38] [cursor=pointer]:
+                    - /url: "#start"
+                - listitem [ref=f3e39]:
+                  - link "Список модов" [ref=f3e40] [cursor=pointer]:
+                    - /url: "#mods"
+                - listitem [ref=f3e41]:
+                  - link "Прогрессия техномагии" [ref=f3e42] [cursor=pointer]:
+                    - /url: "#progress"
+                - listitem [ref=f3e43]:
+                  - link "Команды сервера и бота" [ref=f3e44] [cursor=pointer]:
+                    - /url: "#commands"
+                - listitem [ref=f3e45]:
+                  - link "Экономика" [ref=f3e46] [cursor=pointer]:
+                    - /url: "#economy"
+                - listitem [ref=f3e47]:
+                  - link "Производительность" [ref=f3e48] [cursor=pointer]:
+                    - /url: "#perf"
+                - listitem [ref=f3e49]:
+                  - link "Частые вопросы" [ref=f3e50] [cursor=pointer]:
+                    - /url: "#faq"
+                - listitem [ref=f3e51]:
+                  - link "Ссылки" [ref=f3e52] [cursor=pointer]:
+                    - /url: "#links"
+        - main [ref=f3e53]:
+          - heading "Вики сервера" [level=1] [ref=f3e54]
+          - generic [ref=f3e55]:
+            - generic [ref=f3e56]: Как пользоваться вики
+            - list [ref=f3e57]:
+              - listitem [ref=f3e58]: "Переходите по разделам слева или используйте быстрый поиск по странице: Ctrl + F (Windows / Linux), Cmd + F (macOS)."
+              - listitem [ref=f3e59]: Список модов можно искать по названию, автору и тегам.
+          - generic [ref=f3e61]:
+            - heading "1 О сервере и тематика" [level=2] [ref=f3e62]:
+              - generic [ref=f3e63]: "1"
+              - text: О сервере и тематика
+            - generic [ref=f3e64]:
+              - paragraph [ref=f3e65]: Сервер состоит из одного мира. Тематикой является техномагия с особым упором на строительство. Наша цель — создать комфортное и стабильное место для общения и взаимодействия.
+              - paragraph [ref=f3e66]: Спавн расположен на острове, окружённом со всех сторон океаном. Атмосферно, не находите?
+          - generic [ref=f3e68]:
+            - heading "2 Как начать играть" [level=2] [ref=f3e69]:
+              - generic [ref=f3e70]: "2"
+              - text: Как начать играть
+            - generic [ref=f3e71]:
+              - paragraph [ref=f3e72]: "Чтобы войти на сервер, достаточно аккаунта ArchiTech и официального лаунчера:"
+              - list [ref=f3e73]:
+                - listitem [ref=f3e74]:
+                  - link "Зарегистрируйтесь на сайте ArchiTech" [ref=f3e75] [cursor=pointer]:
+                    - /url: /auth/register
+                  - text: .
+                - listitem [ref=f3e76]:
+                  - link "Скачайте лаунчер" [ref=f3e77] [cursor=pointer]:
+                    - /url: https://launcher.architech-mc.ru/download/launcher/latest
+                  - text: и войдите в аккаунт.
+                - listitem [ref=f3e78]: Запустите сборку через лаунчер.
+                - listitem [ref=f3e79]: Нажмите «Играть» — сервер появится автоматически.
+          - generic [ref=f3e81]:
+            - heading "3 Список модов" [level=2] [ref=f3e82]:
+              - generic [ref=f3e83]: "3"
+              - text: Список модов
+            - button "Показать список модов Актуальный состав клиентских и серверных модов" [ref=f3e85]:
+              - generic [ref=f3e86]:
+                - generic [ref=f3e87]: Показать список модов
+                - generic [ref=f3e88]: Актуальный состав клиентских и серверных модов
+          - generic [ref=f3e92]:
+            - heading "4 Прогрессия техномагии" [level=2] [ref=f3e93]:
+              - generic [ref=f3e94]: "4"
+              - text: Прогрессия техномагии
+            - list [ref=f3e96]:
+              - listitem [ref=f3e97]: "I. Старт: Железо → медь → базовые механизмы Create и обработка руд. Инструменты раннего тира."
+              - listitem [ref=f3e98]: "II. Склад: Начальная сеть AE2, энергия и автокрафт простых деталей. Лёгкие фермы ресурсов."
+              - listitem [ref=f3e99]: "III. Магия: Ars Nouveau: заклинания, источники маны, ритуалы и автоматизация магии."
+              - listitem [ref=f3e100]: "IV. Индустрия: Развитые линии Create, поезда, производство и механизмы Create: Aeronautics."
+              - listitem [ref=f3e101]: "V. Поздняя игра: Полный автокрафт, крупные производства, воздушные суда и собственные мегапроекты."
+          - generic [ref=f3e103]:
+            - heading "5 Команды сервера и бота" [level=2] [ref=f3e104]:
+              - generic [ref=f3e105]: "5"
+              - text: Команды сервера и бота
+            - generic [ref=f3e108]:
+              - generic [ref=f3e109]: Сервер
+              - table [ref=f3e111]:
+                - rowgroup [ref=f3e112]:
+                  - row [ref=f3e113]:
+                    - columnheader "Команда" [ref=f3e114]
+                    - columnheader "Описание" [ref=f3e115]
+                - rowgroup [ref=f3e116]:
+                  - row [ref=f3e117]:
+                    - cell "/spawn" [ref=f3e118]
+                    - cell "Телепорт на спавн" [ref=f3e119]
+                  - row [ref=f3e120]:
+                    - cell "/home, /sethome, /delhome" [ref=f3e121]
+                    - cell "Дом, установка и удаление" [ref=f3e122]
+                  - row [ref=f3e123]:
+                    - cell "/msg <nickname> <text>" [ref=f3e124]
+                    - cell "Личные сообщения" [ref=f3e125]
+                  - row [ref=f3e126]:
+                    - cell "/rtp" [ref=f3e127]
+                    - cell "Случайный телепорт" [ref=f3e128]
+                  - row [ref=f3e129]:
+                    - cell "/claim, /map" [ref=f3e130]
+                    - cell "Клейм и карта чанков (FTB Chunks)" [ref=f3e131]
+          - generic [ref=f3e133]:
+            - heading "6 Экономика" [level=2] [ref=f3e134]:
+              - generic [ref=f3e135]: "6"
+              - text: Экономика
+            - list [ref=f3e137]:
+              - listitem [ref=f3e138]: Торгуйте с игроками напрямую или через магазины на базах.
+              - listitem [ref=f3e139]: Крупные сделки лучше фиксировать книгой-договором.
+          - generic [ref=f3e141]:
+            - heading "7 Производительность" [level=2] [ref=f3e142]:
+              - generic [ref=f3e143]: "7"
+              - text: Производительность
+            - list [ref=f3e145]:
+              - listitem [ref=f3e146]: Ставьте выключатели на фермы и ограничивайте скорость подачи предметов.
+              - listitem [ref=f3e147]: Не создавайте бесконечные сущности и лаг-машины. Администрация может отключить источник лагов.
+              - listitem [ref=f3e148]: На клиенте снизьте дальность прорисовки и качество шейдеров, если не хватает FPS.
+          - generic [ref=f3e150]:
+            - heading "8 Частые вопросы" [level=2] [ref=f3e151]:
+              - generic [ref=f3e152]: "8"
+              - text: Частые вопросы
+            - generic [ref=f3e154]:
+              - generic [ref=f3e155]:
+                - generic [ref=f3e156]: Как попасть на сервер?
+                - generic [ref=f3e157]: Зарегистрируйтесь на сайте, скачайте официальный лаунчер и войдите в аккаунт — сервер появится автоматически.
+              - generic [ref=f3e158]:
+                - generic [ref=f3e159]: Список модов фиксированный?
+                - generic [ref=f3e160]: Сборку устанавливает и обновляет лаунчер. Дополнительные клиентские моды допустимы, если они не дают нечестного преимущества.
+              - generic [ref=f3e161]:
+                - generic [ref=f3e162]: Разрешён PVP?
+                - generic [ref=f3e163]: Только по взаимному согласию или в специально обозначенных зонах и событиях.
+              - generic [ref=f3e164]:
+                - generic [ref=f3e165]: Можно переносить базу?
+                - generic [ref=f3e166]: Да. Предупредите соседей и снимите клеймы перед переездом.
+          - generic [ref=f3e168]:
+            - heading "9 Ссылки" [level=2] [ref=f3e169]:
+              - generic [ref=f3e170]: "9"
+              - text: Ссылки
+            - list [ref=f3e172]:
+              - listitem [ref=f3e173]:
+                - link "Правила сервера" [ref=f3e174] [cursor=pointer]:
+                  - /url: /rules
+              - listitem [ref=f3e175]:
+                - link "Как начать играть" [ref=f3e176] [cursor=pointer]:
+                  - /url: /start
+              - listitem [ref=f3e177]:
+                - link "Политика конфиденциальности" [ref=f3e178] [cursor=pointer]:
+                  - /url: /privacy
+              - listitem [ref=f3e179]:
+                - link "Пользовательское соглашение" [ref=f3e180] [cursor=pointer]:
+                  - /url: /terms
+        - complementary [ref=f3e181]:
+          - navigation [ref=f3e182]:
+            - generic [ref=f3e183]:
+              - generic [ref=f3e184]: На этой странице
+              - list [ref=f3e185]:
+                - listitem [ref=f3e186]:
+                  - generic [ref=f3e187]: "1"
+                  - link "О сервере и тематика" [ref=f3e188] [cursor=pointer]:
+                    - /url: "#intro"
+                - listitem [ref=f3e189]:
+                  - generic [ref=f3e190]: "2"
+                  - link "Как начать играть" [ref=f3e191] [cursor=pointer]:
+                    - /url: "#start"
+                - listitem [ref=f3e192]:
+                  - generic [ref=f3e193]: "3"
+                  - link "Список модов" [ref=f3e194] [cursor=pointer]:
+                    - /url: "#mods"
+                - listitem [ref=f3e195]:
+                  - generic [ref=f3e196]: "4"
+                  - link "Прогрессия техномагии" [ref=f3e197] [cursor=pointer]:
+                    - /url: "#progress"
+                - listitem [ref=f3e198]:
+                  - generic [ref=f3e199]: "5"
+                  - link "Команды сервера и бота" [ref=f3e200] [cursor=pointer]:
+                    - /url: "#commands"
+                - listitem [ref=f3e201]:
+                  - generic [ref=f3e202]: "6"
+                  - link "Экономика" [ref=f3e203] [cursor=pointer]:
+                    - /url: "#economy"
+                - listitem [ref=f3e204]:
+                  - generic [ref=f3e205]: "7"
+                  - link "Производительность" [ref=f3e206] [cursor=pointer]:
+                    - /url: "#perf"
+                - listitem [ref=f3e207]:
+                  - generic [ref=f3e208]: "8"
+                  - link "Частые вопросы" [ref=f3e209] [cursor=pointer]:
+                    - /url: "#faq"
+                - listitem [ref=f3e210]:
+                  - generic [ref=f3e211]: "9"
+                  - link "Ссылки" [ref=f3e212] [cursor=pointer]:
+                    - /url: "#links"
+    - contentinfo [ref=f3e213]:
+      - generic [ref=f3e214]:
+        - generic [ref=f3e215]:
+          - generic [ref=f3e216]:
+            - img "Логотип ArchiTech MC" [ref=f3e217]
+            - generic [ref=f3e218]: ArchiTech MC
+          - generic [ref=f3e219]:
+            - link "Telegram" [ref=f3e220] [cursor=pointer]:
+              - /url: https://t.me/archi_tech_official
+            - link "Discord" [ref=f3e223] [cursor=pointer]:
+              - /url: https://discord.gg/x6JwVPwPtw
+        - generic [ref=f3e226]:
+          - link "О сервере" [ref=f3e227] [cursor=pointer]:
+            - /url: /about
+          - link "Контакты" [ref=f3e228] [cursor=pointer]:
+            - /url: /contacts
+          - link "Пользовательское соглашение" [ref=f3e229] [cursor=pointer]:
+            - /url: /terms
+          - link "Политика конфиденциальности" [ref=f3e230] [cursor=pointer]:
+            - /url: /privacy
+        - generic [ref=f3e231]: Не является официальным продуктом Minecraft. Мы никак не связаны с Mojang Synergies AB, Microsoft Corporation или другими правообладателями.
+        - generic [ref=f3e233]: © ArchiTech MC. 2024–2026. Все права защищены.

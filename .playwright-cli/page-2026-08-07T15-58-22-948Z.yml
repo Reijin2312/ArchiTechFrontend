@@ -1,0 +1,75 @@
+- generic [ref=f2e2]:
+  - region "Notifications alt+T"
+  - generic [ref=f2e3]:
+    - banner [ref=f2e4]:
+      - navigation [ref=f2e5]:
+        - link "Go to homepage" [ref=f2e107] [cursor=pointer]:
+          - /url: /
+          - img "ArchiTech MC logo" [ref=f2e108]
+          - generic [ref=f2e8]: ArchiTech MC
+        - generic [ref=f2e9]:
+          - link "Home" [ref=f2e109] [cursor=pointer]:
+            - /url: /
+          - link "About" [ref=f2e110] [cursor=pointer]:
+            - /url: /about
+          - link "Rules" [ref=f2e111] [cursor=pointer]:
+            - /url: /rules
+          - link "Map" [ref=f2e112] [cursor=pointer]:
+            - /url: /map
+          - link "Wiki" [ref=f2e113] [cursor=pointer]:
+            - /url: /wiki
+          - link "Telegram" [ref=f2e15] [cursor=pointer]:
+            - /url: https://t.me/archi_tech_official
+          - link "Discord" [ref=f2e18] [cursor=pointer]:
+            - /url: https://discord.gg/x6JwVPwPtw
+          - button "Language" [ref=f2e114]
+          - link "Log in" [ref=f2e121] [cursor=pointer]:
+            - /url: /auth/login?next=%2Fu%2FReijin2312
+    - main [ref=f2e28]:
+      - main [ref=f2e30]:
+        - generic [ref=f2e31]:
+          - generic [ref=f2e33]:
+            - generic [ref=f2e34]:
+              - heading "Skin" [level=2] [ref=f2e122]
+              - link "Open skin gallery" [ref=f2e123] [cursor=pointer]:
+                - /url: /u/Reijin2312/skins
+            - generic "3D-просмотр скина" [ref=f2e43]
+          - generic [ref=f2e46]:
+            - generic [ref=f2e47]: AVA
+            - generic [ref=f2e50]:
+              - heading "—" [level=1] [ref=f2e90]
+              - paragraph [ref=f2e53]: No bio yet
+              - generic [ref=f2e54]:
+                - button "Message" [ref=f2e124]
+                - button "Report" [ref=f2e125]
+        - generic [ref=f2e57]:
+          - generic [ref=f2e58]:
+            - generic [ref=f2e59]:
+              - heading "Achievements" [level=3] [ref=f2e126]
+              - link "Open all achievements" [ref=f2e127] [cursor=pointer]:
+                - /url: /u/Reijin2312/achievements
+            - generic [ref=f2e66]: This player has no achievements yet
+          - generic [ref=f2e67]: Failed to load sessions
+        - generic [ref=f2e128]: Request failed with status code 500
+    - contentinfo [ref=f2e69]:
+      - generic [ref=f2e70]:
+        - generic [ref=f2e71]:
+          - generic [ref=f2e72]:
+            - img "ArchiTech MC logo" [ref=f2e129]
+            - generic [ref=f2e74]: ArchiTech MC
+          - generic [ref=f2e75]:
+            - link "Telegram" [ref=f2e76] [cursor=pointer]:
+              - /url: https://t.me/archi_tech_official
+            - link "Discord" [ref=f2e79] [cursor=pointer]:
+              - /url: https://discord.gg/x6JwVPwPtw
+        - generic [ref=f2e82]:
+          - link "About" [ref=f2e130] [cursor=pointer]:
+            - /url: /about
+          - link "Contacts" [ref=f2e131] [cursor=pointer]:
+            - /url: /contacts
+          - link "Terms of Service" [ref=f2e132] [cursor=pointer]:
+            - /url: /terms
+          - link "Privacy Policy" [ref=f2e133] [cursor=pointer]:
+            - /url: /privacy
+        - generic [ref=f2e87]: Not an official Minecraft product. We are not affiliated with Mojang Synergies AB, Microsoft Corporation, or any other rights holders.
+        - generic [ref=f2e89]: © ArchiTech MC. 2024–2026. All rights reserved.

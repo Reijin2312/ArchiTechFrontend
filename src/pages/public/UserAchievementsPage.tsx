@@ -6,6 +6,8 @@ import { isSelf } from '@/shared/auth/isSelf';
 import { useWallpaper } from '@/shared/ui/wallpaper/useWallpaper';
 import { Seo } from '@/shared/seo/seo';
 import { ProfileThemeProvider, useProfileTheme } from '@/shared/ui/utils/ProfileThemeContext';
+import { useI18n } from '@/shared/i18n/I18nProvider';
+import { fill, profileTranslations } from '@/shared/i18n/profileTranslations';
 
 type Achievement = {
   id: string;
@@ -46,13 +48,9 @@ type Metric = {
   icon: string;
 };
 
-const FILTERS: Array<{ id: FilterMode; label: string }> = [
-  { id: 'all', label: 'Все' },
-  { id: 'unlocked', label: 'Открытые' },
-  { id: 'locked', label: 'Скрытые' },
-];
-
 export default function UserAchievementsPage() {
+  const { language } = useI18n();
+  const copy = profileTranslations[language];
   const username = useParams().username ?? '';
   const self = isSelf(username);
 
@@ -76,13 +74,13 @@ export default function UserAchievementsPage() {
         if (!alive) return;
         setUser(data);
       })
-      .catch((e) => alive && setErr(e?.response?.data?.message || e?.message || 'Ошибка загрузки достижений'))
+      .catch((e) => alive && setErr(e?.response?.data?.message || e?.message || copy.achievements.loadError))
       .finally(() => alive && setLoading(false));
 
     return () => {
       alive = false;
     };
-  }, [username, self]);
+  }, [username, self, copy.achievements.loadError]);
 
   const achievements = useMemo(() => user?.achievements ?? [], [user?.achievements]);
   const total = achievements.length;
@@ -102,9 +100,9 @@ export default function UserAchievementsPage() {
       const bTime = b.unlockedAt ? Date.parse(b.unlockedAt) : 0;
       if (aTime !== bTime) return bTime - aTime;
 
-      return a.title.localeCompare(b.title, 'ru');
+      return a.title.localeCompare(b.title, language);
     });
-  }, [achievements]);
+  }, [achievements, language]);
 
   const pinned = useMemo(() => {
     const withPin = achievements.filter((a) => a.unlocked && a.pinned);
@@ -140,13 +138,18 @@ export default function UserAchievementsPage() {
   }, [sortedAchievements, filter, query]);
 
   const displayName = user?.displayName || user?.username || username;
-  const metrics = useMemo(() => buildMetrics(user), [user]);
+  const metrics = useMemo(() => buildMetrics(user, copy.achievements.metrics), [user, copy.achievements.metrics]);
+  const filters: Array<{ id: FilterMode; label: string }> = [
+    { id: 'all', label: copy.achievements.filters.all },
+    { id: 'unlocked', label: copy.achievements.filters.unlocked },
+    { id: 'locked', label: copy.achievements.filters.locked },
+  ];
   const leftMetrics = metrics.slice(0, 3);
   const rightMetrics = metrics.slice(3, 6);
 
   return (
     <>
-      <Seo title={`Достижения ${displayName} — ArchiTech MC`} robots="noindex,follow" />
+      <Seo title={fill(copy.achievements.seo, { name: displayName })} robots="noindex,follow" />
       <ProfileThemeProvider
         themeId={user?.profileTheme}
         customColor1={user?.customThemeColor1}
@@ -167,7 +170,7 @@ export default function UserAchievementsPage() {
                     {user?.avatarUrl ? (
                       <img
                         src={user.avatarUrl}
-                        alt="Аватар"
+                        alt={copy.avatar}
                         loading="lazy"
                         decoding="async"
                         className="h-full w-full object-cover"
@@ -179,7 +182,7 @@ export default function UserAchievementsPage() {
                     )}
                   </div>
                   <div className="text-center">
-                    <div className="text-xs uppercase tracking-[0.18em] text-slate-400">Достижения игрока</div>
+                    <div className="text-xs uppercase tracking-[0.18em] text-slate-400">{copy.achievements.heading}</div>
                     <h1 className="mt-1 text-2xl font-semibold text-slate-100 md:text-3xl">{displayName}</h1>
                   </div>
                 </div>
@@ -188,7 +191,7 @@ export default function UserAchievementsPage() {
                   className="absolute right-0 top-0 inline-flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-900/60 px-3 py-1.5 text-sm text-slate-200 hover:border-slate-500"
                 >
                   <span aria-hidden="true">↩</span>
-                  К профилю
+                  {copy.backToProfile}
                 </Link>
               </div>
 
@@ -200,7 +203,7 @@ export default function UserAchievementsPage() {
                 </div>
 
                 <div className="mx-auto w-full max-w-[280px] rounded-3xl border border-amber-500/30 bg-slate-950/70 p-5 shadow-[0_0_0_1px_rgba(251,191,36,.2)_inset,0_18px_45px_-28px_rgba(251,191,36,.55)]">
-                  <div className="mb-3 text-center text-xs uppercase tracking-[0.14em] text-amber-200/85">Рейтинг архива</div>
+                  <div className="mb-3 text-center text-xs uppercase tracking-[0.14em] text-amber-200/85">{copy.achievements.archiveRating}</div>
                   <div
                     className="mx-auto grid h-44 w-44 place-items-center rounded-full p-[12px]"
                     style={{
@@ -231,7 +234,7 @@ export default function UserAchievementsPage() {
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_0_100%,rgba(56,189,248,.08),transparent_40%)]" />
               </div>
               <div className="relative z-10 mb-3 flex flex-col items-center justify-center gap-1 text-center">
-                <h2 className="text-base font-semibold uppercase tracking-[0.12em] text-amber-100">Закрепленные награды</h2>
+                <h2 className="text-base font-semibold uppercase tracking-[0.12em] text-amber-100">{copy.achievements.pinned}</h2>
               </div>
 
               {loading ? (
@@ -243,20 +246,20 @@ export default function UserAchievementsPage() {
               ) : pinned.length > 0 ? (
                 <div className="-mx-1 flex gap-3 overflow-x-auto px-1 pb-1 [scrollbar-width:thin]">
                   {pinned.map((achievement) => (
-                    <PinnedRibbonItem key={achievement.id} achievement={achievement} />
+                    <PinnedRibbonItem key={achievement.id} achievement={achievement} language={language} fixed={copy.achievements.fixed} />
                   ))}
                 </div>
               ) : (
-                <EmptyText text="Пока нет закрепленных наград" />
+                <EmptyText text={copy.achievements.noPinned} />
               )}
             </section>
 
             <section>
               <Card>
                 <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                  <h2 className="text-lg font-semibold text-slate-100">Каталог достижений</h2>
+                  <h2 className="text-lg font-semibold text-slate-100">{copy.achievements.catalog}</h2>
                   <div className="inline-flex rounded-xl border border-slate-700 bg-slate-900/80 p-1">
-                    {FILTERS.map((item) => (
+                    {filters.map((item) => (
                       <button
                         key={item.id}
                         type="button"
@@ -277,7 +280,7 @@ export default function UserAchievementsPage() {
                   <input
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
-                    placeholder="Поиск по названию или описанию"
+                    placeholder={copy.achievements.search}
                     className="w-full rounded-xl border border-slate-700 bg-slate-900/70 px-3 py-2 text-sm text-slate-100 outline-none placeholder:text-slate-500 focus:border-sky-500/60"
                   />
                 </div>
@@ -291,16 +294,16 @@ export default function UserAchievementsPage() {
                 ) : visibleCatalog.length > 0 ? (
                   <>
                     <div className="mb-3 text-xs text-slate-400">
-                      Показано {visibleCatalog.length} • Открыто {unlockedCount} • Закрыто {lockedCount}
+                      {fill(copy.achievements.shown, { shown: visibleCatalog.length, unlocked: unlockedCount, locked: lockedCount })}
                     </div>
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 2xl:grid-cols-3">
                       {visibleCatalog.map((achievement) => (
-                        <AchievementTile key={achievement.id} achievement={achievement} />
+                        <AchievementTile key={achievement.id} achievement={achievement} language={language} received={copy.achievements.received} />
                       ))}
                     </div>
                   </>
                 ) : (
-                  <EmptyText text="По текущему фильтру ничего не найдено" />
+                  <EmptyText text={copy.achievements.empty} />
                 )}
               </Card>
             </section>
@@ -348,8 +351,8 @@ function MetricCard({ metric }: { metric: Metric }) {
   );
 }
 
-function PinnedRibbonItem({ achievement }: { achievement: Achievement }) {
-  const unlockedAt = formatDate(achievement.unlockedAt);
+function PinnedRibbonItem({ achievement, language, fixed }: { achievement: Achievement; language: 'ru' | 'en'; fixed: string }) {
+  const unlockedAt = formatDate(achievement.unlockedAt, language);
   return (
     <article className="group w-32 shrink-0">
       <div className="relative rounded-xl border border-amber-300/25 bg-black/35 p-2 shadow-[0_14px_28px_-18px_rgba(0,0,0,.9)]">
@@ -359,16 +362,16 @@ function PinnedRibbonItem({ achievement }: { achievement: Achievement }) {
         </div>
         <div className="relative text-center">
           <div className="truncate text-xs font-semibold uppercase tracking-[0.06em] text-amber-100">{achievement.title}</div>
-          <div className="mt-0.5 text-[10px] text-amber-100/65">{unlockedAt ?? 'закреплено'}</div>
+          <div className="mt-0.5 text-[10px] text-amber-100/65">{unlockedAt ?? fixed}</div>
         </div>
       </div>
     </article>
   );
 }
 
-function AchievementTile({ achievement }: { achievement: Achievement }) {
+function AchievementTile({ achievement, language, received }: { achievement: Achievement; language: 'ru' | 'en'; received: string }) {
   const unlocked = !!achievement.unlocked;
-  const unlockedAt = formatDate(achievement.unlockedAt);
+  const unlockedAt = formatDate(achievement.unlockedAt, language);
 
   return (
     <article
@@ -397,7 +400,7 @@ function AchievementTile({ achievement }: { achievement: Achievement }) {
           <div className="mt-0.5 line-clamp-2 text-xs text-slate-400">{achievement.description}</div>
           {unlockedAt && (
             <div className="mt-2 text-[11px] text-slate-500">
-              Получено: <span className="text-slate-300">{unlockedAt}</span>
+              {received} <span className="text-slate-300">{unlockedAt}</span>
             </div>
           )}
         </div>
@@ -416,18 +419,18 @@ function EmptyText({ text }: { text: string }) {
   );
 }
 
-function formatDate(iso?: string): string | null {
+function formatDate(iso: string | undefined, language: 'ru' | 'en'): string | null {
   if (!iso) return null;
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return null;
-  return date.toLocaleDateString('ru-RU');
+  return date.toLocaleDateString(language === 'ru' ? 'ru-RU' : 'en-US');
 }
 
 function normalizeText(value: string): string {
   return value.trim().toLowerCase();
 }
 
-function buildMetrics(user: PublicUser | Me | null): Metric[] {
+function buildMetrics(user: PublicUser | Me | null, labels: typeof profileTranslations.ru.achievements.metrics): Metric[] {
   const roots = [user, user?.stats, user?.minecraftStats, user?.gameStats, user?.mcStats].filter(Boolean) as Record<
     string,
     unknown
@@ -441,12 +444,12 @@ function buildMetrics(user: PublicUser | Me | null): Metric[] {
   const walkedKm = readDistanceKm(roots);
 
   return [
-    { id: 'mobKills', icon: '⚔️', label: 'Убито мобов', value: formatMetricValue(mobKills), hint: '' },
-    { id: 'blocksPlaced', icon: '🧱', label: 'Поставлено блоков', value: formatMetricValue(blocksPlaced), hint: '' },
-    { id: 'blocksBroken', icon: '⛏️', label: 'Добыто блоков', value: formatMetricValue(blocksBroken), hint: '' },
-    { id: 'deaths', icon: '☠️', label: 'Смертей', value: formatMetricValue(deaths), hint: '' },
-    { id: 'playHours', icon: '⌛', label: 'Часов в мире', value: formatMetricValue(playHours), hint: '' },
-    { id: 'walkedKm', icon: '🧭', label: 'Пройдено км', value: formatMetricValue(walkedKm, 1), hint: '' },
+    { id: 'mobKills', icon: '⚔️', label: labels.mobKills, value: formatMetricValue(mobKills), hint: '' },
+    { id: 'blocksPlaced', icon: '🧱', label: labels.blocksPlaced, value: formatMetricValue(blocksPlaced), hint: '' },
+    { id: 'blocksBroken', icon: '⛏️', label: labels.blocksBroken, value: formatMetricValue(blocksBroken), hint: '' },
+    { id: 'deaths', icon: '☠️', label: labels.deaths, value: formatMetricValue(deaths), hint: '' },
+    { id: 'playHours', icon: '⌛', label: labels.playHours, value: formatMetricValue(playHours), hint: '' },
+    { id: 'walkedKm', icon: '🧭', label: labels.walkedKm, value: formatMetricValue(walkedKm, 1), hint: '' },
   ];
 }
 

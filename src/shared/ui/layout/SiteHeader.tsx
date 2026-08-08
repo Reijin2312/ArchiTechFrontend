@@ -6,6 +6,8 @@ import { WIKI_SECTIONS } from '@/pages/public/WikiPage';
 import { PRIVACY_SECTIONS } from '@/pages/legal/PrivacyPolicyPage';
 import { TERMS_SECTIONS } from '@/pages/legal/UserAgreementPage';
 import { SvgTelegram, SvgDiscord, SvgMenu, SvgX } from '@/shared/ui/image/Icons';
+import { LanguageSwitcher } from '@/shared/i18n/LanguageSwitcher';
+import { useI18n } from '@/shared/i18n/I18nProvider';
 
 import {
   SERVER_NAME,
@@ -25,6 +27,7 @@ const TERMS_URL = '/terms';
 type HeaderTocItem = { id: string; title: string };
 
 export default function SiteHeader() {
+  const { language, t } = useI18n();
   const user = authStore((s) => s.user);
   const { pathname, search } = useLocation();
   const next = encodeURIComponent(pathname + search);
@@ -32,7 +35,7 @@ export default function SiteHeader() {
   const isWikiPage = pathname === WIKI_URL;
   const isPrivacyPage = pathname === PRIVACY_URL;
   const isTermsPage = pathname === TERMS_URL;
-  const mobileTocItems: HeaderTocItem[] | undefined = isRulesPage
+  const rawMobileTocItems: HeaderTocItem[] | undefined = isRulesPage
     ? RULES_SECTIONS
     : isWikiPage
       ? WIKI_SECTIONS
@@ -41,6 +44,10 @@ export default function SiteHeader() {
         : isTermsPage
           ? TERMS_SECTIONS
           : undefined;
+  const mobileTocItems = rawMobileTocItems?.map((item) => ({
+    ...item,
+    title: localizedTocTitle(pathname, item.id, item.title, language),
+  }));
 
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -89,7 +96,7 @@ export default function SiteHeader() {
 
     return (
       <div className="mt-6 rounded-xl border border-slate-800 bg-slate-900/70 px-3 py-3">
-        <div className="mb-2 text-xs font-semibold text-slate-300">На этой странице</div>
+        <div className="mb-2 text-xs font-semibold text-slate-300">{t('header.onThisPage')}</div>
         <ol className="space-y-1 text-xs">
           {items.map((it, i) => {
             const on = active === it.id;
@@ -125,11 +132,11 @@ export default function SiteHeader() {
           <Link
             to={MAIN_URL}
             className="flex items-center gap-3 text-slate-100 focus-visible:outline2 focus-visible:outline-sky-500 rounded-xl px-1 -mx-1"
-            aria-label="На главную"
+            aria-label={t('header.homeAria')}
           >
             <img
               src="/images/favicon-192.png"
-              alt="Логотип ArchiTech MC"
+              alt={t('header.logoAlt')}
               width={32}
               height={32}
               decoding="async"
@@ -143,35 +150,35 @@ export default function SiteHeader() {
               className={linkCls(isActive(MAIN_URL, true))}
               aria-current={isActive(MAIN_URL, true) ? 'page' : undefined}
             >
-              Главная
+              {t('header.home')}
             </a>
             <a
               href={ABOUT_URL}
               className={linkCls(isActive(ABOUT_URL))}
               aria-current={isActive(ABOUT_URL) ? 'page' : undefined}
             >
-              О сервере
+              {t('header.about')}
             </a>
             <a
               href={RULES_URL}
               className={linkCls(isActive(RULES_URL))}
               aria-current={isActive(RULES_URL) ? 'page' : undefined}
             >
-              Правила
+              {t('header.rules')}
             </a>
             <a
               href={MAP_URL}
               className={linkCls(isActive(MAP_URL))}
               aria-current={isActive(MAP_URL) ? 'page' : undefined}
             >
-              Карта
+              {t('header.map')}
             </a>
             <a
               href={WIKI_URL}
               className={linkCls(isActive(WIKI_URL))}
               aria-current={isActive(WIKI_URL) ? 'page' : undefined}
             >
-              Вики
+              {t('header.wiki')}
             </a>
             {/* Messenger is intentionally hidden; keep the link here for an easy rollback.
             <a
@@ -199,12 +206,14 @@ export default function SiteHeader() {
               <SvgDiscord className="h-5" />
             </a>
 
+            <LanguageSwitcher />
+
             {user ? (
               <>
                 <Link
                   to={`/u/${user.username}`}
                   className="rounded-xl px-3 py-1.5 border border-slate-700 hover:border-slate-500"
-                  title="Профиль"
+                  title={t('header.profile')}
                 >
                   {user.username}
                 </Link>
@@ -212,12 +221,12 @@ export default function SiteHeader() {
                 <Link
                   to={`/u/${user.username}`}
                   className="ml-2 inline-flex h-8 w-8 overflow-hidden rounded-full border border-slate-700"
-                  title="Профиль"
+                  title={t('header.profile')}
                 >
                   {(user as any)?.avatarUrl ? (
                     <img
                       src={(user as any).avatarUrl as string}
-                      alt="Профиль"
+                      alt={t('header.profile')}
                       width={32}
                       height={32}
                       decoding="async"
@@ -236,22 +245,23 @@ export default function SiteHeader() {
                 to={`/auth/login?next=${next}`}
                 className="rounded-xl px-3 py-1.5 border border-slate-700 hover:border-slate-500"
               >
-                Войти
+                {t('header.login')}
               </Link>
             )}
           </div>
 
           <div className="flex items-center gap-2 md:hidden">
+            <LanguageSwitcher />
             {user ? (
               <Link
                 to={`/u/${user.username}`}
                 className="inline-flex h-8 w-8 overflow-hidden rounded-full border border-slate-700"
-                title="Профиль"
+                title={t('header.profile')}
               >
                 {(user as any)?.avatarUrl ? (
                   <img
                     src={(user as any).avatarUrl as string}
-                    alt="Профиль"
+                    alt={t('header.profile')}
                     width={32}
                     height={32}
                     decoding="async"
@@ -268,9 +278,9 @@ export default function SiteHeader() {
               <Link
                 to={`/auth/login?next=${next}`}
                 className="inline-flex h-8 w-8 items-center justify-center overflow-hidden rounded-full border border-slate-700 text-xs text-slate-300"
-                title="Войти"
+                title={t('header.login')}
               >
-                В
+                {t('header.login').charAt(0)}
               </Link>
             )}
 
@@ -278,7 +288,7 @@ export default function SiteHeader() {
               type="button"
               onClick={() => setMobileOpen((v) => !v)}
               className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-700 bg-slate-900/70 hover:bg-slate-800"
-              aria-label={mobileOpen ? 'Закрыть меню' : 'Открыть меню'}
+              aria-label={mobileOpen ? t('header.closeMenu') : t('header.openMenu')}
             >
               {mobileOpen ? (
                 <SvgX className="h-5 w-5" />
@@ -300,7 +310,7 @@ export default function SiteHeader() {
           type="button"
           className="absolute inset-0 bg-black/50"
           onClick={() => setMobileOpen(false)}
-          aria-label="Закрыть меню"
+          aria-label={t('header.closeMenu')}
         />
 
         <div
@@ -310,13 +320,13 @@ export default function SiteHeader() {
         >
           <div className="mb-4 flex items-center justify-between">
             <span className="text-xs font-semibold tracking-[0.18em] uppercase text-slate-300">
-              Навигация
+              {t('header.navigation')}
             </span>
             <button
               type="button"
               onClick={() => setMobileOpen(false)}
               className="inline-flex h-8 w-8 items-center justify-center rounded-lg hover:bg-slate-900"
-              aria-label="Закрыть меню"
+              aria-label={t('header.closeMenu')}
             >
               <SvgX className="h-5 w-5" />
             </button>
@@ -331,7 +341,7 @@ export default function SiteHeader() {
                 isActive(MAIN_URL, true) ? 'bg-slate-800 text-sky-300' : 'text-slate-200 hover:bg-slate-900'
               }`}
             >
-              Главная
+              {t('header.home')}
             </a>
             <a
               href={ABOUT_URL}
@@ -340,7 +350,7 @@ export default function SiteHeader() {
                 isActive(ABOUT_URL) ? 'bg-slate-800 text-sky-300' : 'text-slate-200 hover:bg-slate-900'
               }`}
             >
-              О сервере
+              {t('header.about')}
             </a>
             <a
               href={RULES_URL}
@@ -349,7 +359,7 @@ export default function SiteHeader() {
                 isActive(RULES_URL) ? 'bg-slate-800 text-sky-300' : 'text-slate-200 hover:bg-slate-900'
               }`}
             >
-              Правила
+              {t('header.rules')}
             </a>
             <a
               href={MAP_URL}
@@ -358,7 +368,7 @@ export default function SiteHeader() {
                 isActive(MAP_URL) ? 'bg-slate-800 text-sky-300' : 'text-slate-200 hover:bg-slate-900'
               }`}
             >
-              Карта
+              {t('header.map')}
             </a>
             <a
               href={WIKI_URL}
@@ -367,7 +377,7 @@ export default function SiteHeader() {
                 isActive(WIKI_URL) ? 'bg-slate-800 text-sky-300' : 'text-slate-200 hover:bg-slate-900'
               }`}
             >
-              Вики
+              {t('header.wiki')}
             </a>
             {/* Messenger is intentionally hidden; keep the mobile link here for an easy rollback.
             <a
@@ -394,7 +404,7 @@ export default function SiteHeader() {
                   {(user as any)?.avatarUrl ? (
                     <img
                       src={(user as any).avatarUrl as string}
-                      alt="Профиль"
+                      alt={t('header.profile')}
                       width={28}
                       height={28}
                       decoding="async"
@@ -415,7 +425,7 @@ export default function SiteHeader() {
                 onClick={() => setMobileOpen(false)}
                 className="rounded-lg border border-slate-700 px-3 py-1.5 text-sm hover:border-slate-500"
               >
-                Войти
+                {t('header.login')}
               </Link>
             )}
           </div>
@@ -429,7 +439,7 @@ export default function SiteHeader() {
             <div className="flex items-center gap-2">
               <img
                 src="/images/favicon-192.png"
-                alt="Логотип ArchiTech MC"
+                alt={t('header.logoAlt')}
                 width={24}
                 height={24}
                 decoding="async"
@@ -459,5 +469,16 @@ export default function SiteHeader() {
       </div>
     </>
   );
+}
+
+const ENGLISH_TOC: Record<string, Record<string, string>> = {
+  '/rules': { intro: 'Introduction', forbidden: 'Forbidden actions', chat: 'Communication', techmagic: 'Mods and resource packs', build: 'Building', farms: 'Farms and machinery', pvp: 'PVP / PVE', trade: 'Economy and trading', security: 'Security and accounts', penalties: 'Penalties' },
+  '/wiki': { intro: 'Server and theme', start: 'How to start playing', mods: 'Mod list', progress: 'Tech-magic progression', commands: 'Server commands', economy: 'Economy', perf: 'Performance', faq: 'FAQ', links: 'Links' },
+  '/privacy': { id1: 'General provisions', id2: 'Data and processing purposes', id3: 'Cookies and similar technologies', id4: 'Legal grounds for processing', id5: 'Third parties and international transfers', id6: 'Your data rights', id7: 'Retention and security', id8: 'Third-party links', id9: 'Communications', id10: 'Limitation of liability', id11: 'Dispute resolution', id12: 'Policy changes', id13: 'Operator contacts' },
+  '/terms': { id1: 'General terms', id2: 'User responsibilities', id3: 'Disclaimer of warranties', id4: 'Content and moderation', id5: 'Intellectual property', id6: 'Enforcement and restrictions', id7: 'In-game content transactions', id8: 'Account and access transactions', id9: 'Personal data', id10: 'Other terms' },
+};
+
+function localizedTocTitle(path: string, id: string, fallback: string, language: 'ru' | 'en') {
+  return language === 'en' ? ENGLISH_TOC[path]?.[id] ?? fallback : fallback;
 }
 

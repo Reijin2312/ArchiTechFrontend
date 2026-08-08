@@ -1,6 +1,7 @@
 import { useRef } from 'react';
 import { DragDropZone } from '@/shared/ui/form/DragDropZone';
 import { ImageWithLoader } from '@/shared/ui/image';
+import { useI18n } from '@/shared/i18n/I18nProvider';
 
 export function BannerPicker(props: {
   value: string;
@@ -8,6 +9,8 @@ export function BannerPicker(props: {
   onChange: (file: File) => void | Promise<void>;
   onClear?: () => void;
 }) {
+  const { language } = useI18n();
+  const text = language === 'ru' ? { alt: 'Баннер профиля', replace: 'Нажмите, чтобы выбрать другой файл, или перетащите сюда изображение', choose: 'Перетащите сюда изображение или нажмите для выбора файла', hint: 'PNG/JPG до 5 МБ, желательно 1920×400 или шире', set: 'Текущий баннер установлен', clear: 'Убрать баннер' } : { alt: 'Profile banner', replace: 'Click to choose another file, or drag an image here', choose: 'Drag an image here or click to choose a file', hint: 'PNG/JPG up to 5 MB, preferably 1920×400 or wider', set: 'A banner is currently set', clear: 'Remove banner' };
   const inputRef = useRef<HTMLInputElement | null>(null);
   const handleClick = () => {
     if (props.busy) return;
@@ -31,13 +34,13 @@ export function BannerPicker(props: {
               <div className="h-32 w-full overflow-hidden rounded-xl border border-slate-800 bg-slate-950">
                 <ImageWithLoader
                   src={props.value}
-                  alt="Баннер профиля"
+                  alt={text.alt}
                   className="h-full w-full object-cover"
                   placeholderClassName="h-32 w-full"
                 />
               </div>
               <div className="text-xs text-slate-300">
-                Нажмите, чтобы выбрать другой файл, или перетащите сюда изображение
+                {text.replace}
               </div>
             </div>
           ) : (
@@ -46,9 +49,9 @@ export function BannerPicker(props: {
                 🎨
               </div>
               <div className="text-xs text-slate-300">
-                Перетащите сюда изображение или нажмите для выбора файла
+                {text.choose}
               </div>
-              <div className="text-[11px] text-slate-500">PNG/JPG до 5 МБ, желательно 1920×400 или шире</div>
+              <div className="text-[11px] text-slate-500">{text.hint}</div>
             </div>
           )}
         </button>
@@ -68,14 +71,14 @@ export function BannerPicker(props: {
 
       {props.value && (
         <div className="flex justify-between text-xs text-slate-400">
-          <span>Текущий баннер установлен</span>
+          <span>{text.set}</span>
           {props.onClear && (
             <button
               type="button"
               onClick={props.onClear}
               className="text-[11px] text-slate-400 hover:text-red-300"
             >
-              Убрать баннер
+              {text.clear}
             </button>
           )}
         </div>

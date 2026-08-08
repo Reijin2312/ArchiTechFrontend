@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
+import { useI18n } from '@/shared/i18n/I18nProvider'
 
 type StatusOption = {
   id: string
@@ -24,6 +25,10 @@ type StatusSelectProps = {
 }
 
 export function StatusSelect({ value, customStatus, onChange, className = '' }: StatusSelectProps) {
+  const { language } = useI18n()
+  const labels: Record<string, string> = language === 'ru'
+    ? { online: 'В сети', playing: 'Играю', building: 'Строю', afk: 'AFK', dnd: 'Не беспокоить' }
+    : { online: 'Online', playing: 'Playing', building: 'Building', afk: 'AFK', dnd: 'Do not disturb' }
   const [open, setOpen] = useState(false)
   const [editingCustom, setEditingCustom] = useState(false)
   const [customText, setCustomText] = useState(customStatus || '')
@@ -39,7 +44,7 @@ export function StatusSelect({ value, customStatus, onChange, className = '' }: 
       >
         <span className="text-lg">{selected.emoji}</span>
         <span className={selected.color || 'text-slate-300'}>
-          {customStatus || selected.label}
+          {customStatus || labels[selected.id]}
         </span>
         <span className="ml-auto text-slate-500">▼</span>
       </button>
@@ -71,7 +76,7 @@ export function StatusSelect({ value, customStatus, onChange, className = '' }: 
                     }`}
                   >
                     <span className="text-lg">{status.emoji}</span>
-                    <span className={status.color || 'text-slate-300'}>{status.label}</span>
+                    <span className={status.color || 'text-slate-300'}>{labels[status.id]}</span>
                   </button>
                 ))}
                 <div className="border-t border-slate-800 p-2">
@@ -81,7 +86,7 @@ export function StatusSelect({ value, customStatus, onChange, className = '' }: 
                         type="text"
                         value={customText}
                         onChange={(e) => setCustomText(e.target.value)}
-                        placeholder="Свой статус..."
+                        placeholder={language === 'ru' ? 'Свой статус...' : 'Custom status...'}
                         maxLength={50}
                         className="flex-1 rounded-lg border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm outline-none focus:border-slate-500"
                         autoFocus
@@ -104,7 +109,7 @@ export function StatusSelect({ value, customStatus, onChange, className = '' }: 
                       onClick={() => setEditingCustom(true)}
                       className="w-full rounded-lg px-2 py-1.5 text-left text-sm text-slate-400 hover:bg-slate-900 hover:text-slate-300"
                     >
-                      ✏️ Свой статус
+                      ✏️ {language === 'ru' ? 'Свой статус' : 'Custom status'}
                     </button>
                   )}
                 </div>

@@ -145,21 +145,21 @@ export const routesMeta: Record<string, any> = {
       }
     ]
   },
-  "/shop": {
+  "/start": {
     title: "Как начать играть на ArchiTech MC",
     description: "Бесплатный вход на ArchiTech MC: регистрация, лаунчер и автоматическое подключение к серверу.",
     keywords: [...BASE_KEYWORDS, 'как начать играть minecraft', 'лаунчер ArchiTech MC', 'сборка ArchiTech MC'],
-    canonical: `${ORIGIN}/shop`,
-    og: { url: `${ORIGIN}/shop`, type: "website", image: OG },
+    canonical: `${ORIGIN}/start`,
+    og: { url: `${ORIGIN}/start`, type: "website", image: OG },
     twitterCard: "summary_large_image",
     jsonLd: [
-      breadcrumb([{ name: "Главная", url: ORIGIN + "/" }, { name: "Как начать играть", url: ORIGIN + "/shop" }]),
+      breadcrumb([{ name: "Главная", url: ORIGIN + "/" }, { name: "Как начать играть", url: ORIGIN + "/start" }]),
       {
         "@context": "https://schema.org",
         "@type": "WebPage",
         "name": "Как начать играть на ArchiTech MC",
         "brand": "ArchiTech MC",
-        "url": `${ORIGIN}/shop`,
+        "url": `${ORIGIN}/start`,
         "image": OG
       }
     ]

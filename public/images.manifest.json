@@ -8,18 +8,85 @@
       "webp": "/images/bg.webp"
     },
     "avif": [
-      { "w": 320, "path": "/images/bg-320.avif" },
-      { "w": 640, "path": "/images/bg-640.avif" },
-      { "w": 960, "path": "/images/bg-960.avif" },
-      { "w": 1280, "path": "/images/bg-1280.avif" },
-      { "w": 1600, "path": "/images/bg-1600.avif" }
+      {
+        "w": 320,
+        "path": "/images/bg-320.avif"
+      },
+      {
+        "w": 640,
+        "path": "/images/bg-640.avif"
+      },
+      {
+        "w": 960,
+        "path": "/images/bg-960.avif"
+      },
+      {
+        "w": 1280,
+        "path": "/images/bg-1280.avif"
+      },
+      {
+        "w": 1600,
+        "path": "/images/bg-1600.avif"
+      }
     ],
     "webp": [
-      { "w": 320, "path": "/images/bg-320.webp" },
-      { "w": 640, "path": "/images/bg-640.webp" },
-      { "w": 960, "path": "/images/bg-960.webp" },
-      { "w": 1280, "path": "/images/bg-1280.webp" },
-      { "w": 1600, "path": "/images/bg-1600.webp" }
+      {
+        "w": 320,
+        "path": "/images/bg-320.webp"
+      },
+      {
+        "w": 640,
+        "path": "/images/bg-640.webp"
+      },
+      {
+        "w": 960,
+        "path": "/images/bg-960.webp"
+      },
+      {
+        "w": 1280,
+        "path": "/images/bg-1280.webp"
+      },
+      {
+        "w": 1600,
+        "path": "/images/bg-1600.webp"
+      }
+    ]
+  },
+  "logo-steel-wings.png": {
+    "original": {
+      "w": 1132,
+      "h": 402,
+      "png": "/images/logo-steel-wings.png",
+      "avif": "/images/logo-steel-wings.avif",
+      "webp": "/images/logo-steel-wings.webp"
+    },
+    "avif": [
+      {
+        "w": 320,
+        "path": "/images/logo-steel-wings-320.avif"
+      },
+      {
+        "w": 640,
+        "path": "/images/logo-steel-wings-640.avif"
+      },
+      {
+        "w": 960,
+        "path": "/images/logo-steel-wings-960.avif"
+      }
+    ],
+    "webp": [
+      {
+        "w": 320,
+        "path": "/images/logo-steel-wings-320.webp"
+      },
+      {
+        "w": 640,
+        "path": "/images/logo-steel-wings-640.webp"
+      },
+      {
+        "w": 960,
+        "path": "/images/logo-steel-wings-960.webp"
+      }
     ]
   },
   "screen1.png": {

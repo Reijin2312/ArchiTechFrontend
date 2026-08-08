@@ -1,6 +1,8 @@
 import React from 'react';
 import { Card } from './components';
 import type { Session, Status, SortKey, SessionFilters } from './types';
+import { useI18n } from '@/shared/i18n/I18nProvider';
+import { profileTranslations } from '@/shared/i18n/profileTranslations';
 
 interface SessionsSectionProps {
   visibleSessions: Session[];
@@ -18,10 +20,10 @@ interface SessionsSectionProps {
   sessionStatus: (s: Session) => Status;
 }
 
-function fmt(x?: string) {
+function fmt(x: string | undefined, language: 'ru' | 'en') {
   if (!x) return '—';
   try {
-    return new Date(x).toLocaleString('ru-RU', {
+    return new Date(x).toLocaleString(language === 'ru' ? 'ru-RU' : 'en-US', {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
@@ -33,8 +35,8 @@ function fmt(x?: string) {
   }
 }
 
-function parseDeviceName(ua?: string | null): string {
-  if (!ua) return 'Неизвестное устройство';
+function parseDeviceName(ua: string | null | undefined, unknownDevice: string): string {
+  if (!ua) return unknownDevice;
   
   if (ua.includes('Windows NT 10')) return 'Windows 10/11';
   if (ua.includes('Windows')) return 'Windows';
@@ -43,7 +45,7 @@ function parseDeviceName(ua?: string | null): string {
   if (ua.includes('Android')) return 'Android';
   if (ua.includes('iOS') || ua.includes('iPhone') || ua.includes('iPad')) return 'iOS';
   
-  return 'Неизвестное устройство';
+  return unknownDevice;
 }
 
 function parseBrowser(ua?: string | null): string {
@@ -100,9 +102,11 @@ export function SessionsSection({
   onRefresh,
   sessionStatus,
 }: SessionsSectionProps) {
+  const { language } = useI18n();
+  const copy = profileTranslations[language].settings;
   return (
     <Card className="mt-6">
-      <h2 className="mb-3 text-sm font-semibold text-sky-300">Сессии</h2>
+      <h2 className="mb-3 text-sm font-semibold text-sky-300">{copy.sessions}</h2>
 
       {/* фильтры статусов */}
       <div className="mb-3 flex flex-wrap gap-2 text-xs">
@@ -124,14 +128,14 @@ export function SessionsSection({
           onClick={() => setShow({ active: true, expired: true, replaced: true, revoked: true })}
           className="rounded-lg border border-slate-700 px-2.5 py-1 text-slate-300 hover:border-slate-500"
         >
-          все
+          {copy.all}
         </button>
         <button
           type="button"
           onClick={() => setShow({ active: true, expired: false, replaced: false, revoked: false })}
           className="rounded-lg border border-slate-700 px-2.5 py-1 text-slate-300 hover:border-slate-500"
         >
-          только active
+          {copy.activeOnly}
         </button>
       </div>
 
@@ -154,10 +158,10 @@ export function SessionsSection({
           onChange={(e) => setSortBy(e.target.value as SortKey)}
           className="rounded-lg border border-slate-800 bg-slate-900 px-2 py-1"
         >
-          <option value="created_desc">Новые сверху</option>
-          <option value="created_asc">Новые снизу</option>
-          <option value="expires_desc">По истечению ↓</option>
-          <option value="expires_asc">По истечению ↑</option>
+          <option value="created_desc">{copy.newestFirst}</option>
+          <option value="created_asc">{copy.newestLast}</option>
+          <option value="expires_desc">{copy.expiresDesc}</option>
+          <option value="expires_asc">{copy.expiresAsc}</option>
         </select>
         <button
           type="button"
@@ -169,19 +173,19 @@ export function SessionsSection({
           }}
           className="rounded-lg border border-slate-700 px-2.5 py-1 hover:border-slate-500"
         >
-          Сбросить фильтры
+          {copy.resetFilters}
         </button>
       </div>
 
       <div className="space-y-2">
         {visibleSessions.length === 0 ? (
           <div className="rounded-xl border border-slate-800 bg-slate-900 p-4 text-sm text-slate-400">
-            Нет сессий по выбранному фильтру
+            {copy.noSessions}
           </div>
         ) : (
           visibleSessions.map((s) => {
             const status = sessionStatus(s);
-            const deviceName = parseDeviceName(s.ua);
+            const deviceName = parseDeviceName(s.ua, copy.unknownDevice);
             const browser = parseBrowser(s.ua);
             const deviceIcon = getDeviceIcon(s.ua);
             
@@ -214,10 +218,10 @@ export function SessionsSection({
                     )}
                     
                     <div className="text-slate-500 space-y-0.5 mt-2">
-                      <div>🕐 Создана: {fmt(s.createdAt)}</div>
-                      <div>⏰ Истекает: {fmt(s.expiresAt)}</div>
-                      {s.revokedAt && <div>🚫 Отозвана: {fmt(s.revokedAt)}</div>}
-                      {s.replacedBy && <div>🔄 Заменена новой сессией</div>}
+                      <div>🕐 {copy.created} {fmt(s.createdAt, language)}</div>
+                      <div>⏰ {copy.expires} {fmt(s.expiresAt, language)}</div>
+                      {s.revokedAt && <div>🚫 {copy.revoked} {fmt(s.revokedAt, language)}</div>}
+                      {s.replacedBy && <div>🔄 {copy.replaced}</div>}
                     </div>
                   </div>
                   
@@ -229,7 +233,7 @@ export function SessionsSection({
                         onClick={() => onRevoke(s.tokenId)}
                         className="rounded-lg border border-red-800 px-3 py-1.5 text-[11px] text-red-300 hover:bg-red-900/20 disabled:opacity-50 transition-colors"
                       >
-                        {busy === `sess:${s.tokenId}` ? 'Завершение...' : 'Завершить'}
+                        {busy === `sess:${s.tokenId}` ? copy.ending : copy.end}
                       </button>
                     )}
                   </div>
@@ -254,7 +258,7 @@ export function SessionsSection({
             onClick={onRefresh}
             className="rounded-lg border border-slate-700 px-2.5 py-1 text-[11px] hover:border-slate-500"
           >
-            🔄 Обновить
+            🔄 {copy.refresh}
           </button>
         </div>
       </div>

@@ -6,6 +6,7 @@
     "target": "ES2022",
     "module": "ES2022",
     "moduleResolution": "Bundler",
+    "types": ["node", "vite/client"],
     "jsx": "react-jsx",
     "baseUrl": ".",
     "paths": { "@/*": ["src/*"] },

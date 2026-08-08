@@ -5,6 +5,7 @@ import { routesMeta } from '@/shared/seo/routesMeta';
 import { motion } from 'framer-motion';
 import { LeftNav as BaseLeftNav, RightToc as BaseRightToc, Section as BaseSection, Kbd, Callout, pageVariants } from '@/shared/ui/layout/PageSidebar';
 import { useIsMobile } from '@/shared/ui/utils/useIsMobile';
+import { useI18n } from '@/shared/i18n/I18nProvider';
 
 export type TocItem = { id: string; title: string };
 
@@ -27,6 +28,7 @@ export const SECTIONS: TocItem[] = [
 export default function RulesPage() {
   useWallpaper();
   const isMobile = useIsMobile();
+  const { language } = useI18n();
 
   const Section = (props: ComponentProps<typeof BaseSection>) => (
     <BaseSection {...props} disableMotion={isMobile} />
@@ -37,6 +39,8 @@ export default function RulesPage() {
   const RightToc = (props: ComponentProps<typeof BaseRightToc>) => (
     <BaseRightToc {...props} disableMotion={isMobile} />
   );
+
+  if (language === 'en') return <EnglishRules isMobile={isMobile} />;
 
   return (
     <>
@@ -165,4 +169,40 @@ export default function RulesPage() {
     </motion.div>
     </>
   );
+}
+
+const EN_SECTIONS: TocItem[] = [
+  { id: 'intro', title: 'Introduction' }, { id: 'forbidden', title: 'Forbidden actions' },
+  { id: 'chat', title: 'Communication' }, { id: 'techmagic', title: 'Mods and resource packs' },
+  { id: 'build', title: 'Building' }, { id: 'farms', title: 'Farms and machinery' },
+  { id: 'pvp', title: 'PVP / PVE' }, { id: 'trade', title: 'Economy and trading' },
+  { id: 'security', title: 'Security and accounts' }, { id: 'penalties', title: 'Penalties' },
+];
+
+const EN_RULES: Array<{ id: string; items: React.ReactNode[] }> = [
+  { id: 'intro', items: [<>The server uses <b>one persistent world</b> focused on tech magic and building. Our goal is a stable, welcoming place for collaboration. Staff may decide cases not explicitly covered by these rules.</>, <>Respect other players, help newcomers, play fairly, and report violations to staff.</>] },
+  { id: 'forbidden', items: [<><b>Griefing:</b> damaging another player’s build without permission.</>, <><b>Abusive behaviour:</b> targeted insults or harassment; friendly mutual banter is the only exception.</>, <><b>Toxicity:</b> disrupting conversation, shouting, repeated loud sounds, or abusing voice chat.</>, <><b>Flood and spam:</b> meaningless or repetitive messages.</>, <>Off-topic posts in topic-specific channels.</>, <>Malware, phishing, shock content, or suspicious links.</>, <>Pornographic or erotic content.</>, <>Sharing another person’s private data without consent.</>, <>Misinformation intended to harm the project or its reputation.</>, <>Begging players or staff for privileges.</>, <>Manipulating wording or searching for loopholes to excuse a violation.</>, <>Alternate accounts used to evade punishment or gain an advantage.</>, <>Cheats, software, mods, or resource packs that provide an unfair advantage, including their promotion.</>, <>Commercial advertising without staff approval.</>] },
+  { id: 'chat', items: [<>Follow the laws applicable to the hosting location and platform.</>, <>Do not publish another person’s private data.</>, <>Send constructive feedback to the appropriate channels and avoid off-topic discussion.</>] },
+  { id: 'techmagic', items: [<>The server modpack is allowed. Extra client-side mods are allowed unless they provide an unfair advantage.</>, <>Visual and quality-of-life mods are allowed when they do not change gameplay fairness.</>, <>Exploits and duplication glitches are forbidden, except TNT, dragon egg, and carpet duplication. Report newly discovered bugs to staff.</>] },
+  { id: 'build', items: [<>Do not overlap another player’s building area without agreement.</>, <>Mark occupied territory so its owner can be identified.</>, <>Never remove another player’s markers or seize their territory. An unused claim on the spawn island may be released after one month with no construction.</>, <>Keep public paths, highways, railways, portals, junctions, and train routes clear.</>, <>Clean up the terrain after dismantling builds or terraforming.</>] },
+  { id: 'farms', items: [<>Coordinate very large or heavy farms and machinery with staff. They must not reduce server TPS or cause lag.</>, <>Automated farms must have rate limits and an off switch.</>, <>Entity limits apply. Staff may remove or disable a source of server lag.</>] },
+  { id: 'pvp', items: [<>PVE is allowed.</>, <>PVP is allowed only with mutual consent or inside designated zones and events.</>, <>Do not trick or provoke players into unwanted PVP.</>] },
+  { id: 'trade', items: [<>Use dedicated trading stations when possible and record the terms of major deals, for example in a signed book.</>, <>Advertise your own shops only in designated places.</>] },
+  { id: 'security', items: [<>You are responsible for the security of your account.</>, <>Never share sign-in details or access codes.</>, <>Staff cannot read your password; credentials are stored securely.</>, <>Do not evade bans using alternate accounts or VPN services.</>, <>Report suspicious account activity to staff immediately.</>] },
+  { id: 'penalties', items: [<>Typical escalation is <b>warning → mute → temporary ban → permanent ban</b>.</>, <>The penalty depends on severity, repetition, and consequences.</>, <>Staff may increase a penalty when aggravating circumstances apply.</>] },
+];
+
+function EnglishRules({ isMobile }: { isMobile: boolean }) {
+  return <>
+    <Seo {...routesMeta['/rules']} />
+    <motion.div className="mx-auto grid w-full max-w-7xl grid-cols-12 gap-6 px-4 py-6 text-slate-100" variants={isMobile ? undefined : pageVariants} initial={isMobile ? false : 'hidden'} animate={isMobile ? false : 'show'}>
+      <aside className="hidden md:block md:col-span-3"><BaseLeftNav items={EN_SECTIONS} disableMotion={isMobile} blurIntensity="xl" bgOpacity="60" /></aside>
+      <main className="col-span-12 md:col-span-6">
+        <h1 className="mb-4 text-center text-[22px] font-bold md:text-[24px]">Server rules</h1>
+        <Callout title="Tip"><ul className="space-y-1 text-sm text-slate-300"><li>Search this page with <Kbd>Ctrl</Kbd> + <Kbd>F</Kbd> (Windows / Linux) or <Kbd>Cmd</Kbd> + <Kbd>F</Kbd> (macOS).</li><li>Ask the staff team if anything remains unclear.</li></ul></Callout>
+        {EN_SECTIONS.map((section, index) => <BaseSection key={section.id} id={section.id} title={section.title} n={index + 1} disableMotion={isMobile}><ul className="list-disc space-y-1 pl-5 text-slate-300">{EN_RULES.find((entry) => entry.id === section.id)?.items.map((item, itemIndex) => <li key={itemIndex}>{item}</li>)}</ul></BaseSection>)}
+      </main>
+      <aside className="hidden md:block md:col-span-3"><BaseRightToc items={EN_SECTIONS} disableMotion={isMobile} blurIntensity="xl" bgOpacity="60" /></aside>
+    </motion.div>
+  </>;
 }

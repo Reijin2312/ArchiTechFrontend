@@ -1,0 +1,650 @@
+- generic [ref=f2e2]:
+  - region "Notifications alt+T"
+  - generic [ref=f2e3]:
+    - banner [ref=f2e4]:
+      - navigation [ref=f2e5]:
+        - link "На главную" [ref=f2e6] [cursor=pointer]:
+          - /url: /
+          - img "Логотип ArchiTech MC" [ref=f2e7]
+          - generic [ref=f2e8]: ArchiTech MC
+        - generic [ref=f2e9]:
+          - link "В" [ref=f2e10] [cursor=pointer]:
+            - /url: /auth/login?next=%2Fwiki
+          - button "Открыть меню" [ref=f2e11]
+    - main [ref=f2e14]:
+      - main [ref=f2e16]:
+        - heading "Вики сервера" [level=1] [ref=f2e17]
+        - generic [ref=f2e18]:
+          - generic [ref=f2e19]: Как пользоваться вики
+          - list [ref=f2e20]:
+            - listitem [ref=f2e21]: "Переходите по разделам слева или используйте быстрый поиск по странице: Ctrl + F (Windows / Linux), Cmd + F (macOS)."
+            - listitem [ref=f2e22]: Список модов можно фильтровать по названию или категории.
+        - generic [ref=f2e24]:
+          - heading "1 О сервере и тематика" [level=2] [ref=f2e25]:
+            - generic [ref=f2e26]: "1"
+            - text: О сервере и тематика
+          - generic [ref=f2e27]:
+            - paragraph [ref=f2e28]: Сервер состоит из одного мира. Тематикой является техномагия с особым упором на строительство. Наша цель — создать комфортное и стабильное место для общения и взаимодействия.
+            - paragraph [ref=f2e29]: Спавн расположен на острове, окружённым со всех сторон океаном. Атмосферно, не находите?
+        - generic [ref=f2e31]:
+          - heading "2 Как начать играть" [level=2] [ref=f2e32]:
+            - generic [ref=f2e33]: "2"
+            - text: Как начать играть
+          - list [ref=f2e35]:
+            - listitem [ref=f2e36]:
+              - link "Зарегистрируйтесь" [ref=f2e37] [cursor=pointer]:
+                - /url: /api/auth/register
+              - text: или
+              - link "войдите" [ref=f2e38] [cursor=pointer]:
+                - /url: /api/auth/login
+              - text: на сайте.
+            - listitem [ref=f2e39]:
+              - text: Получите проходку в
+              - link "телеграм-боте." [ref=f2e40] [cursor=pointer]:
+                - /url: https://telegram.me/@Archi_payment_bot
+            - listitem [ref=f2e41]:
+              - text: Скачайте лаунчер
+              - link "отсюда" [ref=f2e42] [cursor=pointer]:
+                - /url: https://launcher.architech-mc.ru/download/launcher/latest
+              - text: .
+            - listitem [ref=f2e43]: Установите игру. Сервер автоматически появится в списке серверов сетевой игры.
+            - listitem [ref=f2e44]: Начинайте играть!
+        - generic [ref=f2e46]:
+          - heading "3 Список модов" [level=2] [ref=f2e47]:
+            - generic [ref=f2e48]: "3"
+            - text: Список модов
+          - generic [ref=f2e49]:
+            - generic [ref=f2e50]:
+              - generic [ref=f2e51]:
+                - paragraph [ref=f2e52]: 163 модов в актуальной сборке
+                - textbox [ref=f2e54]:
+                  - /placeholder: Мод, автор или тег…
+              - generic "Фильтр по тегам" [ref=f2e55]:
+                - button "Adventure" [active] [pressed] [ref=f2e56]
+                - button "Cursed" [ref=f2e57]
+                - button "Decoration" [ref=f2e58]
+                - button "Economy" [ref=f2e59]
+                - button "Equipment" [ref=f2e60]
+                - button "Food" [ref=f2e61]
+                - button "Game mechanics" [ref=f2e62]
+                - button "Library" [ref=f2e63]
+                - button "Local" [ref=f2e64]
+                - button "Magic" [ref=f2e65]
+                - button "Management" [ref=f2e66]
+                - button "Mobs" [ref=f2e67]
+                - button "Optimization" [ref=f2e68]
+                - button "Social" [ref=f2e69]
+                - button "Storage" [ref=f2e70]
+                - button "Technology" [ref=f2e71]
+                - button "Transportation" [ref=f2e72]
+                - button "Utility" [ref=f2e73]
+                - button "Worldgen" [ref=f2e74]
+            - generic [ref=f2e75]:
+              - link "2032 World Height на Modrinth" [ref=f2e76] [cursor=pointer]:
+                - /url: https://modrinth.com/mod/2032-world-height
+                - generic [ref=f2e81]:
+                  - generic [ref=f2e82]:
+                    - heading "2032 World Height" [level=3] [ref=f2e83]
+                    - generic [ref=f2e84]: от Obydux
+                  - paragraph [ref=f2e85]: Increase your build limit to Y=2031 in all dimensions.
+                  - generic [ref=f2e86]:
+                    - generic [ref=f2e87]: Сервер
+                    - generic [ref=f2e88]: v1.1+mod
+                    - generic [ref=f2e89]: Cursed
+                    - generic [ref=f2e90]: Game mechanics
+                    - generic [ref=f2e91]: Worldgen
+                    - generic [ref=f2e92]: "+2"
+                - generic [ref=f2e93]:
+                  - generic "загрузок" [ref=f2e94]: 619,3 тыс.
+                  - generic "подписчиков" [ref=f2e98]: "345"
+              - link "3D Skin Layers на Modrinth" [ref=f2e126] [cursor=pointer]:
+                - /url: https://modrinth.com/mod/3dskinlayers
+                - generic [ref=f2e131]:
+                  - generic [ref=f2e132]:
+                    - heading "3D Skin Layers" [level=3] [ref=f2e133]
+                    - generic [ref=f2e134]: от tr7zw
+                  - paragraph [ref=f2e135]: Render the player skin layer in 3d!
+                  - generic [ref=f2e136]:
+                    - generic [ref=f2e137]: Клиент
+                    - generic [ref=f2e138]: v1.11.2
+                    - generic [ref=f2e139]: Adventure
+                    - generic [ref=f2e140]: Decoration
+                - generic [ref=f2e141]:
+                  - generic "загрузок" [ref=f2e142]: 68,1 млн
+                  - generic "подписчиков" [ref=f2e146]: 11,1 тыс.
+              - link "Ars Nouveau's Flavors & Delight на Modrinth" [ref=f2e497] [cursor=pointer]:
+                - /url: https://modrinth.com/mod/arsdelight
+                - generic [ref=f2e502]:
+                  - generic [ref=f2e503]:
+                    - heading "Ars Nouveau's Flavors & Delight" [level=3] [ref=f2e504]
+                    - generic [ref=f2e505]: от Modrinth
+                  - paragraph [ref=f2e506]: Adding 49+ food made with Ars Nouveau's ingredients in Farmer's Delight style, and mechanics that interacts with spells and rituals
+                  - generic [ref=f2e507]:
+                    - generic [ref=f2e508]: Клиент и сервер
+                    - generic [ref=f2e509]: v2.2.2
+                    - generic [ref=f2e510]: Food
+                    - generic [ref=f2e511]: Adventure
+                    - generic [ref=f2e512]: Decoration
+                    - generic [ref=f2e513]: "+1"
+                - generic [ref=f2e514]:
+                  - generic "загрузок" [ref=f2e515]: 2,6 млн
+                  - generic "подписчиков" [ref=f2e519]: "136"
+              - link "Biomes O' Plenty на Modrinth" [ref=f2e695] [cursor=pointer]:
+                - /url: https://modrinth.com/mod/biomes-o-plenty
+                - generic [ref=f2e700]:
+                  - generic [ref=f2e701]:
+                    - heading "Biomes O' Plenty" [level=3] [ref=f2e702]
+                    - generic [ref=f2e703]: от Forstride
+                  - paragraph [ref=f2e704]: Adds 50+ unique biomes to enhance your world, with new trees, flowers, and more!
+                  - generic [ref=f2e705]:
+                    - generic [ref=f2e706]: Клиент и сервер
+                    - generic [ref=f2e707]: v21.1.0.14
+                    - generic [ref=f2e708]: Adventure
+                    - generic [ref=f2e709]: Decoration
+                    - generic [ref=f2e710]: Worldgen
+                - generic [ref=f2e711]:
+                  - generic "загрузок" [ref=f2e712]: 31,1 млн
+                  - generic "подписчиков" [ref=f2e716]: 5 тыс.
+              - link "Born in Chaos на Modrinth" [ref=f2e764] [cursor=pointer]:
+                - /url: https://modrinth.com/mod/borninchaos
+                - generic [ref=f2e769]:
+                  - generic [ref=f2e770]:
+                    - heading "Born in Chaos" [level=3] [ref=f2e771]
+                    - generic [ref=f2e772]: от Mongoose_artist
+                  - paragraph [ref=f2e773]: Adds a lot of aggressive mobs, with their unique properties that can diversify and complicate your survival. Also adds new structures, equipment, blocks and achievements.
+                  - generic [ref=f2e774]:
+                    - generic [ref=f2e775]: Клиент и сервер
+                    - generic [ref=f2e776]: v1.7.6
+                    - generic [ref=f2e777]: Equipment
+                    - generic [ref=f2e778]: Mobs
+                    - generic [ref=f2e779]: Worldgen
+                    - generic [ref=f2e780]: "+4"
+                - generic [ref=f2e781]:
+                  - generic "загрузок" [ref=f2e782]: 1,2 млн
+                  - generic "подписчиков" [ref=f2e786]: "250"
+              - link "Create Aeronautics на Modrinth" [ref=f2e1065] [cursor=pointer]:
+                - /url: https://modrinth.com/mod/create-aeronautics
+                - generic [ref=f2e1070]:
+                  - generic [ref=f2e1071]:
+                    - heading "Create Aeronautics" [level=3] [ref=f2e1072]
+                    - generic [ref=f2e1073]: от Modrinth
+                  - paragraph [ref=f2e1074]: Build anything from airships to planes and cars!
+                  - generic [ref=f2e1075]:
+                    - generic [ref=f2e1076]: Клиент и сервер
+                    - generic [ref=f2e1077]: v1.3.0+mc1.21.1
+                    - generic [ref=f2e1078]: Adventure
+                    - generic [ref=f2e1079]: Technology
+                    - generic [ref=f2e1080]: Transportation
+                    - generic [ref=f2e1081]: "+2"
+                - generic [ref=f2e1082]:
+                  - generic "загрузок" [ref=f2e1083]: 6,1 млн
+                  - generic "подписчиков" [ref=f2e1087]: 2,9 тыс.
+              - link "Create Big Cannons на Modrinth" [ref=f2e1091] [cursor=pointer]:
+                - /url: https://modrinth.com/mod/create-big-cannons
+                - generic [ref=f2e1096]:
+                  - generic [ref=f2e1097]:
+                    - heading "Create Big Cannons" [level=3] [ref=f2e1098]
+                    - generic [ref=f2e1099]: от realRobotix
+                  - paragraph [ref=f2e1100]: A Minecraft mod for building large cannons with the Create mod.
+                  - generic [ref=f2e1101]:
+                    - generic [ref=f2e1102]: Клиент и сервер
+                    - generic [ref=f2e1103]: v5.11.7
+                    - generic [ref=f2e1104]: Adventure
+                    - generic [ref=f2e1105]: Equipment
+                    - generic [ref=f2e1106]: Technology
+                    - generic [ref=f2e1107]: "+2"
+                - generic [ref=f2e1108]:
+                  - generic "загрузок" [ref=f2e1109]: 6,6 млн
+                  - generic "подписчиков" [ref=f2e1113]: 1,1 тыс.
+              - link "Curios API на Modrinth" [ref=f2e1117] [cursor=pointer]:
+                - /url: https://modrinth.com/mod/curios
+                - generic [ref=f2e1122]:
+                  - generic [ref=f2e1123]:
+                    - heading "Curios API" [level=3] [ref=f2e1124]
+                    - generic [ref=f2e1125]: от TheIllusiveC4
+                  - paragraph [ref=f2e1126]: A flexible and expandable accessory/equipment API for users and developers.
+                  - generic [ref=f2e1127]:
+                    - generic [ref=f2e1128]: Клиент и сервер
+                    - generic [ref=f2e1129]: v9.5.1+1.21.1
+                    - generic [ref=f2e1130]: Equipment
+                    - generic [ref=f2e1131]: Library
+                    - generic [ref=f2e1132]: Utility
+                    - generic [ref=f2e1133]: "+1"
+                - generic [ref=f2e1134]:
+                  - generic "загрузок" [ref=f2e1135]: 28,2 млн
+                  - generic "подписчиков" [ref=f2e1139]: 1,5 тыс.
+              - link "Deeper and Darker на Modrinth" [ref=f2e1143] [cursor=pointer]:
+                - /url: https://modrinth.com/mod/deeperdarker
+                - generic [ref=f2e1148]:
+                  - generic [ref=f2e1149]:
+                    - heading "Deeper and Darker" [level=3] [ref=f2e1150]
+                    - generic [ref=f2e1151]: от NewJumper
+                  - paragraph [ref=f2e1152]: A Minecraft mod which features more blocks, items, armors, and hidden mysteries to complement the Deep Dark biome.
+                  - generic [ref=f2e1153]:
+                    - generic [ref=f2e1154]: Клиент и сервер
+                    - generic [ref=f2e1155]: v1.4.1-neoforge-1.21.1
+                    - generic [ref=f2e1156]: Adventure
+                    - generic [ref=f2e1157]: Mobs
+                    - generic [ref=f2e1158]: Worldgen
+                    - generic [ref=f2e1159]: "+1"
+                - generic [ref=f2e1160]:
+                  - generic "загрузок" [ref=f2e1161]: 14,1 млн
+                  - generic "подписчиков" [ref=f2e1165]: 2,3 тыс.
+              - link "Explorify на Modrinth" [ref=f2e1169] [cursor=pointer]:
+                - /url: https://modrinth.com/mod/explorify
+                - generic [ref=f2e1174]:
+                  - generic [ref=f2e1175]:
+                    - heading "Explorify" [level=3] [ref=f2e1176]
+                    - generic [ref=f2e1177]: от bebebea_loste
+                  - paragraph [ref=f2e1178]: A simplistic, vanilla-friendly collection of new structures.
+                  - generic [ref=f2e1179]:
+                    - generic [ref=f2e1180]: Сервер
+                    - generic [ref=f2e1181]: vv1.6.5
+                    - generic [ref=f2e1182]: Adventure
+                    - generic [ref=f2e1183]: Worldgen
+                - generic [ref=f2e1184]:
+                  - generic "загрузок" [ref=f2e1185]: 8,3 млн
+                  - generic "подписчиков" [ref=f2e1189]: 3,1 тыс.
+              - link "Immersive Melodies на Modrinth" [ref=f2e1193] [cursor=pointer]:
+                - /url: https://modrinth.com/mod/immersive-melodies
+                - generic [ref=f2e1198]:
+                  - generic [ref=f2e1199]:
+                    - heading "Immersive Melodies" [level=3] [ref=f2e1200]
+                    - generic [ref=f2e1201]: от Luke100000
+                  - paragraph [ref=f2e1202]: Play custom melodies on various instruments and annoy your friends!
+                  - generic [ref=f2e1203]:
+                    - generic [ref=f2e1204]: Клиент и сервер
+                    - generic [ref=f2e1205]: v0.6.4+1.21.1
+                    - generic [ref=f2e1206]: Equipment
+                    - generic [ref=f2e1207]: Game mechanics
+                    - generic [ref=f2e1208]: Social
+                    - generic [ref=f2e1209]: "+2"
+                - generic [ref=f2e1210]:
+                  - generic "загрузок" [ref=f2e1211]: 7,8 млн
+                  - generic "подписчиков" [ref=f2e1215]: 1,2 тыс.
+              - link "Just Player Heads на Modrinth" [ref=f2e1219] [cursor=pointer]:
+                - /url: https://modrinth.com/mod/just-player-heads
+                - generic [ref=f2e1224]:
+                  - generic [ref=f2e1225]:
+                    - heading "Just Player Heads" [level=3] [ref=f2e1226]
+                    - generic [ref=f2e1227]: от Serilum
+                  - paragraph [ref=f2e1228]: 🗿 Allows the collection of player heads via command or death event.
+                  - generic [ref=f2e1229]:
+                    - generic [ref=f2e1230]: Сервер
+                    - generic [ref=f2e1231]: v1.21.1-4.4-fabric+forge+neo
+                    - generic [ref=f2e1232]: Adventure
+                    - generic [ref=f2e1233]: Decoration
+                    - generic [ref=f2e1234]: Game mechanics
+                    - generic [ref=f2e1235]: "+1"
+                - generic [ref=f2e1236]:
+                  - generic "загрузок" [ref=f2e1237]: 1,3 млн
+                  - generic "подписчиков" [ref=f2e1241]: "326"
+              - link "Oh The Biomes We've Gone на Modrinth" [ref=f2e1245] [cursor=pointer]:
+                - /url: https://modrinth.com/mod/oh-the-biomes-weve-gone
+                - generic [ref=f2e1250]:
+                  - generic [ref=f2e1251]:
+                    - heading "Oh The Biomes We've Gone" [level=3] [ref=f2e1252]
+                    - generic [ref=f2e1253]: от JT122406
+                  - paragraph [ref=f2e1254]: An astounding sequel to the original BYG mod for 1.20.1+ with over 50+ biomes ranging from the magical to the realistic and all breathtaking!
+                  - generic [ref=f2e1255]:
+                    - generic [ref=f2e1256]: Клиент и сервер
+                    - generic [ref=f2e1257]: v2.6.0-NeoForge
+                    - generic [ref=f2e1258]: Adventure
+                    - generic [ref=f2e1259]: Decoration
+                    - generic [ref=f2e1260]: Worldgen
+                    - generic [ref=f2e1261]: "+2"
+                - generic [ref=f2e1262]:
+                  - generic "загрузок" [ref=f2e1263]: 10,2 млн
+                  - generic "подписчиков" [ref=f2e1267]: 1,5 тыс.
+              - link "Simple Voice Chat на Modrinth" [ref=f2e1271] [cursor=pointer]:
+                - /url: https://modrinth.com/mod/simple-voice-chat
+                - generic [ref=f2e1276]:
+                  - generic [ref=f2e1277]:
+                    - heading "Simple Voice Chat" [level=3] [ref=f2e1278]
+                    - generic [ref=f2e1279]: от BreadLoaf
+                  - paragraph [ref=f2e1280]: A working voice chat in Minecraft!
+                  - generic [ref=f2e1281]:
+                    - generic [ref=f2e1282]: Клиент и сервер
+                    - generic [ref=f2e1283]: vneoforge-1.21.1-2.6.21
+                    - generic [ref=f2e1284]: Adventure
+                    - generic [ref=f2e1285]: Social
+                    - generic [ref=f2e1286]: Utility
+                - generic [ref=f2e1287]:
+                  - generic "загрузок" [ref=f2e1288]: 61,4 млн
+                  - generic "подписчиков" [ref=f2e1292]: 13,3 тыс.
+              - link "Sit на Modrinth" [ref=f2e1296] [cursor=pointer]:
+                - /url: https://modrinth.com/mod/bl4cks-sit
+                - generic [ref=f2e1301]:
+                  - generic [ref=f2e1302]:
+                    - heading "Sit" [level=3] [ref=f2e1303]
+                    - generic [ref=f2e1304]: от bl4ckscor3
+                  - paragraph [ref=f2e1305]: Allows you to sit on slabs and stairs.
+                  - generic [ref=f2e1306]:
+                    - generic [ref=f2e1307]: Клиент и сервер
+                    - generic [ref=f2e1308]: vv1.4
+                    - generic [ref=f2e1309]: Game mechanics
+                    - generic [ref=f2e1310]: Adventure
+                - generic [ref=f2e1311]:
+                  - generic "загрузок" [ref=f2e1312]: 6,1 млн
+                  - generic "подписчиков" [ref=f2e1316]: 1,4 тыс.
+              - link "Vanilla Backport на Modrinth" [ref=f2e1320] [cursor=pointer]:
+                - /url: https://modrinth.com/mod/vanillabackport
+                - generic [ref=f2e1325]:
+                  - generic [ref=f2e1326]:
+                    - heading "Vanilla Backport" [level=3] [ref=f2e1327]
+                    - generic [ref=f2e1328]: от ItsBlackgear
+                  - paragraph [ref=f2e1329]: Backports modern minecraft features to previous versions, trying to keep it as accurate as vanilla Minecraft
+                  - generic [ref=f2e1330]:
+                    - generic [ref=f2e1331]: Клиент и сервер
+                    - generic [ref=f2e1332]: v1.1.7.10
+                    - generic [ref=f2e1333]: Adventure
+                    - generic [ref=f2e1334]: Mobs
+                    - generic [ref=f2e1335]: Worldgen
+                    - generic [ref=f2e1336]: "+1"
+                - generic [ref=f2e1337]:
+                  - generic "загрузок" [ref=f2e1338]: 7,6 млн
+                  - generic "подписчиков" [ref=f2e1342]: 1,1 тыс.
+              - link "Voice Messages на Modrinth" [ref=f2e1346] [cursor=pointer]:
+                - /url: https://modrinth.com/mod/voicemessages
+                - generic [ref=f2e1351]:
+                  - generic [ref=f2e1352]:
+                    - heading "Voice Messages" [level=3] [ref=f2e1353]
+                    - generic [ref=f2e1354]: от DimasKama
+                  - paragraph [ref=f2e1355]: Voice messages in minecraft chat
+                  - generic [ref=f2e1356]:
+                    - generic [ref=f2e1357]: Клиент и сервер
+                    - generic [ref=f2e1358]: vneoforge-1.0.12-1.21.1
+                    - generic [ref=f2e1359]: Adventure
+                    - generic [ref=f2e1360]: Social
+                    - generic [ref=f2e1361]: Utility
+                - generic [ref=f2e1362]:
+                  - generic "загрузок" [ref=f2e1363]: 251 тыс.
+                  - generic "подписчиков" [ref=f2e1367]: "231"
+              - link "William Wythers' Overhauled Overworld на Modrinth" [ref=f2e1371] [cursor=pointer]:
+                - /url: https://modrinth.com/mod/wwoo
+                - generic [ref=f2e1376]:
+                  - generic [ref=f2e1377]:
+                    - heading "William Wythers' Overhauled Overworld" [level=3] [ref=f2e1378]
+                    - generic [ref=f2e1379]: от WilliamWythers
+                  - paragraph [ref=f2e1380]: This mod overhauls all vanilla biomes, with different sub biomes!
+                  - generic [ref=f2e1381]:
+                    - generic [ref=f2e1382]: Сервер
+                    - generic [ref=f2e1383]: v2.6.7
+                    - generic [ref=f2e1384]: Worldgen
+                    - generic [ref=f2e1385]: Adventure
+                - generic [ref=f2e1386]:
+                  - generic "загрузок" [ref=f2e1387]: 1,8 млн
+                  - generic "подписчиков" [ref=f2e1391]: 1,3 тыс.
+              - link "Xaero's Minimap на Modrinth" [ref=f2e1395] [cursor=pointer]:
+                - /url: https://modrinth.com/mod/xaeros-minimap
+                - generic [ref=f2e1400]:
+                  - generic [ref=f2e1401]:
+                    - heading "Xaero's Minimap" [level=3] [ref=f2e1402]
+                    - generic [ref=f2e1403]: от thexaero
+                  - paragraph [ref=f2e1404]: Displays a map of the nearby world terrain, players, mobs, entities in the corner of your screen. Lets you create waypoints which help you find the locations you've marked.
+                  - generic [ref=f2e1405]:
+                    - generic [ref=f2e1406]: Клиент
+                    - generic [ref=f2e1407]: vneoforge-1.21.1-26.4.2
+                    - generic [ref=f2e1408]: Adventure
+                    - generic [ref=f2e1409]: Transportation
+                    - generic [ref=f2e1410]: Utility
+                - generic [ref=f2e1411]:
+                  - generic "загрузок" [ref=f2e1412]: 99,8 млн
+                  - generic "подписчиков" [ref=f2e1416]: 17,4 тыс.
+              - link "Xaero's World Map на Modrinth" [ref=f2e1420] [cursor=pointer]:
+                - /url: https://modrinth.com/mod/xaeros-world-map
+                - generic [ref=f2e1425]:
+                  - generic [ref=f2e1426]:
+                    - heading "Xaero's World Map" [level=3] [ref=f2e1427]
+                    - generic [ref=f2e1428]: от thexaero
+                  - paragraph [ref=f2e1429]: Adds a full screen world map which shows you what you have explored in the world. Works great together with Xaero's Minimap.
+                  - generic [ref=f2e1430]:
+                    - generic [ref=f2e1431]: Клиент
+                    - generic [ref=f2e1432]: vneoforge-1.21.1-1.44.2
+                    - generic [ref=f2e1433]: Adventure
+                    - generic [ref=f2e1434]: Transportation
+                    - generic [ref=f2e1435]: Utility
+                - generic [ref=f2e1436]:
+                  - generic "загрузок" [ref=f2e1437]: 87,3 млн
+                  - generic "подписчиков" [ref=f2e1441]: 13,2 тыс.
+              - link "YUNG's Better Desert Temples на Modrinth" [ref=f2e1445] [cursor=pointer]:
+                - /url: https://modrinth.com/mod/yungs-better-desert-temples
+                - generic [ref=f2e1450]:
+                  - generic [ref=f2e1451]:
+                    - heading "YUNG's Better Desert Temples" [level=3] [ref=f2e1452]
+                    - generic [ref=f2e1453]: от TeraBuildsStuff
+                  - paragraph [ref=f2e1454]: A complete redesign of Minecraft's desert temples!
+                  - generic [ref=f2e1455]:
+                    - generic [ref=f2e1456]: Сервер
+                    - generic [ref=f2e1457]: v1.21.1-NeoForge-4.1.5
+                    - generic [ref=f2e1458]: Adventure
+                    - generic [ref=f2e1459]: Decoration
+                    - generic [ref=f2e1460]: Worldgen
+                - generic [ref=f2e1461]:
+                  - generic "загрузок" [ref=f2e1462]: 15,1 млн
+                  - generic "подписчиков" [ref=f2e1466]: 2,4 тыс.
+              - link "YUNG's Better Dungeons на Modrinth" [ref=f2e1470] [cursor=pointer]:
+                - /url: https://modrinth.com/mod/yungs-better-dungeons
+                - generic [ref=f2e1475]:
+                  - generic [ref=f2e1476]:
+                    - heading "YUNG's Better Dungeons" [level=3] [ref=f2e1477]
+                    - generic [ref=f2e1478]: от Acarii
+                  - paragraph [ref=f2e1479]: A complete redesign of Minecraft's dungeons!
+                  - generic [ref=f2e1480]:
+                    - generic [ref=f2e1481]: Сервер
+                    - generic [ref=f2e1482]: v1.21.1-NeoForge-5.1.4
+                    - generic [ref=f2e1483]: Adventure
+                    - generic [ref=f2e1484]: Decoration
+                    - generic [ref=f2e1485]: Worldgen
+                - generic [ref=f2e1486]:
+                  - generic "загрузок" [ref=f2e1487]: 19,9 млн
+                  - generic "подписчиков" [ref=f2e1491]: 3 тыс.
+              - link "YUNG's Better Jungle Temples на Modrinth" [ref=f2e1495] [cursor=pointer]:
+                - /url: https://modrinth.com/mod/yungs-better-jungle-temples
+                - generic [ref=f2e1500]:
+                  - generic [ref=f2e1501]:
+                    - heading "YUNG's Better Jungle Temples" [level=3] [ref=f2e1502]
+                    - generic [ref=f2e1503]: от YUNGNICKYOUNG
+                  - paragraph [ref=f2e1504]: A complete redesign of Minecraft's jungle temples!
+                  - generic [ref=f2e1505]:
+                    - generic [ref=f2e1506]: Сервер
+                    - generic [ref=f2e1507]: v1.21.1-NeoForge-3.1.2
+                    - generic [ref=f2e1508]: Adventure
+                    - generic [ref=f2e1509]: Decoration
+                    - generic [ref=f2e1510]: Worldgen
+                - generic [ref=f2e1511]:
+                  - generic "загрузок" [ref=f2e1512]: 18,4 млн
+                  - generic "подписчиков" [ref=f2e1516]: 2,1 тыс.
+              - link "YUNG's Better Mineshafts на Modrinth" [ref=f2e1520] [cursor=pointer]:
+                - /url: https://modrinth.com/mod/yungs-better-mineshafts
+                - generic [ref=f2e1525]:
+                  - generic [ref=f2e1526]:
+                    - heading "YUNG's Better Mineshafts" [level=3] [ref=f2e1527]
+                    - generic [ref=f2e1528]: от YUNGNICKYOUNG
+                  - paragraph [ref=f2e1529]: A long-awaited and much-needed abandoned mineshaft overhaul!
+                  - generic [ref=f2e1530]:
+                    - generic [ref=f2e1531]: Сервер
+                    - generic [ref=f2e1532]: v1.21.1-NeoForge-5.1.1
+                    - generic [ref=f2e1533]: Adventure
+                    - generic [ref=f2e1534]: Decoration
+                    - generic [ref=f2e1535]: Worldgen
+                - generic [ref=f2e1536]:
+                  - generic "загрузок" [ref=f2e1537]: 18,4 млн
+                  - generic "подписчиков" [ref=f2e1541]: 2,9 тыс.
+              - link "YUNG's Better Nether Fortresses на Modrinth" [ref=f2e1545] [cursor=pointer]:
+                - /url: https://modrinth.com/mod/yungs-better-nether-fortresses
+                - generic [ref=f2e1550]:
+                  - generic [ref=f2e1551]:
+                    - heading "YUNG's Better Nether Fortresses" [level=3] [ref=f2e1552]
+                    - generic [ref=f2e1553]: от YUNGNICKYOUNG
+                  - paragraph [ref=f2e1554]: A complete redesign of Minecraft's Nether fortresses!
+                  - generic [ref=f2e1555]:
+                    - generic [ref=f2e1556]: Сервер
+                    - generic [ref=f2e1557]: v1.21.1-NeoForge-3.1.5
+                    - generic [ref=f2e1558]: Adventure
+                    - generic [ref=f2e1559]: Decoration
+                    - generic [ref=f2e1560]: Worldgen
+                - generic [ref=f2e1561]:
+                  - generic "загрузок" [ref=f2e1562]: 20,7 млн
+                  - generic "подписчиков" [ref=f2e1566]: 2,7 тыс.
+              - link "YUNG's Better Strongholds на Modrinth" [ref=f2e1570] [cursor=pointer]:
+                - /url: https://modrinth.com/mod/yungs-better-strongholds
+                - generic [ref=f2e1575]:
+                  - generic [ref=f2e1576]:
+                    - heading "YUNG's Better Strongholds" [level=3] [ref=f2e1577]
+                    - generic [ref=f2e1578]: от YUNGNICKYOUNG
+                  - paragraph [ref=f2e1579]: A complete redesign of Minecraft's strongholds!
+                  - generic [ref=f2e1580]:
+                    - generic [ref=f2e1581]: Сервер
+                    - generic [ref=f2e1582]: v1.21.1-NeoForge-5.1.3
+                    - generic [ref=f2e1583]: Adventure
+                    - generic [ref=f2e1584]: Decoration
+                    - generic [ref=f2e1585]: Worldgen
+                - generic [ref=f2e1586]:
+                  - generic "загрузок" [ref=f2e1587]: 16,6 млн
+                  - generic "подписчиков" [ref=f2e1591]: 2,7 тыс.
+              - link "YUNG's Better Witch Huts на Modrinth" [ref=f2e1595] [cursor=pointer]:
+                - /url: https://modrinth.com/mod/yungs-better-witch-huts
+                - generic [ref=f2e1600]:
+                  - generic [ref=f2e1601]:
+                    - heading "YUNG's Better Witch Huts" [level=3] [ref=f2e1602]
+                    - generic [ref=f2e1603]: от YUNGNICKYOUNG
+                  - paragraph [ref=f2e1604]: Adds overhauled witch huts to swamps!
+                  - generic [ref=f2e1605]:
+                    - generic [ref=f2e1606]: Сервер
+                    - generic [ref=f2e1607]: v1.21.1-NeoForge-4.1.1
+                    - generic [ref=f2e1608]: Adventure
+                    - generic [ref=f2e1609]: Decoration
+                    - generic [ref=f2e1610]: Worldgen
+                - generic [ref=f2e1611]:
+                  - generic "загрузок" [ref=f2e1612]: 16,1 млн
+                  - generic "подписчиков" [ref=f2e1616]: 2,2 тыс.
+        - generic [ref=f2e934]:
+          - heading "4 Прогрессия техномагии" [level=2] [ref=f2e935]:
+            - generic [ref=f2e936]: "4"
+            - text: Прогрессия техномагии
+          - list [ref=f2e938]:
+            - listitem [ref=f2e939]: "I. Старт: Железо → медь → базовые Create механизмы, руда-обработка. Инструменты раннего тира."
+            - listitem [ref=f2e940]: "II. Склад: AE2 начальная сеть, энергия, автокрафт простых деталей. Лёгкие фермы ресурсов."
+            - listitem [ref=f2e941]: "III. Магия: Botania/Occultism: мана-инфраструктура, ритуалы, утилитарные предметы."
+            - listitem [ref=f2e942]: "IV. Индастриал: Mekanism/электрика Create C&A, мультиблоки, генерация."
+            - listitem [ref=f2e943]: "V. Поздняя игра: Полный автокрафт, высокие ритуалы, автоматизация босс-ресурсов (если есть)."
+        - generic [ref=f2e945]:
+          - heading "5 Команды сервера и бота" [level=2] [ref=f2e946]:
+            - generic [ref=f2e947]: "5"
+            - text: Команды сервера и бота
+          - generic [ref=f2e949]:
+            - generic [ref=f2e950]:
+              - generic [ref=f2e951]: Сервер
+              - table [ref=f2e953]:
+                - rowgroup [ref=f2e954]:
+                  - row [ref=f2e955]:
+                    - columnheader "Команда" [ref=f2e956]
+                    - columnheader "Описание" [ref=f2e957]
+                - rowgroup [ref=f2e958]:
+                  - row [ref=f2e959]:
+                    - cell "/spawn" [ref=f2e960]
+                    - cell "Телепорт на спавн" [ref=f2e961]
+                  - row [ref=f2e962]:
+                    - cell "/home, /sethome, /delhome" [ref=f2e963]
+                    - cell "Дом, установка и удаление" [ref=f2e964]
+                  - row [ref=f2e965]:
+                    - cell "/msg <ник> <текст>" [ref=f2e966]
+                    - cell "Личные сообщения" [ref=f2e967]
+                  - row [ref=f2e968]:
+                    - cell "/rtp" [ref=f2e969]
+                    - cell "Случайный телепорт (если включено)" [ref=f2e970]
+                  - row [ref=f2e971]:
+                    - cell "/claim, /map" [ref=f2e972]
+                    - cell "Клейм и карта чанков (FTB Chunks)" [ref=f2e973]
+            - generic [ref=f2e974]:
+              - generic [ref=f2e975]: Telegram-бот
+              - table [ref=f2e977]:
+                - rowgroup [ref=f2e978]:
+                  - row [ref=f2e979]:
+                    - columnheader "Команда" [ref=f2e980]
+                    - columnheader "Описание" [ref=f2e981]
+                - rowgroup [ref=f2e982]:
+                  - row [ref=f2e983]:
+                    - 'cell "Бот: старт" [ref=f2e984]'
+                    - cell "Начало, меню оплаты проходки" [ref=f2e985]
+                  - row [ref=f2e986]:
+                    - 'cell "Бот: привязать ник" [ref=f2e987]'
+                    - cell "Связка Telegram ↔ ник" [ref=f2e988]
+                  - row [ref=f2e989]:
+                    - 'cell "Бот: моя проходка" [ref=f2e990]'
+                    - cell "Срок действия, дата окончания" [ref=f2e991]
+                  - row [ref=f2e992]:
+                    - 'cell "Бот: пригласить друга" [ref=f2e993]'
+                    - cell "Реферальная ссылка и скидки" [ref=f2e994]
+        - generic [ref=f2e996]:
+          - heading "6 Экономика" [level=2] [ref=f2e997]:
+            - generic [ref=f2e998]: "6"
+            - text: Экономика
+          - list [ref=f2e1000]:
+            - listitem [ref=f2e1001]: Бартер/торговые станции на базах. Рекламу магазинов — в спец. каналах.
+            - listitem [ref=f2e1002]: Крупные сделки фиксируйте книгой-договором.
+        - generic [ref=f2e1004]:
+          - heading "7 Производительность" [level=2] [ref=f2e1005]:
+            - generic [ref=f2e1006]: "7"
+            - text: Производительность
+          - list [ref=f2e1008]:
+            - listitem [ref=f2e1009]: Ставьте выключатели на фермы. Ограничивайте скорость подачи предметов.
+            - listitem [ref=f2e1010]: Не создавайте бесконечные сущности и «лаг-машины». Админы могут отключить источник лагов.
+            - listitem [ref=f2e1011]: "Клиент: снизьте рендер-дистанцию, включите VBO, используйте легковесные шейдеры/ресурс-пак."
+        - generic [ref=f2e1013]:
+          - heading "8 FAQ" [level=2] [ref=f2e1014]:
+            - generic [ref=f2e1015]: "8"
+            - text: FAQ
+          - generic [ref=f2e1017]:
+            - generic [ref=f2e1018]:
+              - generic [ref=f2e1019]: Как попасть на сервер?
+              - generic [ref=f2e1020]: Купить проходку в Telegram-боте, привязать ник, дождаться записи в whitelist.
+            - generic [ref=f2e1021]:
+              - generic [ref=f2e1022]: Список модов фиксированный?
+              - generic [ref=f2e1023]: Да. Клиентские QoL-моды без преимущества допустимы, если не нарушают античит.
+            - generic [ref=f2e1024]:
+              - generic [ref=f2e1025]: Разрешён PVP?
+              - generic [ref=f2e1026]: По взаимному согласию или в специальных зонах/ивентах.
+            - generic [ref=f2e1027]:
+              - generic [ref=f2e1028]: Можно переносить базу?
+              - generic [ref=f2e1029]: Да. Предупредите соседей и снимите клеймы перед переездом.
+        - generic [ref=f2e1031]:
+          - heading "9 Ссылки" [level=2] [ref=f2e1032]:
+            - generic [ref=f2e1033]: "9"
+            - text: Ссылки
+          - list [ref=f2e1035]:
+            - listitem [ref=f2e1036]:
+              - link "Правила сервера" [ref=f2e1037] [cursor=pointer]:
+                - /url: /rules
+            - listitem [ref=f2e1038]:
+              - link "Получение проходки" [ref=f2e1039] [cursor=pointer]:
+                - /url: /shop
+            - listitem [ref=f2e1040]:
+              - link "Политика конфиденциальности" [ref=f2e1041] [cursor=pointer]:
+                - /url: /privacy
+            - listitem [ref=f2e1042]:
+              - link "Пользовательское соглашение" [ref=f2e1043] [cursor=pointer]:
+                - /url: /terms
+    - contentinfo [ref=f2e1044]:
+      - generic [ref=f2e1045]:
+        - generic [ref=f2e1046]:
+          - generic [ref=f2e1047]:
+            - img "Логотип ArchiTech MC" [ref=f2e1048]
+            - generic [ref=f2e1049]: ArchiTech MC
+          - generic [ref=f2e1050]:
+            - link "Telegram" [ref=f2e1051] [cursor=pointer]:
+              - /url: https://t.me/archi_tech_official
+            - link "Discord" [ref=f2e1054] [cursor=pointer]:
+              - /url: https://discord.gg/x6JwVPwPtw
+        - generic [ref=f2e1057]:
+          - link "О сервере" [ref=f2e1058] [cursor=pointer]:
+            - /url: /about
+          - link "Контакты" [ref=f2e1059] [cursor=pointer]:
+            - /url: /contacts
+          - link "Пользовательское соглашение" [ref=f2e1060] [cursor=pointer]:
+            - /url: /terms
+          - link "Политика конфиденциальности" [ref=f2e1061] [cursor=pointer]:
+            - /url: /privacy
+        - generic [ref=f2e1062]: Не является официальным продуктом Minecraft. Мы никаким образом не связаны и не поддерживаем Mojang Synergies AB, Microsoft Corporation или других правообладателей.
+        - generic [ref=f2e1064]: © ArchiTech MC. 2024–2026. Все права защищены.

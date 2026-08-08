@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useWallpaper } from '@/shared/ui/wallpaper/useWallpaper'
 import { AnimatePresence, motion, useReducedMotion, type Variants } from 'framer-motion'
@@ -9,6 +9,8 @@ import { IMAGES } from '@/shared/images.manifest'
 import { SvgMcBlockGrass, SvgModpack, SvgShield, SvgGitHub, SvgChevronDown } from '@/shared/ui/image/Icons'
 import { useIsMobile } from '@/shared/ui/utils/useIsMobile'
 import { SERVER_NAME, DISCORD_URL, TELEGRAM_URL, LAUNCHER_DOWNLOAD_URL } from '@/shared/constants'
+import { useI18n } from '@/shared/i18n/I18nProvider'
+import { aboutTranslations, englishSeasons } from '@/shared/i18n/aboutTranslations'
 
 type SeasonPlayer = {
   username: string
@@ -145,6 +147,11 @@ function GlassCard({
 
 export default function AboutServerPage() {
   useWallpaper()
+  const { language } = useI18n()
+  const copy = aboutTranslations[language]
+  const seasons = useMemo(() => language === 'en'
+    ? SEASONS.map((season, index) => ({ ...season, ...englishSeasons[index], features: [...englishSeasons[index].features] }))
+    : SEASONS, [language])
 
   const prefersReducedMotion = useReducedMotion()
   const reduceMotion = Boolean(prefersReducedMotion)
@@ -166,7 +173,7 @@ export default function AboutServerPage() {
 
   // Загрузка аватаров игроков
   useEffect(() => {
-    const allPlayers = SEASONS.flatMap((s) => s.players.map((p) => p.username))
+    const allPlayers = seasons.flatMap((s) => s.players.map((p) => p.username))
     const uniquePlayers = Array.from(new Set(allPlayers))
 
     const controller = new AbortController()
@@ -193,7 +200,7 @@ export default function AboutServerPage() {
       alive = false
       controller.abort()
     }
-  }, [])
+  }, [seasons])
 
   const containerVariants: Variants = {
     hidden: { opacity: 0 },
@@ -226,10 +233,10 @@ export default function AboutServerPage() {
           <GlassCard className="p-6 md:p-10 bg-slate-900/10 backdrop-blur-none backdrop-saturate-100">
             <div className="text-center max-w-4xl mx-auto">
               <h1 className="text-3xl md:text-4xl font-bold mb-4">
-                О сервере <span className="text-indigo-400">{SERVER_NAME}</span>
+                {copy.title} <span className="text-indigo-400">{SERVER_NAME}</span>
               </h1>
               <p className="text-lg text-slate-300">
-                Ламповый сервер про большие проекты без вечного старта с нуля. Здесь можно возвести фабрику, улететь на собственном дирижабле, освоить магию Ars Nouveau. Мир развивается годами: строй, экспериментируй и оставляй постройки, которые не исчезнут после очередного вайпа.
+                {copy.lead}
               </p>
             </div>
 
@@ -244,8 +251,8 @@ export default function AboutServerPage() {
                   <div className="size-12 rounded-xl bg-indigo-600/20 grid place-items-center text-indigo-300 mb-4 ring-1 ring-white/10">
                     <SvgShield className="h-6" />
                   </div>
-                  <h3 className="text-xl font-semibold mb-2">Без вайпов</h3>
-                  <p className="text-slate-300 text-sm">Полные вайпы отменены. Мир и базы остаются с нами надолго, так что большие проекты действительно имеют смысл.</p>
+                  <h3 className="text-xl font-semibold mb-2">{copy.cards[0][0]}</h3>
+                  <p className="text-slate-300 text-sm">{copy.cards[0][1]}</p>
                 </GlassCard>
               </motion.div>
 
@@ -254,8 +261,8 @@ export default function AboutServerPage() {
                   <div className="size-12 rounded-xl bg-emerald-600/20 grid place-items-center text-emerald-300 mb-4 ring-1 ring-white/10">
                     <SvgModpack className="h-6" />
                   </div>
-                  <h3 className="text-xl font-semibold mb-2">Техника, полёты и магия</h3>
-                  <p className="text-slate-300 text-sm">Create, Create: Aeronautics и Ars Nouveau: механизмы, воздушные корабли и заклинания в одной сборке.</p>
+                  <h3 className="text-xl font-semibold mb-2">{copy.cards[1][0]}</h3>
+                  <p className="text-slate-300 text-sm">{copy.cards[1][1]}</p>
                 </GlassCard>
               </motion.div>
 
@@ -264,8 +271,8 @@ export default function AboutServerPage() {
                   <div className="size-12 rounded-xl bg-sky-600/20 grid place-items-center text-sky-300 mb-4 ring-1 ring-white/10">
                     <SvgGitHub className="h-6" />
                   </div>
-                  <h3 className="text-xl font-semibold mb-2">Авторская сборка</h3>
-                  <p className="text-slate-300 text-sm">Самописные системы и авторские NeoForge-порты BetterEnd и BetterNether от владельца проекта.</p>
+                  <h3 className="text-xl font-semibold mb-2">{copy.cards[2][0]}</h3>
+                  <p className="text-slate-300 text-sm">{copy.cards[2][1]}</p>
                 </GlassCard>
               </motion.div>
             </motion.div>
@@ -283,7 +290,7 @@ export default function AboutServerPage() {
             <div className="aspect-video w-full overflow-hidden rounded-2xl border border-slate-800/70 bg-slate-900/30">
               <ResponsiveImage
                 name={toName(heroScreenshot) as keyof typeof IMAGES}
-                alt="Мир ArchiTech MC"
+                alt={copy.worldAlt}
                 eager
                 width={1920}
                 height={1080}
@@ -302,10 +309,10 @@ export default function AboutServerPage() {
           whileInView={disableEntranceMotion ? undefined : 'show'}
           viewport={{ once: true, margin: '-10% 0px' }}
         >
-          <h2 className="text-2xl md:text-3xl font-semibold mb-8 text-center">История сезонов</h2>
+          <h2 className="text-2xl md:text-3xl font-semibold mb-8 text-center">{copy.history}</h2>
 
           <div className="grid gap-4">
-            {SEASONS.map((season) => {
+            {seasons.map((season) => {
               const isOpen = expandedSeason === season.number
               const isCurrent = !season.legacy
 
@@ -340,7 +347,7 @@ export default function AboutServerPage() {
                             <h3 className="text-xl font-semibold truncate">{season.name}</h3>
                             {isCurrent && (
                               <span className="text-xs px-2 py-1 rounded-full bg-emerald-500/15 text-emerald-200 border border-emerald-500/25">
-                                Текущий
+                                {copy.current}
                               </span>
                             )}
                           </div>
@@ -371,7 +378,7 @@ export default function AboutServerPage() {
                             <p className="text-slate-300">{season.description}</p>
 
                             <div>
-                              <h4 className="text-sm font-semibold text-slate-400 mb-2">Ключевые события</h4>
+                              <h4 className="text-sm font-semibold text-slate-400 mb-2">{copy.events}</h4>
                               <ul className="space-y-2">
                                 {season.features.map((feature, idx) => (
                                   <li key={idx} className="flex items-start gap-2 text-sm text-slate-300">
@@ -384,7 +391,7 @@ export default function AboutServerPage() {
 
                             {season.screenshots.length > 0 && (
                               <div>
-                                <h4 className="text-sm font-semibold text-slate-400 mb-3">Постройки сезона</h4>
+                                <h4 className="text-sm font-semibold text-slate-400 mb-3">{copy.builds}</h4>
                                 <div className="grid grid-cols-2 gap-3">
                                   {season.screenshots.map((screenshot, idx) => (
                                     <motion.div
@@ -395,7 +402,7 @@ export default function AboutServerPage() {
                                     >
                                       <ResponsiveImage
                                         name={toName(screenshot) as keyof typeof IMAGES}
-                                        alt={`${season.name} — скриншот ${idx + 1}`}
+                                        alt={`${season.name} — ${copy.screenshot} ${idx + 1}`}
                                         width={640}
                                         height={360}
                                         sizes="(max-width: 768px) 50vw, 320px"
@@ -410,7 +417,7 @@ export default function AboutServerPage() {
                             {season.players.length > 0 && (
                               <div>
                                 <h4 className="text-sm font-semibold text-slate-400 mb-3">
-                                  Игроки сезона ({season.players.length})
+                                  {copy.players} ({season.players.length})
                                 </h4>
 
                                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
@@ -442,7 +449,7 @@ export default function AboutServerPage() {
                                           <div className="text-sm text-slate-200 group-hover:text-slate-100 truncate transition-colors">
                                             {player.username}
                                           </div>
-                                          {player.role && <div className="text-xs text-slate-500 truncate">{player.role}</div>}
+                                          {player.role && <div className="text-xs text-slate-500 truncate">{language === 'en' ? englishRole(player.role) : player.role}</div>}
                                         </div>
                                       </Link>
                                     )
@@ -474,9 +481,9 @@ export default function AboutServerPage() {
               <div className="pointer-events-none absolute -bottom-32 -left-32 h-64 w-64 rounded-full bg-sky-500/14 blur-3xl" />
 
               <div className="relative z-10">
-                <h2 className="text-2xl md:text-3xl font-bold mb-4">Можно начать прямо сейчас</h2>
+                <h2 className="text-2xl md:text-3xl font-bold mb-4">{copy.join}</h2>
                 <p className="text-lg text-slate-300 mb-6 max-w-2xl mx-auto">
-                  Хочешь оставить след в мире, который не обнулят через пару месяцев? Зарегистрируйся, скачай лаунчер и нажми «Играть».
+                  {copy.joinText}
                 </p>
 
                 <div className="flex flex-wrap gap-4 justify-center">
@@ -484,13 +491,13 @@ export default function AboutServerPage() {
                     href={LAUNCHER_DOWNLOAD_URL}
                     className="inline-flex rounded-xl px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-medium transition-colors shadow-lg shadow-indigo-900/20"
                   >
-                    Скачать лаунчер
+                    {copy.download}
                   </a>
                   <Link
                     to="/"
                     className="inline-flex rounded-xl px-6 py-3 border border-slate-700 bg-slate-900/60 hover:bg-slate-800 text-white font-medium transition-colors"
                   >
-                    На главную
+                    {copy.home}
                   </Link>
                 </div>
 
@@ -504,11 +511,11 @@ export default function AboutServerPage() {
                   </a>
                   <span>•</span>
                   <a href="/wiki" className="hover:text-indigo-300 transition-colors">
-                    Вики
+                    {copy.wiki}
                   </a>
                   <span>•</span>
                   <a href="/rules" className="hover:text-indigo-300 transition-colors">
-                    Правила
+                    {copy.rules}
                   </a>
                 </div>
               </div>
@@ -518,4 +525,15 @@ export default function AboutServerPage() {
       </div>
     </>
   )
+}
+
+function englishRole(role: string) {
+  if (/Python/i.test(role)) return 'Python developer'
+  if (/Дизайнер/i.test(role)) return 'Designer'
+  if (/Тех/i.test(role)) return 'Technical admin'
+  if (/Мл\./i.test(role)) return 'Junior admin'
+  if (/Администратор/i.test(role)) return 'Administrator'
+  if (/Основатель/i.test(role)) return 'Founder'
+  if (/Владелец/i.test(role)) return 'Owner & developer'
+  return 'Player'
 }

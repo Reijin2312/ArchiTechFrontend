@@ -12,6 +12,8 @@ import { useIsMobile } from '@/shared/ui/utils/useIsMobile';
 import { TEAM_MEMBERS } from '@/shared/data/team';
 import { useTeamAvatars } from '@/shared/hooks/useTeamAvatars';
 import { TeamGrid } from '@/shared/ui/card/TeamGrid';
+import { useI18n } from '@/shared/i18n/I18nProvider';
+import { homeTranslations } from '@/shared/i18n/translations';
 
 type McStatus = {
   online: boolean
@@ -21,6 +23,9 @@ type McStatus = {
   latencyMs?: number
   tps?: number
 }
+
+const SERVER_STATUS_CACHE_KEY = 'architech-server-status'
+const SERVER_STATUS_CACHE_MAX_AGE_MS = 5 * 60 * 1000
 
 type OnlineHistoryPoint = {
   ts: number
@@ -88,6 +93,8 @@ type ShotMeta = {
 
 export default function HomePage() {
   useWallpaper();
+  const { language } = useI18n();
+  const copy = homeTranslations[language];
 
   const prefersReducedMotion = useReducedMotion();
   const reduceMotion = Boolean(prefersReducedMotion);
@@ -126,21 +133,21 @@ export default function HomePage() {
   )
   const shotMeta = useMemo<Record<string, ShotMeta>>(
     () => ({
-      '/images/screen1.png': { title: 'Ветрогенераторы', subtitle: 'Построены Hoshimori Inc.' },
-      '/images/screen13.png': { title: 'Портальная лягушка', subtitle: 'It is Wednesday, my dudes' },
-      '/images/screen3.png': { title: 'Дирижабль', subtitle: 'Так и сгинул, упал в океан... Дирижабль Левиафан' },
-      '/images/screen4.png': { title: 'Как это тут оказалось?', subtitle: 'Игрок KIDron позирует на ветрогенераторе' },
-      '/images/screen9.png': { title: 'Цитадель Альянса', subtitle: 'По совместительству база игрока Andrej_Dinera' },
-      '/images/screen10.png': { title: 'Ходячий замок', subtitle: 'Нестареющая классика' },
-      '/images/screen11.png': { title: 'Радиотелескоп', subtitle: 'ОНИ следят за нами...' },
-      '/images/screen12.png': { title: 'Портал', subtitle: 'Главный портал спавна в стиле древнего монолита' },
+      '/images/screen1.png': { title: copy.shots.screen1[0], subtitle: copy.shots.screen1[1] },
+      '/images/screen13.png': { title: copy.shots.screen13[0], subtitle: copy.shots.screen13[1] },
+      '/images/screen3.png': { title: copy.shots.screen3[0], subtitle: copy.shots.screen3[1] },
+      '/images/screen4.png': { title: copy.shots.screen4[0], subtitle: copy.shots.screen4[1] },
+      '/images/screen9.png': { title: copy.shots.screen9[0], subtitle: copy.shots.screen9[1] },
+      '/images/screen10.png': { title: copy.shots.screen10[0], subtitle: copy.shots.screen10[1] },
+      '/images/screen11.png': { title: copy.shots.screen11[0], subtitle: copy.shots.screen11[1] },
+      '/images/screen12.png': { title: copy.shots.screen12[0], subtitle: copy.shots.screen12[1] },
     }),
-    [],
+    [copy],
   )
   const [shot, setShot] = useState(shots[0])
   const activeShotMeta =
     shotMeta[shot] ??
-    ({ title: 'Скриншот ArchiTech', subtitle: 'Момент из жизни сервера' } as ShotMeta)
+    ({ title: copy.fallbackShot, subtitle: copy.fallbackShotSubtitle } as ShotMeta)
   const [prevShot, setPrevShot] = useState<string | null>(null)
   const [cross, setCross] = useState(true);
   const [activeIndex, setActiveIndex] = useState(0)
@@ -251,7 +258,8 @@ export default function HomePage() {
     const nextStatus: McStatus = {
       online: data.online ?? false,
       version: data.version,
-      motd: data.motd?.clean?.[0] || data.motd?.raw?.[0],
+      motd: typeof data.motd === 'string' ? data.motd : data.motd?.clean?.[0] || data.motd?.raw?.[0],
+      latencyMs: typeof data.latencyMs === 'number' ? data.latencyMs : undefined,
       players: data.online ? {
         online: data.players?.online ?? 0,
         max: data.players?.max ?? 0,
@@ -260,35 +268,43 @@ export default function HomePage() {
     }
 
     setStatus(nextStatus)
+    try {
+      localStorage.setItem(SERVER_STATUS_CACHE_KEY, JSON.stringify({ savedAt: Date.now(), status: nextStatus }))
+    } catch { /* storage may be disabled */ }
   }
 
   useEffect(() => {
-    let stop = false
-    ;(async () => {
+    const controller = new AbortController()
+    let stopped = false
+    try {
+      const cached = JSON.parse(localStorage.getItem(SERVER_STATUS_CACHE_KEY) || 'null')
+      if (cached?.status && Date.now() - Number(cached.savedAt) < SERVER_STATUS_CACHE_MAX_AGE_MS) {
+        setStatus(cached.status as McStatus)
+      }
+    } catch { /* ignore an invalid cache */ }
+
+    async function loadStatus() {
       try {
-        const r = await fetch(`https://api.mcsrvstat.us/2/${SERVER_IP}`, { cache: 'no-store' })
+        const r = await fetch('/api/v1/public/server-status', {
+          cache: 'no-store',
+          signal: controller.signal,
+        })
         if (!r.ok) throw new Error('status failed')
         const data = await r.json()
-        if (!stop) applyStatusPayload(data)
-      } catch {
-        if (!stop) {
-          setStatus({ online: false })
+        if (!stopped) applyStatusPayload(data)
+      } catch (error) {
+        if (!(error instanceof DOMException && error.name === 'AbortError')) {
+          // Keep the last successful value. A client-side network failure is not proof
+          // that the Minecraft server is offline.
         }
       }
-    })()
-    const id = setInterval(() => {
-      fetch(`https://api.mcsrvstat.us/2/${SERVER_IP}`, { cache: 'no-store' })
-        .then(r => (r.ok ? r.json() : null))
-        .then(d => {
-          if (d) applyStatusPayload(d)
-        })
-        .catch(() => {
-          setStatus((prev) => prev ?? { online: false })
-        })
-    }, 15000)
+    }
+    void loadStatus()
+    const id = window.setInterval(loadStatus, 15000)
     return () => {
-      stop = true
-      clearInterval(id)
+      stopped = true
+      controller.abort()
+      window.clearInterval(id)
     }
   }, [])
 
@@ -530,14 +546,21 @@ export default function HomePage() {
         <div className="grid md:grid-cols-2 gap-10 md:gap-14 items-stretch">
           <div className="md:flex md:flex-col md:h-full md:justify-between">
             <div>
-              <img
-                src="/images/logo-steel-wings.png"
-                alt={`${SERVER_NAME} Steel Wings`}
-                className="mb-6 block w-[420px] max-w-full select-none object-contain drop-shadow-[0_0_28px_rgba(99,102,241,0.42)] md:translate-x-16"
-                draggable={false}
-              />
+              <div className="mb-6 flex h-[122px] max-w-full items-center justify-center md:h-[149px]">
+                <picture className="block w-[480px] max-w-[92%]">
+                  <source srcSet="/images/logo.webp" type="image/webp" />
+                  <img
+                    src="/images/logo.png"
+                    alt={SERVER_NAME}
+                    width={1510}
+                    height={370}
+                    className="block h-auto w-full select-none object-contain drop-shadow-[0_0_28px_rgba(99,102,241,0.42)]"
+                    draggable={false}
+                  />
+                </picture>
+              </div>
               <p className="mt-4 text-slate-300 max-w-prose">
-                Небольшой ламповый техномагический сервер c упором на строительство и творчество, где можно возвести завод, улететь на собственном дирижабле и случайно стать магом. В основе — Create, Create: Aeronautics и Ars Nouveau с аддонами. Без вайпов и с авторскими портами BetterEnd & BetterNether.
+                {copy.hero}
               </p>
 
             <div className="mt-6 grid gap-3">
@@ -547,8 +570,8 @@ export default function HomePage() {
                 <button
                   onClick={copyIp}
                   className="px-3 py-2 bg-slate-900/60 hover:bg-slate-800 border-l border-slate-800 text-sm grid place-items-center"
-                  aria-label={copyOk === 'ok' ? 'Скопировано' : copyOk === 'err' ? 'Ошибка' : 'Копировать IP'}
-                  title={copyOk === 'ok' ? 'Скопировано' : copyOk === 'err' ? 'Ошибка' : 'Копировать IP'}
+                  aria-label={copyOk === 'ok' ? copy.copied : copyOk === 'err' ? copy.error : copy.copyIp}
+                  title={copyOk === 'ok' ? copy.copied : copyOk === 'err' ? copy.error : copy.copyIp}
                   type="button"
                 >
                   <motion.div
@@ -572,7 +595,7 @@ export default function HomePage() {
               </div>
 
               <div className="flex flex-wrap items-center gap-4 text-sm text-slate-300">
-                <Badge label={status?.online ? 'Онлайн' : 'Офлайн'} ok={!!status?.online} reduceMotion={disableInteractiveMotion} />
+                <Badge label={status == null ? copy.checking : status.online ? copy.online : copy.offline} ok={status == null ? null : status.online} reduceMotion={disableInteractiveMotion} />
                 {/* Online player counter is temporarily disabled. */}
                 {ONLINE_COUNTER_ENABLED && (
                   <div
@@ -597,7 +620,7 @@ export default function HomePage() {
                     }}
                     className="cursor-pointer bg-transparent border-0 text-sm text-slate-300 p-0 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 rounded"
                   >
-                    Игроки: <strong className="text-slate-100">{onlineText}</strong>
+                    {copy.players}: <strong className="text-slate-100">{onlineText}</strong>
                   </button>
                   <AnimatePresence>
                     {showPlayersList && status?.online && status?.players?.sample && status.players.sample.length > 0 && (
@@ -620,14 +643,14 @@ export default function HomePage() {
                           } : undefined}
                         >
                         <div className="text-xs font-semibold text-slate-400 mb-2 px-1 flex items-center justify-between gap-2">
-                          <span>Игроки онлайн ({status.players.sample.length})</span>
+                          <span>{copy.onlinePlayers} ({status.players.sample.length})</span>
                           {isMobile && (
                             <button
                               type="button"
                               onClick={() => setShowPlayersList(false)}
                               className="text-slate-400 hover:text-white text-xs"
                             >
-                              Закрыть
+                              {copy.close}
                             </button>
                           )}
                         </div>
@@ -675,13 +698,13 @@ export default function HomePage() {
                     aria-hidden="true"
                     className="size-6 shrink-0 object-contain"
                   />
-                  <span>Версия: <strong className="text-slate-100">1.21.1 NeoForge</strong></span>
+                  <span>{copy.version}: <strong className="text-slate-100">1.21.1 NeoForge</strong></span>
                 </span>
                 {/* Dynamic server version is intentionally kept disabled.
                 {status?.version && <span>Версия: <strong className="text-slate-100">{status.version} NeoForge</strong></span>}
                 */}
                 {typeof status?.tps === 'number' && <span>TPS: <strong className="text-slate-100">{status.tps.toFixed(1)}</strong></span>}
-                {typeof status?.latencyMs === 'number' && <span>Пинг: <strong className="text-slate-100">{status.latencyMs}ms</strong></span>}
+                {typeof status?.latencyMs === 'number' && <span>{copy.ping}: <strong className="text-slate-100">{status.latencyMs}ms</strong></span>}
               </div>
 
             </div>
@@ -693,14 +716,14 @@ export default function HomePage() {
                 className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-3 text-center shadow-[0_0_24px_rgba(79,70,229,0.45)] transition hover:bg-indigo-500"
               >
                 <SvgDownload className="size-5" />
-                Скачать лаунчер
+                {copy.downloadLauncher}
               </a>
               <a
                 href="https://github.com/Reijin2312/ArchiTech_Launcher"
                 target="_blank"
                 rel="noreferrer noopener"
-                aria-label="Исходный код лаунчера на GitHub"
-                title="Исходный код лаунчера"
+                aria-label={copy.launcherSourceAria}
+                title={copy.launcherSource}
                 className="inline-flex size-11 items-center justify-center text-slate-400 transition hover:scale-110 hover:text-white"
               >
                 <SvgGitHub className="size-6" />
@@ -745,7 +768,7 @@ export default function HomePage() {
                 >
                   <ResponsiveImage
                     name={toName(shot) as keyof typeof IMAGES}
-                    alt="Скриншот мира ArchiTech MC"
+                    alt={copy.galleryAlt}
                     eager
                     width={1600}
                     height={900}
@@ -766,7 +789,7 @@ export default function HomePage() {
                 }
               >
                 <div className="w-fit max-w-[90%] rounded-xl border border-slate-700/80 bg-slate-950/90 px-4 py-2.5 shadow-[0_10px_30px_rgba(2,6,23,0.62)]">
-                  <div className="text-[10px] uppercase tracking-[0.14em] text-indigo-300/95">Галерея</div>
+                  <div className="text-[10px] uppercase tracking-[0.14em] text-indigo-300/95">{copy.gallery}</div>
                   <div className="mt-1 text-sm font-semibold text-slate-100">{activeShotMeta.title}</div>
                   <div className="text-xs text-slate-300">{activeShotMeta.subtitle}</div>
                 </div>
@@ -793,7 +816,7 @@ export default function HomePage() {
                   whileTap={{ scale: 0.95 }}
                   transition={thumbSpring}
                   onClick={() => changeTo(src)}
-                  aria-label="Показать скриншот"
+                  aria-label={copy.showScreenshot}
                   className={[
                     'group relative flex-none w-16 aspect-square rounded-xl ring-offset-2 ring-offset-slate-950 border',
                     i === 0 ? 'origin-left' : i === shots.length - 1 ? 'origin-right' : 'origin-center',
@@ -827,31 +850,31 @@ export default function HomePage() {
       >
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <CardCTA
-            title={<span className="inline-flex items-center gap-2"><SvgServer className="h-5" />О сервере</span>}
-            text="Что такое этот ваш ArchiTech, про что он и с чем его едят"
+            title={<span className="inline-flex items-center gap-2"><SvgServer className="h-5" />{copy.cards[0][0]}</span>}
+            text={copy.cards[0][1]}
             href="/about"
-            button="Узнать больше"
+            button={copy.cards[0][2]}
             reduceMotion={disableInteractiveMotion}
           />
           <CardCTA
-            title={<span className="inline-flex items-center gap-2"><SvgModpack className="h-5" />Посмотреть сборку</span>}
-            text="Щепотка техники, щепотка магии, вуаля - это техномагия!"
+            title={<span className="inline-flex items-center gap-2"><SvgModpack className="h-5" />{copy.cards[1][0]}</span>}
+            text={copy.cards[1][1]}
             href={`${WIKI_URL}#mods`}
-            button="Открыть вики"
+            button={copy.cards[1][2]}
             reduceMotion={disableInteractiveMotion}
           />
           <CardCTA
-            title={<span className="inline-flex items-center gap-2"><SvgRoute className="h-5" />Как начать играть</span>}
-            text="Пара шагов и правильный ник — добро пожаловать в Сити-17"
+            title={<span className="inline-flex items-center gap-2"><SvgRoute className="h-5" />{copy.cards[2][0]}</span>}
+            text={copy.cards[2][1]}
             href={SHOP_URL}
-            button="Начать играть"
+            button={copy.cards[2][2]}
             reduceMotion={disableInteractiveMotion}
           />
           <CardCTA
-            title={<span className="inline-flex items-center gap-2"><SvgLauncher className="h-5" />Скачать лаунчер</span>}
-            text="Скачал и забыл про ручные обновления. Магия вне Хогвартса"
+            title={<span className="inline-flex items-center gap-2"><SvgLauncher className="h-5" />{copy.cards[3][0]}</span>}
+            text={copy.cards[3][1]}
             href={LAUNCHER_DOWNLOAD_URL}
-            button="Скачать"
+            button={copy.cards[3][2]}
             reduceMotion={disableInteractiveMotion}
           />
         </div>
@@ -868,7 +891,7 @@ export default function HomePage() {
           className="text-2xl font-semibold mb-6 font-techno"
           variants={disableEntranceMotion ? undefined : faqItem}
         >
-          Команда проекта
+          {copy.team}
         </motion.h2>
 
         <TeamGrid team={TEAM_MEMBERS} avatars={avatars} disableMotion={disableEntranceMotion} />
@@ -885,7 +908,7 @@ export default function HomePage() {
           className="text-2xl font-semibold mb-6 font-techno"
           variants={disableEntranceMotion ? undefined : faqItem}
         >
-          {'\u041b\u0435\u0433\u0435\u043d\u0434\u044b \u0441\u0435\u0440\u0432\u0435\u0440\u0430'}
+          {copy.leaderboard}
         </motion.h2>
 
         <TopPlayersSection
@@ -935,21 +958,21 @@ export default function HomePage() {
           className="text-2xl font-semibold mb-6 font-techno"
           variants={disableEntranceMotion ? undefined : faqItem}
         >
-          Популярные вопросы
+          {copy.faq}
         </motion.h2>
 
         <motion.div className="grid gap-3">
           <motion.div variants={disableEntranceMotion ? undefined : faqItem}>
-          <Faq icon={<SvgRoute className="size-5" />} q="Как начать играть?" a={<StepsGuide disableMotion={disableEntranceMotion} />} />
+          <Faq icon={<SvgRoute className="size-5" />} q={copy.faqItems.start} a={<StepsGuide disableMotion={disableEntranceMotion} />} />
           </motion.div>
 
           <motion.div variants={disableEntranceMotion ? undefined : faqItem}>
             <Faq
-              q="Нужен ли лаунчер?"
+              q={copy.faqItems.launcher}
               icon={<SvgLauncher className="size-5" />}
               a={
-                <FaqInfoCard label="Установка и обновления">
-                  Да, лаунчер сам установит игру, Neoforge и моды, а в случае обновления автономно поменяет сборку — моды не придётся искать и собирать вручную. Также он выступает в роли системы авторизации.
+                <FaqInfoCard label={copy.faqItems.launcherLabel}>
+                  {copy.faqItems.launcherAnswer}
                 </FaqInfoCard>
               }
             />
@@ -957,20 +980,20 @@ export default function HomePage() {
 
           <motion.div variants={disableEntranceMotion ? undefined : faqItem}>
             <Faq
-              q="Безопасен ли лаунчер?"
+              q={copy.faqItems.safety}
               icon={<SvgShield className="size-5" />}
               a={
-                <FaqInfoCard label="Открытый исходный код">
-                  Исходный код лаунчера открыт и прозрачен: его можно самостоятельно проверить в{' '}
+                <FaqInfoCard label={copy.faqItems.safetyLabel}>
+                  {copy.faqItems.safetyBefore}{' '}
                   <a
                     href="https://github.com/Reijin2312/ArchiTech_Launcher"
                     target="_blank"
                     rel="noreferrer noopener"
                     className="text-sky-300 underline decoration-sky-400/60 underline-offset-2 hover:text-sky-200"
                   >
-                    официальном репозитории GitHub
+                    {copy.faqItems.safetyLink}
                   </a>
-                  . Скачивайте лаунчер только с официального сайта проекта и не переходите по подозрительным ссылкам.
+                  {copy.faqItems.safetyAfter}
                 </FaqInfoCard>
               }
             />
@@ -978,11 +1001,11 @@ export default function HomePage() {
 
           <motion.div variants={disableEntranceMotion ? undefined : faqItem}>
             <Faq
-              q="Сервер бесплатный?"
+              q={copy.faqItems.free}
               icon={<SvgUserPlus className="size-5" />}
               a={
-                <FaqInfoCard label="Свободный вход">
-                  Да, вход полностью бесплатный. Зарегистрируйтесь на сайте и войдите в аккаунт через лаунчер, после чего сервер сам появится в списке игры.
+                <FaqInfoCard label={copy.faqItems.freeLabel}>
+                  {copy.faqItems.freeAnswer}
                 </FaqInfoCard>
               }
             />
@@ -990,11 +1013,11 @@ export default function HomePage() {
 
           <motion.div variants={disableEntranceMotion ? undefined : faqItem}>
             <Faq
-              q="Нужна ли лицензия Minecraft?"
+              q={copy.faqItems.license}
               icon={<SvgShield className="size-5" />}
               a={
-                <FaqInfoCard label="Система аккаунтов">
-                  Нет. Экосистема ArchiTech использует собственную систему аккаунтов, поэтому отдельная лицензия для входа через лаунчер не требуется.
+                <FaqInfoCard label={copy.faqItems.licenseLabel}>
+                  {copy.faqItems.licenseAnswer}
                 </FaqInfoCard>
               }
             />
@@ -1002,17 +1025,17 @@ export default function HomePage() {
 
           <motion.div variants={disableEntranceMotion ? undefined : faqItem}>
             <Faq
-              q="Какие моды и версия?"
+              q={copy.faqItems.mods}
               icon={<SvgModpack className="size-5" />}
               a={
-                <FaqInfoCard label="Состав сборки">
+                <FaqInfoCard label={copy.faqItems.modsLabel}>
                   <>
-                    <span>Minecraft 1.21.1 NeoForge. Основные моды: Create, Create: Aeronautics, Ars Nouveau, их аддоны и авторские порты BetterEnd и BetterNether.</span>{' '}
+                    <span>{copy.faqItems.modsAnswer}</span>{' '}
                     <a
                       href={`${WIKI_URL}#mods`}
                       className="mt-2 inline-flex text-sky-300 underline decoration-sky-400/60 underline-offset-2 hover:text-sky-200"
                     >
-                      Полный состав сборки — в вики.
+                      {copy.faqItems.modsLink}
                     </a>
                   </>
                 </FaqInfoCard>
@@ -1022,11 +1045,11 @@ export default function HomePage() {
 
           <motion.div variants={disableEntranceMotion ? undefined : faqItem}>
             <Faq
-              q="Можно ли поставить свой скин?"
+              q={copy.faqItems.skins}
               icon={<SvgSkin className="size-5" />}
               a={
-                <FaqInfoCard label="Скины игроков">
-                  Да. Можно добавить несколько своих скинов и переключать их в реальном времени прямо в профиле.
+                <FaqInfoCard label={copy.faqItems.skinsLabel}>
+                  {copy.faqItems.skinsAnswer}
                 </FaqInfoCard>
               }
             />
@@ -1034,7 +1057,7 @@ export default function HomePage() {
 
           <motion.div variants={disableEntranceMotion ? undefined : faqItem}>
           <Faq
-            q="Проводятся ли вайпы?"
+            q={copy.faqItems.wipes}
             icon={<SvgMcBlockGrass className="size-5" />}
             a={
               <div className="relative overflow-hidden rounded-2xl border border-slate-800 bg-linear-to-br from-slate-950/80 via-slate-900/60 to-slate-900/20 backdrop-blur-md backdrop-saturate-150 px-4 py-4 sm:px-5 sm:py-5 group transition">
@@ -1047,33 +1070,33 @@ export default function HomePage() {
                   <div className="space-y-1">
                     <div className="inline-flex items-center gap-2 text-[11px] uppercase tracking-wide text-slate-400">
                       <span className="rounded-full border border-slate-700/80 bg-slate-950/60 px-2 py-0.5">
-                        Сезоны и сохранность мира
+                        {copy.faqItems.wipesLabel}
                       </span>
                     </div>
                     <p className="text-sm text-slate-300">
-                      <b>Вайпы существовали только с 1 по 3 сезон и навсегда отменены с началом четвёртого. </b>
-                      Сейчас мир живёт максимально долго, прогресс и постройки никогда не будут обнулены и как-либо затронуты.
+                      <b>{copy.faqItems.wipesStrong}</b>
+                      {copy.faqItems.wipesAnswer}
                     </p>
                   </div>
                 </div>
 
                 <dl className="mt-4 grid gap-2 text-[11px] text-slate-300 sm:grid-cols-3">
                   <div className="rounded-xl border border-slate-800 bg-slate-950/60 px-3 py-2">
-                    <dt className="text-slate-400">Полный вайп</dt>
+                    <dt className="text-slate-400">{copy.faqItems.fullWipe}</dt>
                     <dd className="font-medium text-slate-100">
-                      Никогда не будет проведён
+                      {copy.faqItems.never}
                     </dd>
                   </div>
                   <div className="rounded-xl border border-slate-800 bg-slate-950/60 px-3 py-2">
-                    <dt className="text-slate-400">Текущий сезон</dt>
+                    <dt className="text-slate-400">{copy.faqItems.currentSeason}</dt>
                     <dd className="font-medium text-slate-100">
-                      Только частичные вайпы старых чанков без построек
+                      {copy.faqItems.partial}
                     </dd>
                   </div>
                   <div className="rounded-xl border border-slate-800 bg-slate-950/60 px-3 py-2">
-                    <dt className="text-slate-400">Ваши базы</dt>
+                    <dt className="text-slate-400">{copy.faqItems.bases}</dt>
                     <dd className="font-medium text-slate-100">
-                      Не будут затронуты частичными вайпами
+                      {copy.faqItems.unaffected}
                     </dd>
                   </div>
                 </dl>
@@ -1084,7 +1107,7 @@ export default function HomePage() {
 
             <motion.div variants={disableEntranceMotion ? undefined : faqItem}>
             <Faq
-              q="Какие правила?"
+              q={copy.faqItems.rules}
               icon={<SvgShield className="size-5" />}
               a={
                 <div className="relative overflow-hidden rounded-2xl border border-slate-800 bg-linear-to-br from-slate-950/80 via-slate-900/60 to-slate-900/20 backdrop-blur-md backdrop-saturate-150 px-4 py-4 sm:px-5 sm:py-5 group transition">
@@ -1100,29 +1123,29 @@ export default function HomePage() {
                     <div className="space-y-1">
                       <div className="inline-flex items-center gap-2 text-[11px] uppercase tracking-wide text-slate-400">
                         <span className="rounded-full border border-slate-700/80 bg-slate-950/60 px-2 py-0.5">
-                          Коротко и по делу
+                          {copy.faqItems.rulesLabel}
                         </span>
                       </div>
                       <div className="text-sm font-semibold text-slate-100">
-                        Главная истина: не мешай другим играть
+                        {copy.faqItems.rulesTruth}
                       </div>
                       <ul className="mt-1 space-y-1 text-sm text-slate-300">
-                        <li>— Не ломай чужие постройки и не воруй ресурсы;</li>
-                        <li>— Без токсичности, хейта, угроз и спама в чате.</li>
-                        <li>— Не используй читы, багоюзы, автокликеры;</li>
+                        <li>{copy.faqItems.rule1}</li>
+                        <li>{copy.faqItems.rule2}</li>
+                        <li>{copy.faqItems.rule3}</li>
                       </ul>
                     </div>
                   </div>
 
                   <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-slate-400">
                     <span className="rounded-full border border-slate-700/80 bg-slate-950/60 px-2 py-1">
-                      Подробный регламент правил см. на отдельной странице
+                      {copy.faqItems.rulesDetails}
                     </span>
                     <Link to=
                       {RULES_URL}
                       className="inline-flex items-center gap-1 rounded-full border border-emerald-500/70 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-300 hover:bg-emerald-500/20 hover:border-emerald-400 transition"
                     >
-                      Открыть правила
+                      {copy.faqItems.rulesOpen}
                     </Link>
                   </div>
                 </div>
@@ -1136,19 +1159,21 @@ export default function HomePage() {
           );
         }
 
-function Badge({ label, ok, reduceMotion }: { label: string; ok?: boolean; reduceMotion?: boolean }) {
+function Badge({ label, ok, reduceMotion }: { label: string; ok: boolean | null; reduceMotion?: boolean }) {
   return (
     <span
       className={[
         'inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-xs border',
-        ok
+        ok === true
           ? 'border-emerald-700/50 bg-emerald-500/10 text-emerald-300'
-          : 'border-rose-700/50 bg-rose-500/10 text-rose-300',
+          : ok === false
+            ? 'border-rose-700/50 bg-rose-500/10 text-rose-300'
+            : 'border-slate-700/60 bg-slate-500/10 text-slate-300',
       ].join(' ')}
     >
       <motion.span
         className="size-1.5 rounded-full"
-        style={{ backgroundColor: ok ? '#22c55e' : '#ef4444' }}
+        style={{ backgroundColor: ok === true ? '#22c55e' : ok === false ? '#ef4444' : '#94a3b8' }}
         aria-hidden
         animate={
           reduceMotion || !ok
@@ -1507,7 +1532,9 @@ function TopPlayersSection({
   // onRangeChange: (range: LeaderboardRange) => void
   disableMotion?: boolean
 }) {
-  const rangeLabel = range === 'all' ? '\u0432\u0441\u0451 \u0432\u0440\u0435\u043c\u044f' : range === '7d' ? '7\u0434' : '30\u0434'
+  const { language } = useI18n()
+  const rangeLabel = range === 'all' ? (language === 'ru' ? 'всё время' : 'all time') : range === '7d' ? '7d' : '30d'
+  const leadersPrefix = language === 'ru' ? 'Лидеры по игровому времени за' : 'Playtime leaders for'
   /* Range tabs are temporarily hidden while the leaderboard is fixed to `all`.
   const rangeTabs: Array<{ value: LeaderboardRange; label: string }> = [
     { value: '7d', label: '7\u0434' },
@@ -1521,7 +1548,7 @@ function TopPlayersSection({
     return (
       <div className="rounded-2xl border border-slate-800 bg-linear-to-b from-slate-900/70 to-slate-900/20 p-5 backdrop-blur-md backdrop-saturate-150">
         <div className="mb-4 flex items-center justify-between gap-2">
-          <div className="text-sm text-slate-300 font-arcane uppercase">{'\u041b\u0438\u0434\u0435\u0440\u044b \u043f\u043e \u0438\u0433\u0440\u043e\u0432\u043e\u043c\u0443 \u0432\u0440\u0435\u043c\u0435\u043d\u0438 \u0437\u0430'} {rangeLabel}</div>
+          <div className="text-sm text-slate-300 font-arcane uppercase">{leadersPrefix} {rangeLabel}</div>
           {/* Range switch is temporarily disabled.
           <div className="inline-flex rounded-xl border border-slate-700 bg-slate-950/60 p-1">
             {rangeTabs.map((tab) => (
@@ -1551,7 +1578,7 @@ function TopPlayersSection({
   return (
     <div className="rounded-2xl border border-slate-800 bg-linear-to-b from-slate-900/70 to-slate-900/20 p-5 backdrop-blur-md backdrop-saturate-150">
       <div className="mb-4 flex items-center justify-between gap-2">
-        <div className="text-sm text-slate-300 font-arcane uppercase">{'\u041b\u0438\u0434\u0435\u0440\u044b \u043f\u043e \u0438\u0433\u0440\u043e\u0432\u043e\u043c\u0443 \u0432\u0440\u0435\u043c\u0435\u043d\u0438 \u0437\u0430'} {rangeLabel}</div>
+        <div className="text-sm text-slate-300 font-arcane uppercase">{leadersPrefix} {rangeLabel}</div>
         {/* Range switch is temporarily disabled.
         <div className="inline-flex rounded-xl border border-slate-700 bg-slate-950/60 p-1">
           {rangeTabs.map((tab) => {
@@ -1584,7 +1611,7 @@ function TopPlayersSection({
 
       {players.length === 0 ? (
         <div className="rounded-xl border border-slate-800 bg-slate-950/50 px-4 py-5 text-sm text-slate-400">
-          {'\u041f\u043e\u043a\u0430 \u043d\u0435\u0442 \u0434\u0430\u043d\u043d\u044b\u0445 \u0434\u043b\u044f \u0440\u0435\u0439\u0442\u0438\u043d\u0433\u0430.'}
+          {language === 'ru' ? 'Пока нет данных для рейтинга.' : 'No leaderboard data yet.'}
         </div>
       ) : (
         <div className="space-y-2">
@@ -1643,14 +1670,19 @@ function TopPlayersSection({
             const glowOrbTone = isKing ? 'bg-amber-200/42' : isSilver ? 'bg-slate-100/38' : 'bg-orange-200/40'
 
             return (
-              <motion.div
+              <Link
                 key={player.username}
-                whileHover={disableMotion ? undefined : { y: -2, scale: 1.005 }}
-                className={[
-                  'relative overflow-hidden rounded-xl border px-3 py-2.5',
-                  cardTone,
-                ].join(' ')}
+                to={`/u/${encodeURIComponent(player.username)}`}
+                aria-label={language === 'ru' ? `Открыть профиль ${player.username}` : `Open ${player.username}'s profile`}
+                className="block rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
               >
+                <motion.div
+                  whileHover={disableMotion ? undefined : { y: -2, scale: 1.005 }}
+                  className={[
+                    'relative overflow-hidden rounded-xl border px-3 py-2.5 transition-colors hover:border-sky-400/60',
+                    cardTone,
+                  ].join(' ')}
+                >
                 {isTopThree && !disableMotion && (
                   <>
                     <motion.div
@@ -1711,18 +1743,19 @@ function TopPlayersSection({
                       </span>
                     </div>
                     <div className="text-[11px] text-slate-400">
-                      {player.activeDays} {'\u0434\u043d. \u0430\u043a\u0442\u0438\u0432\u043d\u043e\u0441\u0442\u0438 \u00b7'} {player.sessions} {'\u0441\u0435\u0441\u0441\u0438\u0439'}
+                      {player.activeDays} {language === 'ru' ? 'дн. активности ·' : 'active days ·'} {player.sessions} {language === 'ru' ? 'сессий' : 'sessions'}
                     </div>
                   </div>
 
                   <div className="text-right">
                     <div className={`text-lg font-semibold leading-none ${hoursTone}`}>
-                      {hours}ч
+                      {hours}{language === 'ru' ? 'ч' : 'h'}
                     </div>
-                    <div className="mt-1 text-[11px] text-slate-400">{'\u043d\u0430\u0438\u0433\u0440\u0430\u043d\u043e'}</div>
+                    <div className="mt-1 text-[11px] text-slate-400">{language === 'ru' ? 'наиграно' : 'played'}</div>
                   </div>
                 </div>
-              </motion.div>
+                </motion.div>
+              </Link>
             )
           })}
         </div>
@@ -1781,6 +1814,8 @@ function CardCTA({
 
 
 function StepsGuide({ disableMotion }: { disableMotion?: boolean }) {
+  const { language } = useI18n();
+  const copy = homeTranslations[language].steps;
   const spring: Transition = { type: 'spring', stiffness: 380, damping: 26, mass: 0.6 }
 
   const container: Variants = {
@@ -1821,12 +1856,12 @@ function StepsGuide({ disableMotion }: { disableMotion?: boolean }) {
       <div className="size-10 rounded-xl bg-sky-600/20 grid place-items-center text-sky-300 mb-3">
         <SvgUserPlus className="h-5" />
       </div>
-      <div className="text-lg font-semibold mb-2">Зарегистрируйтесь на сайте</div>
+      <div className="text-lg font-semibold mb-2">{copy.register}</div>
       <div className="min-h-[112px] rounded-xl border border-slate-800 bg-slate-900/60 p-4">
         <Link to="/auth/login" className="inline-flex rounded-xl px-4 py-2 bg-indigo-600 hover:bg-indigo-500">
-          Войти или зарегистрироваться
+          {copy.registerAction}
         </Link>
-        <div className="text-xs text-slate-400 mt-3">Потребуется только ваша почта</div>
+        <div className="text-xs text-slate-400 mt-3">{copy.registerHint}</div>
       </div>
     </div>
     </motion.div>
@@ -1850,12 +1885,12 @@ function StepsGuide({ disableMotion }: { disableMotion?: boolean }) {
       <div className="size-10 rounded-xl bg-indigo-600/20 grid place-items-center text-indigo-300 mb-3">
         <SvgLauncher className="h-5" />
       </div>
-      <div className="text-lg font-semibold mb-2">Скачайте лаунчер</div>
+      <div className="text-lg font-semibold mb-2">{copy.launcher}</div>
       <div className="min-h-[112px] rounded-xl border border-slate-800 bg-slate-900/60 p-4">
         <a href={LAUNCHER_DOWNLOAD_URL} className="inline-flex rounded-xl px-4 py-2 bg-indigo-600 hover:bg-indigo-500">
-          Скачать лаунчер
+          {copy.launcherAction}
         </a>
-        <div className="text-xs text-slate-400 mt-3">Откройте его и войдите в аккаунт ArchiTech</div>
+        <div className="text-xs text-slate-400 mt-3">{copy.launcherHint}</div>
       </div>
     </div>
   </motion.div>
@@ -1879,10 +1914,10 @@ function StepsGuide({ disableMotion }: { disableMotion?: boolean }) {
       <div className="size-10 rounded-xl bg-teal-600/20 grid place-items-center text-teal-300 mb-3">
         <SvgMcBlockGrass className="h-5" />
       </div>
-      <div className="text-lg font-semibold mb-2">Зайдите на сервер</div>
+      <div className="text-lg font-semibold mb-2">{copy.join}</div>
       <div className="min-h-[112px] rounded-xl border border-slate-800 bg-slate-900/60 p-4">
         <div className="rounded-xl border border-teal-500/30 bg-teal-500/10 px-4 py-3 text-center text-sm text-teal-100">
-          После входа сервер автоматически появится в списке — останется только нажать «Играть».
+          {copy.joinHint}
         </div>
     </div>
   </div>

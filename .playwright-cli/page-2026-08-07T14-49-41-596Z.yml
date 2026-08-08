@@ -1,0 +1,231 @@
+- generic [ref=f6e2]:
+  - region "Notifications alt+T"
+  - generic [ref=f6e3]:
+    - banner [ref=f6e4]:
+      - navigation [ref=f6e5]:
+        - link "Go to homepage" [ref=f6e6] [cursor=pointer]:
+          - /url: /
+          - img "ArchiTech MC logo" [ref=f6e7]
+          - generic [ref=f6e8]: ArchiTech MC
+        - generic [ref=f6e9]:
+          - link "Home" [ref=f6e10] [cursor=pointer]:
+            - /url: /
+          - link "About" [ref=f6e11] [cursor=pointer]:
+            - /url: /about
+          - link "Rules" [ref=f6e12] [cursor=pointer]:
+            - /url: /rules
+          - link "Map" [ref=f6e13] [cursor=pointer]:
+            - /url: /map
+          - link "Wiki" [ref=f6e14] [cursor=pointer]:
+            - /url: /wiki
+          - link "Telegram" [ref=f6e15] [cursor=pointer]:
+            - /url: https://t.me/archi_tech_official
+          - link "Discord" [ref=f6e18] [cursor=pointer]:
+            - /url: https://discord.gg/x6JwVPwPtw
+          - button "Language" [ref=f6e22]
+          - link "Log in" [ref=f6e29] [cursor=pointer]:
+            - /url: /auth/login?next=%2Frules
+    - main [ref=f6e30]:
+      - generic [ref=f6e31]:
+        - complementary [ref=f6e32]:
+          - navigation [ref=f6e33]:
+            - generic [ref=f6e34]:
+              - heading "Разделы" [level=2] [ref=f6e35]
+              - list [ref=f6e36]:
+                - listitem [ref=f6e37]:
+                  - link "Introduction" [ref=f6e38] [cursor=pointer]:
+                    - /url: "#intro"
+                - listitem [ref=f6e39]:
+                  - link "Forbidden actions" [ref=f6e40] [cursor=pointer]:
+                    - /url: "#forbidden"
+                - listitem [ref=f6e41]:
+                  - link "Communication" [ref=f6e42] [cursor=pointer]:
+                    - /url: "#chat"
+                - listitem [ref=f6e43]:
+                  - link "Mods and resource packs" [ref=f6e44] [cursor=pointer]:
+                    - /url: "#techmagic"
+                - listitem [ref=f6e45]:
+                  - link "Building" [ref=f6e46] [cursor=pointer]:
+                    - /url: "#build"
+                - listitem [ref=f6e47]:
+                  - link "Farms and machinery" [ref=f6e48] [cursor=pointer]:
+                    - /url: "#farms"
+                - listitem [ref=f6e49]:
+                  - link "PVP / PVE" [ref=f6e50] [cursor=pointer]:
+                    - /url: "#pvp"
+                - listitem [ref=f6e51]:
+                  - link "Economy and trading" [ref=f6e52] [cursor=pointer]:
+                    - /url: "#trade"
+                - listitem [ref=f6e53]:
+                  - link "Security and accounts" [ref=f6e54] [cursor=pointer]:
+                    - /url: "#security"
+                - listitem [ref=f6e55]:
+                  - link "Penalties" [ref=f6e56] [cursor=pointer]:
+                    - /url: "#penalties"
+        - main [ref=f6e57]:
+          - heading "Server rules" [level=1] [ref=f6e58]
+          - generic [ref=f6e59]:
+            - generic [ref=f6e60]: Tip
+            - list [ref=f6e61]:
+              - listitem [ref=f6e62]: Search this page with Ctrl + F (Windows / Linux) or Cmd + F (macOS).
+              - listitem [ref=f6e63]: Ask the staff team if anything remains unclear.
+          - generic [ref=f6e65]:
+            - heading "1 Introduction" [level=2] [ref=f6e66]:
+              - generic [ref=f6e67]: "1"
+              - text: Introduction
+            - list [ref=f6e69]:
+              - listitem [ref=f6e70]: The server uses one persistent world focused on tech magic and building. Our goal is a stable, welcoming place for collaboration. Staff may decide cases not explicitly covered by these rules.
+              - listitem [ref=f6e71]: Respect other players, help newcomers, play fairly, and report violations to staff.
+          - generic [ref=f6e73]:
+            - heading "2 Forbidden actions" [level=2] [ref=f6e74]:
+              - generic [ref=f6e75]: "2"
+              - text: Forbidden actions
+            - list [ref=f6e77]:
+              - listitem [ref=f6e78]: "Griefing: damaging another player’s build without permission."
+              - listitem [ref=f6e79]: "Abusive behaviour: targeted insults or harassment; friendly mutual banter is the only exception."
+              - listitem [ref=f6e80]: "Toxicity: disrupting conversation, shouting, repeated loud sounds, or abusing voice chat."
+              - listitem [ref=f6e81]: "Flood and spam: meaningless or repetitive messages."
+              - listitem [ref=f6e82]: Off-topic posts in topic-specific channels.
+              - listitem [ref=f6e83]: Malware, phishing, shock content, or suspicious links.
+              - listitem [ref=f6e84]: Pornographic or erotic content.
+              - listitem [ref=f6e85]: Sharing another person’s private data without consent.
+              - listitem [ref=f6e86]: Misinformation intended to harm the project or its reputation.
+              - listitem [ref=f6e87]: Begging players or staff for privileges.
+              - listitem [ref=f6e88]: Manipulating wording or searching for loopholes to excuse a violation.
+              - listitem [ref=f6e89]: Alternate accounts used to evade punishment or gain an advantage.
+              - listitem [ref=f6e90]: Cheats, software, mods, or resource packs that provide an unfair advantage, including their promotion.
+              - listitem [ref=f6e91]: Commercial advertising without staff approval.
+          - generic [ref=f6e93]:
+            - heading "3 Communication" [level=2] [ref=f6e94]:
+              - generic [ref=f6e95]: "3"
+              - text: Communication
+            - list [ref=f6e97]:
+              - listitem [ref=f6e98]: Follow the laws applicable to the hosting location and platform.
+              - listitem [ref=f6e99]: Do not publish another person’s private data.
+              - listitem [ref=f6e100]: Send constructive feedback to the appropriate channels and avoid off-topic discussion.
+          - generic [ref=f6e102]:
+            - heading "4 Mods and resource packs" [level=2] [ref=f6e103]:
+              - generic [ref=f6e104]: "4"
+              - text: Mods and resource packs
+            - list [ref=f6e106]:
+              - listitem [ref=f6e107]: The server modpack is allowed. Extra client-side mods are allowed unless they provide an unfair advantage.
+              - listitem [ref=f6e108]: Visual and quality-of-life mods are allowed when they do not change gameplay fairness.
+              - listitem [ref=f6e109]: Exploits and duplication glitches are forbidden, except TNT, dragon egg, and carpet duplication. Report newly discovered bugs to staff.
+          - generic [ref=f6e111]:
+            - heading "5 Building" [level=2] [ref=f6e112]:
+              - generic [ref=f6e113]: "5"
+              - text: Building
+            - list [ref=f6e115]:
+              - listitem [ref=f6e116]: Do not overlap another player’s building area without agreement.
+              - listitem [ref=f6e117]: Mark occupied territory so its owner can be identified.
+              - listitem [ref=f6e118]: Never remove another player’s markers or seize their territory. An unused claim on the spawn island may be released after one month with no construction.
+              - listitem [ref=f6e119]: Keep public paths, highways, railways, portals, junctions, and train routes clear.
+              - listitem [ref=f6e120]: Clean up the terrain after dismantling builds or terraforming.
+          - generic [ref=f6e122]:
+            - heading "6 Farms and machinery" [level=2] [ref=f6e123]:
+              - generic [ref=f6e124]: "6"
+              - text: Farms and machinery
+            - list [ref=f6e126]:
+              - listitem [ref=f6e127]: Coordinate very large or heavy farms and machinery with staff. They must not reduce server TPS or cause lag.
+              - listitem [ref=f6e128]: Automated farms must have rate limits and an off switch.
+              - listitem [ref=f6e129]: Entity limits apply. Staff may remove or disable a source of server lag.
+          - generic [ref=f6e131]:
+            - heading "7 PVP / PVE" [level=2] [ref=f6e132]:
+              - generic [ref=f6e133]: "7"
+              - text: PVP / PVE
+            - list [ref=f6e135]:
+              - listitem [ref=f6e136]: PVE is allowed.
+              - listitem [ref=f6e137]: PVP is allowed only with mutual consent or inside designated zones and events.
+              - listitem [ref=f6e138]: Do not trick or provoke players into unwanted PVP.
+          - generic [ref=f6e140]:
+            - heading "8 Economy and trading" [level=2] [ref=f6e141]:
+              - generic [ref=f6e142]: "8"
+              - text: Economy and trading
+            - list [ref=f6e144]:
+              - listitem [ref=f6e145]: Use dedicated trading stations when possible and record the terms of major deals, for example in a signed book.
+              - listitem [ref=f6e146]: Advertise your own shops only in designated places.
+          - generic [ref=f6e148]:
+            - heading "9 Security and accounts" [level=2] [ref=f6e149]:
+              - generic [ref=f6e150]: "9"
+              - text: Security and accounts
+            - list [ref=f6e152]:
+              - listitem [ref=f6e153]: You are responsible for the security of your account.
+              - listitem [ref=f6e154]: Never share sign-in details or access codes.
+              - listitem [ref=f6e155]: Staff cannot read your password; credentials are stored securely.
+              - listitem [ref=f6e156]: Do not evade bans using alternate accounts or VPN services.
+              - listitem [ref=f6e157]: Report suspicious account activity to staff immediately.
+          - generic [ref=f6e159]:
+            - heading "10 Penalties" [level=2] [ref=f6e160]:
+              - generic [ref=f6e161]: "10"
+              - text: Penalties
+            - list [ref=f6e163]:
+              - listitem [ref=f6e164]: Typical escalation is warning → mute → temporary ban → permanent ban.
+              - listitem [ref=f6e165]: The penalty depends on severity, repetition, and consequences.
+              - listitem [ref=f6e166]: Staff may increase a penalty when aggravating circumstances apply.
+        - complementary [ref=f6e167]:
+          - navigation [ref=f6e168]:
+            - generic [ref=f6e169]:
+              - generic [ref=f6e170]: На этой странице
+              - list [ref=f6e171]:
+                - listitem [ref=f6e172]:
+                  - generic [ref=f6e173]: "1"
+                  - link "Introduction" [ref=f6e174] [cursor=pointer]:
+                    - /url: "#intro"
+                - listitem [ref=f6e175]:
+                  - generic [ref=f6e176]: "2"
+                  - link "Forbidden actions" [ref=f6e177] [cursor=pointer]:
+                    - /url: "#forbidden"
+                - listitem [ref=f6e178]:
+                  - generic [ref=f6e179]: "3"
+                  - link "Communication" [ref=f6e180] [cursor=pointer]:
+                    - /url: "#chat"
+                - listitem [ref=f6e181]:
+                  - generic [ref=f6e182]: "4"
+                  - link "Mods and resource packs" [ref=f6e183] [cursor=pointer]:
+                    - /url: "#techmagic"
+                - listitem [ref=f6e184]:
+                  - generic [ref=f6e185]: "5"
+                  - link "Building" [ref=f6e186] [cursor=pointer]:
+                    - /url: "#build"
+                - listitem [ref=f6e187]:
+                  - generic [ref=f6e188]: "6"
+                  - link "Farms and machinery" [ref=f6e189] [cursor=pointer]:
+                    - /url: "#farms"
+                - listitem [ref=f6e190]:
+                  - generic [ref=f6e191]: "7"
+                  - link "PVP / PVE" [ref=f6e192] [cursor=pointer]:
+                    - /url: "#pvp"
+                - listitem [ref=f6e193]:
+                  - generic [ref=f6e194]: "8"
+                  - link "Economy and trading" [ref=f6e195] [cursor=pointer]:
+                    - /url: "#trade"
+                - listitem [ref=f6e196]:
+                  - generic [ref=f6e197]: "9"
+                  - link "Security and accounts" [ref=f6e198] [cursor=pointer]:
+                    - /url: "#security"
+                - listitem [ref=f6e199]:
+                  - generic [ref=f6e200]: "10"
+                  - link "Penalties" [ref=f6e201] [cursor=pointer]:
+                    - /url: "#penalties"
+    - contentinfo [ref=f6e202]:
+      - generic [ref=f6e203]:
+        - generic [ref=f6e204]:
+          - generic [ref=f6e205]:
+            - img "ArchiTech MC logo" [ref=f6e206]
+            - generic [ref=f6e207]: ArchiTech MC
+          - generic [ref=f6e208]:
+            - link "Telegram" [ref=f6e209] [cursor=pointer]:
+              - /url: https://t.me/archi_tech_official
+            - link "Discord" [ref=f6e212] [cursor=pointer]:
+              - /url: https://discord.gg/x6JwVPwPtw
+        - generic [ref=f6e215]:
+          - link "About" [ref=f6e216] [cursor=pointer]:
+            - /url: /about
+          - link "Contacts" [ref=f6e217] [cursor=pointer]:
+            - /url: /contacts
+          - link "Terms of Service" [ref=f6e218] [cursor=pointer]:
+            - /url: /terms
+          - link "Privacy Policy" [ref=f6e219] [cursor=pointer]:
+            - /url: /privacy
+        - generic [ref=f6e220]: Not an official Minecraft product. We are not affiliated with Mojang Synergies AB, Microsoft Corporation, or any other rights holders.
+        - generic [ref=f6e222]: © ArchiTech MC. 2024–2026. All rights reserved.

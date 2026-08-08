@@ -1,6 +1,8 @@
 import React from 'react';
 import { Card, InputRow, inp } from './components';
 import type { Profile } from './types';
+import { useI18n } from '@/shared/i18n/I18nProvider';
+import { fill, profileTranslations } from '@/shared/i18n/profileTranslations';
 
 interface ProfileSectionProps {
   profile: Profile | null;
@@ -33,28 +35,33 @@ export function ProfileSection({
   busy,
   onSave,
 }: ProfileSectionProps) {
+  const { language } = useI18n();
+  const copy = profileTranslations[language].settings;
+  const yearsText = (value: number) => language === 'en'
+    ? `${value} ${value === 1 ? 'year' : 'years'}`
+    : `${value} ${value % 10 === 1 && value % 100 !== 11 ? 'год' : value % 10 >= 2 && value % 10 <= 4 && (value % 100 < 10 || value % 100 >= 20) ? 'года' : 'лет'}`;
   return (
     <Card>
-      <h2 className="mb-4 text-sm font-semibold text-sky-300">Профиль</h2>
+      <h2 className="mb-4 text-sm font-semibold text-sky-300">{copy.profile}</h2>
 
-      <InputRow label="Отображаемое имя">
+      <InputRow label={copy.displayName}>
         <input value={displayName} onChange={(e) => setDisplayName(e.target.value)} className={inp()} />
       </InputRow>
 
-      <InputRow label="О себе">
+      <InputRow label={copy.bio}>
         <textarea value={bio} onChange={(e) => setBio(e.target.value)} rows={4} className={inp()} />
       </InputRow>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <InputRow label="Город/местоположение">
+        <InputRow label={copy.location}>
           <input value={locationTxt} onChange={(e) => setLocationTxt(e.target.value)} className={inp()} />
         </InputRow>
-        <InputRow label="Сайт">
+        <InputRow label={copy.website}>
           <input value={website} onChange={(e) => setWebsite(e.target.value)} className={inp()} placeholder="https://…" />
         </InputRow>
       </div>
 
-      <InputRow label="Дата рождения">
+      <InputRow label={copy.birthDate}>
         <input
           type="date"
           value={birthDate || ''}
@@ -76,7 +83,7 @@ export function ProfileSection({
                 }
                 return (
                   <span>
-                    Возраст: {age} {age === 1 ? 'год' : age < 5 ? 'года' : 'лет'}
+                    {fill(copy.age, { age })}
                   </span>
                 );
               } catch {
@@ -95,7 +102,7 @@ export function ProfileSection({
                 }
                 return (
                   <span>
-                    С нами {years > 0 ? `${years} ${years === 1 ? 'год' : years < 5 ? 'года' : 'лет'}` : 'менее года'}
+                    {fill(copy.memberFor, { years: years > 0 ? yearsText(years) : copy.lessThanYear })}
                   </span>
                 );
               } catch {
@@ -111,7 +118,7 @@ export function ProfileSection({
           onClick={onSave}
           className="rounded-xl bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-500 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-sky-600/20 transition-all"
         >
-          💾 Сохранить профиль
+          💾 {copy.saveProfile}
         </button>
       </div>
     </Card>

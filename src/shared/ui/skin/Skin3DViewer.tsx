@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import * as skinview3d from 'skinview3d'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
+import { useI18n } from '@/shared/i18n/I18nProvider'
 
 type Skin3DViewerProps = {
   className?: string
@@ -11,6 +12,7 @@ type Skin3DViewerProps = {
 }
 
 export function Skin3DViewer({ className = '', skinUrl, autoRotate = false, animated = true }: Skin3DViewerProps) {
+  const { language } = useI18n()
   const wrapRef = useRef<HTMLDivElement | null>(null)
   const viewerRef = useRef<any>(null)
   const controlsRef = useRef<OrbitControls | null>(null)
@@ -149,5 +151,5 @@ export function Skin3DViewer({ className = '', skinUrl, autoRotate = false, anim
     viewer.render()
   }, [autoRotate])
 
-  return <div ref={wrapRef} className={`${className} relative`} aria-label="3D-просмотр скина" />
+  return <div ref={wrapRef} className={`${className} relative`} aria-label={language === 'ru' ? '3D-просмотр скина' : '3D skin preview'} />
 }

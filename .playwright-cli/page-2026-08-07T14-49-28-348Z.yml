@@ -1,0 +1,253 @@
+- generic [ref=f4e2]:
+  - region "Notifications alt+T"
+  - generic [ref=f4e3]:
+    - banner [ref=f4e4]:
+      - navigation [ref=f4e5]:
+        - link "Go to homepage" [ref=f4e6] [cursor=pointer]:
+          - /url: /
+          - img "ArchiTech MC logo" [ref=f4e7]
+          - generic [ref=f4e8]: ArchiTech MC
+        - generic [ref=f4e9]:
+          - link "Home" [ref=f4e10] [cursor=pointer]:
+            - /url: /
+          - link "About" [ref=f4e11] [cursor=pointer]:
+            - /url: /about
+          - link "Rules" [ref=f4e12] [cursor=pointer]:
+            - /url: /rules
+          - link "Map" [ref=f4e13] [cursor=pointer]:
+            - /url: /map
+          - link "Wiki" [ref=f4e14] [cursor=pointer]:
+            - /url: /wiki
+          - link "Telegram" [ref=f4e15] [cursor=pointer]:
+            - /url: https://t.me/archi_tech_official
+          - link "Discord" [ref=f4e18] [cursor=pointer]:
+            - /url: https://discord.gg/x6JwVPwPtw
+          - button "Language" [ref=f4e22]
+          - link "Log in" [ref=f4e29] [cursor=pointer]:
+            - /url: /auth/login?next=%2Fwiki
+    - main [ref=f4e30]:
+      - generic [ref=f4e31]:
+        - complementary [ref=f4e32]:
+          - navigation [ref=f4e33]:
+            - generic [ref=f4e34]:
+              - heading "Разделы" [level=2] [ref=f4e35]
+              - list [ref=f4e36]:
+                - listitem [ref=f4e37]:
+                  - link "About the server" [ref=f4e38] [cursor=pointer]:
+                    - /url: "#intro"
+                - listitem [ref=f4e39]:
+                  - link "How to start playing" [ref=f4e40] [cursor=pointer]:
+                    - /url: "#start"
+                - listitem [ref=f4e41]:
+                  - link "Mod list" [ref=f4e42] [cursor=pointer]:
+                    - /url: "#mods"
+                - listitem [ref=f4e43]:
+                  - link "Technomagic progression" [ref=f4e44] [cursor=pointer]:
+                    - /url: "#progress"
+                - listitem [ref=f4e45]:
+                  - link "Server commands" [ref=f4e46] [cursor=pointer]:
+                    - /url: "#commands"
+                - listitem [ref=f4e47]:
+                  - link "Economy" [ref=f4e48] [cursor=pointer]:
+                    - /url: "#economy"
+                - listitem [ref=f4e49]:
+                  - link "Performance" [ref=f4e50] [cursor=pointer]:
+                    - /url: "#perf"
+                - listitem [ref=f4e51]:
+                  - link "Frequently asked questions" [ref=f4e52] [cursor=pointer]:
+                    - /url: "#faq"
+                - listitem [ref=f4e53]:
+                  - link "Links" [ref=f4e54] [cursor=pointer]:
+                    - /url: "#links"
+        - main [ref=f4e55]:
+          - heading "Server wiki" [level=1] [ref=f4e56]
+          - generic [ref=f4e57]:
+            - generic [ref=f4e58]: Using the wiki
+            - list [ref=f4e59]:
+              - listitem [ref=f4e60]: "Use the sections on the left, or search this page with: Ctrl + F (Windows / Linux), Cmd + F (macOS)."
+              - listitem [ref=f4e61]: Search the mod list by name, author, or tag.
+          - generic [ref=f4e63]:
+            - heading "1 About the server" [level=2] [ref=f4e64]:
+              - generic [ref=f4e65]: "1"
+              - text: About the server
+            - generic [ref=f4e66]:
+              - paragraph [ref=f4e67]: The server uses one shared world. Its theme is technomagic with a strong focus on building. Our goal is a comfortable, stable place where people can build and play together.
+              - paragraph [ref=f4e68]: Spawn sits on an island surrounded by ocean on every side. Atmospheric, right?
+          - generic [ref=f4e70]:
+            - heading "2 How to start playing" [level=2] [ref=f4e71]:
+              - generic [ref=f4e72]: "2"
+              - text: How to start playing
+            - generic [ref=f4e73]:
+              - paragraph [ref=f4e74]: "All you need to join is an ArchiTech account and the official launcher:"
+              - list [ref=f4e75]:
+                - listitem [ref=f4e76]:
+                  - link "Create an ArchiTech account" [ref=f4e77] [cursor=pointer]:
+                    - /url: /auth/register
+                  - text: .
+                - listitem [ref=f4e78]:
+                  - link "Download the launcher" [ref=f4e79] [cursor=pointer]:
+                    - /url: https://launcher.architech-mc.ru/download/launcher/latest
+                  - text: and sign in.
+                - listitem [ref=f4e80]: Launch the modpack through the launcher.
+                - listitem [ref=f4e81]: Press Play — the server will appear automatically.
+          - generic [ref=f4e83]:
+            - heading "3 Mod list" [level=2] [ref=f4e84]:
+              - generic [ref=f4e85]: "3"
+              - text: Mod list
+            - generic [ref=f4e86]:
+              - button "Collapse mod list" [expanded] [active] [ref=f4e87]
+              - generic [ref=f4e92]:
+                - generic [ref=f4e94]:
+                  - paragraph [ref=f4e95]: Building the current mod list…
+                  - textbox [ref=f4e97]:
+                    - /placeholder: Mod, author, or tag…
+                - generic [ref=f4e98]: The mod list is unavailable right now. Please try refreshing the page later.
+          - generic [ref=f4e100]:
+            - heading "4 Technomagic progression" [level=2] [ref=f4e101]:
+              - generic [ref=f4e102]: "4"
+              - text: Technomagic progression
+            - list [ref=f4e104]:
+              - listitem [ref=f4e105]: "I. Getting started: Iron → copper → basic Create machinery and ore processing. Early-game tools."
+              - listitem [ref=f4e106]: "II. Storage: An early AE2 network, power, simple autocrafting, and lightweight resource farms."
+              - listitem [ref=f4e107]: "III. Magic: Ars Nouveau spells, source generation, rituals, and magical automation."
+              - listitem [ref=f4e108]: "IV. Industry: Advanced Create production lines, trains, factories, and Create: Aeronautics machinery."
+              - listitem [ref=f4e109]: "V. Late game: Full autocrafting, large factories, aircraft, and ambitious megaprojects."
+          - generic [ref=f4e111]:
+            - heading "5 Server commands" [level=2] [ref=f4e112]:
+              - generic [ref=f4e113]: "5"
+              - text: Server commands
+            - generic [ref=f4e116]:
+              - generic [ref=f4e117]: Server
+              - table [ref=f4e119]:
+                - rowgroup [ref=f4e120]:
+                  - row [ref=f4e121]:
+                    - columnheader "Command" [ref=f4e122]
+                    - columnheader "Description" [ref=f4e123]
+                - rowgroup [ref=f4e124]:
+                  - row [ref=f4e125]:
+                    - cell "/spawn" [ref=f4e126]
+                    - cell "Teleport to spawn" [ref=f4e127]
+                  - row [ref=f4e128]:
+                    - cell "/home, /sethome, /delhome" [ref=f4e129]
+                    - cell "Manage your home location" [ref=f4e130]
+                  - row [ref=f4e131]:
+                    - cell "/msg <nickname> <text>" [ref=f4e132]
+                    - cell "Private messages" [ref=f4e133]
+                  - row [ref=f4e134]:
+                    - cell "/rtp" [ref=f4e135]
+                    - cell "Random teleport" [ref=f4e136]
+                  - row [ref=f4e137]:
+                    - cell "/claim, /map" [ref=f4e138]
+                    - cell "Claims and chunk map (FTB Chunks)" [ref=f4e139]
+          - generic [ref=f4e141]:
+            - heading "6 Economy" [level=2] [ref=f4e142]:
+              - generic [ref=f4e143]: "6"
+              - text: Economy
+            - list [ref=f4e145]:
+              - listitem [ref=f4e146]: Trade directly with other players or through shops at their bases.
+              - listitem [ref=f4e147]: For large deals, consider recording the terms in a signed book.
+          - generic [ref=f4e149]:
+            - heading "7 Performance" [level=2] [ref=f4e150]:
+              - generic [ref=f4e151]: "7"
+              - text: Performance
+            - list [ref=f4e153]:
+              - listitem [ref=f4e154]: Add shutoff switches to farms and limit item transfer rates.
+              - listitem [ref=f4e155]: Do not create infinite entity loops or lag machines. Staff may disable the source of server lag.
+              - listitem [ref=f4e156]: Lower render distance and shader quality on the client if you need more FPS.
+          - generic [ref=f4e158]:
+            - heading "8 Frequently asked questions" [level=2] [ref=f4e159]:
+              - generic [ref=f4e160]: "8"
+              - text: Frequently asked questions
+            - generic [ref=f4e162]:
+              - generic [ref=f4e163]:
+                - generic [ref=f4e164]: How do I join the server?
+                - generic [ref=f4e165]: Create an account, download the official launcher, and sign in — the server appears automatically.
+              - generic [ref=f4e166]:
+                - generic [ref=f4e167]: Is the mod list fixed?
+                - generic [ref=f4e168]: The launcher installs and updates the modpack. Extra client-side mods are fine as long as they provide no unfair advantage.
+              - generic [ref=f4e169]:
+                - generic [ref=f4e170]: Is PVP allowed?
+                - generic [ref=f4e171]: Only by mutual consent or inside specifically designated zones and events.
+              - generic [ref=f4e172]:
+                - generic [ref=f4e173]: Can I relocate my base?
+                - generic [ref=f4e174]: Yes. Let your neighbours know and remove your claims before moving.
+          - generic [ref=f4e176]:
+            - heading "9 Links" [level=2] [ref=f4e177]:
+              - generic [ref=f4e178]: "9"
+              - text: Links
+            - list [ref=f4e180]:
+              - listitem [ref=f4e181]:
+                - link "Server rules" [ref=f4e182] [cursor=pointer]:
+                  - /url: /rules
+              - listitem [ref=f4e183]:
+                - link "How to start playing" [ref=f4e184] [cursor=pointer]:
+                  - /url: /start
+              - listitem [ref=f4e185]:
+                - link "Privacy Policy" [ref=f4e186] [cursor=pointer]:
+                  - /url: /privacy
+              - listitem [ref=f4e187]:
+                - link "Terms of Service" [ref=f4e188] [cursor=pointer]:
+                  - /url: /terms
+        - complementary [ref=f4e189]:
+          - navigation [ref=f4e190]:
+            - generic [ref=f4e191]:
+              - generic [ref=f4e192]: На этой странице
+              - list [ref=f4e193]:
+                - listitem [ref=f4e194]:
+                  - generic [ref=f4e195]: "1"
+                  - link "About the server" [ref=f4e196] [cursor=pointer]:
+                    - /url: "#intro"
+                - listitem [ref=f4e197]:
+                  - generic [ref=f4e198]: "2"
+                  - link "How to start playing" [ref=f4e199] [cursor=pointer]:
+                    - /url: "#start"
+                - listitem [ref=f4e200]:
+                  - generic [ref=f4e201]: "3"
+                  - link "Mod list" [ref=f4e202] [cursor=pointer]:
+                    - /url: "#mods"
+                - listitem [ref=f4e203]:
+                  - generic [ref=f4e204]: "4"
+                  - link "Technomagic progression" [ref=f4e205] [cursor=pointer]:
+                    - /url: "#progress"
+                - listitem [ref=f4e206]:
+                  - generic [ref=f4e207]: "5"
+                  - link "Server commands" [ref=f4e208] [cursor=pointer]:
+                    - /url: "#commands"
+                - listitem [ref=f4e209]:
+                  - generic [ref=f4e210]: "6"
+                  - link "Economy" [ref=f4e211] [cursor=pointer]:
+                    - /url: "#economy"
+                - listitem [ref=f4e212]:
+                  - generic [ref=f4e213]: "7"
+                  - link "Performance" [ref=f4e214] [cursor=pointer]:
+                    - /url: "#perf"
+                - listitem [ref=f4e215]:
+                  - generic [ref=f4e216]: "8"
+                  - link "Frequently asked questions" [ref=f4e217] [cursor=pointer]:
+                    - /url: "#faq"
+                - listitem [ref=f4e218]:
+                  - generic [ref=f4e219]: "9"
+                  - link "Links" [ref=f4e220] [cursor=pointer]:
+                    - /url: "#links"
+    - contentinfo [ref=f4e221]:
+      - generic [ref=f4e222]:
+        - generic [ref=f4e223]:
+          - generic [ref=f4e224]:
+            - img "ArchiTech MC logo" [ref=f4e225]
+            - generic [ref=f4e226]: ArchiTech MC
+          - generic [ref=f4e227]:
+            - link "Telegram" [ref=f4e228] [cursor=pointer]:
+              - /url: https://t.me/archi_tech_official
+            - link "Discord" [ref=f4e231] [cursor=pointer]:
+              - /url: https://discord.gg/x6JwVPwPtw
+        - generic [ref=f4e234]:
+          - link "About" [ref=f4e235] [cursor=pointer]:
+            - /url: /about
+          - link "Contacts" [ref=f4e236] [cursor=pointer]:
+            - /url: /contacts
+          - link "Terms of Service" [ref=f4e237] [cursor=pointer]:
+            - /url: /terms
+          - link "Privacy Policy" [ref=f4e238] [cursor=pointer]:
+            - /url: /privacy
+        - generic [ref=f4e239]: Not an official Minecraft product. We are not affiliated with Mojang Synergies AB, Microsoft Corporation, or any other rights holders.
+        - generic [ref=f4e241]: © ArchiTech MC. 2024–2026. All rights reserved.

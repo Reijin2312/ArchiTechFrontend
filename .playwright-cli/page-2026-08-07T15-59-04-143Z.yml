@@ -1,0 +1,157 @@
+- generic [ref=f5e2]:
+  - region "Notifications alt+T"
+  - generic [ref=f5e3]:
+    - banner [ref=f5e4]:
+      - navigation [ref=f5e5]:
+        - link "Go to homepage" [ref=f5e6] [cursor=pointer]:
+          - /url: /
+          - img "ArchiTech MC logo" [ref=f5e7]
+          - generic [ref=f5e8]: ArchiTech MC
+        - generic [ref=f5e9]:
+          - button "Language" [ref=f5e11]
+          - link "L" [ref=f5e18] [cursor=pointer]:
+            - /url: /auth/login?next=%2F
+          - button "Open menu" [ref=f5e19]
+    - main [ref=f5e22]:
+      - generic [ref=f5e23]:
+        - generic [ref=f5e25]:
+          - generic [ref=f5e26]:
+            - generic [ref=f5e27]:
+              - img "ArchiTech MC" [ref=f5e29]
+              - paragraph [ref=f5e30]: "A cozy tech-and-magic server built around construction and creativity: build a factory, fly your own airship, and accidentally become a wizard. Powered by Create, Create: Aeronautics, Ars Nouveau and their addons, with no wipes and our own BetterEnd & BetterNether ports."
+              - generic [ref=f5e31]:
+                - generic [ref=f5e32]:
+                  - generic [ref=f5e33]: architech-mc.com
+                  - button "Copy IP" [ref=f5e34]
+                - generic [ref=f5e39]:
+                  - generic [ref=f5e40]: Checking…
+                  - generic [ref=f5e44]:
+                    - text: "Version:"
+                    - strong [ref=f5e45]: 1.21.1 NeoForge
+            - generic [ref=f5e46]:
+              - link "Download launcher" [ref=f5e47] [cursor=pointer]:
+                - /url: https://launcher.architech-mc.ru/download/launcher/latest
+              - link "Launcher source code on GitHub" [ref=f5e50] [cursor=pointer]:
+                - /url: https://github.com/Reijin2312/ArchiTech_Launcher
+          - generic [ref=f5e53]:
+            - generic [ref=f5e55]:
+              - img "ArchiTech MC world screenshot" [ref=f5e58]
+              - generic:
+                - generic:
+                  - generic: Gallery
+                  - generic: Moving Castle
+                  - generic: A timeless classic
+            - generic [ref=f5e59]:
+              - button "Show screenshot" [ref=f5e60]
+              - button "Show screenshot" [ref=f5e62]
+              - button "Show screenshot" [ref=f5e64]
+              - button "Show screenshot" [ref=f5e66]
+              - button "Show screenshot" [ref=f5e68]
+              - button "Show screenshot" [ref=f5e70]
+              - button "Show screenshot" [ref=f5e72]
+              - button "Show screenshot" [ref=f5e74]
+        - generic [ref=f5e78]:
+          - generic [ref=f5e79]:
+            - generic [ref=f5e80]: About the server
+            - generic [ref=f5e86]: What is this ArchiTech thing, and what do you eat it with?
+            - link "Learn more" [ref=f5e87] [cursor=pointer]:
+              - /url: /about
+          - generic [ref=f5e88]:
+            - generic [ref=f5e89]: Explore the modpack
+            - generic [ref=f5e94]: A pinch of tech, a pinch of magic — voilà, tech magic!
+            - link "Open the wiki" [ref=f5e95] [cursor=pointer]:
+              - /url: /wiki#mods
+          - generic [ref=f5e96]:
+            - generic [ref=f5e97]: How to start
+            - generic [ref=f5e102]: A couple of steps and the right nickname — welcome to City 17
+            - link "Start playing" [ref=f5e103] [cursor=pointer]:
+              - /url: /start
+          - generic [ref=f5e104]:
+            - generic [ref=f5e105]: Download launcher
+            - generic [ref=f5e111]: Install it once and forget manual updates. Magic outside Hogwarts
+            - link "Download" [ref=f5e112] [cursor=pointer]:
+              - /url: https://launcher.architech-mc.ru/download/launcher/latest
+        - generic [ref=f5e113]:
+          - heading "Project team" [level=2] [ref=f5e114]
+          - generic [ref=f5e115]:
+            - generic [ref=f5e117]:
+              - link [ref=f5e118] [cursor=pointer]:
+                - /url: /u/Raijin
+                - img "Raijin" [ref=f5e119]
+              - generic [ref=f5e120]:
+                - generic [ref=f5e121]: Project development
+                - link "Raijin Owner & Minecraft modder" [ref=f5e122] [cursor=pointer]:
+                  - /url: /u/Raijin
+                  - generic [ref=f5e123]: Raijin
+                  - generic [ref=f5e124]: Owner & Minecraft modder
+                - generic [ref=f5e125]:
+                  - link "Raijin2312 projects on CurseForge" [ref=f5e126] [cursor=pointer]:
+                    - /url: https://www.curseforge.com/members/raijin2312/projects
+                  - link "Raijin2312 profile on Modrinth" [ref=f5e129] [cursor=pointer]:
+                    - /url: https://modrinth.com/user/Raijin2312
+                  - link "GitHub Reijin2312" [ref=f5e132] [cursor=pointer]:
+                    - /url: https://github.com/Reijin2312
+            - generic [ref=f5e135]:
+              - link "Kelbor_Hal Kelbor_Hal Junior admin" [ref=f5e137] [cursor=pointer]:
+                - /url: /u/Kelbor_Hal
+                - img "Kelbor_Hal" [ref=f5e138]
+                - generic [ref=f5e139]:
+                  - generic [ref=f5e140]: Kelbor_Hal
+                  - generic [ref=f5e141]: Junior admin
+              - link "Wolle Wolle Technical admin retired 2025" [ref=f5e144] [cursor=pointer]:
+                - /url: /u/Wolle
+                - img "Wolle" [ref=f5e145]
+                - generic [ref=f5e146]:
+                  - generic [ref=f5e147]: Wolle
+                  - generic [ref=f5e148]:
+                    - generic [ref=f5e149]: Technical admin
+                    - generic "Alive. Left the staff team in 2025." [ref=f5e150]: retired 2025
+              - link "Sile_Scorp Sile_Scorp Designer" [ref=f5e152] [cursor=pointer]:
+                - /url: /u/Sile_Scorp
+                - img "Sile_Scorp" [ref=f5e153]
+                - generic [ref=f5e154]:
+                  - generic [ref=f5e155]: Sile_Scorp
+                  - generic [ref=f5e156]: Designer
+              - link "Explyp Explyp Python developer" [ref=f5e159] [cursor=pointer]:
+                - /url: /u/Explyp
+                - img "Explyp" [ref=f5e160]
+                - generic [ref=f5e161]:
+                  - generic [ref=f5e162]: Explyp
+                  - generic [ref=f5e163]: Python developer
+        - generic [ref=f5e165]:
+          - heading "Server legends" [level=2] [ref=f5e166]
+          - generic [ref=f5e167]: Playtime leaders for all time
+        - generic [ref=f5e174]:
+          - heading "Frequently asked questions" [level=2] [ref=f5e175]
+          - generic [ref=f5e176]:
+            - button "How do I start playing?" [ref=f5e179]
+            - button "Do I need the launcher?" [ref=f5e191]
+            - button "Is the launcher safe?" [ref=f5e204]
+            - button "Is the server free?" [ref=f5e216]
+            - button "Do I need a Minecraft license?" [ref=f5e227]
+            - button "Which mods and version?" [ref=f5e239]
+            - button "Can I use my own skin?" [ref=f5e251]
+            - button "Are there world wipes?" [ref=f5e264]
+            - button "What are the rules?" [ref=f5e275]
+    - contentinfo [ref=f5e285]:
+      - generic [ref=f5e286]:
+        - generic [ref=f5e287]:
+          - generic [ref=f5e288]:
+            - img "ArchiTech MC logo" [ref=f5e289]
+            - generic [ref=f5e290]: ArchiTech MC
+          - generic [ref=f5e291]:
+            - link "Telegram" [ref=f5e292] [cursor=pointer]:
+              - /url: https://t.me/archi_tech_official
+            - link "Discord" [ref=f5e295] [cursor=pointer]:
+              - /url: https://discord.gg/x6JwVPwPtw
+        - generic [ref=f5e298]:
+          - link "About" [ref=f5e299] [cursor=pointer]:
+            - /url: /about
+          - link "Contacts" [ref=f5e300] [cursor=pointer]:
+            - /url: /contacts
+          - link "Terms of Service" [ref=f5e301] [cursor=pointer]:
+            - /url: /terms
+          - link "Privacy Policy" [ref=f5e302] [cursor=pointer]:
+            - /url: /privacy
+        - generic [ref=f5e303]: Not an official Minecraft product. We are not affiliated with Mojang Synergies AB, Microsoft Corporation, or any other rights holders.
+        - generic [ref=f5e305]: © ArchiTech MC. 2024–2026. All rights reserved.

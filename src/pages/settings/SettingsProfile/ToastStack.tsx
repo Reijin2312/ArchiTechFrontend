@@ -1,4 +1,5 @@
 import React from 'react';
+import { useI18n } from '@/shared/i18n/I18nProvider';
 
 interface ToastEntry {
   id: number;
@@ -13,6 +14,7 @@ interface ToastStackProps {
 }
 
 export function ToastStack({ toasts, onClose }: ToastStackProps) {
+  const { language } = useI18n();
   if (!toasts.length) return null;
   
   return (
@@ -33,7 +35,7 @@ export function ToastStack({ toasts, onClose }: ToastStackProps) {
               <div className="flex-1">{toast.message}</div>
               <button
                 type="button"
-                aria-label="Закрыть уведомление"
+                aria-label={language === 'ru' ? 'Закрыть уведомление' : 'Close notification'}
                 onClick={() => onClose(toast.id)}
                 className="text-xs text-slate-300 transition-colors hover:text-white"
               >

@@ -9,6 +9,8 @@ import { ProfileThemeProvider } from '@/shared/ui/utils/ProfileThemeContext';
 import { Skin3DViewer } from '@/shared/ui/skin/Skin3DViewer';
 import { useToast } from '@/shared/hooks/settings/useToast';
 import { ToastStack } from '@/pages/settings/SettingsProfile/ToastStack';
+import { useI18n } from '@/shared/i18n/I18nProvider';
+import { fill, profileTranslations } from '@/shared/i18n/profileTranslations';
 
 type SkinModel = 'classic' | 'slim';
 
@@ -51,6 +53,8 @@ const MAX_SLOTS = 10;
 const MAX_UPLOAD_SIZE = 2 * 1024 * 1024;
 
 export default function UserSkinsPage() {
+  const { language } = useI18n();
+  const copy = profileTranslations[language];
   const username = useParams().username ?? '';
   const self = isSelf(username);
 
@@ -93,7 +97,7 @@ export default function UserSkinsPage() {
       })
       .catch((e: unknown) => {
         if (!alive) return;
-        setErr(toErrorText(e, 'Не удалось загрузить галерею скинов'));
+        setErr(toErrorText(e, copy.skins.loadError));
       })
       .finally(() => {
         if (alive) setLoading(false);
@@ -102,7 +106,7 @@ export default function UserSkinsPage() {
     return () => {
       alive = false;
     };
-  }, [username, self]);
+  }, [username, self, copy.skins.loadError]);
 
   useEffect(() => {
     if (!notice) return;
@@ -143,7 +147,7 @@ export default function UserSkinsPage() {
     if (!allEmpty || !user?.skinUrl) return slots;
     const virtualCurrentSkin: SavedSkin = {
       id: '__current__',
-      name: 'Текущий скин',
+      name: copy.skins.current,
       url: user.skinUrl,
       model: user.skinModel === 'slim' ? 'slim' : 'classic',
       savedAt: '',
@@ -152,7 +156,7 @@ export default function UserSkinsPage() {
     const next: Array<SavedSkin | null> = [...slots];
     if (!next[0]) next[0] = virtualCurrentSkin;
     return next;
-  }, [allEmpty, slots, user?.skinModel, user?.skinUrl]);
+  }, [allEmpty, slots, user?.skinModel, user?.skinUrl, copy.skins.current]);
 
   const carouselCards = useMemo(() => {
     const cards: Array<{ index: number; delta: number; abs: number; visible: boolean; skin: SavedSkin | null }> = [];
@@ -196,9 +200,9 @@ export default function UserSkinsPage() {
         { withCredentials: true, headers: { 'Content-Type': 'application/json' } },
       );
       await refreshSelfProfile();
-      setNotice('Галерея скинов обновлена');
+      setNotice(copy.skins.refreshed);
     } catch (e: unknown) {
-      setErr(toErrorText(e, 'Не удалось сохранить галерею'));
+      setErr(toErrorText(e, copy.skins.saveError));
     } finally {
       setBusy(null);
     }
@@ -215,7 +219,7 @@ export default function UserSkinsPage() {
     const url = `${endpoints.profileSkin}?${query.toString()}`;
     const { data } = await http.post<{ skinUrl: string; skinModel?: SkinModel }>(url, fd, { withCredentials: true });
     if (target === 'gallery' && !isSavedSkinUrl(data.skinUrl)) {
-      throw new Error('Сервер сохранил скин как активный, а не как слот. Обновите/перезапустите LauncherBackend с поддержкой gallery.');
+      throw new Error(copy.skins.slotBackendError);
     }
     return { url: data.skinUrl, model: data.skinModel === 'slim' ? 'slim' : model };
   }
@@ -223,7 +227,7 @@ export default function UserSkinsPage() {
   async function applySavedSkinAsActive(skin: SavedSkin) {
     const skinUrl = toAbsoluteUrl(skin.url);
     const response = await fetch(skinUrl, { credentials: 'include' });
-    if (!response.ok) throw new Error(`Не удалось получить файл скина (${response.status})`);
+    if (!response.ok) throw new Error(fill(copy.skins.fetchSkinError, { status: response.status }));
     const blob = await response.blob();
     const file = new File([blob], `${skin.id}.png`, { type: blob.type || 'image/png' });
     await uploadSkinFile(file, skin.model, 'active');
@@ -232,7 +236,7 @@ export default function UserSkinsPage() {
   async function onUploadToSlot(file: File, slot: number) {
     if (!self) return;
     setDragOverSlot(null);
-    const validationError = validateSkinFile(file);
+    const validationError = validateSkinFile(file, copy.skins);
     if (validationError) {
       setErr(validationError);
       setNotice(null);
@@ -245,7 +249,7 @@ export default function UserSkinsPage() {
       const uploaded = await uploadSkinFile(file, uploadModel, 'gallery');
       const skin: SavedSkin = {
         id: makeSkinId(),
-        name: `Скин ${slot + 1}`,
+        name: `${copy.skins.skin} ${slot + 1}`,
         url: uploaded.url,
         model: uploaded.model,
         savedAt: new Date().toISOString(),
@@ -254,10 +258,10 @@ export default function UserSkinsPage() {
       };
       const next = upsertSkinAtSlot(savedSkins, skin, slot);
       await persistSavedSkins(next);
-      setNotice(`Скин загружен в слот #${slot + 1}`);
+      setNotice(fill(copy.skins.uploaded, { slot: slot + 1 }));
       setSelectedSlot(slot);
     } catch (e: unknown) {
-      setErr(toErrorText(e, 'Не удалось загрузить скин'));
+      setErr(toErrorText(e, copy.skins.uploadError));
       setBusy(null);
     }
   }
@@ -271,7 +275,7 @@ export default function UserSkinsPage() {
   async function onApplySelectedSkin() {
     if (!self || !selectedSkin) return;
     if (isLegacyActiveSkinUrl(selectedSkin.url)) {
-      setErr('Этот слот сохранён в старом формате и ссылается на активный скин. Перезагрузите скин в слот.');
+      setErr(copy.skins.legacySelected);
       setNotice(null);
       return;
     }
@@ -283,9 +287,9 @@ export default function UserSkinsPage() {
       const nextSavedSkins = markActiveSavedSkin(savedSkins, selectedSkin.id);
       await persistSavedSkins(nextSavedSkins);
       setActiveSlotOverride(selectedSlot);
-      setNotice('Скин применён');
+      setNotice(copy.skins.applied);
     } catch (e: unknown) {
-      setErr(toErrorText(e, 'Не удалось применить скин'));
+      setErr(toErrorText(e, copy.skins.applyError));
     } finally {
       setBusy(null);
     }
@@ -315,17 +319,17 @@ export default function UserSkinsPage() {
           await persistSavedSkins(nextMarked);
           setSelectedSlot(fallbackSlot);
           setActiveSlotOverride(fallbackSlot);
-          setNotice('Скин удалён. Активным назначен ближайший слот.');
+          setNotice(copy.skins.deletedNearest);
         } else {
           const nextCleared = clearActiveSavedSkin(next);
           await persistSavedSkins(nextCleared);
           setActiveSlotOverride(null);
-          setNotice('Скин удалён из галереи');
+          setNotice(copy.skins.deleted);
         }
       } else {
         await persistSavedSkins(next);
         if (activeSlotOverride === selectedSlot) setActiveSlotOverride(null);
-        setNotice('Скин удалён из галереи');
+        setNotice(copy.skins.deleted);
       }
     } catch {
       setBusy(null);
@@ -341,14 +345,14 @@ export default function UserSkinsPage() {
       const model: SkinModel = user.skinModel === 'slim' ? 'slim' : 'classic';
       const sourceUrl = toAbsoluteUrl(user.skinUrl);
       const response = await fetch(sourceUrl, { credentials: 'include' });
-      if (!response.ok) throw new Error(`Не удалось получить текущий скин (${response.status})`);
+      if (!response.ok) throw new Error(fill(copy.skins.currentFetchError, { status: response.status }));
       const blob = await response.blob();
       const file = new File([blob], `current_${Date.now()}.png`, { type: blob.type || 'image/png' });
       const uploaded = await uploadSkinFile(file, model, 'gallery');
 
       const skin: SavedSkin = {
         id: makeSkinId(),
-        name: `Скин ${selectedSlot + 1}`,
+        name: `${copy.skins.skin} ${selectedSlot + 1}`,
         url: uploaded.url,
         model: uploaded.model,
         savedAt: new Date().toISOString(),
@@ -358,7 +362,7 @@ export default function UserSkinsPage() {
       const next = upsertSkinAtSlot(savedSkins, skin, selectedSlot);
       await persistSavedSkins(next);
     } catch (e: unknown) {
-      setErr(toErrorText(e, 'Не удалось сохранить текущий скин в слот'));
+      setErr(toErrorText(e, copy.skins.currentSaveError));
       setBusy(null);
     }
   }
@@ -368,7 +372,7 @@ export default function UserSkinsPage() {
 
   return (
     <>
-      <Seo title={`Галерея скинов ${displayName} — ArchiTech MC`} robots="noindex,follow" />
+      <Seo title={fill(copy.skins.seo, { name: displayName })} robots="noindex,follow" />
       <ProfileThemeProvider
         themeId={user?.profileTheme}
         customColor1={user?.customThemeColor1}
@@ -388,7 +392,7 @@ export default function UserSkinsPage() {
                     {user?.avatarUrl ? (
                       <img
                         src={user.avatarUrl}
-                        alt="Аватар"
+                        alt={copy.avatar}
                         loading="lazy"
                         decoding="async"
                         className="h-full w-full object-cover"
@@ -400,7 +404,7 @@ export default function UserSkinsPage() {
                     )}
                   </div>
                   <div className="text-center">
-                    <div className="text-xs uppercase tracking-[0.16em] text-slate-400">Галерея скинов</div>
+                    <div className="text-xs uppercase tracking-[0.16em] text-slate-400">{copy.skins.heading}</div>
                     <h1 className="mt-1 text-2xl font-semibold text-slate-100 md:text-3xl">{displayName}</h1>
                   </div>
                 </div>
@@ -408,7 +412,7 @@ export default function UserSkinsPage() {
                   to={profileHref}
                   className="absolute right-0 top-0 inline-flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-900/70 px-3 py-1.5 text-sm text-slate-200 hover:border-slate-500"
                 >
-                  <span aria-hidden="true">←</span> К профилю
+                  <span aria-hidden="true">←</span> {copy.backToProfile}
                 </Link>
               </div>
 
@@ -471,7 +475,7 @@ export default function UserSkinsPage() {
                                 : ''
                           }`}
                           style={cardStyle(delta, visible)}
-                          aria-label={`Слот ${index + 1}`}
+                          aria-label={fill(copy.skins.slot, { slot: index + 1 })}
                           aria-hidden={!visible}
                         >
                           {renderedSkin ? (
@@ -485,20 +489,20 @@ export default function UserSkinsPage() {
                               <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-950 via-slate-950/90 to-transparent px-3 pb-3 pt-6">
                                 <div className="truncate text-xs font-medium text-slate-100">{renderedSkin.name}</div>
                                 <div className="text-[11px] text-slate-400">
-                                  Слот #{index + 1} · {renderedSkin.model === 'slim' ? 'Slim' : 'Classic'}
+                                  {fill(copy.skins.slot, { slot: index + 1 })} · {renderedSkin.model === 'slim' ? 'Slim' : 'Classic'}
                                 </div>
                               </div>
                             </div>
                           ) : (
                             <div className="flex h-full flex-col items-center justify-center gap-2 bg-slate-950/85 text-center">
                               <div className="text-3xl text-slate-500">+</div>
-                              <div className="text-xs text-slate-400">Пустой слот #{index + 1}</div>
+                              <div className="text-xs text-slate-400">{fill(copy.skins.emptySlot, { slot: index + 1 })}</div>
                             </div>
                           )}
                           {isDropTarget && (
                             <div className="pointer-events-none absolute inset-0 z-10 grid place-items-center bg-sky-500/10 backdrop-blur-[1px]">
                               <div className="rounded-lg border border-sky-300/70 bg-slate-950/85 px-3 py-1.5 text-xs text-sky-200">
-                                Отпустите файл для загрузки
+                                {copy.skins.drop}
                               </div>
                             </div>
                           )}
@@ -510,7 +514,7 @@ export default function UserSkinsPage() {
                       type="button"
                       onClick={moveCarouselLeft}
                       className="absolute left-3 top-1/2 z-20 -translate-y-1/2 rounded-full border border-slate-700 bg-slate-900/75 p-2.5 text-slate-100 hover:border-slate-500 sm:left-5"
-                      aria-label="Предыдущий слот"
+                      aria-label={copy.skins.previous}
                     >
                       ‹
                     </button>
@@ -518,7 +522,7 @@ export default function UserSkinsPage() {
                       type="button"
                       onClick={moveCarouselRight}
                       className="absolute right-3 top-1/2 z-20 -translate-y-1/2 rounded-full border border-slate-700 bg-slate-900/75 p-2.5 text-slate-100 hover:border-slate-500 sm:right-5"
-                      aria-label="Следующий слот"
+                      aria-label={copy.skins.next}
                     >
                       ›
                     </button>
@@ -531,7 +535,7 @@ export default function UserSkinsPage() {
                           className={`h-2.5 rounded-full transition-all ${
                             index === selectedSlot ? 'w-8 bg-sky-400' : slots[index] ? 'w-2.5 bg-slate-500' : 'w-2.5 bg-slate-700'
                           }`}
-                          aria-label={`Выбрать слот ${index + 1}`}
+                          aria-label={fill(copy.skins.select, { slot: index + 1 })}
                         />
                       ))}
                     </div>
@@ -571,7 +575,7 @@ export default function UserSkinsPage() {
                           disabled={busy !== null}
                           className="rounded-lg border border-emerald-700/70 bg-emerald-900/25 px-3 py-1.5 text-emerald-200 hover:border-emerald-500 disabled:opacity-60"
                         >
-                          Загрузить в слот
+                          {copy.skins.upload}
                         </button>
                         {selectedSkin ? (
                           <>
@@ -581,7 +585,7 @@ export default function UserSkinsPage() {
                               disabled={busy !== null || selectedSkinLegacy}
                               className="rounded-lg border border-sky-700 bg-sky-900/30 px-3 py-1.5 text-sky-100 hover:border-sky-500 disabled:cursor-not-allowed disabled:opacity-60"
                             >
-                              Сделать активным
+                              {copy.skins.apply}
                             </button>
                             <button
                               type="button"
@@ -589,7 +593,7 @@ export default function UserSkinsPage() {
                               disabled={busy !== null}
                               className="rounded-lg border border-red-700/60 bg-red-900/25 px-3 py-1.5 text-red-200 hover:border-red-500 disabled:opacity-60"
                             >
-                              Удалить из слота
+                              {copy.skins.delete}
                             </button>
                           </>
                         ) : (
@@ -600,19 +604,19 @@ export default function UserSkinsPage() {
                               disabled={busy !== null}
                               className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5 text-slate-200 hover:border-slate-500 disabled:opacity-60"
                             >
-                              Сохранить
+                              {copy.skins.save}
                             </button>
                           )
                         )}
                       </div>
 
                       <div className="mt-3 text-center text-xs text-slate-300">
-                        Перетащите изображение в нужный слот или нажмите на центральную карточку для выбора файла.
+                        {copy.skins.hint}
                       </div>
-                      <div className="text-center text-[11px] text-slate-500">PNG/JPG до 2 МБ, 64×64 или 64×32</div>
+                      <div className="text-center text-[11px] text-slate-500">{copy.skins.fileHint}</div>
                       {legacySlotsCount > 0 && (
                         <div className="mt-3 rounded-xl border border-amber-700/60 bg-amber-950/30 p-3 text-center text-xs text-amber-200">
-                          Найдено слотов старого формата: {legacySlotsCount}. Их нужно загрузить заново, иначе они будут ссылаться на текущий активный скин.
+                          {fill(copy.skins.legacyCount, { count: legacySlotsCount })}
                         </div>
                       )}
                       <input
@@ -629,7 +633,7 @@ export default function UserSkinsPage() {
                     </>
                   ) : (
                     <div className="mt-4 text-center text-sm text-slate-500">
-                      Редактирование доступно только владельцу профиля.
+                      {copy.skins.ownerOnly}
                     </div>
                   )}
 
@@ -771,7 +775,7 @@ function normalizeSavedSkins(raw: unknown): SavedSkin[] {
     if (!url) continue;
 
     const id = typeof entry.id === 'string' && entry.id.trim() ? entry.id : makeSkinId();
-    const name = typeof entry.name === 'string' && entry.name.trim() ? entry.name.trim() : 'Скин';
+    const name = typeof entry.name === 'string' && entry.name.trim() ? entry.name.trim() : 'Skin';
     const model: SkinModel = entry.model === 'slim' ? 'slim' : 'classic';
     const savedAt = typeof entry.savedAt === 'string' ? entry.savedAt : new Date().toISOString();
     const activeRaw = entry.active === true;
@@ -828,12 +832,12 @@ function isLegacyActiveSkinUrl(url?: string | null): boolean {
   }
 }
 
-function validateSkinFile(file: File): string | null {
+function validateSkinFile(file: File, copy: typeof profileTranslations.ru.skins): string | null {
   if (!file.type.startsWith('image/')) {
-    return 'Можно загружать только изображения PNG/JPG';
+    return copy.imageOnly;
   }
   if (file.size > MAX_UPLOAD_SIZE) {
-    return 'Файл слишком большой (макс. 2 МБ)';
+    return copy.tooLarge;
   }
   return null;
 }

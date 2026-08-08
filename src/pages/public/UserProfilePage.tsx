@@ -10,7 +10,8 @@ import { SocialLinks } from '@/shared/ui/utils/SocialLinks';
 import { Skin3DViewer } from '@/shared/ui/skin/Skin3DViewer';
 import { UserSessions } from '@/shared/ui/utils/UserSessions';
 import { ProfileThemeProvider, useProfileTheme } from '@/shared/ui/utils/ProfileThemeContext';
-import { SERVER_IP } from '@/shared/constants';
+import { useI18n } from '@/shared/i18n/I18nProvider';
+import { fill, profileTranslations } from '@/shared/i18n/profileTranslations';
 
 type PublicUser = {
   achievements?: Array<{
@@ -48,6 +49,8 @@ type Stats = {
 };
 
 export default function UserProfilePage() {
+  const { language } = useI18n();
+  const copy = profileTranslations[language];
   const username = useParams().username!;
   const self = isSelf(username);
 
@@ -70,13 +73,13 @@ export default function UserProfilePage() {
         if (!alive) return;
         setUser(data);
       })
-      .catch((e) => alive && setErr(e?.response?.data?.message || e?.message || 'Ошибка загрузки'))
+      .catch((e) => alive && setErr(e?.response?.data?.message || e?.message || copy.loadError))
       .finally(() => alive && setLoading(false));
 
     return () => {
       alive = false;
     };
-  }, [username, self]);
+  }, [username, self, copy.loadError]);
 
   useEffect(() => {
     if (!user?.username) return;
@@ -85,7 +88,7 @@ export default function UserProfilePage() {
 
     const checkPlayerStatus = async () => {
       try {
-        const response = await fetch(`https://api.mcsrvstat.us/2/${SERVER_IP}`, { cache: 'no-store' });
+        const response = await fetch('/api/v1/public/server-status', { cache: 'no-store' });
         if (!response.ok || stop) return;
         const data = await response.json();
         if (stop) return;
@@ -133,7 +136,7 @@ export default function UserProfilePage() {
       if (navigator.share) {
         await navigator.share({
           title: `${shareTitle} — ArchiTech MC`,
-          text: `Профиль игрока ${shareTitle}`,
+          text: fill(copy.public.shareText, { name: shareTitle }),
           url: shareUrl,
         });
         return;
@@ -143,13 +146,13 @@ export default function UserProfilePage() {
     try {
       await navigator.clipboard.writeText(shareUrl);
     } catch {
-      window.prompt('Ссылка на профиль:', shareUrl);
+      window.prompt(copy.public.sharePrompt, shareUrl);
     }
   };
 
   return (
     <>
-    <Seo title="Профиль игрока — ArchiTech MC" robots="noindex,follow" />
+    <Seo title={copy.public.seo} robots="noindex,follow" />
     
     <ProfileThemeProvider
       themeId={(user as any)?.profileTheme}
@@ -162,13 +165,13 @@ export default function UserProfilePage() {
           <section className="order-2 flex flex-col md:col-span-3 md:order-1">
             <Card className="flex h-full flex-col">
               <div className="mb-3 flex items-center justify-between">
-                <h2 className="text-sm font-semibold font-techno">Скин</h2>
+                <h2 className="text-sm font-semibold font-techno">{copy.public.skin}</h2>
                 <div className="flex items-center gap-2">
                   <Link
                     to={skinsHref}
                     className="group inline-flex h-8 w-8 items-center justify-center rounded-full border border-sky-500/35 bg-[radial-gradient(circle_at_30%_20%,rgba(56,189,248,.22),rgba(15,23,42,.92))] text-sky-200 shadow-[0_0_0_1px_rgba(56,189,248,.12)_inset,0_10px_22px_-14px_rgba(0,0,0,.9)] transition hover:scale-105 hover:border-sky-300/60 hover:text-sky-100"
-                    aria-label="Открыть галерею скинов"
-                    title="Галерея скинов"
+                    aria-label={copy.public.openSkins}
+                    title={copy.public.skinGallery}
                   >
                     <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden="true">
                       <path d="M14 5h5v5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
@@ -208,8 +211,8 @@ export default function UserProfilePage() {
                 type="button"
                 onClick={handleShareProfile}
                 className="absolute right-14 top-4 z-10 inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-700 bg-slate-900/70 text-slate-200 hover:border-slate-500 hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-300 backdrop-blur-sm"
-                aria-label="Поделиться профилем"
-                title="Поделиться профилем"
+                aria-label={copy.public.share}
+                title={copy.public.share}
               >
                 <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true">
                   <path d="M14 5h5v5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
@@ -220,7 +223,7 @@ export default function UserProfilePage() {
               <a
                 href="/settings/profile"
                 className="absolute right-4 top-4 z-10 inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-700 bg-slate-900/70 text-slate-200 hover:border-slate-500 hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-300 backdrop-blur-sm"
-                aria-label="Редактировать профиль"
+                aria-label={copy.public.edit}
               >
                 <svg
                   viewBox="0 0 32 32"
@@ -241,7 +244,7 @@ export default function UserProfilePage() {
             )}
 
             <div className="relative z-10 mt-28 flex justify-center">
-              <Avatar url={(user as any)?.avatarUrl} loading={loading} online={stats?.online} />
+              <Avatar url={(user as any)?.avatarUrl} loading={loading} online={stats?.online} copy={copy} />
             </div>
 
             <div className="pt-4 text-center">
@@ -252,7 +255,7 @@ export default function UserProfilePage() {
               )}
               <div className="mb-1 flex items-center justify-center gap-2">
                 <h1 className="truncate text-2xl font-bold font-techno text-techno-glow">
-                  {loading ? 'Загрузка…' : user ? `${user.username}` : '—'}
+                  {loading ? copy.loading : user ? `${user.username}` : '—'}
                 </h1>
               </div>
 
@@ -263,12 +266,12 @@ export default function UserProfilePage() {
               )}
 
               <div className="mb-4 text-xs text-slate-400 font-arcane">
-                {since && <span>с {since}</span>}
-                {self && <span className="ml-2 rounded-md border border-slate-700 px-2 py-0.5 text-sky-400">это вы</span>}
+                {since && <span>{fill(copy.public.since, { date: since })}</span>}
+                {self && <span className="ml-2 rounded-md border border-slate-700 px-2 py-0.5 text-sky-400">{copy.public.self}</span>}
               </div>
 
               <p className="mx-auto max-w-2xl whitespace-pre-wrap text-sm text-slate-200">
-                {loading ? '…' : user?.bio || 'О себе пока ничего не указано'}
+                {loading ? '…' : user?.bio || copy.public.emptyBio}
               </p>
 
               {(user as any)?.socialLinks && Object.keys((user as any).socialLinks).length > 0 && (
@@ -284,10 +287,10 @@ export default function UserProfilePage() {
               {!self && (
                 <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
                   <button className="rounded-xl border border-slate-700 px-3 py-1.5 text-sm hover:border-slate-500">
-                    Написать
+                    {copy.public.message}
                   </button>
                   <button className="rounded-xl border border-red-800 px-3 py-1.5 text-sm text-red-400 hover:bg-red-900/20">
-                    Пожаловаться
+                    {copy.public.report}
                   </button>
                 </div>
               )}
@@ -300,12 +303,12 @@ export default function UserProfilePage() {
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           <Card>
             <div className="mb-3 flex items-center justify-between gap-3">
-              <h3 className="text-sm font-semibold text-sky-300 font-techno">Достижения</h3>
+              <h3 className="text-sm font-semibold text-sky-300 font-techno">{copy.public.achievements}</h3>
               <Link
                 to={achievementsHref}
                 className="group inline-flex h-8 w-8 items-center justify-center rounded-full border border-sky-500/35 bg-[radial-gradient(circle_at_30%_20%,rgba(56,189,248,.22),rgba(15,23,42,.92))] text-sky-200 shadow-[0_0_0_1px_rgba(56,189,248,.12)_inset,0_10px_22px_-14px_rgba(0,0,0,.9)] transition hover:scale-105 hover:border-sky-300/60 hover:text-sky-100"
-                aria-label="Открыть все достижения"
-                title="Все достижения"
+                aria-label={copy.public.openAchievements}
+                title={copy.public.allAchievements}
               >
                 <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" aria-hidden="true">
                   <path d="M14 5h5v5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
@@ -330,7 +333,7 @@ export default function UserProfilePage() {
                   ))}
               </div>
             ) : (
-              <Empty loading={false} text="У игрока пока нет достижений" />
+              <Empty loading={false} text={copy.public.noAchievements} />
             )}
           </Card>
 
@@ -338,7 +341,7 @@ export default function UserProfilePage() {
             {profileUsername ? (
               <UserSessions username={profileUsername} />
             ) : (
-              <Empty loading={loading} text="Не удалось загрузить сессии" />
+              <Empty loading={loading} text={copy.public.sessionsError} />
             )}
           </Card>
         </div>
@@ -376,7 +379,7 @@ function Card(props: { children: React.ReactNode; className?: string; style?: Re
   );
 }
 
-function Avatar({ url, loading, online }: { url?: string; loading: boolean; online?: boolean }) {
+function Avatar({ url, loading, online, copy }: { url?: string; loading: boolean; online?: boolean; copy: typeof profileTranslations.ru }) {
   return (
     <div className="relative h-32 w-32 rounded-3xl border-2 border-sky-700/50 bg-slate-900 shadow-[0_8px_24px_rgba(2,132,199,0.25)]">
       {loading ? (
@@ -384,7 +387,7 @@ function Avatar({ url, loading, online }: { url?: string; loading: boolean; onli
       ) : url ? (
         <img
           src={url}
-          alt="Аватар"
+          alt={copy.avatar}
           loading="lazy"
           decoding="async"
           className="h-full w-full rounded-3xl object-cover"
@@ -399,8 +402,8 @@ function Avatar({ url, loading, online }: { url?: string; loading: boolean; onli
               ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,.75)]'
               : 'bg-slate-500 shadow-[0_0_6px_rgba(100,116,139,.55)]'
           }`}
-          title={online ? 'Онлайн' : 'Оффлайн'}
-          aria-label={online ? 'Онлайн' : 'Оффлайн'}
+          title={online ? copy.public.online : copy.public.offline}
+          aria-label={online ? copy.public.online : copy.public.offline}
         />
       )}
     </div>

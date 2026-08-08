@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
+import { useI18n } from '@/shared/i18n/I18nProvider';
 
 type GameSession = {
   sessionId: number;
@@ -24,6 +25,10 @@ type SessionsData = {
 };
 
 export function UserSessions({ username }: { username: string }) {
+  const { language } = useI18n();
+  const text = language === 'ru' ? {
+    error: 'Не удалось загрузить сессии', title: 'Игровые сессии', online: 'Онлайн', total: 'Всего сессий', played: 'Наиграно', average: 'Средняя сессия', last: 'Последняя игра', now: 'Сейчас', empty: 'Сессий пока нет', recent: 'Последние сессии', inGame: 'Сейчас в игре', still: 'Идет до сих пор', until: 'до',
+  } : { error: 'Failed to load sessions', title: 'Game sessions', online: 'Online', total: 'Total sessions', played: 'Playtime', average: 'Average session', last: 'Last played', now: 'Now', empty: 'No sessions yet', recent: 'Recent sessions', inGame: 'In game now', still: 'Still in progress', until: 'until' };
   const [data, setData] = useState<SessionsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -32,10 +37,11 @@ export function UserSessions({ username }: { username: string }) {
 
   useEffect(() => {
     let mounted = true;
+    let firstLoad = true;
 
     async function fetchSessions() {
       try {
-        setLoading(true);
+        if (firstLoad) setLoading(true);
         const apiBase =
           ((import.meta as any)?.env?.VITE_API_BASE as string | undefined) || window.location.origin;
         const baseUrl = apiBase.replace(/\/$/, '');
@@ -57,14 +63,17 @@ export function UserSessions({ username }: { username: string }) {
       } finally {
         if (mounted) {
           setLoading(false);
+          firstLoad = false;
         }
       }
     }
 
-    fetchSessions();
+    void fetchSessions();
+    const refreshId = window.setInterval(fetchSessions, 60_000);
 
     return () => {
       mounted = false;
+      window.clearInterval(refreshId);
     };
   }, [username]);
 
@@ -89,14 +98,14 @@ export function UserSessions({ username }: { username: string }) {
   if (error || !data) {
     return (
       <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-6">
-        <p className="text-slate-400 text-sm">Не удалось загрузить сессии</p>
+        <p className="text-slate-400 text-sm">{text.error}</p>
       </div>
     );
   }
 
   const formatDate = (isoString: string) => {
     const date = new Date(isoString);
-    return new Intl.DateTimeFormat('ru-RU', {
+    return new Intl.DateTimeFormat(language === 'ru' ? 'ru-RU' : 'en-US', {
       day: 'numeric',
       month: 'short',
       hour: '2-digit',
@@ -108,9 +117,9 @@ export function UserSessions({ username }: { username: string }) {
     const hours = Math.floor(minutes / 60);
     const mins = minutes % 60;
     if (hours > 0) {
-      return `${hours}ч ${mins}м`;
+      return language === 'ru' ? `${hours}ч ${mins}м` : `${hours}h ${mins}m`;
     }
-    return `${mins}м`;
+    return language === 'ru' ? `${mins}м` : `${mins}m`;
   };
 
   const getActiveMinutes = (startedAt: string) => {
@@ -128,9 +137,9 @@ export function UserSessions({ username }: { username: string }) {
     const diffHours = Math.floor(diffMins / 60);
     const diffDays = Math.floor(diffHours / 24);
 
-    if (diffMins < 60) return `${diffMins} мин. назад`;
-    if (diffHours < 24) return `${diffHours} ч. назад`;
-    if (diffDays < 7) return `${diffDays} дн. назад`;
+    if (diffMins < 60) return language === 'ru' ? `${diffMins} мин. назад` : `${diffMins} min ago`;
+    if (diffHours < 24) return language === 'ru' ? `${diffHours} ч. назад` : `${diffHours} hr ago`;
+    if (diffDays < 7) return language === 'ru' ? `${diffDays} дн. назад` : `${diffDays} days ago`;
     return formatDate(isoString);
   };
 
@@ -138,7 +147,7 @@ export function UserSessions({ username }: { username: string }) {
     <div className="rounded-xl border border-slate-800 bg-slate-900/40 overflow-hidden">
       <div className="px-6 py-4 border-b border-slate-800">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-slate-100">Игровые сессии</h3>
+          <h3 className="text-lg font-semibold text-slate-100">{text.title}</h3>
           {data.isOnline && (
             <span className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs border border-emerald-700/50 bg-emerald-500/10 text-emerald-300">
               <motion.span
@@ -153,7 +162,7 @@ export function UserSessions({ username }: { username: string }) {
                 }}
                 transition={{ duration: 1.3, repeat: Infinity, repeatDelay: 0.7 }}
               />
-              Онлайн
+              {text.online}
             </span>
           )}
         </div>
@@ -162,25 +171,29 @@ export function UserSessions({ username }: { username: string }) {
       {data.stats && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 px-6 py-4 bg-slate-950/40">
           <div>
-            <div className="text-xs text-slate-400 mb-1">Всего сессий</div>
+            <div className="text-xs text-slate-400 mb-1">{text.total}</div>
             <div className="text-xl font-semibold text-slate-100">{data.stats.totalSessions}</div>
           </div>
           <div>
-            <div className="text-xs text-slate-400 mb-1">Наиграно</div>
+            <div className="text-xs text-slate-400 mb-1">{text.played}</div>
             <div className="text-xl font-semibold text-slate-100">
-              {data.stats.totalHours.toFixed(1)}ч
+              {data.stats.totalHours.toFixed(1)}{language === 'ru' ? 'ч' : 'h'}
             </div>
           </div>
           <div>
-            <div className="text-xs text-slate-400 mb-1">Средняя сессия</div>
+            <div className="text-xs text-slate-400 mb-1">{text.average}</div>
             <div className="text-xl font-semibold text-slate-100">
               {formatDuration(data.stats.averageMinutes)}
             </div>
           </div>
           <div>
-            <div className="text-xs text-slate-400 mb-1">Последняя игра</div>
-            <div className="text-sm font-medium text-slate-200">
-              {data.stats.lastPlayed ? getRelativeTime(data.stats.lastPlayed) : '—'}
+            <div className="text-xs text-slate-400 mb-1">{text.last}</div>
+            <div className="text-xl font-semibold text-slate-100">
+              {data.isOnline || hasActiveSession
+                ? text.now
+                : data.stats.lastPlayed
+                  ? getRelativeTime(data.stats.lastPlayed)
+                  : '—'}
             </div>
           </div>
         </div>
@@ -189,11 +202,11 @@ export function UserSessions({ username }: { username: string }) {
       <div className="px-6 py-4">
         {data.sessions.length === 0 ? (
           <p className="text-slate-400 text-sm text-center py-8">
-            Сессий пока нет
+            {text.empty}
           </p>
         ) : (
           <div className="space-y-2">
-            <div className="text-xs text-slate-400 mb-3">Последние сессии</div>
+            <div className="text-xs text-slate-400 mb-3">{text.recent}</div>
             {data.sessions.map((session) => {
               const activeMinutes = session.isActive ? getActiveMinutes(session.startedAt) : null;
               const durationMinutes = session.durationMinutes ?? activeMinutes;
@@ -212,14 +225,14 @@ export function UserSessions({ username }: { username: string }) {
                       </span>
                       {session.isActive && (
                         <span className="text-xs text-emerald-400 font-medium">
-                          Сейчас в игре
+                          {text.inGame}
                         </span>
                       )}
                     </div>
                     <div className="text-xs text-slate-400 mt-0.5">
                       {session.endedAt
-                        ? `до ${formatDate(session.endedAt)}`
-                        : 'Идет до сих пор'}
+                        ? `${text.until} ${formatDate(session.endedAt)}`
+                        : text.still}
                     </div>
                   </div>
                   <div className="text-right">

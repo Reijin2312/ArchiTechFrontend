@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { ColorPicker } from '../form/ColorPicker'
+import { useI18n } from '@/shared/i18n/I18nProvider'
 
 type ProfileTheme = {
   id: string
@@ -57,6 +58,10 @@ type ThemeSelectorProps = {
 }
 
 export function ThemeSelector({ value = 'default', customColor1, customColor2, onChange, className = '' }: ThemeSelectorProps) {
+  const { language } = useI18n()
+  const themeNames: Record<string, string> = language === 'ru'
+    ? { default: 'По умолчанию', ocean: 'Океан', sunset: 'Закат', forest: 'Лес', purple: 'Аметист', fire: 'Огонь' }
+    : { default: 'Default', ocean: 'Ocean', sunset: 'Sunset', forest: 'Forest', purple: 'Amethyst', fire: 'Fire' }
   const [localColor1, setLocalColor1] = useState(customColor1 || '#0ea5e9')
   const [localColor2, setLocalColor2] = useState(customColor2 || '#1e40af')
   
@@ -64,7 +69,7 @@ export function ThemeSelector({ value = 'default', customColor1, customColor2, o
 
   return (
     <div className={className}>
-      <div className="mb-3 text-sm font-semibold text-slate-300">Тема профиля</div>
+      <div className="mb-3 text-sm font-semibold text-slate-300">{language === 'ru' ? 'Тема профиля' : 'Profile theme'}</div>
       <div className="grid grid-cols-3 gap-3">
         {THEMES.map((theme) => {
           const isSelected = value === theme.id
@@ -83,7 +88,7 @@ export function ThemeSelector({ value = 'default', customColor1, customColor2, o
             >
               <div className={`h-20 w-full ${theme.preview}`} />
               <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
-                <span className="text-sm font-medium text-white">{theme.name}</span>
+                <span className="text-sm font-medium text-white">{themeNames[theme.id]}</span>
               </div>
               {isSelected && (
                 <motion.div
@@ -114,7 +119,7 @@ export function ThemeSelector({ value = 'default', customColor1, customColor2, o
             }}
           />
           <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
-            <span className="text-sm font-medium text-white">🎨 Своя тема</span>
+            <span className="text-sm font-medium text-white">🎨 {language === 'ru' ? 'Своя тема' : 'Custom theme'}</span>
           </div>
           {isCustom && (
             <motion.div
@@ -134,7 +139,7 @@ export function ThemeSelector({ value = 'default', customColor1, customColor2, o
           className="mt-4 space-y-3 rounded-xl border border-slate-800 bg-slate-900/50 p-4"
         >
           <div>
-            <label className="mb-2 block text-xs text-slate-400">Первый цвет</label>
+            <label className="mb-2 block text-xs text-slate-400">{language === 'ru' ? 'Первый цвет' : 'First color'}</label>
             <ColorPicker
               value={localColor1}
               onChange={(color) => {
@@ -144,7 +149,7 @@ export function ThemeSelector({ value = 'default', customColor1, customColor2, o
             />
           </div>
           <div>
-            <label className="mb-2 block text-xs text-slate-400">Второй цвет</label>
+            <label className="mb-2 block text-xs text-slate-400">{language === 'ru' ? 'Второй цвет' : 'Second color'}</label>
             <ColorPicker
               value={localColor2}
               onChange={(color) => {
@@ -154,7 +159,7 @@ export function ThemeSelector({ value = 'default', customColor1, customColor2, o
             />
           </div>
           <div className="rounded-lg border border-slate-700 p-3">
-            <div className="mb-1 text-xs text-slate-400">Предпросмотр:</div>
+            <div className="mb-1 text-xs text-slate-400">{language === 'ru' ? 'Предпросмотр:' : 'Preview:'}</div>
             <div 
               className="h-16 rounded-lg"
               style={{
