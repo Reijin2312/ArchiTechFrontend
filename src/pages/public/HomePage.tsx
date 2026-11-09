@@ -1,5 +1,5 @@
 import './HomePage.premium.css'
-import React, { useEffect, useId, useMemo, useRef, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { SERVER_NAME, SERVER_IP, RULES_URL, SHOP_URL, WIKI_URL, LAUNCHER_DOWNLOAD_URL } from '@/shared/constants'
 import { AnimatePresence, motion, useReducedMotion, useScroll, useSpring, useTransform, type Variants, type Transition } from 'framer-motion'
@@ -27,40 +27,15 @@ type McStatus = {
 const SERVER_STATUS_CACHE_KEY = 'architech-server-status'
 const SERVER_STATUS_CACHE_MAX_AGE_MS = 5 * 60 * 1000
 
-type OnlineHistoryPoint = {
-  ts: number
-  online: number
-  max: number
-}
-
-type OnlineRange = '24h' | '7d' | '30d'
 type LeaderboardRange = '7d' | '30d' | 'all'
 
 // The historical online chart is temporarily hidden from the landing page.
 // Keep its code below for an easy return when it becomes marketing-positive.
-const ONLINE_TREND_ENABLED = false
-
 // The player counter is temporarily hidden from the hero.
 // Keep the complete UI below so it can be restored with one flag.
 const ONLINE_COUNTER_ENABLED = false
 
 const NEOFORGE_LOGO_URL = 'https://raw.githubusercontent.com/neoforged/Documentation/main/static/img/logo.svg'
-
-type OnlineTrendResponse = {
-  range?: OnlineRange
-  from?: string
-  to?: string
-  bucketMinutes?: number
-  points?: Array<{
-    ts?: string | number
-    online?: number
-  }>
-  summary?: {
-    currentOnline?: number
-    peakOnline?: number
-    averageOnline?: number
-  }
-}
 
 type LeaderboardPlayer = {
   rank: number
@@ -107,8 +82,6 @@ export default function HomePage() {
   const [showPlayersList, setShowPlayersList] = useState(false)
   const playersButtonRef = useRef<HTMLButtonElement>(null)
   const [playersListPosition, setPlayersListPosition] = useState({ top: 0 })
-  const [onlinePoints, setOnlinePoints] = useState<OnlineHistoryPoint[]>([])
-  const [onlineRange, setOnlineRange] = useState<OnlineRange>('7d')
   // Range switching is temporarily disabled. Keep the previous stateful version
   // here so it can be restored together with the tabs in TopPlayersSection.
   // const [leaderboardRange, setLeaderboardRange] = useState<LeaderboardRange>('7d')
@@ -298,50 +271,6 @@ export default function HomePage() {
   }, [])
 
   useEffect(() => {
-    if (!ONLINE_TREND_ENABLED) return
-
-    let stop = false
-
-    async function loadOnlineTrend() {
-      try {
-        const response = await fetch(`/api/v1/sessions/online-trend?range=${encodeURIComponent(onlineRange)}`, {
-          cache: 'no-store',
-        })
-        if (!response.ok) throw new Error('trend failed')
-
-        const data = (await response.json()) as OnlineTrendResponse
-        const parsedPoints = (data.points ?? [])
-          .map((point) => {
-            const tsRaw = point?.ts
-            const ts =
-              typeof tsRaw === 'number'
-                ? tsRaw
-                : typeof tsRaw === 'string'
-                  ? Date.parse(tsRaw)
-                  : Number.NaN
-            if (!Number.isFinite(ts)) return null
-
-            const online = Math.max(0, Math.round(Number(point?.online ?? 0)))
-            return { ts, online, max: online } as OnlineHistoryPoint
-          })
-          .filter((point): point is OnlineHistoryPoint => point !== null)
-          .sort((a, b) => a.ts - b.ts)
-        if (!stop) setOnlinePoints(parsedPoints)
-      } catch {
-        if (!stop) setOnlinePoints((prev) => prev)
-      }
-    }
-
-    void loadOnlineTrend()
-    const id = window.setInterval(() => void loadOnlineTrend(), 60_000)
-
-    return () => {
-      stop = true
-      clearInterval(id)
-    }
-  }, [onlineRange])
-
-  useEffect(() => {
     let stop = false
 
     async function loadLeaderboard() {
@@ -437,29 +366,6 @@ export default function HomePage() {
     const m = status.players?.max ?? 0
     return `${c} / ${m}`
   }, [status])
-
-  const onlineSeries = useMemo(() => {
-    if (onlinePoints.length > 0) return onlinePoints
-
-    return [{
-      ts: Date.now(),
-      online: status?.players?.online ?? 0,
-      max: status?.players?.max ?? 0,
-    }]
-  }, [onlinePoints, status?.players?.online, status?.players?.max])
-
-  const onlinePeak = useMemo(
-    () => onlineSeries.reduce((max, p) => Math.max(max, p.online), 0),
-    [onlineSeries]
-  )
-
-  const onlineAvg = useMemo(() => {
-    if (!onlineSeries.length) return 0
-    const sum = onlineSeries.reduce((acc, p) => acc + p.online, 0)
-    return Math.round(sum / onlineSeries.length)
-  }, [onlineSeries])
-
-  const onlineNow = onlineSeries[onlineSeries.length - 1]?.online ?? status?.players?.online ?? 0
 
   useEffect(() => {
     const players = status?.players?.sample ?? []
@@ -968,329 +874,6 @@ function Badge({ label, ok, reduceMotion }: { label: string; ok: boolean | null;
   )
 }
 
-function buildSmoothSvgPath(points: Array<{ x: number; y: number }>): string {
-  if (!points.length) return ''
-  if (points.length === 1) return `M ${points[0].x} ${points[0].y}`
-
-  let path = `M ${points[0].x} ${points[0].y}`
-  for (let i = 1; i < points.length; i += 1) {
-    const current = points[i]
-    path += ` L ${current.x} ${current.y}`
-  }
-  return path
-}
-
-function OnlineTrendSection({
-  points,
-  range,
-  onRangeChange,
-  current,
-  peak,
-  average,
-  disableMotion,
-}: {
-  points: OnlineHistoryPoint[]
-  range: OnlineRange
-  onRangeChange: (range: OnlineRange) => void
-  current: number
-  peak: number
-  average: number
-  disableMotion?: boolean
-}) {
-  const [hoverIndex, setHoverIndex] = useState<number | null>(null)
-  const gradientScopeId = useId().replace(/:/g, '')
-  const areaGradientId = `online-area-gradient-${gradientScopeId}`
-  const lineShineGradientId = `online-line-shine-gradient-${gradientScopeId}`
-
-  const chart = useMemo(() => {
-    const sorted = [...points].sort((a, b) => a.ts - b.ts)
-    const safe = sorted.length ? sorted : [{ ts: Date.now(), online: 0, max: 0 }]
-
-    const width = 960
-    const height = 280
-    const padX = 26
-    const padY = 18
-
-    const minTs = safe[0].ts
-    const maxTs = safe[safe.length - 1].ts
-    const tsSpan = Math.max(1, maxTs - minTs)
-    const maxOnline = Math.max(10, ...safe.map((p) => p.online), ...safe.map((p) => p.max))
-
-    const toX = (ts: number) => padX + ((ts - minTs) / tsSpan) * (width - padX * 2)
-    const toY = (value: number) => height - padY - (value / maxOnline) * (height - padY * 2)
-
-    const linePoints = safe.map((p) => ({ x: toX(p.ts), y: toY(p.online), ts: p.ts, online: p.online }))
-    const linePath = buildSmoothSvgPath(linePoints)
-
-    const first = linePoints[0]
-    const last = linePoints[linePoints.length - 1]
-    const areaPath = `${linePath} L ${last.x} ${height - padY} L ${first.x} ${height - padY} Z`
-
-    const tickValues = [0, 0.25, 0.5, 0.75, 1].map((ratio) => Math.round(maxOnline * ratio))
-
-    const formatTs = (ts: number) =>
-      range === '24h'
-        ? new Date(ts).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
-        : new Date(ts).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })
-
-    const midTs = minTs + tsSpan / 2
-
-    return {
-      width,
-      height,
-      padX,
-      padY,
-      linePath,
-      areaPath,
-      linePoints,
-      tickValues,
-      maxOnline,
-      labels: {
-        start: formatTs(minTs),
-        mid: formatTs(midTs),
-        end: formatTs(maxTs),
-      },
-    }
-  }, [points, range])
-
-  useEffect(() => {
-    setHoverIndex(null)
-  }, [range, chart.linePoints.length])
-
-  const hoveredPoint =
-    hoverIndex == null || chart.linePoints.length === 0
-      ? null
-      : chart.linePoints[Math.min(Math.max(hoverIndex, 0), chart.linePoints.length - 1)]
-
-  const hoveredMeta = useMemo(() => {
-    if (!hoveredPoint) return null
-
-    const tooltipWidth = 168
-    const tooltipHeight = 48
-    const x = Math.min(
-      chart.width - chart.padX - tooltipWidth,
-      Math.max(chart.padX, hoveredPoint.x - tooltipWidth / 2),
-    )
-    const y = Math.max(chart.padY, hoveredPoint.y - tooltipHeight - 10)
-
-    const timeText =
-      range === '24h'
-        ? new Date(hoveredPoint.ts).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
-        : new Date(hoveredPoint.ts).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })
-
-    return {
-      x,
-      y,
-      timeText,
-      valueText: `\u041e\u043d\u043b\u0430\u0439\u043d: ${hoveredPoint.online}`,
-    }
-  }, [chart.padX, chart.padY, chart.width, hoveredPoint, range])
-
-  function handlePointerMove(e: React.PointerEvent<SVGSVGElement>) {
-    if (!chart.linePoints.length) return
-
-    const svg = e.currentTarget
-    const ctm = svg.getScreenCTM()
-    if (!ctm) return
-
-    const point = svg.createSVGPoint()
-    point.x = e.clientX
-    point.y = e.clientY
-    const local = point.matrixTransform(ctm.inverse())
-    const localX = Math.min(chart.width, Math.max(0, local.x))
-
-    let bestIndex = 0
-    let bestDistance = Number.POSITIVE_INFINITY
-    for (let i = 0; i < chart.linePoints.length; i += 1) {
-      const d = Math.abs(chart.linePoints[i].x - localX)
-      if (d < bestDistance) {
-        bestDistance = d
-        bestIndex = i
-      }
-    }
-    setHoverIndex(bestIndex)
-  }
-
-  const rangeTitle =
-    range === '24h'
-      ? '\u0437\u0430 24 \u0447\u0430\u0441\u0430'
-      : range === '7d'
-        ? '\u0437\u0430 7 \u0434\u043d\u0435\u0439'
-        : '\u0437\u0430 30 \u0434\u043d\u0435\u0439'
-
-  const rangeTabs: Array<{ value: OnlineRange; label: string }> = [
-    { value: '24h', label: '24\u0447' },
-    { value: '7d', label: '7\u0434' },
-    { value: '30d', label: '30\u0434' },
-  ]
-
-  const rangePillLayoutId = `online-range-pill-${gradientScopeId}`
-
-  return (
-    <div className="rounded-2xl border border-slate-800 bg-linear-to-b from-slate-900/70 to-slate-900/20 p-5 backdrop-blur-md backdrop-saturate-150">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <div className="text-sm font-medium text-slate-200 font-arcane uppercase">
-          {'\u0414\u0438\u043d\u0430\u043c\u0438\u043a\u0430'} {rangeTitle}
-        </div>
-        <div className="inline-flex rounded-xl border border-slate-700 bg-slate-950/60 p-1">
-          {rangeTabs.map((tab) => {
-            const active = range === tab.value
-            return (
-              <button
-                key={tab.value}
-                type="button"
-                onClick={() => onRangeChange(tab.value)}
-                className="relative rounded-lg px-3 py-1.5 text-xs text-slate-300 transition-colors hover:bg-slate-800"
-              >
-                {active && (
-                  <motion.span
-                    layoutId={rangePillLayoutId}
-                    transition={
-                      disableMotion
-                        ? { duration: 0 }
-                        : { type: 'spring', stiffness: 420, damping: 34, mass: 0.85 }
-                    }
-                    className="absolute inset-0 rounded-lg bg-indigo-600 shadow-[0_6px_18px_rgba(99,102,241,0.4)]"
-                  />
-                )}
-                <span className={`relative z-10 ${active ? 'text-white' : 'text-slate-300'}`}>{tab.label}</span>
-              </button>
-            )
-          })}
-        </div>
-      </div>
-
-      <div className="mb-4 grid w-full grid-cols-3 gap-2 sm:gap-3">
-        <MetricCard label="Сейчас" value={current} accent="text-emerald-300" />
-        <MetricCard label="Пик" value={peak} accent="text-sky-300" />
-        <MetricCard label="Средний" value={average} accent="text-indigo-300" />
-      </div>
-
-      <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-2 sm:p-3">
-        <div className="-mx-1 overflow-x-auto px-1">
-          <svg
-          viewBox={`0 0 ${chart.width} ${chart.height}`}
-          className="h-72 w-[720px] min-w-[720px] sm:h-64 sm:w-full sm:min-w-0"
-          role="img"
-          aria-label="График онлайна сервера"
-          onPointerMove={handlePointerMove}
-          onPointerDown={handlePointerMove}
-          onPointerLeave={() => setHoverIndex(null)}
-        >
-          <defs>
-            <linearGradient id={areaGradientId} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#6366f1" stopOpacity="0.35" />
-              <stop offset="100%" stopColor="#6366f1" stopOpacity="0.02" />
-            </linearGradient>
-            {!disableMotion && (
-              <linearGradient
-                id={lineShineGradientId}
-                gradientUnits="userSpaceOnUse"
-                x1={-chart.width}
-                y1={0}
-                x2={0}
-                y2={0}
-              >
-                <stop offset="0%" stopColor="#ffffff" stopOpacity="0" />
-                <stop offset="44%" stopColor="#ffffff" stopOpacity="0" />
-                <stop offset="50%" stopColor="#e0e7ff" stopOpacity="0.95" />
-                <stop offset="56%" stopColor="#ffffff" stopOpacity="0" />
-                <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
-                <animate attributeName="x1" from={-chart.width} to={chart.width} dur="3.4s" repeatCount="indefinite" />
-                <animate attributeName="x2" from={0} to={chart.width * 2} dur="3.4s" repeatCount="indefinite" />
-              </linearGradient>
-            )}
-          </defs>
-
-          {chart.tickValues.map((tick) => {
-            const y = chart.height - chart.padY - (tick / chart.maxOnline) * (chart.height - chart.padY * 2)
-            return (
-              <g key={`tick-${tick}`}>
-                <line x1={chart.padX} y1={y} x2={chart.width - chart.padX} y2={y} stroke="rgba(148,163,184,0.16)" strokeWidth="1" />
-                <text x={chart.padX - 8} y={y + 4} textAnchor="end" fill="rgba(148,163,184,0.8)" fontSize="11">
-                  {tick}
-                </text>
-              </g>
-            )
-          })}
-
-          <path d={chart.areaPath} fill={`url(#${areaGradientId})`} />
-          <path
-            d={chart.linePath}
-            fill="none"
-            stroke="#818cf8"
-            strokeWidth="3"
-            strokeLinecap="butt"
-            strokeLinejoin="miter"
-            style={disableMotion ? undefined : { filter: 'drop-shadow(0 0 6px rgba(129,140,248,0.45))' }}
-          />
-          {!disableMotion && (
-            <path
-              d={chart.linePath}
-              fill="none"
-              stroke={`url(#${lineShineGradientId})`}
-              strokeWidth="4.5"
-              strokeLinecap="butt"
-              strokeLinejoin="miter"
-              pointerEvents="none"
-              style={{ filter: 'drop-shadow(0 0 12px rgba(199,210,254,0.55))' }}
-            />
-          )}
-
-          {hoveredPoint && (
-            <g pointerEvents="none">
-              <line
-                x1={hoveredPoint.x}
-                y1={chart.padY}
-                x2={hoveredPoint.x}
-                y2={chart.height - chart.padY}
-                stroke="rgba(129,140,248,0.45)"
-                strokeWidth="1.2"
-                strokeDasharray="4 4"
-              />
-            </g>
-          )}
-
-          {chart.linePoints.length > 0 && !hoveredPoint && (
-            <circle
-              cx={chart.linePoints[chart.linePoints.length - 1].x}
-              cy={chart.linePoints[chart.linePoints.length - 1].y}
-              r="5"
-              fill="#a5b4fc"
-            />
-          )}
-
-          {hoveredPoint && hoveredMeta && (
-            <g pointerEvents="none">
-              <circle cx={hoveredPoint.x} cy={hoveredPoint.y} r="5.5" fill="#a5b4fc" />
-              <g transform={`translate(${hoveredMeta.x}, ${hoveredMeta.y})`}>
-                <rect width="168" height="48" rx="8" fill="rgba(2,6,23,0.94)" stroke="rgba(99,102,241,0.55)" />
-                <text x="10" y="18" fill="rgba(226,232,240,0.95)" fontSize="11" fontWeight="600">
-                  {hoveredMeta.timeText}
-                </text>
-                <text x="10" y="34" fill="rgba(148,163,184,0.95)" fontSize="11">
-                  {hoveredMeta.valueText}
-                </text>
-              </g>
-            </g>
-          )}
-
-          <text x={chart.padX} y={chart.height - 2} fill="rgba(148,163,184,0.75)" fontSize="11">
-            {chart.labels.start}
-          </text>
-          <text x={chart.width / 2} y={chart.height - 2} textAnchor="middle" fill="rgba(148,163,184,0.75)" fontSize="11">
-            {chart.labels.mid}
-          </text>
-          <text x={chart.width - chart.padX} y={chart.height - 2} textAnchor="end" fill="rgba(148,163,184,0.75)" fontSize="11">
-            {chart.labels.end}
-          </text>
-          </svg>
-        </div>
-      </div>
-    </div>
-  )
-}
-
 function TopPlayersSection({
   players,
   avatars,
@@ -1534,15 +1117,6 @@ function TopPlayersSection({
           })}
         </div>
       )}
-    </div>
-  )
-}
-
-function MetricCard({ label, value, accent }: { label: string; value: number; accent: string }) {
-  return (
-    <div className="grid aspect-square place-content-center gap-1 rounded-xl border border-slate-800 bg-slate-950/50 p-1 text-center sm:aspect-auto sm:px-3 sm:py-2 sm:text-left sm:place-content-start">
-      <div className="text-xs leading-none text-slate-300 sm:text-[11px]">{label}</div>
-      <div className={`text-xl leading-none font-semibold sm:text-xl ${accent}`}>{value}</div>
     </div>
   )
 }
