@@ -96,7 +96,7 @@
   position:absolute;inset:0;overflow:hidden;width:100%;height:100%;
   aspect-ratio:auto;border:0;box-shadow:none;border-radius:0
 }
-.architech-home .at-hero .at-gallery>.at-gallery-frame>div{position:absolute;inset:0}
+.architech-home .at-hero .at-gallery>.at-gallery-frame>div.at-gallery-slide{position:absolute;inset:0}
 .architech-home .at-hero .at-gallery .at-gallery-slide{top:-12%;bottom:-12%;height:124%}
 .architech-home .at-hero .at-gallery .at-gallery-slide img{width:100%;height:100%;object-fit:cover;filter:saturate(.83) contrast(1.07)}
 .architech-home .at-hero .at-gallery .at-gallery-caption{
@@ -351,3 +351,9 @@
   .architech-home .at-world-front{display:none}
   .architech-home .at-world-rear{opacity:.08}
 }
+
+/* Motion-rich source components deliberately opt out of stock light sweeps. */
+.architech-home .at-rank-editorial .pointer-events-none.absolute,.architech-home .at-team-editorial .pointer-events-none.absolute{display:none!important}
+.architech-home .at-rank-editorial .mix-blend-screen{display:none!important}
+.architech-home .at-faq-editorial .pointer-events-none.absolute{display:none!important}
+.architech-home .at-team-editorial a:focus-visible,.architech-home .at-rank-editorial a:focus-visible{outline:2px solid #e8d4b4;outline-offset:4px}
