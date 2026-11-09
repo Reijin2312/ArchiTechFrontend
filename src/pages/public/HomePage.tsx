@@ -1,13 +1,14 @@
+import './HomePage.premium.css'
 import React, { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { SERVER_NAME, SERVER_IP, RULES_URL, SHOP_URL, WIKI_URL, LAUNCHER_DOWNLOAD_URL } from '@/shared/constants'
 import { useWallpaper } from '@/shared/ui/wallpaper/useWallpaper';
-import { AnimatePresence, motion, useReducedMotion, type Variants, type Transition, } from 'framer-motion'
+import { AnimatePresence, motion, useReducedMotion, useScroll, useSpring, useTransform, type Variants, type Transition } from 'framer-motion'
 import { Seo } from '@/shared/seo/seo';
 import { routesMeta } from '@/shared/seo/routesMeta';
 import { ResponsiveImage } from '@/shared/ui/image/ResponsiveImage'
 import { IMAGES } from '@/shared/images.manifest'
-import { SvgUserPlus, SvgSkin, SvgMcBlockGrass, SvgServer, SvgModpack, SvgRoute, SvgLauncher, SvgDownload, SvgShield, SvgGitHub, SvgCheck, SvgCopy, SvgChevronDown, SvgCrown } from '@/shared/ui/image/Icons'
+import { SvgUserPlus, SvgSkin, SvgMcBlockGrass, SvgModpack, SvgRoute, SvgLauncher, SvgDownload, SvgShield, SvgGitHub, SvgCheck, SvgCopy, SvgChevronDown, SvgCrown } from '@/shared/ui/image/Icons'
 import { useIsMobile } from '@/shared/ui/utils/useIsMobile';
 import { TEAM_MEMBERS } from '@/shared/data/team';
 import { useTeamAvatars } from '@/shared/hooks/useTeamAvatars';
@@ -148,8 +149,6 @@ export default function HomePage() {
   const activeShotMeta =
     shotMeta[shot] ??
     ({ title: copy.fallbackShot, subtitle: copy.fallbackShotSubtitle } as ShotMeta)
-  const [prevShot, setPrevShot] = useState<string | null>(null)
-  const [cross, setCross] = useState(true);
   const [activeIndex, setActiveIndex] = useState(0)
   const [direction, setDirection] = useState<1 | -1>(1)
   const [sliderPaused, setSliderPaused] = useState(false)
@@ -243,15 +242,7 @@ export default function HomePage() {
       setDirection(nextIdx > currIdx ? 1 : -1)
       setActiveIndex(nextIdx)
     }
-
-    setPrevShot(shot)
     setShot(newSrc)
-
-    setCross(false)
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => setCross(true))
-    })
-    setTimeout(() => setPrevShot(null), 320)
   }
 
   function applyStatusPayload(data: any) {
@@ -536,430 +527,159 @@ export default function HomePage() {
   return (
     <>
     <Seo {...routesMeta['/']} />
-    <div className="min-h-dvh text-slate-100 relative overflow-x-hidden">
-     <motion.section
-        className="mx-auto max-w-7xl px-4 pb-10 pt-10 md:pt-16"
-        initial={disableEntranceMotion ? undefined : { opacity: 0, y: 24, filter: 'blur(8px)' }}
-        animate={disableEntranceMotion ? undefined : { opacity: 1, y: 0, filter: 'blur(0px)' }}
-        transition={{ duration: 0.5, ease: 'easeOut' }}
-      >
-        <div className="grid md:grid-cols-2 gap-10 md:gap-14 items-stretch">
-          <div className="md:flex md:flex-col md:h-full md:justify-between">
-            <div>
-              <div className="mb-6 flex h-[122px] max-w-full items-center justify-center md:h-[149px]">
-                <picture className="block w-[480px] max-w-[92%]">
-                  <source srcSet="/images/logo.webp" type="image/webp" />
-                  <img
-                    src="/images/logo.png"
-                    alt={SERVER_NAME}
-                    width={1510}
-                    height={370}
-                    className="block h-auto w-full select-none object-contain drop-shadow-[0_0_28px_rgba(99,102,241,0.42)]"
-                    draggable={false}
-                  />
-                </picture>
-              </div>
-              <p className="mt-4 text-slate-300 max-w-prose">
-                {copy.hero}
-              </p>
 
-            <div className="mt-6 grid gap-3">
-              <div className="flex w-full items-stretch overflow-hidden rounded-xl border border-slate-800 max-w-md">
-              <div className="px-3 hidden sm:grid place-items-center bg-slate-900/60 border-r border-slate-800 text-xs text-slate-300">IP</div>
-              <div className="px-3 font-mono flex-1 truncate flex items-center justify-center text-center backdrop-blur-md backdrop-saturate-150">{SERVER_IP}</div>
-                <button
-                  onClick={copyIp}
-                  className="px-3 py-2 bg-slate-900/60 hover:bg-slate-800 border-l border-slate-800 text-sm grid place-items-center"
-                  aria-label={copyOk === 'ok' ? copy.copied : copyOk === 'err' ? copy.error : copy.copyIp}
-                  title={copyOk === 'ok' ? copy.copied : copyOk === 'err' ? copy.error : copy.copyIp}
-                  type="button"
-                >
-                  <motion.div
-                    animate={
-                      copyOk === 'ok'
-                        ? { scale: [1, 1.2, 1], rotate: [0, -8, 0] }
-                        : copyOk === 'err'
-                          ? { x: [-2, 2, -2, 2, 0] }
-                          : { scale: 1, rotate: 0, x: 0 }
-                    }
-                    transition={{ duration: 0.3 }}
-                    className="grid place-items-center"
-                  >
-                    {copyOk === 'ok' ? (
-                      <SvgCheck className="size-5" />
-                    ) : (
-                      <SvgCopy className="size-5" />
-                    )}
-                  </motion.div>
-                </button>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-4 text-sm text-slate-300">
-                <Badge label={status == null ? copy.checking : status.online ? copy.online : copy.offline} ok={status == null ? null : status.online} reduceMotion={disableInteractiveMotion} />
-                {/* Online player counter is temporarily disabled. */}
-                {ONLINE_COUNTER_ENABLED && (
-                  <div
-                    className="relative"
-                    onMouseEnter={() => !isMobile && setShowPlayersList(true)}
-                    onMouseLeave={() => !isMobile && setShowPlayersList(false)}
-                  >
-                  <button
-                    ref={playersButtonRef}
-                    type="button"
-                    onClick={() => {
-                      if (isMobile) {
-                        const button = playersButtonRef.current
-                        if (button) {
-                          const rect = button.getBoundingClientRect()
-                          setPlayersListPosition({
-                            top: rect.top - 8
-                          })
-                        }
-                        setShowPlayersList((v) => !v)
-                      }
-                    }}
-                    className="cursor-pointer bg-transparent border-0 text-sm text-slate-300 p-0 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 rounded"
-                  >
-                    {copy.players}: <strong className="text-slate-100">{onlineText}</strong>
-                  </button>
-                  <AnimatePresence>
-                    {showPlayersList && status?.online && status?.players?.sample && status.players.sample.length > 0 && (
-                      <>
-                        {isMobile && (
-                          <div
-                            className="fixed inset-0 z-40 bg-black/20"
-                            onClick={() => setShowPlayersList(false)}
-                          />
-                        )}
-                        <motion.div
-                          initial={{ opacity: 0, y: 8, scale: 0.95 }}
-                          animate={{ opacity: 1, y: 0, scale: 1 }}
-                          exit={{ opacity: 0, y: 8, scale: 0.95 }}
-                          transition={{ duration: 0.2 }}
-                          className={`${isMobile ? 'fixed right-4' : 'absolute left-0 top-full mt-2'} z-50 ${isMobile ? 'w-[calc(100vw-2rem)] max-w-64' : 'w-64'} rounded-xl border border-slate-800 bg-slate-950/95 backdrop-blur-md shadow-xl p-3`}
-                          style={isMobile ? {
-                            top: `${playersListPosition.top}px`,
-                            transform: 'translateY(-100%)'
-                          } : undefined}
-                        >
-                        <div className="text-xs font-semibold text-slate-400 mb-2 px-1 flex items-center justify-between gap-2">
-                          <span>{copy.onlinePlayers} ({status.players.sample.length})</span>
-                          {isMobile && (
-                            <button
-                              type="button"
-                              onClick={() => setShowPlayersList(false)}
-                              className="text-slate-400 hover:text-white text-xs"
-                            >
-                              {copy.close}
-                            </button>
-                          )}
-                        </div>
-                        <div className="max-h-64 overflow-y-auto space-y-1.5">
-                          {status.players.sample.map((player) => {
-                            const avatar = playerAvatars[player.name]
-                            return (
-                              <Link
-                                key={player.name}
-                                to={`/u/${encodeURIComponent(player.name)}`}
-                                className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-900/60 transition-colors group"
-                              >
-                                {avatar ? (
-                                  <img
-                                    src={avatar}
-                                    alt={player.name}
-                                    width={24}
-                                    height={24}
-                                    className="w-6 h-6 rounded-lg object-cover border border-slate-700"
-                                    loading="lazy"
-                                    decoding="async"
-                                  />
-                                ) : (
-                                  <div className="w-6 h-6 rounded-lg border border-slate-700 bg-slate-800 flex items-center justify-center text-xs text-slate-400">
-                                    {player.name[0]?.toUpperCase() || '?'}
-                                  </div>
-                                )}
-                                <span className="text-sm text-slate-200 group-hover:text-slate-100 truncate flex-1">
-                                  {player.name}
-                                </span>
-                              </Link>
-                            )
-                          })}
-                        </div>
-                      </motion.div>
-                      </>
-                    )}
-                  </AnimatePresence>
-                  </div>
-                )}
-                <span className="inline-flex items-center gap-2">
-                  <img
-                    src={NEOFORGE_LOGO_URL}
-                    alt=""
-                    aria-hidden="true"
-                    className="size-6 shrink-0 object-contain"
-                  />
-                  <span>{copy.version}: <strong className="text-slate-100">1.21.1 NeoForge</strong></span>
-                </span>
-                {/* Dynamic server version is intentionally kept disabled.
-                {status?.version && <span>Версия: <strong className="text-slate-100">{status.version} NeoForge</strong></span>}
-                */}
-                {typeof status?.tps === 'number' && <span>TPS: <strong className="text-slate-100">{status.tps.toFixed(1)}</strong></span>}
-                {typeof status?.latencyMs === 'number' && <span>{copy.ping}: <strong className="text-slate-100">{status.latencyMs}ms</strong></span>}
-              </div>
-
+    <div className="architech-home">
+      <WorldAtmosphere reduced={disableInteractiveMotion || isMobile} />
+      <section className="at-hero" aria-label={copy.gallery}>
+        <div className="at-hero-grid">
+          <div className="at-hero-copy">
+            <div className="at-hero-logo-wrap">
+              <picture>
+                <source srcSet="/images/logo.webp" type="image/webp" />
+                <img className="at-hero-logo" src="/images/logo.png" alt={SERVER_NAME} width={1510} height={370} />
+              </picture>
             </div>
+            <p className="at-hero-description">{copy.hero}</p>
+            <div className="at-hero-action-row flex flex-wrap items-center">
+              <a className="at-primary-action" href={LAUNCHER_DOWNLOAD_URL}>
+                <SvgDownload className="size-4" /> {copy.downloadLauncher}
+              </a>
+              <a className="at-source-action inline-flex items-center gap-2" href="https://github.com/Reijin2312/ArchiTech_Launcher"
+                target="_blank" rel="noreferrer noopener" aria-label={copy.launcherSourceAria} title={copy.launcherSource}>
+                <SvgGitHub className="size-5" />
+              </a>
             </div>
-
-            <div className="mt-7 flex flex-wrap items-center gap-2 md:mt-0 md:mb-2">
-              <a
-                href={LAUNCHER_DOWNLOAD_URL}
-                className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-3 text-center shadow-[0_0_24px_rgba(79,70,229,0.45)] transition hover:bg-indigo-500"
-              >
-                <SvgDownload className="size-5" />
-                {copy.downloadLauncher}
-              </a>
-              <a
-                href="https://github.com/Reijin2312/ArchiTech_Launcher"
-                target="_blank"
-                rel="noreferrer noopener"
-                aria-label={copy.launcherSourceAria}
-                title={copy.launcherSource}
-                className="inline-flex size-11 items-center justify-center text-slate-400 transition hover:scale-110 hover:text-white"
-              >
-                <SvgGitHub className="size-6" />
-              </a>
+            <div className="at-ip-block">
+              <div className="px-3 grid place-items-center border-r">IP</div>
+              <div className="flex-1 grid place-items-center px-3 font-mono">{SERVER_IP}</div>
+              <button type="button" onClick={copyIp} className="px-3 border-l" title={copy.copyIp} aria-label={copy.copyIp}>
+                {copyOk === 'ok' ? <SvgCheck className="size-5"/> : <SvgCopy className="size-5"/>}
+              </button>
+            </div>
+            <div className="at-status-row flex flex-wrap items-center">
+              <Badge label={status == null ? copy.checking : status.online ? copy.online : copy.offline}
+                ok={status == null ? null : status.online} reduceMotion />
+              <span className="inline-flex items-center gap-2">
+                <img src={NEOFORGE_LOGO_URL} alt="" aria-hidden="true" className="size-5 object-contain" />
+                {copy.version}: <strong>1.21.1 NeoForge</strong>
+              </span>
+              {typeof status?.tps === 'number' && <span>TPS: <strong>{status.tps.toFixed(1)}</strong></span>}
+              {typeof status?.latencyMs === 'number' && <span>{copy.ping}: <strong>{status.latencyMs}ms</strong></span>}
+              {ONLINE_COUNTER_ENABLED && (
+                <div className="relative">
+                  <button ref={playersButtonRef} type="button" onClick={() => {
+                    if (isMobile) { const box = playersButtonRef.current?.getBoundingClientRect(); if(box) setPlayersListPosition({top:box.top-8}); }
+                    setShowPlayersList(v => !v);
+                  }} onMouseEnter={() => !isMobile && setShowPlayersList(true)}
+                    className="underline underline-offset-4">{copy.players}: {onlineText}</button>
+                  {showPlayersList && status?.online && Boolean(status.players?.sample?.length) && (
+                    <div className="absolute left-0 top-full z-30 mt-2 max-h-56 w-56 overflow-y-auto border border-stone-600 bg-[#171917] p-3"
+                      style={isMobile ? {top:playersListPosition.top,position:'fixed'} : undefined}
+                      onMouseLeave={() => setShowPlayersList(false)}>
+                      {(status.players?.sample ?? []).map(player => (
+                        <Link key={player.name} className="block py-1 text-xs" to={'/u/' + encodeURIComponent(player.name)}>
+                          {playerAvatars[player.name] && <img className="mr-2 inline size-5 object-cover" src={playerAvatars[player.name]} alt="" />}
+                          {player.name}
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
-
-        <div
-          className="relative flex h-full max-w-full flex-col overflow-x-hidden px-2 md:overflow-visible"
-          onMouseEnter={() => {
-            setSliderPaused(true)
-            setGalleryHover(true)
-          }}
-          onMouseLeave={() => {
-            setSliderPaused(false)
-            setGalleryHover(false)
-          }}
-          onFocus={() => {
-            setSliderPaused(true)
-            setGalleryHover(true)
-          }}
-          onBlur={() => {
-            setSliderPaused(false)
-            setGalleryHover(false)
-          }}
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
-          onTouchCancel={handleTouchCancel}
-        >
-            <div className="aspect-16/10 w-full overflow-hidden rounded-2xl border border-slate-800 shadow-xl">
-            <div className="relative h-full w-full overflow-hidden">
+          <div className="at-gallery"
+            onMouseEnter={() => {setSliderPaused(true);setGalleryHover(true)}}
+            onMouseLeave={() => {setSliderPaused(false);setGalleryHover(false)}}
+            onFocus={() => {setSliderPaused(true);setGalleryHover(true)}}
+            onBlur={event => {if(!event.currentTarget.contains(event.relatedTarget)){setSliderPaused(false);setGalleryHover(false)}}}
+            onTouchStart={handleTouchStart} onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd} onTouchCancel={handleTouchCancel}>
+            <div className="at-gallery-frame">
               <AnimatePresence initial={false} custom={direction}>
-                <motion.div
-                  key={shot}
-                  className="absolute inset-0 h-full w-full"
-                  custom={direction}
-                  initial={disableInteractiveMotion ? false : { opacity: 0, x: 40 * direction, scale: 1.02 }}
-                  animate={{ opacity: 1, x: 0, scale: 1 }}
-                  exit={disableInteractiveMotion ? { opacity: 0 } : { opacity: 0, x: -40 * direction, scale: 0.98 }}
-                  transition={{ type: 'spring', stiffness: 260, damping: 30 }}
-                >
-                  <ResponsiveImage
-                    name={toName(shot) as keyof typeof IMAGES}
-                    alt={copy.galleryAlt}
-                    eager
-                    width={1600}
-                    height={900}
-                    sizes="(max-width:640px) 100vw, (max-width:1024px) 80vw, 1200px"
-                    className="h-full w-full object-cover"
-                  />
+                <motion.div key={shot} className="at-gallery-slide absolute inset-0" custom={direction}
+                  initial={disableInteractiveMotion ? {opacity:0} : {opacity:0,scale:1.055}}
+                  animate={{opacity:1,scale:1}}
+                  exit={{opacity:0}}
+                  transition={{duration:disableInteractiveMotion ? .15 : .92,ease:[.22,1,.36,1]}}>
+                  <ResponsiveImage name={toName(shot) as keyof typeof IMAGES} alt={copy.galleryAlt} eager
+                    width={1920} height={1080} sizes="100vw" className="h-full w-full object-cover"/>
                 </motion.div>
               </AnimatePresence>
-
-              <motion.div
-                className="pointer-events-none absolute inset-x-0 bottom-0 p-4 sm:p-5"
-                initial={false}
-                animate={galleryHover ? { opacity: 1, y: 0 } : { opacity: 0, y: 10 }}
-                transition={
-                  disableInteractiveMotion
-                    ? { duration: 0.12 }
-                    : { type: 'spring', stiffness: 280, damping: 28, mass: 0.65 }
-                }
-              >
-                <div className="w-fit max-w-[90%] rounded-xl border border-slate-700/80 bg-slate-950/90 px-4 py-2.5 shadow-[0_10px_30px_rgba(2,6,23,0.62)]">
-                  <div className="text-[10px] uppercase tracking-[0.14em] text-indigo-300/95">{copy.gallery}</div>
-                  <div className="mt-1 text-sm font-semibold text-slate-100">{activeShotMeta.title}</div>
-                  <div className="text-xs text-slate-300">{activeShotMeta.subtitle}</div>
+              <motion.div className="at-gallery-caption"
+                initial={false} animate={{opacity:galleryHover?1:.85}}
+                transition={{duration:.3}}>
+                <div>
+                  <div className="text-[10px] tracking-wider">{copy.gallery} · {String(activeIndex+1).padStart(2,'0')} / {shots.length}</div>
+                  <div className="mt-1 text-sm font-semibold">{activeShotMeta.title}</div>
+                  <div className="text-xs text-stone-300">{activeShotMeta.subtitle}</div>
                 </div>
               </motion.div>
             </div>
-          </div>
-
-          <motion.div
-            className="mt-3 flex w-full flex-nowrap gap-3 overflow-x-auto py-2 px-2 no-scrollbar md:w-[calc(100%+3rem)] md:-mx-2"
-            layout
-          >
-            {shots.map((_, i) => {
-              const idx = (activeIndex + i) % shots.length
-              const src = shots[idx]
-              const isActive = shot === src
-
-              return (
-                <motion.button
-                  key={src}
-                  layout
-                  variants={thumbVariants}
-                  animate={isActive ? 'active' : 'inactive'}
-                  whileHover={{ scale: 1.05, opacity: 1 }}
-                  whileTap={{ scale: 0.95 }}
-                  transition={thumbSpring}
-                  onClick={() => changeTo(src)}
-                  aria-label={copy.showScreenshot}
-                  className={[
-                    'group relative flex-none w-16 aspect-square rounded-xl ring-offset-2 ring-offset-slate-950 border',
-                    i === 0 ? 'origin-left' : i === shots.length - 1 ? 'origin-right' : 'origin-center',
-                    isActive
-                      ? 'border-transparent ring-2 ring-indigo-500/40'
-                      : 'border-slate-800 ring-0 ring-transparent',
-                  ].join(' ')}
-                >
-                  <ResponsiveImage
-                    name={toName(src) as keyof typeof IMAGES}
-                    alt=""
-                    width={160}
-                    height={160}
-                    sizes="64px"
-                    className="h-full w-full object-cover rounded-xl"
-                  />
+            <div className="at-gallery-thumbs">
+              {shots.map(src => (
+                <motion.button type="button" key={src} onClick={() => changeTo(src)}
+                  variants={thumbVariants} animate={src===shot?'active':'inactive'}
+                  transition={thumbSpring} aria-label={copy.showScreenshot}
+                  className={src===shot?'ring-2 ring-stone-200':'opacity-75'}>
+                  <ResponsiveImage name={toName(src) as keyof typeof IMAGES} alt=""
+                    width={160} height={160} sizes="64px" className="h-full w-full object-cover" />
                 </motion.button>
-              )
-            })}
-            <div className="flex-none w-4" aria-hidden />
-          </motion.div>
+              ))}
+            </div>
+          </div>
         </div>
-      </div>
-      </motion.section>
-
-      <motion.section
-        className="mx-auto max-w-7xl px-4 py-10"
-        initial={disableEntranceMotion ? undefined : { y: 24 }}
-        animate={disableEntranceMotion ? undefined : { y: 0 }}
-        transition={{ duration: 0.5, ease: 'easeOut' }}
-      >
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <CardCTA
-            title={<span className="inline-flex items-center gap-2"><SvgServer className="h-5" />{copy.cards[0][0]}</span>}
-            text={copy.cards[0][1]}
-            href="/about"
-            button={copy.cards[0][2]}
-            reduceMotion={disableInteractiveMotion}
-          />
-          <CardCTA
-            title={<span className="inline-flex items-center gap-2"><SvgModpack className="h-5" />{copy.cards[1][0]}</span>}
-            text={copy.cards[1][1]}
-            href={`${WIKI_URL}#mods`}
-            button={copy.cards[1][2]}
-            reduceMotion={disableInteractiveMotion}
-          />
-          <CardCTA
-            title={<span className="inline-flex items-center gap-2"><SvgRoute className="h-5" />{copy.cards[2][0]}</span>}
-            text={copy.cards[2][1]}
-            href={SHOP_URL}
-            button={copy.cards[2][2]}
-            reduceMotion={disableInteractiveMotion}
-          />
-          <CardCTA
-            title={<span className="inline-flex items-center gap-2"><SvgLauncher className="h-5" />{copy.cards[3][0]}</span>}
-            text={copy.cards[3][1]}
-            href={LAUNCHER_DOWNLOAD_URL}
-            button={copy.cards[3][2]}
-            reduceMotion={disableInteractiveMotion}
-          />
+        <div className="at-hero-arrows">
+          <button type="button" onClick={() => goRelative(-1)} aria-label={language==='ru'?'Предыдущий кадр':'Previous image'}>←</button>
+          <button type="button" onClick={() => goRelative(1)} aria-label={language==='ru'?'Следующий кадр':'Next image'}>→</button>
         </div>
-      </motion.section>
-
-      <motion.section
-        className="mx-auto max-w-7xl px-4 py-10"
+        <span className="at-scroll-cue" aria-hidden="true">{language==='ru'?'Прокрутите вниз':'Scroll to explore'}</span>
+      </section>
+      <section className="at-intro">
+        <div className="at-intro-inner">
+          <div className="at-intro-aside">ARCHITECH / MINECRAFT</div>
+          <div className="at-intro-quote"><p>{copy.hero}</p></div>
+        </div>
+      </section>
+      <section className="at-stories">
+        <div className="at-stories-inner">
+          <ParallaxChapter image="screen9.png" number="01" reduced={disableInteractiveMotion || isMobile}
+            title={copy.cards[0][0]} text={copy.cards[0][1]} href="/about" action={copy.cards[0][2]}/>
+          <ParallaxChapter image="screen3.png" number="02" reduced={disableInteractiveMotion || isMobile}
+            title={copy.cards[1][0]} text={copy.cards[1][1]} href={WIKI_URL+'#mods'} action={copy.cards[1][2]}/>
+          <ParallaxChapter image="screen12.png" number="03" reduced={disableInteractiveMotion || isMobile}
+            title={copy.cards[2][0]} text={copy.cards[2][1]} href={SHOP_URL} action={copy.cards[2][2]}/>
+          <ParallaxChapter image="screen11.png" number="04" reduced={disableInteractiveMotion || isMobile}
+            title={copy.cards[3][0]} text={copy.cards[3][1]} href={LAUNCHER_DOWNLOAD_URL} action={copy.cards[3][2]}/>
+        </div>
+      </section>
+      <section className="at-community">
+        <div className="at-container">
+          <div className="at-section-heading"><div><span className="at-kicker">ARCHITECH / COMMUNITY</span><h2>{copy.team}</h2></div></div>
+          <div className="at-team-editorial"><TeamGrid team={TEAM_MEMBERS} avatars={avatars} disableMotion={disableEntranceMotion}/></div>
+        </div>
+      </section>
+      <section className="at-ranking">
+        <div className="at-container at-ranking-layout">
+          <div className="at-section-heading"><div><span className="at-kicker">ARCHITECH / COMMUNITY</span><h2>{copy.leaderboard}</h2></div></div>
+          <div className="at-rank-editorial">
+            <TopPlayersSection players={leaderboardPlayers} avatars={leaderboardAvatars}
+              loading={leaderboardLoading} range={leaderboardRange} disableMotion />
+          </div>
+        </div>
+      </section>
+      <section className="at-faq">
+        <div className="at-container at-faq-layout">
+          <div className="at-section-heading"><div><span className="at-kicker">ARCHITECH / FAQ</span><h2>{copy.faq}</h2></div></div>
+          <div className="at-faq-editorial">
+                  <motion.section
+        className="at-faq-editorial"
         variants={faqContainer}
         initial={disableEntranceMotion ? undefined : 'hidden'}
         whileInView={disableEntranceMotion ? undefined : 'show'}
         viewport={{ once: true, margin: '-10% 0px' }}
       >
-        <motion.h2
-          className="text-2xl font-semibold mb-6 font-techno"
-          variants={disableEntranceMotion ? undefined : faqItem}
-        >
-          {copy.team}
-        </motion.h2>
-
-        <TeamGrid team={TEAM_MEMBERS} avatars={avatars} disableMotion={disableEntranceMotion} />
-      </motion.section>
-
-      <motion.section
-        className="mx-auto max-w-7xl px-4 py-10"
-        variants={faqContainer}
-        initial={disableEntranceMotion ? undefined : 'hidden'}
-        whileInView={disableEntranceMotion ? undefined : 'show'}
-        viewport={{ once: true, margin: '-10% 0px' }}
-      >
-        <motion.h2
-          className="text-2xl font-semibold mb-6 font-techno"
-          variants={disableEntranceMotion ? undefined : faqItem}
-        >
-          {copy.leaderboard}
-        </motion.h2>
-
-        <TopPlayersSection
-          players={leaderboardPlayers}
-          avatars={leaderboardAvatars}
-          loading={leaderboardLoading}
-          range={leaderboardRange}
-          disableMotion={disableInteractiveMotion}
-        />
-      </motion.section>
-
-      {/* Historical online trend is temporarily hidden from the landing page.
-      <motion.section
-        className="mx-auto max-w-7xl px-4 py-10"
-        variants={faqContainer}
-        initial={disableEntranceMotion ? undefined : 'hidden'}
-        whileInView={disableEntranceMotion ? undefined : 'show'}
-        viewport={{ once: true, margin: '-10% 0px' }}
-      >
-        <motion.h2
-          className="text-2xl font-semibold mb-6 font-techno"
-          variants={disableEntranceMotion ? undefined : faqItem}
-        >
-          Онлайн сервера
-        </motion.h2>
-
-        <OnlineTrendSection
-          points={onlineSeries}
-          range={onlineRange}
-          onRangeChange={setOnlineRange}
-          current={onlineNow}
-          peak={onlinePeak}
-          average={onlineAvg}
-          disableMotion={disableInteractiveMotion}
-        />
-      </motion.section>
-      */}
-
-      <motion.section
-        className="mx-auto max-w-7xl px-4 py-10"
-        variants={faqContainer}
-        initial={disableEntranceMotion ? undefined : 'hidden'}
-        whileInView={disableEntranceMotion ? undefined : 'show'}
-        viewport={{ once: true, margin: '-10% 0px' }}
-      >
-        <motion.h2
-          className="text-2xl font-semibold mb-6 font-techno"
-          variants={disableEntranceMotion ? undefined : faqItem}
-        >
-          {copy.faq}
-        </motion.h2>
+        
 
         <motion.div className="grid gap-3">
           <motion.div variants={disableEntranceMotion ? undefined : faqItem}>
@@ -1154,10 +874,68 @@ export default function HomePage() {
             </motion.div>
             </motion.div>
             </motion.section>
-            </div>
+          </div>
+        </div>
+      </section>
+      <section className="at-end">
+        <img src="/images/screen2.webp" alt="" loading="lazy" aria-hidden="true"/>
+        <div className="at-container at-end-inner">
+          <p>{copy.hero}</p>
+          <a className="at-end-link" href={LAUNCHER_DOWNLOAD_URL}>{copy.downloadLauncher} ↗</a>
+        </div>
+      </section>
+    </div>
+
             </>
           );
         }
+
+
+function WorldAtmosphere({ reduced }: { reduced: boolean }) {
+  const { scrollY } = useScroll()
+  const rearY = useTransform(scrollY, [0, 3800], [0, -230])
+  const frontY = useTransform(scrollY, [0, 3800], [0, 310])
+  const rearSmooth = useSpring(rearY, { stiffness: 55, damping: 32 })
+  const frontSmooth = useSpring(frontY, { stiffness: 55, damping: 32 })
+  return (
+    <div className="at-world" aria-hidden="true">
+      <div className="at-world-stage">
+        <motion.div className="at-world-rear" style={reduced ? undefined : {y:rearSmooth}}/>
+        <motion.div className="at-world-front" style={reduced ? undefined : {y:frontSmooth}}/>
+        <div className="at-world-wash"/>
+      </div>
+    </div>
+  )
+}
+
+function ParallaxChapter({image,number,reduced,title,text,href,action}: {
+ image: string;number:string;reduced:boolean;title:string;text:string;href:string;action:string
+}) {
+  const target = useRef<HTMLElement>(null)
+  const {scrollYProgress} = useScroll({target,offset:['start end','end start']})
+  const y = useTransform(scrollYProgress,[0,1],[-95,95])
+  const opacity = useTransform(scrollYProgress,[.08,.4],[0,1])
+  return (
+    <section ref={target} className="at-chapter">
+      <motion.div className="at-chapter-image" style={reduced ? undefined : {y}}>
+        <ResponsiveImage name={image as keyof typeof IMAGES} alt="" width={1920} height={1080}
+           sizes="100vw" className="h-full w-full object-cover"/>
+      </motion.div>
+      <div className="at-chapter-shade"/>
+      <motion.div className="at-chapter-content"
+        style={reduced ? undefined : {opacity}}
+        initial={reduced ? false : {opacity:0,y:24}}
+        whileInView={{opacity:1,y:0}}
+        viewport={{once:true,amount:.2}}
+        transition={{duration:.8,ease:[.22,1,.36,1]}}>
+        <span className="at-kicker">{number} / ARCHITECH</span>
+        <h2 className="at-chapter-title">{title}</h2>
+        <p className="at-chapter-description">{text}</p>
+        <a className="at-chapter-link" href={href}>{action} <span aria-hidden="true">↗</span></a>
+      </motion.div>
+    </section>
+  )
+}
 
 function Badge({ label, ok, reduceMotion }: { label: string; ok: boolean | null; reduceMotion?: boolean }) {
   return (
@@ -1772,46 +1550,6 @@ function MetricCard({ label, value, accent }: { label: string; value: number; ac
     </div>
   )
 }
-
-const SHINE_EVERY = 4.5 
-const SHINE_DURATION = 0.85
-
-function CardCTA({
-  title, text, href, button, reduceMotion,
-}: { title: React.ReactNode; text: string; href: string; button: string; reduceMotion?: boolean }) {
-  const initialDelay = useMemo(() => Math.random() * SHINE_EVERY, [])
-
-  return (
-    <motion.div
-      whileHover={{ y: -4, scale: 1.01 }}
-      className="relative rounded-2xl border border-slate-800 p-5 bg-linear-to-b from-slate-900/60 to-slate-900/20 backdrop-blur-md backdrop-saturate-150 overflow-hidden"
-    >
-    
-    {!reduceMotion && (
-      <motion.span
-        aria-hidden
-        className="pointer-events-none absolute inset-y-0 -left-1/3 w-1/3 bg-linear-to-r from-transparent via-white/10 to-transparent"
-        initial={{ x: '-40%', opacity: 0 }}
-        animate={{ x: ['-40%', '160%'], opacity: [0, 1, 0] }}
-        transition={{
-          duration: SHINE_DURATION,
-          ease: 'easeOut',
-          delay: initialDelay,
-          repeat: Infinity,
-          repeatType: 'loop',
-          repeatDelay: SHINE_EVERY
-        }}
-        style={{ willChange: 'transform, opacity' }}
-      />
-    )}
-
-    <div className="font-medium text-lg">{title}</div>
-    <div className="text-sm text-slate-300 mt-1 mb-4">{text}</div>
-    <a href={href} className="inline-flex rounded-xl px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-sm">{button}</a>
-    </motion.div>
-  )
-}
-
 
 function StepsGuide({ disableMotion }: { disableMotion?: boolean }) {
   const { language } = useI18n();
