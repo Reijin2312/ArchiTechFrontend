@@ -2,7 +2,6 @@ import './HomePage.premium.css'
 import React, { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { SERVER_NAME, SERVER_IP, RULES_URL, SHOP_URL, WIKI_URL, LAUNCHER_DOWNLOAD_URL } from '@/shared/constants'
-import { useWallpaper } from '@/shared/ui/wallpaper/useWallpaper';
 import { AnimatePresence, motion, useReducedMotion, useScroll, useSpring, useTransform, type Variants, type Transition } from 'framer-motion'
 import { Seo } from '@/shared/seo/seo';
 import { routesMeta } from '@/shared/seo/routesMeta';
@@ -93,7 +92,6 @@ type ShotMeta = {
 }
 
 export default function HomePage() {
-  useWallpaper();
   const { language } = useI18n();
   const copy = homeTranslations[language];
 
@@ -880,7 +878,7 @@ export default function HomePage() {
       <section className="at-end">
         <img src="/images/screen2.webp" alt="" loading="lazy" aria-hidden="true"/>
         <div className="at-container at-end-inner">
-          <p>{copy.hero}</p>
+          <img src="/images/logo.webp" alt={SERVER_NAME} width={360} height={95} className="h-auto max-w-[70vw]" />
           <a className="at-end-link" href={LAUNCHER_DOWNLOAD_URL}>{copy.downloadLauncher} ↗</a>
         </div>
       </section>
@@ -914,7 +912,6 @@ function ParallaxChapter({image,number,reduced,title,text,href,action}: {
   const target = useRef<HTMLElement>(null)
   const {scrollYProgress} = useScroll({target,offset:['start end','end start']})
   const y = useTransform(scrollYProgress,[0,1],[-95,95])
-  const opacity = useTransform(scrollYProgress,[.08,.4],[0,1])
   return (
     <section ref={target} className="at-chapter">
       <motion.div className="at-chapter-image" style={reduced ? undefined : {y}}>
@@ -923,7 +920,6 @@ function ParallaxChapter({image,number,reduced,title,text,href,action}: {
       </motion.div>
       <div className="at-chapter-shade"/>
       <motion.div className="at-chapter-content"
-        style={reduced ? undefined : {opacity}}
         initial={reduced ? false : {opacity:0,y:24}}
         whileInView={{opacity:1,y:0}}
         viewport={{once:true,amount:.2}}
