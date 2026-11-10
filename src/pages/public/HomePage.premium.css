@@ -324,7 +324,7 @@
   height: 100%;
   object-fit: cover;
   object-position: center;
-  filter: saturate(.93) contrast(1.035);
+  filter: brightness(1.09) saturate(.94) contrast(1.025);
 }
 .architech-home .at-hero .at-gallery .at-gallery-caption {
   position: absolute;
@@ -524,7 +524,7 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  filter: saturate(.85) contrast(1.03);
+  filter: brightness(1.055) saturate(.88) contrast(1.02);
 }
 .architech-home .at-chapter:nth-child(2) .at-chapter-image img { object-position: 45% center; }
 .architech-home .at-chapter:nth-child(3) .at-chapter-image img { object-position: 60% center; }
