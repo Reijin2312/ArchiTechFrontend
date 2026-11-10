@@ -187,7 +187,7 @@ function LegacyJoin({ copy }: { copy: typeof aboutTranslations.ru | typeof about
   )
 }
 
-export default function AboutServerPage() {
+export default function AboutServerPage({ seasonNumberOverride }: { seasonNumberOverride?: number } = {}) {
   useWallpaper()
   const { seasonNumber } = useParams<{ seasonNumber?: string }>()
   const { language } = useI18n()
@@ -195,7 +195,8 @@ export default function AboutServerPage() {
   const seasons = useMemo(() => language === 'en'
     ? SEASONS.map((season, index) => ({ ...season, ...englishSeasons[index], features: [...englishSeasons[index].features] }))
     : SEASONS, [language])
-  const season = seasonNumber ? seasons.find(item => String(item.number) === seasonNumber) : undefined
+  const activeSeasonNumber = seasonNumberOverride ? String(seasonNumberOverride) : seasonNumber
+  const season = activeSeasonNumber ? seasons.find(item => String(item.number) === activeSeasonNumber) : undefined
   const reducedMotion = Boolean(useReducedMotion())
   const [playerAvatars, setPlayerAvatars] = useState<Record<string, string>>({})
 
@@ -229,10 +230,10 @@ export default function AboutServerPage() {
   }, [season?.number])
 
   useEffect(() => {
-    if (seasonNumber) window.scrollTo({ top: 0, behavior: 'auto' })
-  }, [seasonNumber])
+    if (activeSeasonNumber) window.scrollTo({ top: 0, behavior: 'auto' })
+  }, [activeSeasonNumber])
 
-  if (seasonNumber && !season) return <Navigate to="/about#seasons" replace />
+  if (activeSeasonNumber && !season) return <Navigate to="/about#seasons" replace />
 
   const seasonUrl = season ? `${ORIGIN}/about/seasons/${season.number}` : undefined
   const pageSeo = season ? {
