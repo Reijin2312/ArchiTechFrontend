@@ -35,17 +35,7 @@ function MinecraftPortrait({ name, src, prominent = false }: {
 
   return (
     <span className={prominent ? 'at-staff-portrait at-staff-portrait--large' : 'at-staff-portrait'}>
-      <span className="at-staff-pixel-head" aria-hidden="true">
-        <svg viewBox="0 0 64 64" fill="none" focusable="false">
-          <path d="M12 8h40v40H12z" fill="#8E836F"/>
-          <path d="M12 8h40v12H12zM12 20h8v8h-8zm32 0h8v8h-8z" fill="#393A34"/>
-          <path d="M20 28h8v8h-8zm16 0h8v8h-8z" fill="#222823"/>
-          <path d="M28 36h8v8h-8z" fill="#BBA783"/>
-          <path d="M20 44h24v4H20z" fill="#41392F"/>
-          <path d="M4 56h56v8H4z" fill="#4F594B"/>
-          <path d="M12 48h40v8H12z" fill="#626C5C"/>
-        </svg>
-      </span>
+      <span className="at-staff-monogram" aria-hidden="true">{name.slice(0, 1).toUpperCase()}</span>
       {src && !failed && (
         <img
           key={src}
@@ -97,41 +87,35 @@ export function HomeTeam({ team, avatars, disableMotion = false }: TeamProps) {
       <motion.article className="at-staff-feature" variants={disableMotion ? undefined : appear}>
         <a className="at-staff-feature-photo" href={founderPath} aria-label={founder.name}>
           <MinecraftPortrait name={founder.name} src={avatars[founder.name]} prominent />
-          <span className="at-staff-photo-index" aria-hidden="true">01 / 0{team.length}</span>
         </a>
         <div className="at-staff-feature-body">
-          <p className="at-staff-eyebrow">{copy.lead}</p>
           <a className="at-staff-founder-name" href={founderPath}>
             <span>{founder.name}</span>
-            <SvgArrowUpRight className="at-staff-arrow" />
+            <SvgArrowUpRight className="at-staff-arrow" aria-hidden="true" />
           </a>
           <p className="at-staff-founder-role">{roleFor(founder, copy)}</p>
           <div className="at-staff-socials">
             {founder.curseForgeUrl && (
-              <a href={founder.curseForgeUrl} target="_blank" rel="noopener noreferrer" aria-label={copy.curseForge} title="CurseForge">
-                <SvgCurseForge />
-                <span>CurseForge</span>
+              <a href={founder.curseForgeUrl} target="_blank" rel="noopener noreferrer" aria-label="CurseForge" title="CurseForge">
+                <SvgCurseForge aria-hidden="true" />
               </a>
             )}
             {founder.modrinthUrl && (
-              <a href={founder.modrinthUrl} target="_blank" rel="noopener noreferrer" aria-label={copy.modrinth} title="Modrinth">
-                <SvgModrinth />
-                <span>Modrinth</span>
+              <a href={founder.modrinthUrl} target="_blank" rel="noopener noreferrer" aria-label="Modrinth" title="Modrinth">
+                <SvgModrinth aria-hidden="true" />
               </a>
             )}
             {founder.githubUrl && (
               <a href={founder.githubUrl} target="_blank" rel="noopener noreferrer" aria-label="GitHub" title="GitHub">
-                <SvgGitHub />
-                <span>GitHub</span>
+                <SvgGitHub aria-hidden="true" />
               </a>
             )}
           </div>
         </div>
-        <span className="at-staff-feature-rule" aria-hidden="true" />
       </motion.article>
 
       <div className="at-staff-grid">
-        {members.map((member, index) => {
+        {members.map(member => {
           const retired = Boolean(member.retiredSince)
           const reason = language === 'ru' ? member.retirementReason ?? copy.left : copy.left
           const retiredTitle = member.retiredSince
@@ -155,10 +139,7 @@ export function HomeTeam({ team, avatars, disableMotion = false }: TeamProps) {
                   <span className="at-staff-former-label">{copy.left} · {member.retiredSince}</span>
                 )}
               </span>
-              <span className="at-staff-person-side">
-                <span className="at-staff-person-index">{String(index + 2).padStart(2, '0')}</span>
-                <SvgArrowUpRight className="at-staff-arrow" />
-              </span>
+              <SvgArrowUpRight className="at-staff-arrow at-staff-person-arrow" aria-hidden="true" />
             </motion.a>
           )
         })}
