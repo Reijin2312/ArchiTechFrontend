@@ -197,6 +197,8 @@ export default function AboutServerPage({ seasonNumberOverride }: { seasonNumber
     : SEASONS, [language])
   const activeSeasonNumber = seasonNumberOverride ? String(seasonNumberOverride) : seasonNumber
   const season = activeSeasonNumber ? seasons.find(item => String(item.number) === activeSeasonNumber) : undefined
+  const previousSeason = season && seasons.find(item => item.number === season.number - 1)
+  const nextSeason = season && seasons.find(item => item.number === season.number + 1)
   const reducedMotion = Boolean(useReducedMotion())
   const [playerAvatars, setPlayerAvatars] = useState<Record<string, string>>({})
 
@@ -230,7 +232,14 @@ export default function AboutServerPage({ seasonNumberOverride }: { seasonNumber
   }, [season?.number])
 
   useEffect(() => {
-    if (activeSeasonNumber) window.scrollTo({ top: 0, behavior: 'auto' })
+    if (activeSeasonNumber) {
+      window.scrollTo({ top: 0, behavior: 'auto' })
+    } else if (window.location.hash === '#seasons') {
+      const frame = window.requestAnimationFrame(() => {
+        document.getElementById('seasons')?.scrollIntoView({ behavior: 'auto', block: 'start' })
+      })
+      return () => window.cancelAnimationFrame(frame)
+    }
   }, [activeSeasonNumber])
 
   if (activeSeasonNumber && !season) return <Navigate to="/about#seasons" replace />
@@ -348,12 +357,12 @@ export default function AboutServerPage({ seasonNumberOverride }: { seasonNumber
             </section>
 
             <nav className="at-legacy-shell at-legacy-season-nav" aria-label={language === 'ru' ? 'Навигация по сезонам' : 'Season navigation'}>
-              {seasons.find(s => s.number === season.number - 1) ? (
-                <Link to={`/about/seasons/${season.number - 1}`}><span>← {language === 'ru' ? 'Предыдущий сезон' : 'Previous season'}</span><strong>{seasons[season.number - 2].name}</strong></Link>
+              {previousSeason ? (
+                <Link to={`/about/seasons/${previousSeason.number}`}><span>← {language === 'ru' ? 'Предыдущий сезон' : 'Previous season'}</span><strong>{previousSeason.name}</strong></Link>
               ) : <span />}
-              {seasons.find(s => s.number === season.number + 1) ? (
-                <Link to={`/about/seasons/${season.number + 1}`}><span>{language === 'ru' ? 'Следующий сезон' : 'Next season'} →</span><strong>{seasons[season.number].name}</strong></Link>
-              ) : <Link to="/about#seasons"><span>{language === 'ru' ? 'Вернуться' : 'Return'} →</span><strong>{copy.history}</strong></Link>}
+              {nextSeason ? (
+                <Link to={`/about/seasons/${nextSeason.number}`}><span>{language === 'ru' ? 'Следующий сезон' : 'Next season'} →</span><strong>{nextSeason.name}</strong></Link>
+              ) : <Link to="/about#seasons"><span>{language === 'ru' ? 'Вернуться' : 'Return'} →</span><strong>{copy.history}</strong></Link>
             </nav>
           </main>
         ) : (
