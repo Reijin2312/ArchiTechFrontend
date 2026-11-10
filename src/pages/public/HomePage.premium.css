@@ -403,7 +403,7 @@
   left: auto;
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: flex-start;
   width: auto !important;
   max-width: min(630px,61vw);
   gap: 8px;
@@ -855,12 +855,21 @@
   }
   .architech-home .at-hero .at-hero-logo-wrap { margin-bottom: 22px; }
   .architech-home .at-hero .at-hero-logo { width: min(430px,96%); }
-  .architech-home .at-hero .at-hero-description { font-size: 15px; line-height: 1.66; }
+  .architech-home .at-hero .at-hero-description { max-width: 100%; font-size: 15.5px; line-height: 1.64; letter-spacing: -.012em; }
   .architech-home .at-hero .at-hero-action-row { margin-top: 22px; }
-  .architech-home .at-primary-action { min-height: 49px; padding: 12px 18px; }
-  .architech-home .at-source-action { width: 49px; height: 49px; }
+  .architech-home .at-hero .at-primary-action { min-height: 50px; padding: 0 19px; }
+  .architech-home .at-hero .at-source-action {
+    min-height: 50px;
+    width: 50px;
+    justify-content: center;
+    border: 1px solid rgba(238,232,220,.33);
+    border-radius: 10px;
+    background: rgba(13,14,13,.35);
+  }
+  .architech-home .at-hero .at-source-action .at-source-label { display: none; }
+  .architech-home .at-hero .at-source-action:hover { background: rgba(238,232,220,.12); }
   .architech-home .at-hero .at-ip-block { width: 100%; max-width: none; margin-top: 18px; }
-  .architech-home .at-hero .at-status-row { gap: 9px; font-size: 11px; }
+  .architech-home .at-hero .at-status-row { gap: 9px; font-size: 12px; }
   .architech-home .at-hero .at-hero-arrows { left: 21px; bottom: 26px; gap: 7px; }
   .architech-home .at-hero .at-hero-arrows button { width: 46px; height: 46px; border-radius: 9px; }
   .architech-home .at-hero .at-scroll-cue { display: none; }
