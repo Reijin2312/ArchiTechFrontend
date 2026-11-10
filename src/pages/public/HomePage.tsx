@@ -1,4 +1,5 @@
 import './HomePage.premium.css'
+import { HomeQuote } from './HomeQuote'
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { SERVER_NAME, SERVER_IP, RULES_URL, SHOP_URL, WIKI_URL, LAUNCHER_DOWNLOAD_URL } from '@/shared/constants'
@@ -565,21 +566,16 @@ export default function HomePage() {
         </div>
         <span className="at-scroll-cue" aria-hidden="true">{language==='ru'?'Прокрутите вниз':'Scroll to explore'}</span>
       </section>
-      <section className="at-intro">
-        <div className="at-intro-inner">
-          <div className="at-intro-aside">ARCHITECH / MINECRAFT</div>
-          <div className="at-intro-quote"><p>{copy.hero}</p></div>
-        </div>
-      </section>
+      <HomeQuote reduced={disableEntranceMotion} fallbackAvatar={avatars[TEAM_MEMBERS[0].name]} />
       <section className="at-stories">
         <div className="at-stories-inner">
-          <ParallaxChapter image="screen9.png" number="01" reduced={disableInteractiveMotion || isMobile}
+          <ParallaxChapter image="screen9.png" number="01" scene={shotMeta['/images/screen9.png']} reduced={disableInteractiveMotion || isMobile}
             title={copy.cards[0][0]} text={copy.cards[0][1]} href="/about" action={copy.cards[0][2]}/>
-          <ParallaxChapter image="screen3.png" number="02" reduced={disableInteractiveMotion || isMobile}
+          <ParallaxChapter image="screen3.png" number="02" scene={shotMeta['/images/screen3.png']} reduced={disableInteractiveMotion || isMobile}
             title={copy.cards[1][0]} text={copy.cards[1][1]} href={WIKI_URL+'#mods'} action={copy.cards[1][2]}/>
-          <ParallaxChapter image="screen12.png" number="03" reduced={disableInteractiveMotion || isMobile}
+          <ParallaxChapter image="screen12.png" number="03" scene={shotMeta['/images/screen12.png']} reduced={disableInteractiveMotion || isMobile}
             title={copy.cards[2][0]} text={copy.cards[2][1]} href={SHOP_URL} action={copy.cards[2][2]}/>
-          <ParallaxChapter image="screen11.png" number="04" reduced={disableInteractiveMotion || isMobile}
+          <ParallaxChapter image="screen11.png" number="04" scene={shotMeta['/images/screen11.png']} reduced={disableInteractiveMotion || isMobile}
             title={copy.cards[3][0]} text={copy.cards[3][1]} href={LAUNCHER_DOWNLOAD_URL} action={copy.cards[3][2]}/>
         </div>
       </section>
@@ -838,30 +834,59 @@ function WorldAtmosphere({ reduced }: { reduced: boolean }) {
   )
 }
 
-function ParallaxChapter({image,number,reduced,title,text,href,action}: {
- image: string;number:string;reduced:boolean;title:string;text:string;href:string;action:string
+const chapterEntrance: Variants = {
+  hidden: { opacity: 0, y: 17 },
+  visible: { opacity: 1, y: 0, transition: { duration: .74, ease: [.22, 1, .36, 1] } },
+}
+
+const chapterSequence: Variants = {
+  hidden: {},
+  visible: { transition: { staggerChildren: .11, delayChildren: .06 } },
+}
+
+function ParallaxChapter({image,number,reduced,title,text,href,action,scene}: {
+  image: string
+  number: string
+  reduced: boolean
+  title: string
+  text: string
+  href: string
+  action: string
+  scene?: ShotMeta
 }) {
   const target = useRef<HTMLElement>(null)
-  const {scrollYProgress} = useScroll({target,offset:['start end','end start']})
-  const yTarget = useTransform(scrollYProgress,[0,1],[-72,72])
-  const y = useSpring(yTarget, {stiffness:65,damping:29,mass:.75})
+  const { scrollYProgress } = useScroll({ target, offset: ['start end', 'end start'] })
+  const yTarget = useTransform(scrollYProgress, [0, 1], [-64, 64])
+  const y = useSpring(yTarget, { stiffness: 68, damping: 32, mass: .7 })
+
   return (
-    <section ref={target} className="at-chapter">
-      <motion.div className="at-chapter-image" style={reduced ? undefined : {y}}>
+    <section ref={target} className={'at-chapter at-chapter--' + number}>
+      <motion.div className="at-chapter-image" style={reduced ? undefined : { y }}>
         <ResponsiveImage name={image as keyof typeof IMAGES} alt="" width={1920} height={1080}
-           sizes="100vw" className="h-full w-full object-cover"/>
+          sizes="100vw" className="h-full w-full object-cover" />
       </motion.div>
-      <div className="at-chapter-shade"/>
+      <div className="at-chapter-shade" aria-hidden="true" />
       <motion.div className="at-chapter-content"
-        initial={reduced ? false : {opacity:0,y:17}}
-        whileInView={{opacity:1,y:0}}
-        viewport={{once:true,amount:.2}}
-        transition={{duration:.95,ease:[.22,1,.36,1]}}>
-        <span className="at-kicker">{number} / ARCHITECH</span>
-        <h2 className="at-chapter-title">{title}</h2>
-        <p className="at-chapter-description">{text}</p>
-        <a className="at-chapter-link" href={href}>{action} <span aria-hidden="true">↗</span></a>
+        variants={reduced ? undefined : chapterSequence}
+        initial={reduced ? false : 'hidden'}
+        whileInView={reduced ? undefined : 'visible'}
+        viewport={{ once: true, amount: .3 }}>
+        <motion.span className="at-kicker at-chapter-kicker" variants={reduced ? undefined : chapterEntrance}>
+          {number} / ARCHITECH
+        </motion.span>
+        <motion.h2 className="at-chapter-title" variants={reduced ? undefined : chapterEntrance}>{title}</motion.h2>
+        <motion.p className="at-chapter-description" variants={reduced ? undefined : chapterEntrance}>{text}</motion.p>
+        <motion.a className="at-chapter-link" href={href} variants={reduced ? undefined : chapterEntrance}>
+          <span>{action}</span><span className="at-chapter-link-arrow" aria-hidden="true">↗</span>
+        </motion.a>
       </motion.div>
+      {scene && (
+        <div className="at-chapter-scene" aria-hidden="true">
+          <span className="at-chapter-scene-index">{number} / 04</span>
+          <span className="at-chapter-scene-title">{scene.title}</span>
+          <span className="at-chapter-scene-subtitle">{scene.subtitle}</span>
+        </div>
+      )}
     </section>
   )
 }
