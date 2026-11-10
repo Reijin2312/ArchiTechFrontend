@@ -29,7 +29,7 @@ function originalExcerpt(language: 'ru' | 'en') {
 export function HomeQuote({ reduced, typewriterReduced = reduced }: { reduced: boolean; typewriterReduced?: boolean }) {
   const { language } = useI18n()
   const root = useRef<HTMLElement>(null)
-  const quoteRef = useRef<HTMLElement>(null)
+  const quoteRef = useRef<HTMLQuoteElement>(null)
   const [nearViewport, setNearViewport] = useState(false)
   const [quoteInView, setQuoteInView] = useState(false)
   const [typedCount, setTypedCount] = useState(0)
