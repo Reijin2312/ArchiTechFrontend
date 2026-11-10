@@ -9,9 +9,11 @@ type Skin3DViewerProps = {
   skinUrl: string
   autoRotate?: boolean
   animated?: boolean
+  background?: string
+  interactive?: boolean
 }
 
-export function Skin3DViewer({ className = '', skinUrl, autoRotate = false, animated = true }: Skin3DViewerProps) {
+export function Skin3DViewer({ className = '', skinUrl, autoRotate = false, animated = true, background = '#0f172a', interactive = true }: Skin3DViewerProps) {
   const { language } = useI18n()
   const wrapRef = useRef<HTMLDivElement | null>(null)
   const viewerRef = useRef<any>(null)
@@ -31,14 +33,14 @@ export function Skin3DViewer({ className = '', skinUrl, autoRotate = false, anim
     wrapRef.current.innerHTML = ''
     wrapRef.current.appendChild(viewer.canvas)
 
-    viewer.background = '#0f172a'
+    viewer.background = background
     viewer.camera.fov = 40
     viewer.camera.zoom = 1
     viewer.camera.near = 0.01
     viewer.camera.far = 1000
     viewer.camera.updateProjectionMatrix()
-    viewer.cameraLight.intensity = 2
-    viewer.globalLight.intensity = 2
+    viewer.cameraLight.intensity = interactive ? 2 : 1.35
+    viewer.globalLight.intensity = interactive ? 2 : 1.8
     viewer.animation = animated ? new skinview3d.IdleAnimation() : null
     if (animated && viewer.animation) viewer.animation.speed = 1
 
@@ -46,6 +48,8 @@ export function Skin3DViewer({ className = '', skinUrl, autoRotate = false, anim
     controls.enableDamping = true
     controls.dampingFactor = 0.08
     controls.enablePan = false
+    controls.enableZoom = interactive
+    controls.enableRotate = interactive
     controls.addEventListener('change', () => viewer.render())
     controlsRef.current = controls
 
@@ -141,7 +145,7 @@ export function Skin3DViewer({ className = '', skinUrl, autoRotate = false, anim
       viewerRef.current = null
       controlsRef.current = null
     }
-  }, [skinUrl, animated])
+  }, [skinUrl, animated, background, interactive])
 
   useEffect(() => {
     const viewer = viewerRef.current
