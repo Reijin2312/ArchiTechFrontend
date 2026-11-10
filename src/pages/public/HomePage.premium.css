@@ -561,13 +561,6 @@
   transition: opacity .45s ease;
 }
 .architech-home .at-testimonial-avatar--hidden { opacity: 0; }
-.architech-home .at-testimonial-portrait-caption {
-  flex-shrink: 0;
-  padding: 18px 0 0;
-  font: 600 10px/1.5 'Golos Text', sans-serif;
-  letter-spacing: .13em;
-  color: #c5aa84;
-}
 .architech-home .at-testimonial-copy {
   align-self: center;
   padding: 45px 0;
@@ -609,14 +602,6 @@
   pointer-events: none;
   opacity: .86;
 }
-.architech-home .at-testimonial-signature { display: flex; gap: 16px; align-items: center; margin-top: 38px; }
-.architech-home .at-testimonial-signature-line { display: block; height: 1px; width: 49px; background: #b49b75; }
-.architech-home .at-testimonial-signature > span:last-child {
-  color: #9d988e;
-  font: 500 10px/1.4 'Golos Text', sans-serif;
-  letter-spacing: .16em;
-}
-
 /* Alternating photo essays, not repetitive slideshow cards.
    Each image has its own vignette; stable charcoal dissolves the edges. */
 .architech-home .at-stories,
