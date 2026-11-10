@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { useI18n } from '@/shared/i18n/I18nProvider'
 import { homeTranslations, teamTranslations } from '@/shared/i18n/translations'
@@ -27,6 +27,8 @@ export function HomeQuote({ reduced, fallbackAvatar }: { reduced: boolean; fallb
   const root = useRef<HTMLElement>(null)
   const [nearViewport, setNearViewport] = useState(false)
   const [skinUrl, setSkinUrl] = useState<string | null>(null)
+  const [skinReady, setSkinReady] = useState(false)
+  const handleSkinReady = useCallback(() => setSkinReady(true), [])
 
   // Defer the WebGL renderer until this section approaches the screen.
   useEffect(() => {
@@ -83,30 +85,30 @@ export function HomeQuote({ reduced, fallbackAvatar }: { reduced: boolean; fallb
           viewport={{ once: true, amount: .18 }}
           transition={{ duration: .95, ease: [.22, 1, .36, 1] }}>
           <div className="at-testimonial-stage">
-            {nearViewport && skinUrl ? (
-              <Suspense fallback={<div className="at-testimonial-skin-placeholder" aria-hidden="true" />}>
+            <img
+              className={'at-testimonial-avatar' + (skinReady ? ' at-testimonial-avatar--hidden' : '')}
+              src={fallbackAvatar || TEAM_AVATAR_FALLBACK}
+              alt=""
+              loading="lazy"
+              decoding="async"
+              onError={(event) => {
+                if (!event.currentTarget.src.endsWith(TEAM_AVATAR_FALLBACK)) {
+                  event.currentTarget.src = TEAM_AVATAR_FALLBACK
+                }
+              }}
+            />
+            {nearViewport && skinUrl && (
+              <Suspense fallback={null}>
                 <Skin3DViewer
                   skinUrl={skinUrl}
                   background="#1b1c19"
                   animated={false}
                   autoRotate={false}
                   interactive={false}
-                  className="at-testimonial-skin"
+                  onReady={handleSkinReady}
+                  className={'at-testimonial-skin' + (skinReady ? ' at-testimonial-skin--visible' : '')}
                 />
               </Suspense>
-            ) : (
-              <img
-                className="at-testimonial-avatar"
-                src={fallbackAvatar || TEAM_AVATAR_FALLBACK}
-                alt=""
-                loading="lazy"
-                decoding="async"
-                onError={(event) => {
-                  if (!event.currentTarget.src.endsWith(TEAM_AVATAR_FALLBACK)) {
-                    event.currentTarget.src = TEAM_AVATAR_FALLBACK
-                  }
-                }}
-              />
             )}
           </div>
           <div className="at-testimonial-portrait-caption" aria-hidden="true">ARCHITECH / MINECRAFT</div>
