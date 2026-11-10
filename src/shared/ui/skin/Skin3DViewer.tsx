@@ -125,7 +125,13 @@ export function Skin3DViewer({ className = '', skinUrl, autoRotate = false, anim
     Promise.resolve(viewer.loadSkin(skinUrl as any))
       .catch(() => {})
       .finally(() => {
+        if (viewerRef.current !== viewer) return
         fitPixels()
+        // The static testimonial should not keep an off-screen WebGL animation loop alive.
+        if (!interactive && !animated) {
+          viewer.renderPaused = true
+          viewer.render()
+        }
       })
 
     const ro = new ResizeObserver(fitPixels)
