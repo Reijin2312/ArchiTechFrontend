@@ -267,7 +267,7 @@ export default function AboutServerPage({ seasonNumberOverride }: { seasonNumber
     <>
       <Seo {...pageSeo} />
       <div className="at-legacy">
-        {season ? (
+        {season && (
           <div className="at-legacy-season">
             <header className="at-legacy-shell at-legacy-detail-header">
               <Link className="at-legacy-back" to="/about#seasons"><span aria-hidden="true">←</span>{language === 'ru' ? 'Все сезоны' : 'All seasons'}</Link>
@@ -365,7 +365,8 @@ export default function AboutServerPage({ seasonNumberOverride }: { seasonNumber
               ) : <Link to="/about#seasons"><span>{language === 'ru' ? 'Вернуться' : 'Return'} →</span><strong>{copy.history}</strong></Link>
             </nav>
           </div>
-        ) : (
+        )}
+        {!season && (
           <div>
             <header className="at-legacy-shell at-legacy-intro">
               <motion.div {...fadeProps}>
