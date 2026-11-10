@@ -11,6 +11,7 @@ import { ModCatalogSection } from '@/pages/public/wiki/ModCatalogSection';
 import { useI18n } from '@/shared/i18n/I18nProvider';
 import { LAUNCHER_DOWNLOAD_URL } from '@/shared/constants';
 import type { TranslationKey } from '@/shared/i18n/translations';
+import './DocumentPages.atelier.css';
 
 export type WikiTocItem = { id: string; title: string; n: number };
 export const WIKI_SECTIONS: WikiTocItem[] = [
@@ -142,7 +143,7 @@ export default function WikiPage() {
     <>
     <Seo {...routesMeta['/wiki']} />
     <motion.div
-      className="mx-auto w-full max-w-7xl grid grid-cols-12 gap-6 px-4 py-6 text-slate-100"
+      className="architech-document architech-wiki mx-auto w-full max-w-7xl grid grid-cols-12 gap-6 px-4 py-6 text-slate-100"
       variants={isMobile ? undefined : pageVariants}
       initial={isMobile ? false : 'hidden'}
       animate={isMobile ? false : 'show'}
