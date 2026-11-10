@@ -123,9 +123,9 @@
   inset: 0;
   pointer-events: none;
   background:
-    linear-gradient(90deg,rgba(13,14,13,.81) 0%,rgba(13,14,13,.57) 27%,rgba(13,14,13,.26) 50%,rgba(13,14,13,.08) 80%,rgba(13,14,13,.05) 100%),
-    linear-gradient(0deg,#171816 0%,rgba(23,24,22,.69) 8%,rgba(23,24,22,.04) 36%,transparent 82%),
-    linear-gradient(180deg,rgba(12,14,13,.1),transparent 19%);
+    radial-gradient(ellipse 68% 98% at 8% 48%, rgba(16,17,15,.49) 0%, rgba(16,17,15,.28) 51%, transparent 100%),
+    linear-gradient(90deg,rgba(14,15,14,.64) 0%,rgba(14,15,14,.40) 34%,rgba(14,15,14,.12) 64%,transparent 92%),
+    linear-gradient(to top,#171816 0%,rgba(23,24,22,.76) 9%,rgba(23,24,22,.08) 31%,transparent 60%);
 }
 .architech-home .at-hero > .at-hero-grid {
   display: block;
@@ -142,15 +142,15 @@
   flex-direction: column;
   justify-content: center;
   min-height: inherit;
-  width: min(625px,53vw);
+  width: min(660px,56vw);
   margin-left: max(5vw,calc((100vw - 1380px)/2));
-  padding: 95px 0 158px;
+  padding: 91px 0 163px;
 }
 .architech-home .at-hero .at-hero-logo-wrap {
   width: 100%;
   max-width: 540px;
   height: auto;
-  margin: 0 0 28px;
+  margin: 0 0 26px;
   justify-content: flex-start;
 }
 .architech-home .at-hero .at-hero-logo {
@@ -161,24 +161,23 @@
   filter: none;
 }
 .architech-home .at-hero .at-hero-description {
-  max-width: 545px;
+  max-width: 590px;
   margin: 0;
   font-family: 'Golos Text',sans-serif;
-  font-size: clamp(16px,1.27vw,18px);
-  line-height: 1.77;
-  letter-spacing: -.012em;
+  font-size: clamp(16.5px,1.15vw,18px);
+  line-height: 1.64;
+  letter-spacing: -.015em;
   font-weight: 400;
-  color: var(--at-ink);
+  color: #f2eee7;
   text-wrap: pretty;
 }
 .architech-home .at-hero .at-hero-action-row {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-top: 31px;
+  gap: 23px;
+  margin-top: 30px;
   margin-bottom: 0;
 }
-.architech-home .at-primary-action,
 .architech-home .at-end-link {
   display: inline-flex;
   align-items: center;
@@ -195,35 +194,67 @@
   letter-spacing: -.015em;
   transition: transform .42s var(--at-ease),background-color .25s ease,border-color .25s ease,box-shadow .3s ease;
 }
-.architech-home .at-primary-action:hover,
 .architech-home .at-end-link:hover {
   transform: translateY(-2px);
   background: #f5ede0 !important;
   border-color: #f5ede0;
   box-shadow: 0 14px 29px rgba(0,0,0,.16) !important;
 }
-.architech-home .at-primary-action:active,
 .architech-home .at-end-link:active { transform: translateY(1px) scale(.985); }
-.architech-home .at-primary-action svg { width: 17px; height: 17px; }
-.architech-home .at-source-action {
-  width: 53px;
-  height: 53px;
+.architech-home .at-hero .at-primary-action {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid var(--at-line-strong);
+  gap: 11px;
+  min-height: 55px;
+  padding: 0 24px;
+  border: 1px solid #e6ddcf;
   border-radius: 11px;
-  background: rgba(20,21,20,.32);
-  color: var(--at-ink);
-  opacity: 1;
-  transition: transform .42s var(--at-ease),background-color .25s ease,border-color .25s ease;
+  background: #e6ddcf;
+  color: #25231f;
+  box-shadow: 0 7px 19px rgba(0,0,0,.11);
+  font: 600 14px/1.2 'Onest',sans-serif;
+  letter-spacing: -.012em;
+  white-space: nowrap;
+  transition: transform .3s var(--at-ease),background-color .23s ease,box-shadow .23s ease;
 }
-.architech-home .at-source-action:hover {
-  transform: translateY(-2px);
-  border-color: rgba(242,239,233,.7);
-  background: rgba(242,239,233,.11);
+.architech-home .at-hero .at-primary-action:hover {
+  background: #f1e8d9;
+  box-shadow: 0 9px 22px rgba(0,0,0,.15);
+  transform: translateY(-1px);
 }
-.architech-home .at-source-action:active { transform: translateY(1px) scale(.97); }
+.architech-home .at-hero .at-primary-action:active {
+  background: #d8cbb8;
+  transform: translateY(1px) scale(.985);
+}
+.architech-home .at-hero .at-primary-action svg { width: 18px; height: 18px; }
+.architech-home .at-hero .at-source-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  width: auto;
+  min-height: 55px;
+  padding: 0 1px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #e4ded3;
+  font: 500 13px/1.2 'Onest',sans-serif;
+  letter-spacing: -.006em;
+  white-space: nowrap;
+  opacity: .96;
+  transition: color .25s ease, opacity .25s ease;
+}
+.architech-home .at-hero .at-source-action svg { width: 19px; height: 19px; }
+.architech-home .at-hero .at-source-action .at-source-label {
+  border-bottom: 1px solid rgba(230,221,207,.35);
+  padding: 3px 0;
+  transition: border-color .2s ease;
+}
+.architech-home .at-hero .at-source-action:hover { color: #fff8ee; opacity: 1; }
+.architech-home .at-hero .at-source-action:hover .at-source-label { border-color: #e4ded3; }
+.architech-home .at-hero .at-source-action:active { opacity: .75; }
 .architech-home .at-ip-block {
   display: inline-flex;
   width: min(100%,422px);
@@ -231,26 +262,26 @@
   min-height: 54px;
   margin-top: 24px;
   overflow: hidden;
-  border: 1px solid var(--at-line-strong);
-  border-radius: 11px;
-  background: rgba(22,23,22,.66);
+  border: 1px solid rgba(238,232,220,.29);
+  border-radius: 10px;
+  background: rgba(18,19,18,.40);
 }
 .architech-home .at-ip-block > div:first-child {
   padding-inline: 16px;
   background: transparent;
   border-color: var(--at-line);
   color: var(--at-brass);
-  font: 600 10px 'Golos Text',sans-serif;
-  letter-spacing: .14em;
+  font: 600 11px 'Golos Text',sans-serif;
+  letter-spacing: .10em;
 }
 .architech-home .at-ip-block > div:nth-child(2) {
   min-width: 0;
   padding-inline: 12px;
   background: transparent;
   color: var(--at-ink);
-  font: 500 clamp(11px,1.1vw,14px)/1.3 'Golos Text',sans-serif;
+  font: 500 clamp(12px,1.05vw,14px)/1.3 'Golos Text',sans-serif;
   font-variant-numeric: tabular-nums;
-  letter-spacing: .055em;
+  letter-spacing: .025em;
 }
 .architech-home .at-ip-block > button {
   min-width: 54px;
@@ -268,8 +299,9 @@
   display: flex;
   gap: 17px;
   flex-wrap: wrap;
-  margin-top: 17px;
-  font: 400 12px/1.5 'Golos Text',sans-serif;
+  align-items: center;
+  margin-top: 16px;
+  font: 400 12.5px/1.5 'Golos Text',sans-serif;
   color: var(--at-ink-secondary);
 }
 .architech-home .at-status-row strong { color: var(--at-ink); font-weight: 600; }
