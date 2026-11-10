@@ -16,10 +16,12 @@ type PublicProfile = { skinUrl?: string | null }
 // It is not a second description of the server or a new marketing slogan.
 function originalExcerpt(language: 'ru' | 'en') {
   const text = homeTranslations[language].hero
-  if (language === 'ru') {
-    return text.match(/где можно возвести завод, улететь на собственном дирижабле и случайно стать магом\./)?.[0] ?? text
-  }
-  return text.match(/build a factory, fly your own airship, and accidentally become a wizard\./)?.[0] ?? text
+  // A verbatim fragment, with only the first letter capitalized for typesetting.
+  const excerpt = language === 'ru'
+    ? text.match(/можно возвести завод, улететь на собственном дирижабле и случайно стать магом\./)?.[0]
+    : text.match(/build a factory, fly your own airship, and accidentally become a wizard\./)?.[0]
+  const source = excerpt ?? text.split('.')[0] + '.'
+  return source.charAt(0).toUpperCase() + source.slice(1)
 }
 
 export function HomeQuote({ reduced, fallbackAvatar }: { reduced: boolean; fallbackAvatar?: string }) {
@@ -111,7 +113,6 @@ export function HomeQuote({ reduced, fallbackAvatar }: { reduced: boolean; fallb
               </Suspense>
             )}
           </div>
-          <div className="at-testimonial-portrait-caption" aria-hidden="true">ARCHITECH / MINECRAFT</div>
         </motion.div>
         <motion.div className="at-testimonial-copy"
           initial={reduced ? false : { opacity: 0, y: 17 }}
@@ -129,10 +130,6 @@ export function HomeQuote({ reduced, fallbackAvatar }: { reduced: boolean; fallb
             <span className="at-testimonial-open-quote" aria-hidden="true">“</span>
             <p>{quote}</p>
           </blockquote>
-          <div className="at-testimonial-signature" aria-hidden="true">
-            <span className="at-testimonial-signature-line" />
-            <span>ARCHITECH MC</span>
-          </div>
         </motion.div>
       </div>
     </section>
