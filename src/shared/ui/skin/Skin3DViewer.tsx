@@ -174,16 +174,54 @@ export function Skin3DViewer({ className = '', skinUrl, autoRotate = false, anim
     const scheduleGaze = () => {
       if (gazeFrame === null) gazeFrame = window.requestAnimationFrame(updateGaze)
     }
+    // Project the real on-screen cursor through the portrait camera. Using the
+    // camera ray (rather than percentages of the browser window) makes the gaze
+    // follow the actual cursor location, including when it is outside the canvas.
+    const pointerRaycaster = new THREE.Raycaster()
+    const pointerNdc = new THREE.Vector2()
+    const aimPlane = new THREE.Plane()
+    const aimPoint = new THREE.Vector3()
     const onPointerMove = (event: PointerEvent) => {
       if (event.pointerType !== 'mouse' || !wrapRef.current) return
       const bounds = wrapRef.current.getBoundingClientRect()
-      if (bounds.bottom < 0 || bounds.top > window.innerHeight) return
-      const centerX = bounds.left + bounds.width * 0.5
-      const centerY = bounds.top + bounds.height * 0.37
-      const x = THREE.MathUtils.clamp((event.clientX - centerX) / (window.innerWidth * 0.5), -1, 1)
-      const y = THREE.MathUtils.clamp((event.clientY - centerY) / (window.innerHeight * 0.5), -1, 1)
-      targetYaw = x * 0.32
-      targetPitch = y * 0.16
+      if (bounds.bottom < 0 || bounds.top > window.innerHeight) {
+        resetGaze()
+        return
+      }
+      if (!bounds.width || !bounds.height) return
+
+      pointerNdc.set(
+        ((event.clientX - bounds.left) / bounds.width) * 2 - 1,
+        1 - ((event.clientY - bounds.top) / bounds.height) * 2,
+      )
+      viewer.camera.updateWorldMatrix(true, false)
+      pointerRaycaster.setFromCamera(pointerNdc, viewer.camera)
+
+      const head = viewer.playerObject.skin.head
+      const parent = head.parent
+      if (!parent) return
+      // The head pivot is below the eyes in skinview3d. Use the eye line as
+      // the gaze origin, unaffected by the head's current interpolation.
+      const headWorld = head.getWorldPosition(new THREE.Vector3())
+        .add(new THREE.Vector3(0, 3.5, 0))
+      const towardCamera = viewer.camera.getWorldPosition(new THREE.Vector3()).sub(headWorld)
+      const gazeDepth = THREE.MathUtils.clamp(towardCamera.length() * 0.45, 12, 24)
+      const planePoint = headWorld.clone().addScaledVector(towardCamera.normalize(), gazeDepth)
+      const cameraForward = viewer.camera.getWorldDirection(new THREE.Vector3())
+      aimPlane.setFromNormalAndCoplanarPoint(cameraForward, planePoint)
+      if (!pointerRaycaster.ray.intersectPlane(aimPlane, aimPoint)) return
+
+      // Body yaw is accounted for by converting both points to head-parent
+      // coordinates. +Z is the front of a Minecraft skin in skinview3d.
+      const localTarget = parent.worldToLocal(aimPoint.clone())
+      const localOrigin = parent.worldToLocal(headWorld.clone())
+      const direction = localTarget.sub(localOrigin)
+      targetYaw = THREE.MathUtils.clamp(Math.atan2(direction.x, direction.z), -0.62, 0.62)
+      targetPitch = THREE.MathUtils.clamp(
+        -Math.atan2(direction.y, Math.hypot(direction.x, direction.z)),
+        -0.34,
+        0.34,
+      )
       scheduleGaze()
     }
     const resetGaze = () => {
