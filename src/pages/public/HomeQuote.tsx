@@ -144,6 +144,7 @@ export function HomeQuote({ reduced, typewriterReduced = reduced }: { reduced: b
                   autoRotate={false}
                   interactive={false}
                   portraitYaw={0.36}
+                  portraitFraming
                   followCursor={!typewriterReduced}
                   onReady={handleSkinReady}
                   onError={handleSkinError}
