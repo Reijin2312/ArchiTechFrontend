@@ -1,16 +1,15 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, Navigate, useParams } from 'react-router-dom'
+import { motion, useReducedMotion, type Variants } from 'framer-motion'
 import { useWallpaper } from '@/shared/ui/wallpaper/useWallpaper'
-import { AnimatePresence, motion, useReducedMotion, type Variants } from 'framer-motion'
 import { Seo } from '@/shared/seo/seo'
-import { routesMeta } from '@/shared/seo/routesMeta'
+import { routesMeta, ORIGIN } from '@/shared/seo/routesMeta'
 import { ResponsiveImage } from '@/shared/ui/image/ResponsiveImage'
 import { IMAGES } from '@/shared/images.manifest'
-import { SvgMcBlockGrass, SvgModpack, SvgShield, SvgGitHub, SvgChevronDown } from '@/shared/ui/image/Icons'
-import { useIsMobile } from '@/shared/ui/utils/useIsMobile'
 import { SERVER_NAME, DISCORD_URL, TELEGRAM_URL, LAUNCHER_DOWNLOAD_URL } from '@/shared/constants'
 import { useI18n } from '@/shared/i18n/I18nProvider'
 import { aboutTranslations, englishSeasons } from '@/shared/i18n/aboutTranslations'
+import './AboutServerPage.atelier.css'
 
 type SeasonPlayer = {
   username: string
@@ -122,408 +121,36 @@ const SEASONS: Season[] = [
   }
 ]
 
-function cx(...v: Array<string | false | undefined | null>) {
-  return v.filter(Boolean).join(' ')
+const reveal: Variants = {
+  hidden: { opacity: 0, y: 20 },
+  show: { opacity: 1, y: 0, transition: { duration: .6, ease: [.22, 1, .36, 1] } },
 }
 
-function GlassCard({
-  className,
-  children
-}: {
-  className?: string
-  children: React.ReactNode
+const revealList: Variants = {
+  hidden: {},
+  show: { transition: { staggerChildren: .09 } },
+}
+
+const imageName = (src: string) => src.split('/').pop()!
+  .replace(/-[a-z0-9]{8,}(?=\.\w+$)/i, '')
+  .replace(/\.(avif|webp)$/i, '.png')
+
+function SeasonPicture({ src, alt, eager = false, sizes = '(max-width: 720px) 100vw, 50vw' }: {
+  src: string
+  alt: string
+  eager?: boolean
+  sizes?: string
 }) {
   return (
-    <div
-      className={cx(
-        'rounded-2xl border border-slate-700/80 bg-slate-900/22 backdrop-blur-xl backdrop-saturate-180 shadow-xl shadow-slate-950/25 ring-1 ring-white/6',
-        className
-      )}
-    >
-      {children}
-    </div>
-  )
-}
-
-export default function AboutServerPage() {
-  useWallpaper()
-  const { language } = useI18n()
-  const copy = aboutTranslations[language]
-  const seasons = useMemo(() => language === 'en'
-    ? SEASONS.map((season, index) => ({ ...season, ...englishSeasons[index], features: [...englishSeasons[index].features] }))
-    : SEASONS, [language])
-
-  const prefersReducedMotion = useReducedMotion()
-  const reduceMotion = Boolean(prefersReducedMotion)
-  const isMobile = useIsMobile()
-  const disableEntranceMotion = reduceMotion || isMobile
-  const disableInteractiveMotion = reduceMotion || isMobile
-
-  const [expandedSeason, setExpandedSeason] = useState<number | null>(null)
-  const [playerAvatars, setPlayerAvatars] = useState<Record<string, string>>({})
-
-  const heroScreenshot = '/images/screen2.png'
-
-  const toName = (p: string) =>
-    p
-      .split('/')
-      .pop()!
-      .replace(/-[a-z0-9]{8,}(?=\.\w+$)/i, '')
-      .replace(/\.(avif|webp)$/i, '.png')
-
-  // Загрузка аватаров игроков
-  useEffect(() => {
-    const allPlayers = seasons.flatMap((s) => s.players.map((p) => p.username))
-    const uniquePlayers = Array.from(new Set(allPlayers))
-
-    const controller = new AbortController()
-    let alive = true
-
-    ;(async () => {
-      const avatars: Record<string, string> = {}
-      await Promise.all(
-        uniquePlayers.map(async (username) => {
-          try {
-            const r = await fetch(`/api/v1/users/by-name?username=${encodeURIComponent(username)}`, {
-              signal: controller.signal
-            })
-            if (!r.ok) return
-            const data = await r.json()
-            if (data.avatarUrl && alive) avatars[username] = data.avatarUrl
-          } catch {}
-        })
-      )
-      if (alive) setPlayerAvatars(avatars)
-    })()
-
-    return () => {
-      alive = false
-      controller.abort()
-    }
-  }, [seasons])
-
-  const containerVariants: Variants = {
-    hidden: { opacity: 0 },
-    show: { opacity: 1, transition: { staggerChildren: 0.09, delayChildren: 0.06 } }
-  }
-
-  const itemVariants: Variants = {
-    hidden: { opacity: 0, y: 18, scale: 0.99 },
-    show: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.42, ease: 'easeOut' } }
-  }
-
-  return (
-    <>
-      <Seo {...routesMeta['/about']} />
-
-      <div className="min-h-dvh text-slate-100 relative overflow-x-hidden">
-        <div className="pointer-events-none absolute inset-0 overflow-hidden">
-          <div className="absolute -top-28 right-[-18%] h-112 w-md rounded-full bg-indigo-500/14 blur-[120px]" />
-          <div className="absolute -bottom-36 left-[-20%] h-128 w-lg rounded-full bg-sky-500/12 blur-[140px]" />
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(99,102,241,0.10),transparent_55%)]" />
-          <div className="absolute inset-0 opacity-[0.07] bg-[radial-gradient(circle,white_1px,transparent_1px)] bg-size-[26px_26px]" />
-        </div>
-
-        <motion.section
-          className="mx-auto max-w-7xl px-4 pb-8 pt-10 md:pt-16 relative"
-          initial={disableEntranceMotion ? undefined : { opacity: 0, y: 22, filter: 'blur(8px)' }}
-          animate={disableEntranceMotion ? undefined : { opacity: 1, y: 0, filter: 'blur(0px)' }}
-          transition={{ duration: 0.5, ease: 'easeOut' }}
-        >
-          <GlassCard className="p-6 md:p-10 bg-slate-900/10 backdrop-blur-none backdrop-saturate-100">
-            <div className="text-center max-w-4xl mx-auto">
-              <h1 className="text-3xl md:text-4xl font-bold mb-4">
-                {copy.title} <span className="text-indigo-400">{SERVER_NAME}</span>
-              </h1>
-              <p className="text-lg text-slate-300">
-                {copy.lead}
-              </p>
-            </div>
-
-            <motion.div
-              className="mt-8 grid gap-6 md:grid-cols-3 md:items-stretch"
-              variants={disableEntranceMotion ? undefined : containerVariants}
-              initial={disableEntranceMotion ? undefined : 'hidden'}
-              animate={disableEntranceMotion ? undefined : 'show'}
-            >
-              <motion.div className="h-full" variants={disableEntranceMotion ? undefined : itemVariants}>
-                <GlassCard className="flex h-full flex-col p-6 bg-slate-900/16 backdrop-blur-2xl backdrop-saturate-200 border-slate-600/80 ring-1 ring-white/12 shadow-[0_20px_40px_-24px_rgba(0,0,0,.85)]">
-                  <div className="size-12 rounded-xl bg-indigo-600/20 grid place-items-center text-indigo-300 mb-4 ring-1 ring-white/10">
-                    <SvgShield className="h-6" />
-                  </div>
-                  <h3 className="text-xl font-semibold mb-2">{copy.cards[0][0]}</h3>
-                  <p className="text-slate-300 text-sm">{copy.cards[0][1]}</p>
-                </GlassCard>
-              </motion.div>
-
-              <motion.div className="h-full" variants={disableEntranceMotion ? undefined : itemVariants}>
-                <GlassCard className="flex h-full flex-col p-6 bg-slate-900/16 backdrop-blur-2xl backdrop-saturate-200 border-slate-600/80 ring-1 ring-white/12 shadow-[0_20px_40px_-24px_rgba(0,0,0,.85)]">
-                  <div className="size-12 rounded-xl bg-emerald-600/20 grid place-items-center text-emerald-300 mb-4 ring-1 ring-white/10">
-                    <SvgModpack className="h-6" />
-                  </div>
-                  <h3 className="text-xl font-semibold mb-2">{copy.cards[1][0]}</h3>
-                  <p className="text-slate-300 text-sm">{copy.cards[1][1]}</p>
-                </GlassCard>
-              </motion.div>
-
-              <motion.div className="h-full" variants={disableEntranceMotion ? undefined : itemVariants}>
-                <GlassCard className="flex h-full flex-col p-6 bg-slate-900/16 backdrop-blur-2xl backdrop-saturate-200 border-slate-600/80 ring-1 ring-white/12 shadow-[0_20px_40px_-24px_rgba(0,0,0,.85)]">
-                  <div className="size-12 rounded-xl bg-sky-600/20 grid place-items-center text-sky-300 mb-4 ring-1 ring-white/10">
-                    <SvgGitHub className="h-6" />
-                  </div>
-                  <h3 className="text-xl font-semibold mb-2">{copy.cards[2][0]}</h3>
-                  <p className="text-slate-300 text-sm">{copy.cards[2][1]}</p>
-                </GlassCard>
-              </motion.div>
-            </motion.div>
-          </GlassCard>
-        </motion.section>
-
-        <motion.section
-          id="gallery"
-          className="mx-auto max-w-7xl px-4 py-10 relative"
-          initial={disableEntranceMotion ? undefined : { opacity: 0, y: 22 }}
-          animate={disableEntranceMotion ? undefined : { opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, ease: 'easeOut', delay: 0.08 }}
-        >
-          <div className="rounded-2xl p-px bg-linear-to-br from-indigo-500/35 via-slate-800/20 to-sky-500/25 shadow-2xl shadow-indigo-900/20">
-            <div className="aspect-video w-full overflow-hidden rounded-2xl border border-slate-800/70 bg-slate-900/30">
-              <ResponsiveImage
-                name={toName(heroScreenshot) as keyof typeof IMAGES}
-                alt={copy.worldAlt}
-                eager
-                width={1920}
-                height={1080}
-                sizes="(max-width: 1280px) 100vw, 1280px"
-                className="h-full w-full object-cover"
-              />
-            </div>
-          </div>
-        </motion.section>
-
-        <motion.section
-          id="seasons"
-          className="mx-auto max-w-7xl px-4 py-10 relative"
-          variants={containerVariants}
-          initial={disableEntranceMotion ? undefined : 'hidden'}
-          whileInView={disableEntranceMotion ? undefined : 'show'}
-          viewport={{ once: true, margin: '-10% 0px' }}
-        >
-          <h2 className="text-2xl md:text-3xl font-semibold mb-8 text-center">{copy.history}</h2>
-
-          <div className="grid gap-4">
-            {seasons.map((season) => {
-              const isOpen = expandedSeason === season.number
-              const isCurrent = !season.legacy
-
-              return (
-                <motion.div key={season.number} variants={disableEntranceMotion ? undefined : itemVariants} className="relative">
-                  <div
-                    className={cx(
-                      'rounded-2xl border overflow-hidden backdrop-blur-xl backdrop-saturate-180 transition-all shadow-lg shadow-slate-950/20',
-                      isCurrent
-                        ? 'border-indigo-500/45 bg-linear-to-br from-indigo-900/20 to-slate-900/14 ring-1 ring-indigo-300/20'
-                        : 'border-slate-700/80 bg-slate-900/20 ring-1 ring-white/6'
-                    )}
-                  >
-                    <button
-                      onClick={() => setExpandedSeason(isOpen ? null : season.number)}
-                      className="w-full text-left px-5 py-4 hover:bg-slate-900/25 flex items-center justify-between transition-colors"
-                      aria-expanded={isOpen}
-                      aria-controls={`season-panel-${season.number}`}
-                    >
-                      <div className="flex items-center gap-4 min-w-0">
-                        <div
-                          className={cx(
-                            'size-12 rounded-xl grid place-items-center text-xl font-bold ring-1 ring-white/10 shrink-0',
-                            isCurrent ? 'bg-indigo-600/25 text-indigo-200' : 'bg-slate-700/25 text-slate-300'
-                          )}
-                        >
-                          {season.number}
-                        </div>
-
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-3 flex-wrap">
-                            <h3 className="text-xl font-semibold truncate">{season.name}</h3>
-                            {isCurrent && (
-                              <span className="text-xs px-2 py-1 rounded-full bg-emerald-500/15 text-emerald-200 border border-emerald-500/25">
-                                {copy.current}
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-sm text-slate-400 mt-1">{season.period}</p>
-                        </div>
-                      </div>
-
-                      <motion.span
-                        className="text-slate-400"
-                        animate={{ rotate: isOpen ? 180 : 0 }}
-                        transition={{ type: 'spring', stiffness: 380, damping: 26 }}
-                      >
-                        <SvgChevronDown className="size-5" />
-                      </motion.span>
-                    </button>
-
-                    <AnimatePresence initial={false}>
-                      {isOpen && (
-                        <motion.div
-                          id={`season-panel-${season.number}`}
-                          initial={{ height: 0, opacity: 0 }}
-                          animate={{ height: 'auto', opacity: 1 }}
-                          exit={{ height: 0, opacity: 0 }}
-                          transition={{ duration: 0.28, ease: 'easeInOut' }}
-                          className="overflow-hidden border-t border-slate-800/80"
-                        >
-                          <div className="px-5 py-4 space-y-6">
-                            <p className="text-slate-300">{season.description}</p>
-
-                            <div>
-                              <h4 className="text-sm font-semibold text-slate-400 mb-2">{copy.events}</h4>
-                              <ul className="space-y-2">
-                                {season.features.map((feature, idx) => (
-                                  <li key={idx} className="flex items-start gap-2 text-sm text-slate-300">
-                                    <span className="text-indigo-400 mt-0.5">▸</span>
-                                    <span>{feature}</span>
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-
-                            {season.screenshots.length > 0 && (
-                              <div>
-                                <h4 className="text-sm font-semibold text-slate-400 mb-3">{copy.builds}</h4>
-                                <div className="grid grid-cols-2 gap-3">
-                                  {season.screenshots.map((screenshot, idx) => (
-                                    <motion.div
-                                      key={screenshot}
-                                      whileHover={disableInteractiveMotion ? undefined : { scale: 1.03 }}
-                                      transition={{ type: 'spring', stiffness: 320, damping: 24 }}
-                                      className="aspect-video rounded-lg overflow-hidden border border-slate-700/50 shadow-md"
-                                    >
-                                      <ResponsiveImage
-                                        name={toName(screenshot) as keyof typeof IMAGES}
-                                        alt={`${season.name} — ${copy.screenshot} ${idx + 1}`}
-                                        width={640}
-                                        height={360}
-                                        sizes="(max-width: 768px) 50vw, 320px"
-                                        className="h-full w-full object-cover"
-                                      />
-                                    </motion.div>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-
-                            {season.players.length > 0 && (
-                              <div>
-                                <h4 className="text-sm font-semibold text-slate-400 mb-3">
-                                  {copy.players} ({season.players.length})
-                                </h4>
-
-                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                                  {season.players.map((player) => {
-                                    const avatar = playerAvatars[player.username]
-                                    return (
-                                      <Link
-                                        key={player.username}
-                                        to={`/u/${encodeURIComponent(player.username)}`}
-                                        className="flex flex-col items-center gap-2 p-3 rounded-xl border border-slate-700/45 bg-slate-900/24 backdrop-blur-md backdrop-saturate-150 hover:bg-slate-800/38 hover:border-slate-600 transition-all group"
-                                      >
-                                        {avatar ? (
-                                          <img
-                                            src={avatar}
-                                            alt={player.username}
-                                            width={48}
-                                            height={48}
-                                            className="w-12 h-12 rounded-lg object-cover border border-slate-700 group-hover:border-slate-600 transition-colors"
-                                            loading="lazy"
-                                            decoding="async"
-                                          />
-                                        ) : (
-                                          <div className="w-12 h-12 rounded-lg border border-slate-700 bg-linear-to-br from-slate-800 to-slate-900 flex items-center justify-center text-lg text-slate-300 group-hover:border-slate-600 transition-colors">
-                                            {player.username[0]?.toUpperCase() || '?'}
-                                          </div>
-                                        )}
-
-                                        <div className="text-center w-full">
-                                          <div className="text-sm text-slate-200 group-hover:text-slate-100 truncate transition-colors">
-                                            {player.username}
-                                          </div>
-                                          {player.role && <div className="text-xs text-slate-500 truncate">{language === 'en' ? englishRole(player.role) : player.role}</div>}
-                                        </div>
-                                      </Link>
-                                    )
-                                  })}
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </div>
-                </motion.div>
-              )
-            })}
-          </div>
-        </motion.section>
-
-        <motion.section
-          id="join"
-          className="mx-auto max-w-7xl px-4 py-10 mb-10 relative"
-          initial={disableEntranceMotion ? undefined : { opacity: 0, y: 22 }}
-          animate={disableEntranceMotion ? undefined : { opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, ease: 'easeOut', delay: 0.12 }}
-        >
-          <div className="rounded-3xl p-px bg-linear-to-br from-indigo-500/45 via-slate-800/20 to-sky-500/30 shadow-2xl shadow-indigo-900/20">
-            <div className="relative rounded-3xl border border-slate-800/70 p-8 md:p-12 bg-slate-900/35 backdrop-blur-md backdrop-saturate-150 overflow-hidden text-center">
-              <div className="pointer-events-none absolute -top-32 -right-32 h-64 w-64 rounded-full bg-indigo-500/14 blur-3xl" />
-              <div className="pointer-events-none absolute -bottom-32 -left-32 h-64 w-64 rounded-full bg-sky-500/14 blur-3xl" />
-
-              <div className="relative z-10">
-                <h2 className="text-2xl md:text-3xl font-bold mb-4">{copy.join}</h2>
-                <p className="text-lg text-slate-300 mb-6 max-w-2xl mx-auto">
-                  {copy.joinText}
-                </p>
-
-                <div className="flex flex-wrap gap-4 justify-center">
-                  <a
-                    href={LAUNCHER_DOWNLOAD_URL}
-                    className="inline-flex rounded-xl px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-medium transition-colors shadow-lg shadow-indigo-900/20"
-                  >
-                    {copy.download}
-                  </a>
-                  <Link
-                    to="/"
-                    className="inline-flex rounded-xl px-6 py-3 border border-slate-700 bg-slate-900/60 hover:bg-slate-800 text-white font-medium transition-colors"
-                  >
-                    {copy.home}
-                  </Link>
-                </div>
-
-                <div className="mt-6 flex flex-wrap gap-4 justify-center text-sm text-slate-400">
-                  <a href={DISCORD_URL} className="hover:text-indigo-300 transition-colors">
-                    Discord
-                  </a>
-                  <span>•</span>
-                  <a href={TELEGRAM_URL} className="hover:text-indigo-300 transition-colors">
-                    Telegram
-                  </a>
-                  <span>•</span>
-                  <a href="/wiki" className="hover:text-indigo-300 transition-colors">
-                    {copy.wiki}
-                  </a>
-                  <span>•</span>
-                  <a href="/rules" className="hover:text-indigo-300 transition-colors">
-                    {copy.rules}
-                  </a>
-                </div>
-              </div>
-            </div>
-          </div>
-        </motion.section>
-      </div>
-    </>
+    <ResponsiveImage
+      name={imageName(src) as keyof typeof IMAGES}
+      alt={alt}
+      eager={eager}
+      width={1440}
+      height={810}
+      sizes={sizes}
+      className="at-legacy-image"
+    />
   )
 }
 
@@ -536,4 +163,259 @@ function englishRole(role: string) {
   if (/Основатель/i.test(role)) return 'Founder'
   if (/Владелец/i.test(role)) return 'Owner & developer'
   return 'Player'
+}
+
+function LegacyJoin({ copy }: { copy: typeof aboutTranslations.ru | typeof aboutTranslations.en }) {
+  return (
+    <section className="at-legacy-join" id="join">
+      <div className="at-legacy-shell at-legacy-join-inner">
+        <span className="at-legacy-kicker">ARCHITECH / COMMUNITY</span>
+        <h2>{copy.join}</h2>
+        <p>{copy.joinText}</p>
+        <div className="at-legacy-actions">
+          <a className="at-legacy-action at-legacy-action--primary" href={LAUNCHER_DOWNLOAD_URL}>{copy.download}<span aria-hidden="true">↗</span></a>
+          <Link className="at-legacy-action at-legacy-action--secondary" to="/">{copy.home}<span aria-hidden="true">↗</span></Link>
+        </div>
+        <nav className="at-legacy-join-links" aria-label="ArchiTech">
+          <a href={DISCORD_URL}>Discord</a>
+          <a href={TELEGRAM_URL}>Telegram</a>
+          <Link to="/wiki">{copy.wiki}</Link>
+          <Link to="/rules">{copy.rules}</Link>
+        </nav>
+      </div>
+    </section>
+  )
+}
+
+export default function AboutServerPage() {
+  useWallpaper()
+  const { seasonNumber } = useParams<{ seasonNumber?: string }>()
+  const { language } = useI18n()
+  const copy = aboutTranslations[language]
+  const seasons = useMemo(() => language === 'en'
+    ? SEASONS.map((season, index) => ({ ...season, ...englishSeasons[index], features: [...englishSeasons[index].features] }))
+    : SEASONS, [language])
+  const season = seasonNumber ? seasons.find(item => String(item.number) === seasonNumber) : undefined
+  const reducedMotion = Boolean(useReducedMotion())
+  const [playerAvatars, setPlayerAvatars] = useState<Record<string, string>>({})
+
+  useEffect(() => {
+    if (!season) return
+    const controller = new AbortController()
+    setPlayerAvatars({})
+    const usernames = Array.from(new Set(season.players.map(player => player.username)))
+    void Promise.all(usernames.map(async username => {
+      try {
+        const response = await fetch(
+          `/api/v1/users/by-name?username=${encodeURIComponent(username)}`,
+          { signal: controller.signal },
+        )
+        if (!response.ok) return null
+        const result = await response.json()
+        return typeof result?.avatarUrl === 'string' && result.avatarUrl
+          ? { username, url: result.avatarUrl as string }
+          : null
+      } catch {
+        return null
+      }
+    })).then(results => {
+      if (!controller.signal.aborted) {
+        const images: Record<string, string> = {}
+        for (const item of results) if (item) images[item.username] = item.url
+        setPlayerAvatars(images)
+      }
+    })
+    return () => controller.abort()
+  }, [season?.number])
+
+  useEffect(() => {
+    if (seasonNumber) window.scrollTo({ top: 0, behavior: 'auto' })
+  }, [seasonNumber])
+
+  if (seasonNumber && !season) return <Navigate to="/about#seasons" replace />
+
+  const seasonUrl = season ? `${ORIGIN}/about/seasons/${season.number}` : undefined
+  const pageSeo = season ? {
+    ...routesMeta['/about'],
+    title: `${season.name} — ${language === 'ru' ? 'История сезона' : 'Season history'} | ArchiTech MC`,
+    description: season.description.slice(0, 170),
+    canonical: seasonUrl,
+    og: { url: seasonUrl, type: 'article', image: `${ORIGIN}${season.screenshots[0]}` },
+    jsonLd: [{
+      '@context': 'https://schema.org', '@type': 'Article',
+      headline: season.name, description: season.description,
+      mainEntityOfPage: seasonUrl, image: `${ORIGIN}${season.screenshots[0]}`,
+      author: { '@type': 'Organization', name: 'ArchiTech MC' }
+    }],
+  } : routesMeta['/about']
+
+  const fadeProps = reducedMotion
+    ? { initial: false as const }
+    : { variants: reveal, initial: 'hidden', whileInView: 'show', viewport: { once: true, amount: .12 } }
+
+  return (
+    <>
+      <Seo {...pageSeo} />
+      <div className="at-legacy">
+        {season ? (
+          <main className="at-legacy-season">
+            <header className="at-legacy-shell at-legacy-detail-header">
+              <Link className="at-legacy-back" to="/about#seasons"><span aria-hidden="true">←</span>{language === 'ru' ? 'Все сезоны' : 'All seasons'}</Link>
+              <div className="at-legacy-detail-topline">
+                <span className="at-legacy-kicker">ARCHITECH / LEGACY / {String(season.number).padStart(2, '0')}</span>
+                {!season.legacy && <span className="at-legacy-current">{copy.current}</span>}
+              </div>
+              <h1>{season.name}</h1>
+              <p className="at-legacy-detail-period">{season.period}</p>
+              <div className="at-legacy-detail-rule" />
+            </header>
+
+            <motion.figure className="at-legacy-shell at-legacy-detail-cover" {...fadeProps}>
+              <SeasonPicture src={season.screenshots[0]} alt={`${season.name} — ${copy.screenshot} 1`} eager sizes="(max-width: 1380px) 100vw, 1380px" />
+              <figcaption>{String(season.number).padStart(2, '0')} / ARCHITECH</figcaption>
+            </motion.figure>
+
+            <section className="at-legacy-shell at-legacy-detail-story" aria-labelledby="at-legacy-story-title">
+              <div className="at-legacy-detail-side">
+                <span className="at-legacy-kicker">01 / {language === 'ru' ? 'ИСТОРИЯ' : 'STORY'}</span>
+                <h2 id="at-legacy-story-title">{language === 'ru' ? 'История сезона' : 'Season story'}</h2>
+              </div>
+              <motion.div className="at-legacy-reading" {...fadeProps}>
+                <p>{season.description}</p>
+              </motion.div>
+            </section>
+
+            <section className="at-legacy-shell at-legacy-detail-story at-legacy-detail-story--events" aria-labelledby="at-legacy-events-title">
+              <div className="at-legacy-detail-side">
+                <span className="at-legacy-kicker">02 / {language === 'ru' ? 'СОБЫТИЯ' : 'EVENTS'}</span>
+                <h2 id="at-legacy-events-title">{copy.events}</h2>
+              </div>
+              <motion.ol className="at-legacy-events" {...fadeProps}>
+                {season.features.map((feature, index) => (
+                  <li key={index}>
+                    <span className="at-legacy-event-index">{String(index + 1).padStart(2, '0')}</span>
+                    <span>{feature}</span>
+                  </li>
+                ))}
+              </motion.ol>
+            </section>
+
+            {season.screenshots.length > 1 && (
+              <section className="at-legacy-shell at-legacy-gallery-section" aria-labelledby="at-legacy-gallery-title">
+                <div className="at-legacy-section-head">
+                  <div>
+                    <span className="at-legacy-kicker">03 / {language === 'ru' ? 'АРХИВ' : 'ARCHIVE'}</span>
+                    <h2 id="at-legacy-gallery-title">{copy.builds}</h2>
+                  </div>
+                  <span className="at-legacy-section-count">{String(season.screenshots.length).padStart(2, '0')} {language === 'ru' ? 'снимка' : 'images'}</span>
+                </div>
+                <motion.div className="at-legacy-gallery" variants={reducedMotion ? undefined : revealList} initial={reducedMotion ? false : 'hidden'} whileInView={reducedMotion ? undefined : 'show'} viewport={{ once: true, amount: .12 }}>
+                  {season.screenshots.slice(1).map((screenshot, index) => (
+                    <motion.figure key={screenshot} variants={reducedMotion ? undefined : reveal} className="at-legacy-gallery-item">
+                      <SeasonPicture src={screenshot} alt={`${season.name} — ${copy.screenshot} ${index + 2}`} />
+                      <figcaption>{String(index + 2).padStart(2, '0')} / {String(season.screenshots.length).padStart(2, '0')}</figcaption>
+                    </motion.figure>
+                  ))}
+                </motion.div>
+              </section>
+            )}
+
+            <section className="at-legacy-shell at-legacy-players-section" aria-labelledby="at-legacy-players-title">
+              <div className="at-legacy-section-head">
+                <div>
+                  <span className="at-legacy-kicker">04 / {language === 'ru' ? 'ЛЮДИ' : 'PEOPLE'}</span>
+                  <h2 id="at-legacy-players-title">{copy.players}</h2>
+                </div>
+                <span className="at-legacy-section-count">{String(season.players.length).padStart(2, '0')}</span>
+              </div>
+              <div className="at-legacy-players">
+                {season.players.map(player => (
+                  <Link className="at-legacy-player" key={player.username} to={`/u/${encodeURIComponent(player.username)}`}>
+                    <span className="at-legacy-avatar">
+                      {playerAvatars[player.username] ? (
+                        <img src={playerAvatars[player.username]} alt="" loading="lazy" decoding="async" />
+                      ) : <span aria-hidden="true">{player.username[0]?.toUpperCase() || '?'}</span>}
+                    </span>
+                    <span className="at-legacy-player-info">
+                      <strong>{player.username}</strong>
+                      {player.role && <small>{language === 'en' ? englishRole(player.role) : player.role}</small>}
+                    </span>
+                    <span className="at-legacy-player-arrow" aria-hidden="true">↗</span>
+                  </Link>
+                ))}
+              </div>
+            </section>
+
+            <nav className="at-legacy-shell at-legacy-season-nav" aria-label={language === 'ru' ? 'Навигация по сезонам' : 'Season navigation'}>
+              {seasons.find(s => s.number === season.number - 1) ? (
+                <Link to={`/about/seasons/${season.number - 1}`}><span>← {language === 'ru' ? 'Предыдущий сезон' : 'Previous season'}</span><strong>{seasons[season.number - 2].name}</strong></Link>
+              ) : <span />}
+              {seasons.find(s => s.number === season.number + 1) ? (
+                <Link to={`/about/seasons/${season.number + 1}`}><span>{language === 'ru' ? 'Следующий сезон' : 'Next season'} →</span><strong>{seasons[season.number].name}</strong></Link>
+              ) : <Link to="/about#seasons"><span>{language === 'ru' ? 'Вернуться' : 'Return'} →</span><strong>{copy.history}</strong></Link>}
+            </nav>
+          </main>
+        ) : (
+          <main>
+            <header className="at-legacy-shell at-legacy-intro">
+              <motion.div {...fadeProps}>
+                <span className="at-legacy-kicker">ARCHITECH / COMMUNITY</span>
+                <h1>{copy.title} <span>{SERVER_NAME}</span></h1>
+                <p className="at-legacy-lead">{copy.lead}</p>
+              </motion.div>
+            </header>
+
+            <motion.figure className="at-legacy-shell at-legacy-world" {...fadeProps}>
+              <SeasonPicture src="/images/screen2.png" alt={copy.worldAlt} eager sizes="(max-width: 1380px) 100vw, 1380px" />
+              <figcaption>ARCHITECH / MINECRAFT</figcaption>
+            </motion.figure>
+
+            <section className="at-legacy-shell at-legacy-values" aria-label={language === 'ru' ? 'Особенности сервера' : 'Server features'}>
+              {copy.cards.map(([title, description], index) => (
+                <div className="at-legacy-value" key={title}>
+                  <span className="at-legacy-value-index">{String(index + 1).padStart(2, '0')}</span>
+                  <h2>{title}</h2>
+                  <p>{description}</p>
+                </div>
+              ))}
+            </section>
+
+            <section className="at-legacy-shell at-legacy-seasons-section" id="seasons" aria-labelledby="at-legacy-seasons-title">
+              <div className="at-legacy-section-head">
+                <div>
+                  <span className="at-legacy-kicker">ARCHITECH / LEGACY</span>
+                  <h2 id="at-legacy-seasons-title">{copy.history}</h2>
+                </div>
+                <p className="at-legacy-seasons-period">{language === 'ru' ? 'Май 2022 — настоящее время' : 'May 2022 — present'}</p>
+              </div>
+
+              <motion.div className="at-legacy-seasons-grid" variants={reducedMotion ? undefined : revealList} initial={reducedMotion ? false : 'hidden'} whileInView={reducedMotion ? undefined : 'show'} viewport={{ once: true, amount: .08 }}>
+                {[...seasons].reverse().map(item => (
+                  <motion.div key={item.number} variants={reducedMotion ? undefined : reveal} className="at-legacy-season-grid-item">
+                    <Link className="at-legacy-season-card" to={`/about/seasons/${item.number}`}>
+                      <div className="at-legacy-season-card-image">
+                        <SeasonPicture src={item.screenshots[0]} alt={`${item.name} — ${copy.screenshot} 1`} />
+                        <span className="at-legacy-image-number">{String(item.number).padStart(2, '0')} / 04</span>
+                      </div>
+                      <div className="at-legacy-season-card-content">
+                        <div className="at-legacy-season-card-topline">
+                          <span className="at-legacy-card-label">{language === 'ru' ? 'СЕЗОН' : 'SEASON'} {String(item.number).padStart(2, '0')}</span>
+                          {!item.legacy && <span className="at-legacy-current">{copy.current}</span>}
+                        </div>
+                        <h3>{item.name}</h3>
+                        <span className="at-legacy-season-period">{item.period}</span>
+                        <p>{item.description}</p>
+                        <span className="at-legacy-season-open">{language === 'ru' ? 'История сезона' : 'Explore season'} <span aria-hidden="true">↗</span></span>
+                      </div>
+                    </Link>
+                  </motion.div>
+                ))}
+              </motion.div>
+            </section>
+          </main>
+        )}
+        <LegacyJoin copy={copy} />
+      </div>
+    </>
+  )
 }
