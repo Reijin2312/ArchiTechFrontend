@@ -650,9 +650,10 @@
   display: inline-flex;
   align-items: center;
   gap: 12px;
-  color: #d0b48c;
-  font-size: 12px;
-  letter-spacing: .13em;
+  color: #e0c59c;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: .105em;
 }
 .architech-home .at-chapter-kicker::before {
   content: '';
@@ -679,20 +680,23 @@
 .architech-home .at-chapter-link {
   display: inline-flex;
   align-items: center;
-  gap: 19px;
-  min-height: 50px;
-  padding: 0 1px;
-  border-bottom: 1px solid rgba(232,221,201,.7);
-  color: #eee6d9;
-  font: 600 15px/1.3 'Onest',sans-serif;
-  letter-spacing: -.012em;
+  gap: 16px;
+  min-height: 54px;
+  padding: 0 2px;
+  border-bottom: 2px solid #cbb08a;
+  color: #f7efe3;
+  font: 600 18px/1.3 'Onest',sans-serif;
+  letter-spacing: -.018em;
+  text-shadow: 0 1px 14px rgba(0,0,0,.25);
   transition: border-color .2s ease, color .2s ease;
 }
-.architech-home .at-chapter-link:hover { color: #fff8ee; border-color: #f1e7d5; }
+.architech-home .at-chapter-link:hover { color: #fffaf2; border-color: #fff1d8; }
 .architech-home .at-chapter-link:active { color: #c7ac86; }
 .architech-home .at-chapter-link-arrow {
   display: inline-block;
-  color: #d5b993;
+  color: #e5c59b;
+  font-size: 21px;
+  line-height: 1;
   transition: transform .34s cubic-bezier(.22,1,.36,1);
 }
 .architech-home .at-chapter-link:hover .at-chapter-link-arrow { transform: translate(3px,-3px); }
@@ -714,18 +718,21 @@
   text-align: left;
 }
 .architech-home .at-chapter-scene-index {
-  color: #c4ab85;
-  font: 600 10px/1.5 'Golos Text',sans-serif;
-  letter-spacing: .12em;
+  color: #dec39c;
+  font: 600 12px/1.5 'Golos Text',sans-serif;
+  letter-spacing: .1em;
+  text-shadow: 0 1px 10px rgba(0,0,0,.48);
 }
 .architech-home .at-chapter-scene-title {
-  color: #e6e0d7;
-  font: 600 15px/1.35 'Onest',sans-serif;
-  letter-spacing: -.015em;
+  color: #f3eee4;
+  font: 600 18px/1.35 'Onest',sans-serif;
+  letter-spacing: -.02em;
+  text-shadow: 0 1px 12px rgba(0,0,0,.5);
 }
 .architech-home .at-chapter-scene-subtitle {
-  color: #bab5ad;
-  font: 400 12px/1.45 'Golos Text',sans-serif;
+  color: #ded8cd;
+  font: 400 14px/1.5 'Golos Text',sans-serif;
+  text-shadow: 0 1px 12px rgba(0,0,0,.55);
 }
 
 /* People: a considered typographic roster, never floating glow cards. */
@@ -1190,7 +1197,7 @@
   .architech-home .at-chapter .at-chapter-title { font-size: clamp(40px,10vw,66px); margin: 18px 0 20px; }
   .architech-home .at-chapter .at-chapter-description { font-size: 16px; line-height: 1.64; margin-bottom: 25px; }
   .architech-home .at-chapter-scene { display: none; }
-  .architech-home .at-chapter-kicker { font-size: 11px; }
+  .architech-home .at-chapter-kicker { font-size: 12px; }
   .architech-home .at-community,
   .architech-home .at-ranking,
   .architech-home .at-faq { padding: 88px 0; }
