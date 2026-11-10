@@ -116,10 +116,10 @@
   overflow: hidden;
   background: #191a18;
 }
-.architech-home .at-hero::after {
+.architech-home .at-hero .at-gallery-frame::after {
   content: '';
   position: absolute;
-  z-index: 1;
+  z-index: 2;
   inset: 0;
   pointer-events: none;
   background:
@@ -288,7 +288,7 @@
 /* Preserve the existing eight shots, thumbnails and hand-written captions. */
 .architech-home .at-hero .at-gallery {
   position: absolute;
-  z-index: 0;
+  z-index: 2;
   inset: 0;
   display: block;
   width: 100%;
@@ -311,6 +311,7 @@
 }
 .architech-home .at-hero .at-gallery .at-gallery-slide {
   position: absolute;
+  z-index: 1;
   top: -7%;
   bottom: -7%;
   left: 0;
@@ -807,7 +808,7 @@
 @media (max-width: 700px) {
   .architech-home .at-container { width: calc(100% - 42px); }
   .architech-home .at-hero { min-height: 720px; height: min(940px,calc(100svh + 60px)); }
-  .architech-home .at-hero::after {
+  .architech-home .at-hero .at-gallery-frame::after {
     background:
       linear-gradient(0deg,rgba(18,19,17,.97) 0%,rgba(18,19,17,.82) 26%,rgba(18,19,17,.43) 68%,rgba(18,19,17,.19) 100%),
       linear-gradient(90deg,rgba(18,19,17,.5),transparent);
