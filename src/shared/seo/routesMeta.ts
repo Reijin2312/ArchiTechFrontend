@@ -262,4 +262,38 @@ export const routesMeta: Record<string, any> = {
   }
 } as const;
 
+
+// Search-friendly archival metadata for every public season story.
+// Keep URLs in sync with AboutServerPage, the router and the static site generator.
+const legacySeasonMeta = [
+  { number: 1, name: 'Мир островов', image: '/images/screen6.png', description: 'Первый сезон ArchiTech: мир островов, первые базы, железные дороги, Медуза-1 и башня Энунция.' },
+  { number: 2, name: 'Мир равнин', image: '/images/screen3.png', description: 'Второй сезон ArchiTech: мир равнин, чёрный замок, озеро спавна, промзона Олимпия и железная дорога.' },
+  { number: 3, name: 'Промышленная революция', image: '/images/screen5.png', description: 'Третий сезон ArchiTech: обновление Minecraft, пересборка модпака, экономика и подготовка мира без вайпов.' },
+  { number: 4, name: 'Инфинити', image: '/images/screen10.png', description: 'Текущий сезон ArchiTech: постоянный мир без полных вайпов, техника, магия и долгосрочные совместные проекты.' },
+];
+for (const item of legacySeasonMeta) {
+  const path = `/about/seasons/${item.number}`;
+  routesMeta[path] = {
+    ...routesMeta['/about'],
+    title: `${item.name} — История сезона | ArchiTech MC`,
+    description: item.description,
+    canonical: `${ORIGIN}${path}`,
+    og: { url: `${ORIGIN}${path}`, type: 'article', image: `${ORIGIN}${item.image}` },
+    jsonLd: [
+      breadcrumb([
+        { name: 'Главная', url: `${ORIGIN}/` },
+        { name: 'О сервере', url: `${ORIGIN}/about` },
+        { name: item.name, url: `${ORIGIN}${path}` },
+      ]),
+      {
+        '@context': 'https://schema.org', '@type': 'Article',
+        headline: item.name, description: item.description,
+        mainEntityOfPage: `${ORIGIN}${path}`,
+        image: `${ORIGIN}${item.image}`,
+        author: { '@type': 'Organization', name: 'ArchiTech MC' },
+      },
+    ],
+  };
+}
+
 export type RoutePath = keyof typeof routesMeta;
