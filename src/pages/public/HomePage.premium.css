@@ -1,359 +1,894 @@
-/* ArchiTech — editorial Minecraft world. Scoped to the homepage only.
-   Photography, restraint, intentional rhythm. No neon, glass cards or ambient glow. */
-.architech-home{
-  --at-bg:#10110f;--at-paper:#f0ece5;--at-subtle:#c7bfb1;--at-muted:#aca69c;
-  --at-brass:#c3a77e;--at-line:rgba(238,233,225,.22);
-  position:relative;isolation:isolate;overflow:clip;background:var(--at-bg);
-  color:var(--at-paper);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;
-  font-size:16px;font-weight:400;-webkit-font-smoothing:antialiased;
-}
-.architech-home *{box-sizing:border-box}
-.architech-home a:focus-visible,.architech-home button:focus-visible{outline:2px solid #e8d4b4;outline-offset:5px}
-.architech-home>section,.architech-home>.at-section-wrap{position:relative;z-index:1}
-.architech-home a{transition:color .3s ease,border-color .3s ease,background-color .3s ease}
-.architech-home .at-kicker{display:block;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--at-brass);font-weight:600}
-.architech-home .at-container{width:min(calc(100% - 9vw),1390px);margin-inline:auto}
-.architech-home .at-headline{font-size:clamp(37px,5.8vw,83px);line-height:1.06;letter-spacing:-.055em;font-weight:630;text-wrap:balance}
-.architech-home .at-rule{height:1px;background:var(--at-line);width:100%}
+@import url('https://fonts.googleapis.com/css2?family=Bona+Nova:wght@400;700&family=Golos+Text:wght@400;500;600;700&family=Onest:wght@400;500;600;700;800&display=swap');
 
-/* Independent fixed-depth layers: the slideshow never drives these. */
-.architech-home .at-world{position:absolute;inset:0;z-index:0;overflow:clip;pointer-events:none}
-.architech-home .at-world-stage{position:sticky;top:0;height:100svh;overflow:hidden}
-.architech-home .at-world-rear,.architech-home .at-world-front,.architech-home .at-world-wash{position:absolute;inset:-16% -8%;will-change:transform}
-.architech-home .at-world-rear{
-  background:url('/images/screen2.webp') center /cover no-repeat;
-  opacity:.18;filter:saturate(.56) contrast(1.13)
+/*
+ * ARCHITECH / ATELIER
+ * Homepage only. Minecraft photography is the visual centre.
+ * No iridescence, neon, glow-shadows, glassmorphism or theatrical gears.
+ * Type: Onest / Golos Text / Bona Nova, all with Cyrillic support.
+ * Motion: scroll-linked transform; one-time editorial reveals; quiet interactions.
+ */
+.architech-home {
+  --at-bg: #171816;
+  --at-bg-deep: #121310;
+  --at-bg-raised: #20211e;
+  --at-bg-paper: #252620;
+  --at-ink: #f2efe9;
+  --at-ink-secondary: #c9c4b9;
+  --at-ink-muted: #b0aa9d;
+  --at-brass: #c5aa84;
+  --at-line: rgba(238,232,220,.19);
+  --at-line-strong: rgba(238,232,220,.36);
+  --at-control: #e6ddcf;
+  --at-control-ink: #25231f;
+  --at-ease: cubic-bezier(.22,1,.36,1);
+  position: relative;
+  isolation: isolate;
+  overflow: clip;
+  background: var(--at-bg);
+  color: var(--at-ink);
+  font-family: 'Golos Text', sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
-.architech-home .at-world-front{
-  background:url('/images/screen3.webp') 75% center/cover no-repeat;
-  opacity:.075;filter:grayscale(.52) contrast(1.25);
-  -webkit-mask-image:linear-gradient(95deg,transparent 30%,#000 100%);
-  mask-image:linear-gradient(95deg,transparent 30%,#000 100%)
+.architech-home *,
+.architech-home *::before,
+.architech-home *::after { box-sizing: border-box; }
+.architech-home :is(a,button):focus-visible {
+  outline: 2px solid #e6ddcf;
+  outline-offset: 4px;
 }
-.architech-home .at-world-wash{
-  inset:0;background:linear-gradient(180deg,rgba(16,17,15,.1),rgba(16,17,15,.74) 50%,#10110f 100%);
-  will-change:auto
+.architech-home button { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.architech-home a { text-decoration: none; }
+.architech-home > section,
+.architech-home > .at-section-wrap { position: relative; z-index: 1; }
+.architech-home .at-container {
+  width: min(calc(100% - 10vw), 1380px);
+  margin-inline: auto;
+}
+.architech-home .at-kicker {
+  display: block;
+  color: var(--at-brass);
+  font-family: 'Golos Text', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .135em;
+  line-height: 1.55;
+  text-transform: uppercase;
+}
+.architech-home .at-section-heading h2,
+.architech-home .at-chapter-title {
+  font-family: 'Onest', sans-serif;
+  font-weight: 600;
+  font-synthesis: none;
+}
+.architech-home .at-rule { height: 1px; background: var(--at-line); }
+
+/* Deep atmosphere, made only from existing in-game photographs.
+   Two layers float behind the whole page; no wallpaper changes on slide switch. */
+.architech-home .at-world {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: clip;
+}
+.architech-home .at-world-stage {
+  position: sticky;
+  top: 0;
+  height: 100svh;
+  overflow: hidden;
+  background: var(--at-bg);
+}
+.architech-home .at-world-rear,
+.architech-home .at-world-front {
+  position: absolute;
+  inset: -16% -8%;
+  will-change: transform;
+}
+.architech-home .at-world-rear {
+  background: url('/images/screen2.webp') 50% 47% / cover no-repeat;
+  opacity: .18;
+  filter: saturate(.72) contrast(1.02);
+}
+.architech-home .at-world-front {
+  background: url('/images/screen3.webp') 78% 42% / cover no-repeat;
+  opacity: .08;
+  filter: saturate(.6);
+  -webkit-mask-image: linear-gradient(90deg,transparent 24%,#000 100%);
+  mask-image: linear-gradient(90deg,transparent 24%,#000 100%);
+}
+.architech-home .at-world-wash {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom,rgba(23,24,22,.22),rgba(23,24,22,.67) 48%,#171816 100%);
 }
 
-/* HERO — full-bleed screenshot instead of the old two-column composition. */
-.architech-home .at-hero{
-  position:relative;min-height:clamp(690px,92svh,1080px);
-  width:100%;max-width:none;margin:0;padding:0;overflow:hidden;
-  display:block;background:#171917
+/* Full-bleed hero — illustration and type are one composed scene. */
+.architech-home .at-hero {
+  position: relative;
+  display: block;
+  width: 100%;
+  min-height: clamp(700px,94svh,1120px);
+  margin: 0;
+  overflow: hidden;
+  background: #191a18;
 }
-.architech-home .at-hero::after{
-  content:"";position:absolute;inset:0;z-index:1;pointer-events:none;
-  background:linear-gradient(90deg,rgba(8,9,8,.92) 0%,rgba(8,9,8,.68) 37%,rgba(8,9,8,.04) 83%),
-  linear-gradient(0deg,rgba(8,9,8,.84) 0%,transparent 32%,rgba(8,9,8,.12) 85%)
+.architech-home .at-hero::after {
+  content: '';
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg,rgba(13,14,13,.81) 0%,rgba(13,14,13,.57) 27%,rgba(13,14,13,.26) 50%,rgba(13,14,13,.08) 80%,rgba(13,14,13,.05) 100%),
+    linear-gradient(0deg,#171816 0%,rgba(23,24,22,.69) 8%,rgba(23,24,22,.04) 36%,transparent 82%),
+    linear-gradient(180deg,rgba(12,14,13,.1),transparent 19%);
 }
-.architech-home .at-hero>.at-hero-grid{display:block;max-width:none;padding:0;margin:0;min-height:inherit;position:static}
-.architech-home .at-hero>.at-hero-grid>.at-hero-copy{
-  position:relative;z-index:3;display:flex;flex-direction:column;
-  justify-content:center;min-height:inherit;margin-left:max(5vw,calc((100vw - 1390px)/2));
-  width:min(610px,54vw);padding:105px 0 175px
+.architech-home .at-hero > .at-hero-grid {
+  display: block;
+  position: static;
+  min-height: inherit;
+  max-width: none;
+  margin: 0;
+  padding: 0;
 }
-.architech-home .at-hero .at-hero-logo-wrap{height:auto;max-width:560px;margin:0 0 22px;justify-content:flex-start}
-.architech-home .at-hero .at-hero-logo{width:min(550px,78vw);height:auto;max-width:100%;filter:none}
-.architech-home .at-hero .at-hero-description{
-  font-size:clamp(15px,1.28vw,18px);line-height:1.8;color:#e6dfd5;
-  max-width:590px;margin:0;text-wrap:pretty
+.architech-home .at-hero > .at-hero-grid > .at-hero-copy {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: inherit;
+  width: min(625px,53vw);
+  margin-left: max(5vw,calc((100vw - 1380px)/2));
+  padding: 95px 0 158px;
 }
-.architech-home .at-hero .at-hero-action-row{margin-top:29px;margin-bottom:0;gap:19px;align-items:center}
-.architech-home .at-hero .at-primary-action{
-  display:inline-flex;align-items:center;justify-content:center;min-height:49px;
-  padding:13px 23px;background:#eee9e1!important;color:#171917!important;
-  border:1px solid #eee9e1;border-radius:2px;box-shadow:none!important;
-  font-size:13px;font-weight:650;letter-spacing:.01em;transform:translateZ(0);
-  transition:background-color .25s ease,transform .35s cubic-bezier(.22,1,.36,1)
+.architech-home .at-hero .at-hero-logo-wrap {
+  width: 100%;
+  max-width: 540px;
+  height: auto;
+  margin: 0 0 28px;
+  justify-content: flex-start;
 }
-.architech-home .at-hero .at-primary-action:hover{background:#d5c7b4!important;transform:translateY(-2px)}
-.architech-home .at-hero .at-source-action{opacity:.9}
-.architech-home .at-hero .at-source-action:hover{opacity:1;transform:translateY(-2px)}
-.architech-home .at-hero .at-ip-block{
-  margin-top:25px;display:inline-flex;max-width:390px;min-height:48px;
-  width:100%;border:1px solid rgba(238,234,224,.36);border-radius:2px;
-  background:rgba(11,13,12,.45);overflow:hidden
+.architech-home .at-hero .at-hero-logo {
+  display: block;
+  width: min(540px,80vw);
+  height: auto;
+  max-width: 100%;
+  filter: none;
 }
-.architech-home .at-hero .at-ip-block>div:first-child{
-  border-color:rgba(238,234,224,.23);background:transparent;font-size:10px;
-  letter-spacing:.15em;font-weight:600;color:#d8cbb7
+.architech-home .at-hero .at-hero-description {
+  max-width: 545px;
+  margin: 0;
+  font-family: 'Golos Text',sans-serif;
+  font-size: clamp(16px,1.27vw,18px);
+  line-height: 1.77;
+  letter-spacing: -.012em;
+  font-weight: 400;
+  color: var(--at-ink);
+  text-wrap: pretty;
 }
-.architech-home .at-hero .at-ip-block>div:nth-child(2){
-  background:transparent;font-size:13px;letter-spacing:.045em;color:#f1eee8
+.architech-home .at-hero .at-hero-action-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 31px;
+  margin-bottom: 0;
 }
-.architech-home .at-hero .at-ip-block button{
-  background:transparent;border-color:rgba(238,234,224,.23);border-radius:0
+.architech-home .at-primary-action,
+.architech-home .at-end-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 53px;
+  padding: 15px 25px;
+  border: 1px solid var(--at-control);
+  border-radius: 11px;
+  background: var(--at-control) !important;
+  color: var(--at-control-ink) !important;
+  box-shadow: 0 10px 25px rgba(0,0,0,.11) !important;
+  font: 600 14px/1.2 'Onest',sans-serif;
+  letter-spacing: -.015em;
+  transition: transform .42s var(--at-ease),background-color .25s ease,border-color .25s ease,box-shadow .3s ease;
 }
-.architech-home .at-hero .at-ip-block button:hover{background:rgba(255,255,255,.10)}
-.architech-home .at-hero .at-status-row{margin-top:15px;gap:16px;font-size:12px;color:#c9c5bd}
-.architech-home .at-hero .at-status-row strong{color:#f0ebe3}
-.architech-home .at-hero .at-status-row [class*="bg-emerald"],.architech-home .at-hero .at-status-row [class*="bg-slate"]{background:rgba(16,17,15,.7)!important}
-.architech-home .at-hero .at-gallery{
-  position:absolute;inset:0;z-index:0;overflow:hidden;display:block;padding:0;margin:0;
-  max-width:none!important;width:100%;height:100%
+.architech-home .at-primary-action:hover,
+.architech-home .at-end-link:hover {
+  transform: translateY(-2px);
+  background: #f5ede0 !important;
+  border-color: #f5ede0;
+  box-shadow: 0 14px 29px rgba(0,0,0,.16) !important;
 }
-.architech-home .at-hero .at-gallery>.at-gallery-frame{
-  position:absolute;inset:0;overflow:hidden;width:100%;height:100%;
-  aspect-ratio:auto;border:0;box-shadow:none;border-radius:0
+.architech-home .at-primary-action:active,
+.architech-home .at-end-link:active { transform: translateY(1px) scale(.985); }
+.architech-home .at-primary-action svg { width: 17px; height: 17px; }
+.architech-home .at-source-action {
+  width: 53px;
+  height: 53px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--at-line-strong);
+  border-radius: 11px;
+  background: rgba(20,21,20,.32);
+  color: var(--at-ink);
+  opacity: 1;
+  transition: transform .42s var(--at-ease),background-color .25s ease,border-color .25s ease;
 }
-.architech-home .at-hero .at-gallery>.at-gallery-frame>div.at-gallery-slide{position:absolute;inset:0}
-.architech-home .at-hero .at-gallery .at-gallery-slide{top:-12%;bottom:-12%;height:124%}
-.architech-home .at-hero .at-gallery .at-gallery-slide img{width:100%;height:100%;object-fit:cover;filter:saturate(.83) contrast(1.07)}
-.architech-home .at-hero .at-gallery .at-gallery-caption{
-  position:absolute;bottom:105px;right:4vw;left:auto;top:auto;opacity:1;
-  padding:0;max-width:min(420px,30vw);text-align:right
+.architech-home .at-source-action:hover {
+  transform: translateY(-2px);
+  border-color: rgba(242,239,233,.7);
+  background: rgba(242,239,233,.11);
 }
-.architech-home .at-hero .at-gallery .at-gallery-caption>div{
-  background:transparent;border:0;border-radius:0;padding:0;box-shadow:none
+.architech-home .at-source-action:active { transform: translateY(1px) scale(.97); }
+.architech-home .at-ip-block {
+  display: inline-flex;
+  width: min(100%,422px);
+  max-width: 422px;
+  min-height: 54px;
+  margin-top: 24px;
+  overflow: hidden;
+  border: 1px solid var(--at-line-strong);
+  border-radius: 11px;
+  background: rgba(22,23,22,.66);
 }
-.architech-home .at-hero .at-gallery .at-gallery-caption [class*="text-indigo"]{
-  color:#d1b997!important;font-size:10px;letter-spacing:.2em;text-transform:uppercase
+.architech-home .at-ip-block > div:first-child {
+  padding-inline: 16px;
+  background: transparent;
+  border-color: var(--at-line);
+  color: var(--at-brass);
+  font: 600 10px 'Golos Text',sans-serif;
+  letter-spacing: .14em;
 }
-.architech-home .at-hero .at-gallery .at-gallery-thumbs{
-  position:absolute;right:4vw;bottom:27px;left:auto;z-index:4;
-  display:flex;justify-content:flex-end;width:auto!important;
-  max-width:min(580px,67vw);margin:0;padding:8px;overflow-x:auto;
-  gap:8px;background:rgba(11,12,11,.49);border:1px solid rgba(234,227,217,.12)
+.architech-home .at-ip-block > div:nth-child(2) {
+  min-width: 0;
+  padding-inline: 12px;
+  background: transparent;
+  color: var(--at-ink);
+  font: 500 clamp(11px,1.1vw,14px)/1.3 'Golos Text',sans-serif;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: .055em;
 }
-.architech-home .at-hero .at-gallery .at-gallery-thumbs button{
-  width:47px;height:47px;flex:0 0 47px;aspect-ratio:1;border:0;border-radius:0;
-  box-shadow:none!important;transition:opacity .3s ease,transform .35s ease
+.architech-home .at-ip-block > button {
+  min-width: 54px;
+  display: grid;
+  place-items: center;
+  padding: 0 16px;
+  background: transparent;
+  border-color: var(--at-line);
+  color: var(--at-ink);
+  transition: background .25s ease,color .25s ease;
 }
-.architech-home .at-hero .at-gallery .at-gallery-thumbs button img{border-radius:0}
-.architech-home .at-hero .at-gallery .at-gallery-thumbs button[class*="ring-2"]{outline:1px solid #eee4d3;outline-offset:2px;box-shadow:none!important}
-.architech-home .at-hero .at-hero-arrows{
-  position:absolute;z-index:4;left:max(5vw,calc((100vw - 1390px)/2));bottom:37px;
-  display:flex;gap:1px
+.architech-home .at-ip-block > button:hover { background: rgba(242,239,233,.11); }
+.architech-home .at-ip-block > button:active { background: rgba(242,239,233,.18); }
+.architech-home .at-status-row {
+  display: flex;
+  gap: 17px;
+  flex-wrap: wrap;
+  margin-top: 17px;
+  font: 400 12px/1.5 'Golos Text',sans-serif;
+  color: var(--at-ink-secondary);
 }
-.architech-home .at-hero .at-hero-arrows button{
-  width:49px;height:46px;border:1px solid rgba(235,227,216,.54);
-  background:rgba(8,9,8,.32);color:#f3ede4;cursor:pointer;font-size:22px;
-  transition:background-color .3s ease
+.architech-home .at-status-row strong { color: var(--at-ink); font-weight: 600; }
+.architech-home .at-status-row > span:first-child {
+  border: 1px solid var(--at-line-strong) !important;
+  border-radius: 999px;
+  padding: 4px 9px;
+  background: rgba(24,25,22,.65) !important;
+  color: var(--at-ink-secondary) !important;
 }
-.architech-home .at-hero .at-hero-arrows button:hover{background:rgba(243,236,227,.2)}
-.architech-home .at-hero .at-scroll-cue{position:absolute;z-index:3;left:max(5vw,calc((100vw - 1390px)/2));bottom:104px;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#d2c2ad}
-.architech-home .at-hero .at-scroll-cue::after{content:"";display:inline-block;margin-left:14px;height:24px;width:1px;background:#d2c2ad;vertical-align:middle}
+.architech-home .at-status-row > span:first-child > span {
+  box-shadow: none !important;
+  opacity: .8;
+}
 
-/* Quiet transition: no cards, no "feature tiles", generous typographic pauses. */
-.architech-home .at-intro{
-  position:relative;background:#141513;display:flex;align-items:center;min-height:350px;
-  border-top:1px solid rgba(222,216,207,.19);border-bottom:1px solid rgba(222,216,207,.19)
+/* Preserve the existing eight shots, thumbnails and hand-written captions. */
+.architech-home .at-hero .at-gallery {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  display: block;
+  width: 100%;
+  max-width: none !important;
+  height: 100%;
+  padding: 0;
+  margin: 0;
+  overflow: hidden;
 }
-.architech-home .at-intro-inner{
-  width:min(calc(100% - 9vw),1390px);margin:auto;padding:95px 0;
-  display:grid;grid-template-columns:1fr 2.5fr;gap:clamp(35px,8vw,150px);align-items:start
+.architech-home .at-hero .at-gallery > .at-gallery-frame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  aspect-ratio: auto;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
 }
-.architech-home .at-intro-quote{font-size:clamp(25px,3vw,46px);line-height:1.3;letter-spacing:-.036em;max-width:860px;color:#f0ece5}
-.architech-home .at-intro-quote p{margin:0}
-.architech-home .at-intro .at-intro-aside{font-size:11px;letter-spacing:.17em;text-transform:uppercase;color:var(--at-brass);padding-top:10px}
+.architech-home .at-hero .at-gallery .at-gallery-slide {
+  position: absolute;
+  top: -7%;
+  bottom: -7%;
+  left: 0;
+  right: 0;
+  height: 114%;
+  will-change: opacity,transform;
+}
+.architech-home .at-hero .at-gallery .at-gallery-slide img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  filter: saturate(.93) contrast(1.035);
+}
+.architech-home .at-hero .at-gallery .at-gallery-caption {
+  position: absolute;
+  z-index: 5;
+  bottom: 114px;
+  right: 5vw;
+  left: auto;
+  top: auto;
+  max-width: min(450px,35vw);
+  padding: 0;
+  text-align: right;
+  opacity: 1;
+  pointer-events: none;
+}
+.architech-home .at-hero .at-gallery .at-gallery-caption > div {
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.architech-home .at-gallery-caption div[class*="tracking-wider"] {
+  color: #d9c4a2;
+  font: 600 11px/1.5 'Golos Text',sans-serif;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+.architech-home .at-gallery-caption div[class*="font-semibold"] {
+  color: var(--at-ink);
+  font: 600 20px/1.25 'Onest',sans-serif;
+  letter-spacing: -.025em;
+}
+.architech-home .at-gallery-caption div[class*="text-stone-300"] {
+  color: #d4cec4;
+  font: 400 13px/1.5 'Golos Text',sans-serif;
+}
+.architech-home .at-hero .at-gallery .at-gallery-thumbs {
+  position: absolute;
+  z-index: 5;
+  bottom: 30px;
+  right: 5vw;
+  left: auto;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  width: auto !important;
+  max-width: min(630px,61vw);
+  gap: 9px;
+  margin: 0;
+  padding: 9px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  border: 1px solid rgba(238,232,220,.20);
+  border-radius: 12px;
+  background: rgba(16,17,16,.65);
+}
+.architech-home .at-hero .at-gallery .at-gallery-thumbs::-webkit-scrollbar { display: none; }
+.architech-home .at-hero .at-gallery .at-gallery-thumbs button {
+  display: block;
+  flex: 0 0 54px;
+  width: 54px;
+  height: 47px;
+  aspect-ratio: auto;
+  overflow: hidden;
+  border: 0;
+  border-radius: 6px;
+  box-shadow: none !important;
+  outline-offset: 3px;
+  transition: opacity .28s ease;
+}
+.architech-home .at-hero .at-gallery .at-gallery-thumbs button img {
+  width: 100%;
+  height: 100%;
+  border-radius: 6px;
+  object-fit: cover;
+}
+.architech-home .at-hero .at-gallery .at-gallery-thumbs button:hover { opacity: 1 !important; }
+.architech-home .at-hero .at-gallery .at-gallery-thumbs button[aria-pressed="true"] {
+  opacity: 1;
+  outline: 1px solid var(--at-ink);
+}
+.architech-home .at-hero .at-hero-arrows {
+  position: absolute;
+  z-index: 5;
+  bottom: 33px;
+  left: max(5vw,calc((100vw - 1380px)/2));
+  display: inline-flex;
+  gap: 8px;
+}
+.architech-home .at-hero .at-hero-arrows button {
+  display: grid;
+  place-items: center;
+  width: 51px;
+  height: 52px;
+  border: 1px solid rgba(238,232,220,.45);
+  border-radius: 11px;
+  background: rgba(20,21,20,.58);
+  color: #f3eee6;
+  font: 400 22px/1 'Onest',sans-serif;
+  box-shadow: none;
+  transition: background-color .24s ease,transform .34s var(--at-ease),border-color .24s ease;
+}
+.architech-home .at-hero .at-hero-arrows button:hover {
+  border-color: rgba(238,232,220,.9);
+  background: rgba(238,232,220,.16);
+  transform: translateY(-2px);
+}
+.architech-home .at-hero .at-hero-arrows button:active { transform: translateY(1px) scale(.97); }
+.architech-home .at-hero .at-scroll-cue {
+  position: absolute;
+  z-index: 5;
+  bottom: 115px;
+  left: max(5vw,calc((100vw - 1380px)/2));
+  color: var(--at-ink-secondary);
+  font: 600 10px/1.4 'Golos Text',sans-serif;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+.architech-home .at-hero .at-scroll-cue::after {
+  content: '';
+  display: inline-block;
+  width: 1px;
+  height: 24px;
+  margin-left: 13px;
+  vertical-align: middle;
+  background: var(--at-brass);
+}
 
-/* Four full-width chapters: existing headings, descriptions, links verbatim. */
-.architech-home .at-stories{
-  width:100%;max-width:none;margin:0;padding:0;
-  position:relative;background:#10110f
+/* A typographic breath between scenes. */
+.architech-home .at-intro {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  min-height: 360px;
+  background: #1b1c19;
+  border-top: 1px solid var(--at-line);
+  border-bottom: 1px solid var(--at-line);
 }
-.architech-home .at-stories>.at-stories-inner{display:block;width:100%;max-width:none;padding:0;margin:0}
-.architech-home .at-chapter{
-  position:relative;min-height:clamp(590px,79svh,960px);width:100%;
-  border:0;border-radius:0;box-shadow:none;overflow:hidden;
-  display:flex;align-items:center;cursor:default;
-  background:#141512
+.architech-home .at-intro-inner {
+  display: grid;
+  grid-template-columns: 1fr 2.5fr;
+  gap: clamp(35px,8vw,155px);
+  align-items: start;
+  width: min(calc(100% - 10vw),1380px);
+  margin-inline: auto;
+  padding: 100px 0;
 }
-.architech-home .at-chapter .at-chapter-image{position:absolute;inset:-16% 0;height:132%;pointer-events:none;will-change:transform}
-.architech-home .at-chapter .at-chapter-image img{
-  width:100%;height:100%;object-fit:cover;filter:saturate(.77) contrast(1.07)
+.architech-home .at-intro-aside {
+  padding-top: 10px;
+  color: var(--at-brass);
+  font: 600 11px/1.5 'Golos Text',sans-serif;
+  letter-spacing: .145em;
 }
-.architech-home .at-chapter:nth-child(2) .at-chapter-image img{object-position:45% center}
-.architech-home .at-chapter:nth-child(3) .at-chapter-image img{object-position:60% center}
-.architech-home .at-chapter .at-chapter-shade{
-  position:absolute;inset:0;pointer-events:none;
-  background:linear-gradient(90deg,rgba(10,11,10,.91) 0%,rgba(10,11,10,.67) 39%,rgba(10,11,10,.12) 86%),
-  linear-gradient(0deg,rgba(9,10,9,.44),transparent 46%,rgba(9,10,9,.1))
+.architech-home .at-intro-quote {
+  max-width: 960px;
+  color: #ede9e2;
+  font: 400 clamp(27px,3.18vw,49px)/1.27 'Bona Nova',Georgia,serif;
+  letter-spacing: -.032em;
+  text-wrap: pretty;
 }
-.architech-home .at-chapter:nth-child(even) .at-chapter-shade{
-  background:linear-gradient(270deg,rgba(10,11,10,.94) 0%,rgba(10,11,10,.69) 39%,rgba(10,11,10,.08) 86%),
-  linear-gradient(0deg,rgba(9,10,9,.44),transparent 46%,rgba(9,10,9,.1))
-}
-.architech-home .at-chapter .at-chapter-content{
-  position:relative;z-index:2;width:min(545px,53vw);
-  margin-left:max(5vw,calc((100vw - 1390px)/2));padding:100px 0
-}
-.architech-home .at-chapter:nth-child(even) .at-chapter-content{
-  margin-left:auto;margin-right:max(5vw,calc((100vw - 1390px)/2))
-}
-.architech-home .at-chapter .at-chapter-title{
-  font-size:clamp(42px,6.15vw,96px);line-height:1.05;letter-spacing:-.06em;
-  font-weight:650;margin:21px 0 24px;max-width:610px;text-wrap:balance
-}
-.architech-home .at-chapter .at-chapter-title svg{display:none}
-.architech-home .at-chapter .at-chapter-description{
-  font-size:clamp(16px,1.33vw,19px);line-height:1.8;color:#e0d9cf;max-width:450px;margin-bottom:35px
-}
-.architech-home .at-chapter .at-chapter-link{
-  display:inline-flex;align-items:center;gap:26px;border-bottom:1px solid rgba(239,230,216,.85);
-  padding-bottom:11px;font-size:14px;color:#f1e9dc;letter-spacing:.01em;font-weight:600;
-  transition:color .25s ease,gap .35s cubic-bezier(.22,1,.36,1)
-}
-.architech-home .at-chapter .at-chapter-link:hover{gap:36px;color:#d5c0a0}
+.architech-home .at-intro-quote p { margin: 0; }
 
-/* People and leaderboard: editorial rows instead of stock "glass" cards. */
-.architech-home .at-community{
-  padding:135px 0 110px;background:rgba(16,17,15,.89)
+/* Four original full-width chapters. Fade every photograph into the SAME
+   charcoal surface on both ends, so no hard cuts on long scroll. */
+.architech-home .at-stories,
+.architech-home .at-stories > .at-stories-inner {
+  display: block;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  background: var(--at-bg);
 }
-.architech-home .at-section-heading{
-  display:flex;justify-content:space-between;align-items:end;gap:35px;
-  padding-bottom:28px;border-bottom:1px solid var(--at-line);margin-bottom:38px
+.architech-home .at-chapter {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: clamp(595px,79svh,990px);
+  overflow: hidden;
+  background: var(--at-bg);
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
 }
-.architech-home .at-section-heading h2{
-  font-size:clamp(36px,5vw,72px);letter-spacing:-.055em;line-height:1.12;
-  font-weight:640;margin:8px 0 0
+.architech-home .at-chapter .at-chapter-image {
+  position: absolute;
+  inset: -13% 0;
+  height: 126%;
+  pointer-events: none;
+  will-change: transform;
+  -webkit-mask-image: linear-gradient(to bottom,transparent 0%,rgba(0,0,0,.65) 13%,#000 27%,#000 74%,rgba(0,0,0,.6) 87%,transparent 100%);
+  mask-image: linear-gradient(to bottom,transparent 0%,rgba(0,0,0,.65) 13%,#000 27%,#000 74%,rgba(0,0,0,.6) 87%,transparent 100%);
 }
-.architech-home .at-team-editorial>div{display:flex;flex-direction:column;gap:0}
-.architech-home .at-team-editorial>div>div{display:flex;flex-direction:column;gap:0;width:100%}
-.architech-home .at-team-editorial [class*="rounded-2xl"]{
-  width:100%;background:transparent!important;border:0!important;border-bottom:1px solid var(--at-line)!important;
-  border-radius:0!important;box-shadow:none!important;backdrop-filter:none!important;
-  transform:none!important;margin:0!important;padding:22px 5px!important
+.architech-home .at-chapter .at-chapter-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: saturate(.85) contrast(1.03);
 }
-.architech-home .at-team-editorial [class*="rounded-2xl"]>div[class*="pointer-events-none"]{display:none}
-.architech-home .at-team-editorial [class*="text-sky-300"],.architech-home .at-team-editorial [class*="text-indigo"]{color:var(--at-brass)!important}
-.architech-home .at-team-editorial img{filter:saturate(.75)}
-.architech-home .at-team-editorial .group:hover{background:rgba(255,255,255,.035)!important}
-.architech-home .at-ranking{
-  padding:125px 0 150px;background:rgba(29,30,27,.94);
-  border-block:1px solid var(--at-line)
+.architech-home .at-chapter:nth-child(2) .at-chapter-image img { object-position: 45% center; }
+.architech-home .at-chapter:nth-child(3) .at-chapter-image img { object-position: 60% center; }
+.architech-home .at-chapter .at-chapter-shade {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg,rgba(16,17,15,.84) 0%,rgba(16,17,15,.57) 38%,rgba(16,17,15,.10) 79%),
+    linear-gradient(to bottom,#171816 0%,transparent 24%,transparent 73%,#171816 100%);
 }
-.architech-home .at-ranking-layout{
-  display:grid;grid-template-columns:.75fr 1.25fr;
-  gap:clamp(40px,9vw,155px);align-items:start
+.architech-home .at-chapter:nth-child(even) .at-chapter-shade {
+  background:
+    linear-gradient(270deg,rgba(16,17,15,.85) 0%,rgba(16,17,15,.56) 38%,rgba(16,17,15,.1) 79%),
+    linear-gradient(to bottom,#171816 0%,transparent 24%,transparent 73%,#171816 100%);
 }
-.architech-home .at-ranking .at-section-heading{border:0;margin:0;position:sticky;top:105px}
-.architech-home .at-rank-editorial>div{
-  border:0!important;border-radius:0!important;background:transparent!important;
-  box-shadow:none!important;backdrop-filter:none!important;padding:0!important
+.architech-home .at-chapter .at-chapter-content {
+  position: relative;
+  z-index: 2;
+  align-self: center;
+  width: min(555px,51vw);
+  margin-left: max(5vw,calc((100vw - 1380px)/2));
+  padding: 105px 0;
 }
-.architech-home .at-rank-editorial [class*="rounded-xl"]{
-  background:transparent!important;border:0!important;border-bottom:1px solid var(--at-line)!important;
-  border-radius:0!important;box-shadow:none!important;filter:none!important
+.architech-home .at-chapter:nth-child(even) .at-chapter-content {
+  margin-left: auto;
+  margin-right: max(5vw,calc((100vw - 1380px)/2));
 }
-.architech-home .at-rank-editorial a[class*="rounded-xl"]{outline-offset:5px}
-.architech-home .at-rank-editorial .relative.overflow-hidden.rounded-xl{
-  padding:23px 7px!important;transition:background-color .3s ease
+.architech-home .at-chapter .at-chapter-title {
+  max-width: 610px;
+  margin: 17px 0 26px;
+  color: var(--at-ink);
+  font-size: clamp(45px,6.25vw,98px);
+  line-height: 1.09;
+  letter-spacing: -.055em;
+  text-wrap: balance;
 }
-.architech-home .at-rank-editorial .relative.overflow-hidden.rounded-xl:hover{background:rgba(255,255,255,.045)!important}
-.architech-home .at-rank-editorial .relative.size-11{border:1px solid rgba(240,233,223,.25)!important}
-.architech-home .at-rank-editorial [class*="text-sky-300"],.architech-home .at-rank-editorial [class*="text-amber"]{color:#d9c19d!important}
-.architech-home .at-rank-editorial [class*="text-orange"]{color:#ccb399!important}
-.architech-home .at-rank-editorial .animate-pulse{animation:none!important}
-.architech-home .at-faq{
-  padding:135px 0 165px;background:rgba(16,17,15,.93)
+.architech-home .at-chapter .at-chapter-description {
+  max-width: 480px;
+  margin: 0 0 34px;
+  color: #e0d9cf;
+  font: 400 clamp(16px,1.33vw,19px)/1.7 'Golos Text',sans-serif;
+  letter-spacing: -.01em;
 }
-.architech-home .at-faq-layout{
-  display:grid;grid-template-columns:.74fr 1.26fr;
-  align-items:start;gap:clamp(40px,9vw,155px)
+.architech-home .at-chapter .at-chapter-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 20px;
+  min-height: 50px;
+  padding: 0 2px;
+  border-bottom: 1px solid rgba(240,232,221,.7);
+  color: var(--at-ink);
+  font: 600 15px/1.3 'Onest',sans-serif;
+  letter-spacing: -.015em;
+  transition: gap .42s var(--at-ease),border-color .25s ease,color .25s ease;
 }
-.architech-home .at-faq .at-section-heading{position:sticky;top:105px;border:0;margin:0}
-.architech-home .at-faq-editorial{border-top:1px solid var(--at-line)}
-.architech-home .at-faq-editorial>div{gap:0!important}
-.architech-home .at-faq-editorial [class*="rounded-2xl"]{
-  background:transparent!important;border:0!important;border-radius:0!important;
-  box-shadow:none!important;backdrop-filter:none!important
+.architech-home .at-chapter .at-chapter-link:hover {
+  gap: 30px;
+  border-color: var(--at-ink);
+  color: #ffffff;
 }
-.architech-home .at-faq-editorial [class*="rounded-2xl"] [class*="bg-sky"],.architech-home .at-faq-editorial [class*="rounded-2xl"] [class*="bg-indigo"]{background:transparent!important}
-.architech-home .at-faq-editorial [class*="rounded-2xl"] [class*="text-sky"],.architech-home .at-faq-editorial [class*="rounded-2xl"] [class*="text-indigo"]{color:var(--at-brass)!important}
-.architech-home .at-faq-editorial [class*="rounded-2xl"]>button{
-  border-bottom:1px solid var(--at-line)!important;
-  background:transparent!important;padding:25px 3px!important;
-  font-size:clamp(15px,1.35vw,18px);color:#eee8de;transition:color .25s ease
-}
-.architech-home .at-faq-editorial [class*="rounded-2xl"]>button:hover{color:#d8bc97}
-.architech-home .at-faq-editorial [class*="rounded-2xl"]>div{padding:23px 5px 29px!important}
-.architech-home .at-faq-editorial [class*="rounded-xl"]{border:1px solid var(--at-line)!important;background:rgba(255,255,255,.035)!important;border-radius:3px!important}
-.architech-home .at-faq-editorial [class*="bg-indigo-600"],.architech-home .at-faq-editorial [class*="bg-sky-600"]{background:#d2b891!important;color:#121310!important}
-.architech-home .at-faq-editorial [class*="text-slate-300"]{color:#c9c3b9!important}
-.architech-home .at-faq-editorial [class*="text-slate-400"]{color:#ada69a!important}
-.architech-home .at-faq-editorial .font-techno,.architech-home .at-community .font-techno,.architech-home .at-ranking .font-techno{font-family:inherit;letter-spacing:inherit}
-.architech-home .at-end{
-  position:relative;min-height:410px;display:flex;align-items:center;
-  overflow:hidden;background:#131613;border-top:1px solid var(--at-line)
-}
-.architech-home .at-end>img{
-  position:absolute;inset:0;width:100%;height:100%;object-fit:cover;
-  filter:saturate(.57) brightness(.35)
-}
-.architech-home .at-end::after{
-  content:"";position:absolute;inset:0;pointer-events:none;
-  background:linear-gradient(90deg,rgba(10,12,10,.88),rgba(10,12,10,.28))
-}
-.architech-home .at-end-inner{position:relative;z-index:1;padding:85px 0;display:flex;flex-wrap:wrap;gap:25px;align-items:center;justify-content:space-between}
-.architech-home .at-end-inner p{font-size:clamp(21px,2.6vw,39px);line-height:1.25;letter-spacing:-.04em;max-width:610px;margin:0}
-.architech-home .at-end-link{display:inline-flex;border:1px solid #f1eadd;background:#f1eadd;color:#161715!important;
-  border-radius:2px;padding:15px 23px;font-size:13px;font-weight:650;transition:transform .3s ease,background .3s ease}
-.architech-home .at-end-link:hover{background:#d6c7b1;transform:translateY(-2px)}
-.architech-home .at-reveal{will-change:transform,opacity}
-.architech-home .at-progress{position:fixed;z-index:9;top:0;left:0;width:100%;height:2px;transform-origin:0 50%;background:#c4a77c;pointer-events:none}
+.architech-home .at-chapter .at-chapter-link:active { gap: 24px; }
 
-@media(max-width:950px){
-  .architech-home .at-hero>.at-hero-grid>.at-hero-copy{width:min(590px,75vw)}
-  .architech-home .at-intro-inner{grid-template-columns:1fr;gap:35px}
-  .architech-home .at-ranking-layout,.architech-home .at-faq-layout{grid-template-columns:1fr;gap:45px}
-  .architech-home .at-ranking .at-section-heading,.architech-home .at-faq .at-section-heading{position:static}
-  .architech-home .at-gallery .at-gallery-caption{display:none}
-  .architech-home .at-hero .at-gallery .at-gallery-thumbs{max-width:55vw}
+/* People: a considered typographic roster, never floating glow cards. */
+.architech-home .at-community {
+  padding: 130px 0 120px;
+  background: #1b1c19;
+  border-top: 1px solid var(--at-line);
 }
-@media(max-width:700px){
-  .architech-home .at-container{width:calc(100% - 40px)}
-  .architech-home .at-hero{min-height:710px;height:calc(100svh - 40px)}
-  .architech-home .at-hero::after{
-    background:linear-gradient(0deg,rgba(7,8,7,.92),rgba(7,8,7,.56) 54%,rgba(7,8,7,.23)),
-    linear-gradient(90deg,rgba(7,8,7,.6),transparent)
+.architech-home .at-section-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 35px;
+  margin-bottom: 42px;
+  padding-bottom: 29px;
+  border-bottom: 1px solid var(--at-line);
+}
+.architech-home .at-section-heading h2 {
+  margin: 10px 0 0;
+  font-size: clamp(38px,5.2vw,75px);
+  line-height: 1.09;
+  letter-spacing: -.052em;
+  color: var(--at-ink);
+}
+.architech-home .at-team-editorial > div,
+.architech-home .at-team-editorial > div > div {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  gap: 0;
+}
+.architech-home .at-team-editorial [class*="rounded-2xl"] {
+  width: 100%;
+  margin: 0 !important;
+  padding: 23px 3px !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--at-line) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+}
+.architech-home .at-team-editorial [class*="rounded-2xl"] > div[class*="pointer-events-none"] { display: none !important; }
+.architech-home .at-team-editorial [class*="text-sky"],
+.architech-home .at-team-editorial [class*="text-indigo"] { color: var(--at-brass) !important; }
+.architech-home .at-team-editorial img { border-radius: 9px; filter: saturate(.83); }
+.architech-home .at-team-editorial a { transition: opacity .24s ease; }
+.architech-home .at-team-editorial a:hover { opacity: .85; }
+.architech-home .at-team-editorial .group:hover { background: rgba(244,239,230,.025) !important; }
+
+/* Leaderboard: hierarchy from rank, weight and spacing, not glowing crowns. */
+.architech-home .at-ranking {
+  padding: 128px 0 145px;
+  background: #22231f;
+  border-top: 1px solid var(--at-line);
+  border-bottom: 1px solid var(--at-line);
+}
+.architech-home .at-ranking-layout,
+.architech-home .at-faq-layout {
+  display: grid;
+  grid-template-columns: .72fr 1.28fr;
+  align-items: start;
+  gap: clamp(40px,8vw,145px);
+}
+.architech-home .at-ranking .at-section-heading,
+.architech-home .at-faq .at-section-heading {
+  position: sticky;
+  top: 105px;
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+.architech-home .at-rank-editorial > div {
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+}
+.architech-home .at-rank-editorial [class*="rounded-xl"] {
+  background: transparent !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--at-line) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+.architech-home .at-rank-editorial [class*="rounded-xl"].relative.overflow-hidden {
+  padding: 23px 5px !important;
+  transition: background-color .27s ease;
+}
+.architech-home .at-rank-editorial [class*="rounded-xl"].relative.overflow-hidden:hover { background: rgba(244,239,230,.035) !important; }
+.architech-home .at-rank-editorial .pointer-events-none.absolute,
+.architech-home .at-rank-editorial .mix-blend-screen { display: none !important; }
+.architech-home .at-rank-editorial [class*="text-amber"],
+.architech-home .at-rank-editorial [class*="text-sky"],
+.architech-home .at-rank-editorial [class*="text-orange"] { color: #d8bf99 !important; }
+.architech-home .at-rank-editorial .relative.size-11 { border: 1px solid rgba(241,235,222,.3) !important; border-radius: 8px !important; }
+.architech-home .at-rank-editorial .animate-pulse { animation: none !important; }
+
+/* FAQ: fast to scan, no ornaments competing with the original language. */
+.architech-home .at-faq {
+  padding: 130px 0 160px;
+  background: #1b1c19;
+}
+.architech-home .at-faq-editorial { border-top: 1px solid var(--at-line); }
+.architech-home .at-faq-editorial > div { gap: 0 !important; }
+.architech-home .at-faq-editorial [class*="rounded-2xl"] {
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+}
+.architech-home .at-faq-editorial .pointer-events-none.absolute { display: none !important; }
+.architech-home .at-faq-editorial [class*="rounded-2xl"] > button {
+  width: 100%;
+  min-height: 76px;
+  padding: 25px 4px !important;
+  border-bottom: 1px solid var(--at-line) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: var(--at-ink);
+  font: 500 clamp(16px,1.35vw,18px)/1.4 'Golos Text',sans-serif;
+  transition: background-color .25s ease,color .25s ease;
+}
+.architech-home .at-faq-editorial [class*="rounded-2xl"] > button:hover {
+  background: rgba(244,239,230,.035) !important;
+  color: #ffffff;
+}
+.architech-home .at-faq-editorial [class*="rounded-2xl"] > div { padding: 23px 4px 30px !important; }
+.architech-home .at-faq-editorial [class*="rounded-xl"] {
+  border: 1px solid var(--at-line) !important;
+  border-radius: 10px !important;
+  background: rgba(245,239,229,.034) !important;
+}
+.architech-home .at-faq-editorial [class*="text-sky"],
+.architech-home .at-faq-editorial [class*="text-indigo"],
+.architech-home .at-faq-editorial [class*="text-emerald"] { color: var(--at-brass) !important; }
+.architech-home .at-faq-editorial [class*="bg-sky"],
+.architech-home .at-faq-editorial [class*="bg-indigo"],
+.architech-home .at-faq-editorial [class*="bg-emerald"] { background: rgba(197,170,132,.11) !important; }
+.architech-home .at-faq-editorial [class*="text-slate-300"] { color: var(--at-ink-secondary) !important; }
+.architech-home .at-faq-editorial [class*="text-slate-400"] { color: var(--at-ink-muted) !important; }
+.architech-home .at-faq-editorial a[class*="rounded-xl"],
+.architech-home .at-faq-editorial a[class*="rounded-full"] {
+  border-color: var(--at-line-strong) !important;
+  border-radius: 9px !important;
+  color: var(--at-ink) !important;
+  background: rgba(240,235,224,.08) !important;
+  transition: background .25s ease,border-color .25s ease;
+}
+.architech-home .at-faq-editorial a[class*="rounded-xl"]:hover,
+.architech-home .at-faq-editorial a[class*="rounded-full"]:hover {
+  background: rgba(240,235,224,.16) !important;
+  border-color: var(--at-ink-secondary) !important;
+}
+.architech-home .at-faq-editorial .font-techno,
+.architech-home .at-community .font-techno,
+.architech-home .at-ranking .font-techno { font-family: 'Onest',sans-serif; letter-spacing: -.035em; }
+
+/* Final photographic signature before the unchanged global footer. */
+.architech-home .at-end {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-height: 395px;
+  overflow: hidden;
+  background: var(--at-bg);
+  border-top: 1px solid var(--at-line);
+}
+.architech-home .at-end > img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: saturate(.8) brightness(.57);
+}
+.architech-home .at-end::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(90deg,rgba(23,24,22,.84),rgba(23,24,22,.48) 65%,rgba(23,24,22,.42));
+}
+.architech-home .at-end-inner {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 30px;
+  padding: 90px 0;
+}
+.architech-home .at-end-inner img {
+  max-height: 92px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  filter: none;
+}
+.architech-home .at-end-link { min-width: 196px; }
+.architech-home .at-reveal { will-change: transform,opacity; }
+
+/* Tablet: retain the same chapters, loosen composition responsibly. */
+@media (max-width: 950px) {
+  .architech-home .at-hero > .at-hero-grid > .at-hero-copy { width: min(600px,77vw); }
+  .architech-home .at-intro-inner { grid-template-columns: 1fr; gap: 32px; }
+  .architech-home .at-ranking-layout,
+  .architech-home .at-faq-layout { grid-template-columns: 1fr; gap: 43px; }
+  .architech-home .at-ranking .at-section-heading,
+  .architech-home .at-faq .at-section-heading { position: static; }
+  .architech-home .at-hero .at-gallery .at-gallery-caption { display: none; }
+  .architech-home .at-hero .at-gallery .at-gallery-thumbs { max-width: 57vw; }
+}
+
+/* Handheld: readable controls, an unobstructed shot and no tiny thumb strip. */
+@media (max-width: 700px) {
+  .architech-home .at-container { width: calc(100% - 42px); }
+  .architech-home .at-hero { min-height: 720px; height: min(940px,calc(100svh + 60px)); }
+  .architech-home .at-hero::after {
+    background:
+      linear-gradient(0deg,rgba(18,19,17,.97) 0%,rgba(18,19,17,.82) 26%,rgba(18,19,17,.43) 68%,rgba(18,19,17,.19) 100%),
+      linear-gradient(90deg,rgba(18,19,17,.5),transparent);
   }
-  .architech-home .at-hero>.at-hero-grid>.at-hero-copy{
-    min-height:inherit;margin:0 20px;width:calc(100% - 40px);
-    justify-content:center;padding:55px 0 128px
+  .architech-home .at-hero > .at-hero-grid > .at-hero-copy {
+    width: calc(100% - 42px);
+    min-height: inherit;
+    margin: 0 21px;
+    padding: 45px 0 148px;
+    justify-content: center;
   }
-  .architech-home .at-hero .at-hero-logo{width:min(420px,92%)}
-  .architech-home .at-hero .at-hero-description{font-size:14px;line-height:1.68}
-  .architech-home .at-hero .at-hero-action-row{margin-top:16px}
-  .architech-home .at-hero .at-ip-block{max-width:none}
-  .architech-home .at-hero .at-status-row{gap:10px;font-size:11px}
-  .architech-home .at-hero .at-hero-arrows{left:20px;bottom:25px}
-  .architech-home .at-hero .at-scroll-cue{display:none}
-  .architech-home .at-hero .at-gallery .at-gallery-thumbs{max-width:55vw;right:14px;bottom:23px;padding:5px;gap:5px}
-  .architech-home .at-hero .at-gallery .at-gallery-thumbs button{width:35px;height:35px;flex-basis:35px}
-  .architech-home .at-intro-inner{padding:75px 0}
-  .architech-home .at-intro-quote{font-size:clamp(24px,6.2vw,34px)}
-  .architech-home .at-chapter{min-height:700px}
-  .architech-home .at-chapter .at-chapter-image img{object-position:center center}
-  .architech-home .at-chapter .at-chapter-shade,.architech-home .at-chapter:nth-child(even) .at-chapter-shade{
-    background:linear-gradient(0deg,rgba(9,10,9,.94),rgba(9,10,9,.55) 64%,rgba(9,10,9,.22))
+  .architech-home .at-hero .at-hero-logo-wrap { margin-bottom: 22px; }
+  .architech-home .at-hero .at-hero-logo { width: min(430px,96%); }
+  .architech-home .at-hero .at-hero-description { font-size: 15px; line-height: 1.66; }
+  .architech-home .at-hero .at-hero-action-row { margin-top: 22px; }
+  .architech-home .at-primary-action { min-height: 49px; padding: 12px 18px; }
+  .architech-home .at-source-action { width: 49px; height: 49px; }
+  .architech-home .at-hero .at-ip-block { width: 100%; max-width: none; margin-top: 18px; }
+  .architech-home .at-hero .at-status-row { gap: 9px; font-size: 11px; }
+  .architech-home .at-hero .at-hero-arrows { left: 21px; bottom: 26px; gap: 7px; }
+  .architech-home .at-hero .at-hero-arrows button { width: 43px; height: 45px; border-radius: 9px; }
+  .architech-home .at-hero .at-scroll-cue { display: none; }
+  .architech-home .at-hero .at-gallery .at-gallery-thumbs {
+    max-width: min(60vw,310px);
+    right: 17px;
+    bottom: 26px;
+    gap: 6px;
+    padding: 5px;
+    border-radius: 9px;
   }
-  .architech-home .at-chapter .at-chapter-content,.architech-home .at-chapter:nth-child(even) .at-chapter-content{
-    margin:0 24px;width:calc(100% - 48px);padding:70px 0;align-self:flex-end
+  .architech-home .at-hero .at-gallery .at-gallery-thumbs button {
+    flex-basis: 35px;
+    width: 35px;
+    height: 35px;
+    border-radius: 5px;
   }
-  .architech-home .at-chapter .at-chapter-title{font-size:clamp(39px,9vw,65px)}
-  .architech-home .at-chapter .at-chapter-description{font-size:16px}
-  .architech-home .at-community,.architech-home .at-ranking,.architech-home .at-faq{padding:85px 0}
-  .architech-home .at-section-heading h2{font-size:clamp(38px,8vw,55px)}
-  .architech-home .at-team-editorial [class*="rounded-2xl"]{padding:18px 0!important}
-  .architech-home .at-faq-editorial [class*="rounded-2xl"]>button{padding:20px 2px!important}
-  .architech-home .at-end-inner{padding:65px 0}
-}
-@media (prefers-reduced-motion:reduce){
-  .architech-home *, .architech-home *::before, .architech-home *::after{
-    scroll-behavior:auto!important;animation-duration:.01ms!important;
-    animation-iteration-count:1!important;transition-duration:.01ms!important;
-    will-change:auto!important
+  .architech-home .at-hero .at-gallery .at-gallery-thumbs button img { border-radius: 5px; }
+  .architech-home .at-intro-inner { padding: 80px 0; }
+  .architech-home .at-intro-quote { font-size: clamp(26px,6.8vw,36px); line-height: 1.33; }
+  .architech-home .at-chapter { min-height: 700px; }
+  .architech-home .at-chapter .at-chapter-image img { object-position: 50% center; }
+  .architech-home .at-chapter .at-chapter-shade,
+  .architech-home .at-chapter:nth-child(even) .at-chapter-shade {
+    background:
+      linear-gradient(0deg,rgba(23,24,22,.93),rgba(23,24,22,.54) 55%,rgba(23,24,22,.17) 88%),
+      linear-gradient(to bottom,#171816,transparent 22%,transparent 77%,#171816);
   }
-  .architech-home .at-chapter .at-chapter-image,.architech-home .at-world-rear,.architech-home .at-world-front{transform:none!important}
-}
-@media (prefers-reduced-data:reduce){
-  .architech-home .at-world-front{display:none}
-  .architech-home .at-world-rear{opacity:.08}
+  .architech-home .at-chapter .at-chapter-content,
+  .architech-home .at-chapter:nth-child(even) .at-chapter-content {
+    align-self: flex-end;
+    width: calc(100% - 46px);
+    margin: 0 23px;
+    padding: 85px 0;
+  }
+  .architech-home .at-chapter .at-chapter-title { font-size: clamp(41px,10vw,68px); margin: 15px 0 21px; }
+  .architech-home .at-chapter .at-chapter-description { font-size: 16px; line-height: 1.65; margin-bottom: 21px; }
+  .architech-home .at-community,
+  .architech-home .at-ranking,
+  .architech-home .at-faq { padding: 88px 0; }
+  .architech-home .at-section-heading h2 { font-size: clamp(38px,8.5vw,60px); }
+  .architech-home .at-team-editorial [class*="rounded-2xl"] { padding: 18px 0 !important; }
+  .architech-home .at-faq-editorial [class*="rounded-2xl"] > button { min-height: 70px; padding: 19px 3px !important; }
+  .architech-home .at-end-inner { padding: 70px 0; }
 }
 
-/* Motion-rich source components deliberately opt out of stock light sweeps. */
-.architech-home .at-rank-editorial .pointer-events-none.absolute,.architech-home .at-team-editorial .pointer-events-none.absolute{display:none!important}
-.architech-home .at-rank-editorial .mix-blend-screen{display:none!important}
-.architech-home .at-faq-editorial .pointer-events-none.absolute{display:none!important}
-.architech-home .at-team-editorial a:focus-visible,.architech-home .at-rank-editorial a:focus-visible{outline:2px solid #e8d4b4;outline-offset:4px}
+/* This design never depends on motion for information or access. */
+@media (prefers-reduced-motion: reduce) {
+  .architech-home *,
+  .architech-home *::before,
+  .architech-home *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+    will-change: auto !important;
+  }
+  .architech-home .at-chapter .at-chapter-image,
+  .architech-home .at-world-rear,
+  .architech-home .at-world-front { transform: none !important; }
+}
+@media (prefers-reduced-data: reduce) {
+  .architech-home .at-world-front { display: none; }
+  .architech-home .at-world-rear { opacity: .055; }
+}
