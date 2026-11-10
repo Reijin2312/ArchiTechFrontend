@@ -362,7 +362,7 @@ export default function AboutServerPage({ seasonNumberOverride }: { seasonNumber
               ) : <span />}
               {nextSeason ? (
                 <Link to={`/about/seasons/${nextSeason.number}`}><span>{language === 'ru' ? 'Следующий сезон' : 'Next season'} →</span><strong>{nextSeason.name}</strong></Link>
-              ) : <Link to="/about#seasons"><span>{language === 'ru' ? 'Вернуться' : 'Return'} →</span><strong>{copy.history}</strong></Link>
+              ) : <Link to="/about#seasons"><span>{language === 'ru' ? 'Вернуться' : 'Return'} →</span><strong>{copy.history}</strong></Link>}
             </nav>
           </div>
         )}
