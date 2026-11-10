@@ -2,13 +2,15 @@ import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { useI18n } from '@/shared/i18n/I18nProvider'
 import { homeTranslations, teamTranslations } from '@/shared/i18n/translations'
-import { TEAM_MEMBERS, TEAM_AVATAR_FALLBACK } from '@/shared/data/team'
+import { TEAM_MEMBERS } from '@/shared/data/team'
 
 const Skin3DViewer = lazy(() =>
   import('@/shared/ui/skin/Skin3DViewer').then((module) => ({ default: module.Skin3DViewer })),
 )
 
 const OWNER = TEAM_MEMBERS[0].name
+// Static, classic Steve skin used whenever a public player skin is unavailable.
+const DEFAULT_STEVE_SKIN = 'https://raw.githubusercontent.com/nodecraft/crafthead/master/src/worker/assets/steve.png'
 
 type PublicProfile = { skinUrl?: string | null }
 
@@ -24,13 +26,16 @@ function originalExcerpt(language: 'ru' | 'en') {
   return source.charAt(0).toUpperCase() + source.slice(1)
 }
 
-export function HomeQuote({ reduced, fallbackAvatar }: { reduced: boolean; fallbackAvatar?: string }) {
+export function HomeQuote({ reduced }: { reduced: boolean }) {
   const { language } = useI18n()
   const root = useRef<HTMLElement>(null)
   const [nearViewport, setNearViewport] = useState(false)
-  const [skinUrl, setSkinUrl] = useState<string | null>(null)
+  const [skinUrl, setSkinUrl] = useState(DEFAULT_STEVE_SKIN)
   const [skinReady, setSkinReady] = useState(false)
   const handleSkinReady = useCallback(() => setSkinReady(true), [])
+  const handleSkinError = useCallback(() => {
+    setSkinUrl(current => current === DEFAULT_STEVE_SKIN ? current : DEFAULT_STEVE_SKIN)
+  }, [])
 
   // Defer the WebGL renderer until this section approaches the screen.
   useEffect(() => {
@@ -68,7 +73,7 @@ export function HomeQuote({ reduced, fallbackAvatar }: { reduced: boolean; fallb
           setSkinUrl(profile.skinUrl)
         }
       } catch {
-        // The static avatar remains visible when the optional skin endpoint fails.
+        // Keep the 3D Steve model when the optional player profile is unavailable.
       }
     }
     void loadSkin()
@@ -87,19 +92,7 @@ export function HomeQuote({ reduced, fallbackAvatar }: { reduced: boolean; fallb
           viewport={{ once: true, amount: .18 }}
           transition={{ duration: .95, ease: [.22, 1, .36, 1] }}>
           <div className="at-testimonial-stage">
-            <img
-              className={'at-testimonial-avatar' + (skinReady ? ' at-testimonial-avatar--hidden' : '')}
-              src={fallbackAvatar || TEAM_AVATAR_FALLBACK}
-              alt=""
-              loading="lazy"
-              decoding="async"
-              onError={(event) => {
-                if (!event.currentTarget.src.endsWith(TEAM_AVATAR_FALLBACK)) {
-                  event.currentTarget.src = TEAM_AVATAR_FALLBACK
-                }
-              }}
-            />
-            {nearViewport && skinUrl && (
+            {nearViewport && (
               <Suspense fallback={null}>
                 <Skin3DViewer
                   skinUrl={skinUrl}
@@ -108,6 +101,7 @@ export function HomeQuote({ reduced, fallbackAvatar }: { reduced: boolean; fallb
                   autoRotate={false}
                   interactive={false}
                   onReady={handleSkinReady}
+                  onError={handleSkinError}
                   className={'at-testimonial-skin' + (skinReady ? ' at-testimonial-skin--visible' : '')}
                 />
               </Suspense>
