@@ -26,10 +26,13 @@ function originalExcerpt(language: 'ru' | 'en') {
   return source.charAt(0).toUpperCase() + source.slice(1)
 }
 
-export function HomeQuote({ reduced }: { reduced: boolean }) {
+export function HomeQuote({ reduced, typewriterReduced = reduced }: { reduced: boolean; typewriterReduced?: boolean }) {
   const { language } = useI18n()
   const root = useRef<HTMLElement>(null)
+  const quoteRef = useRef<HTMLElement>(null)
   const [nearViewport, setNearViewport] = useState(false)
+  const [quoteInView, setQuoteInView] = useState(false)
+  const [typedCount, setTypedCount] = useState(0)
   const [skinUrl, setSkinUrl] = useState(DEFAULT_STEVE_SKIN)
   const [skinReady, setSkinReady] = useState(false)
   const handleSkinReady = useCallback(() => setSkinReady(true), [])
@@ -82,6 +85,46 @@ export function HomeQuote({ reduced }: { reduced: boolean }) {
 
   const quote = originalExcerpt(language)
   const role = language === 'ru' ? teamTranslations.ru.owner : teamTranslations.en.owner
+  const displayedQuote = typewriterReduced ? quote : quote.slice(0, typedCount)
+
+  // Start only when the quotation itself is visible; the skin preloads earlier.
+  useEffect(() => {
+    const element = quoteRef.current
+    if (!element) return
+    if (typeof IntersectionObserver === 'undefined') {
+      setQuoteInView(true)
+      return
+    }
+    const observer = new IntersectionObserver(
+      entries => {
+        if (entries.some(entry => entry.isIntersecting)) {
+          setQuoteInView(true)
+          observer.disconnect()
+        }
+      },
+      { threshold: 0.15, rootMargin: '0px 0px -8% 0px' },
+    )
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [])
+
+  // Short, one-shot typewriter, without layout shifts or a repeating restart.
+  useEffect(() => {
+    if (!quoteInView || typewriterReduced || typedCount >= quote.length) return
+    const timer = window.setTimeout(() => {
+      setTypedCount(count => Math.min(count + 1, quote.length))
+    }, 27)
+    return () => window.clearTimeout(timer)
+  }, [quoteInView, typewriterReduced, typedCount, quote.length])
+
+  // Language switches should never force the viewer to watch the animation again.
+  const previousLanguage = useRef(language)
+  useEffect(() => {
+    if (previousLanguage.current !== language) {
+      previousLanguage.current = language
+      setTypedCount(quote.length)
+    }
+  }, [language, quote.length])
 
   return (
     <section ref={root} className="at-intro at-testimonial" aria-label={language === 'ru' ? 'О проекте — слова основателя' : 'About the project — a word from the founder'}>
@@ -100,6 +143,8 @@ export function HomeQuote({ reduced }: { reduced: boolean }) {
                   animated={false}
                   autoRotate={false}
                   interactive={false}
+                  portraitYaw={0.36}
+                  followCursor={!typewriterReduced}
                   onReady={handleSkinReady}
                   onError={handleSkinError}
                   className={'at-testimonial-skin' + (skinReady ? ' at-testimonial-skin--visible' : '')}
@@ -120,9 +165,17 @@ export function HomeQuote({ reduced }: { reduced: boolean }) {
               <span className="at-testimonial-role">{role}</span>
             </div>
           </div>
-          <blockquote className="at-intro-quote at-testimonial-quote">
+          <blockquote ref={quoteRef} className="at-intro-quote at-testimonial-quote">
             <span className="at-testimonial-open-quote" aria-hidden="true">“</span>
-            <p>{quote}</p>
+            <div className="at-testimonial-type">
+              <p className="at-testimonial-type-measure" aria-hidden="true">
+                {quote}<span className="at-testimonial-type-caret">|</span>
+              </p>
+              <p className="at-testimonial-type-live" aria-hidden="true">
+                {displayedQuote}<span className="at-testimonial-type-caret">|</span>
+              </p>
+              <span className="sr-only">{quote}</span>
+            </div>
           </blockquote>
         </motion.div>
       </div>
