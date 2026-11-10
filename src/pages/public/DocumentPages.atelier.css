@@ -1,0 +1,207 @@
+@import url('https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=Onest:wght@400;500;600;700&display=swap');
+
+/*
+ * ARCHITECH / DOCUMENTS
+ * Visual theme for /rules and /wiki only.
+ * Keep every existing component, spacing, font size, grid, sticky navigation,
+ * transition, animation and interaction unchanged.
+ */
+body:has(.architech-document) {
+  background-color: #171816;
+  color: #f2efe9;
+}
+body.has-wallpaper:has(.architech-document)::before {
+  background-image: none;
+  background-color: #171816;
+}
+
+.architech-document {
+  --doc-bg: #171816;
+  --doc-surface: #20211e;
+  --doc-surface-hover: #292a25;
+  --doc-ink: #f2efe9;
+  --doc-secondary: #c9c4b9;
+  --doc-muted: #aaa598;
+  --doc-brass: #c5aa84;
+  --doc-line: rgba(238, 232, 220, .19);
+  --doc-line-strong: rgba(238, 232, 220, .33);
+  color: var(--doc-ink);
+  font-family: 'Golos Text', sans-serif;
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+.architech-document ::selection {
+  background: #c5aa84;
+  color: #171816;
+}
+.architech-document :is(h1, h2, h3) {
+  font-family: 'Onest', sans-serif;
+  color: var(--doc-ink);
+}
+.architech-document main > h1 {
+  color: #f2efe9;
+}
+
+/* Retain both sidebars exactly where they were, replacing only their finish. */
+.architech-document aside > nav {
+  background: #20211e;
+  border-color: var(--doc-line);
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+.architech-document aside nav h2 {
+  color: var(--doc-brass);
+}
+.architech-document aside nav > div > div {
+  color: var(--doc-secondary);
+}
+.architech-document aside nav a {
+  color: var(--doc-secondary);
+  text-decoration: none;
+}
+.architech-document aside nav a:hover,
+.architech-document aside nav a:focus-visible {
+  color: var(--doc-ink);
+}
+.architech-document aside nav ol li > span {
+  border-color: var(--doc-line-strong);
+  color: var(--doc-muted);
+  background: #262721;
+}
+.architech-document aside nav ol li > span[class~="border-sky-500"] {
+  color: #1c1c19;
+  background: var(--doc-brass);
+  border-color: var(--doc-brass);
+}
+.architech-document aside nav ol a[class~="text-sky-300"] {
+  color: var(--doc-brass);
+}
+
+/* Editorial section headings and reading surfaces; no geometry changes. */
+.architech-document main section > div > h2 {
+  background: transparent;
+  border-radius: 8px;
+  color: #eeeae2;
+}
+.architech-document main section > div > h2 > span {
+  background: var(--doc-brass);
+  color: #25231f;
+  border-radius: 6px;
+}
+.architech-document main section > div > div.mb-8 {
+  background: var(--doc-surface);
+  border-color: var(--doc-line);
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+.architech-document main > div.mb-6 {
+  background: #252620;
+  border-color: rgba(197,170,132,.35);
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+.architech-document main > div.mb-6 > div:first-child {
+  color: #e1ccaa;
+}
+.architech-document :is(p, li, td) strong,
+.architech-document :is(p, li, td) b {
+  color: #eae5da;
+}
+
+/* Recolour existing Tailwind utility surfaces without changing their layout. */
+.architech-document [class*="bg-slate-950"] {
+  background-color: #171816;
+}
+.architech-document [class*="bg-slate-900"] {
+  background-color: #252620;
+}
+.architech-document [class*="bg-slate-800"] {
+  background-color: #34352f;
+}
+.architech-document [class*="border-slate"] {
+  border-color: var(--doc-line);
+}
+.architech-document [class*="border-sky"] {
+  border-color: rgba(197,170,132,.55);
+}
+.architech-document [class*="bg-sky"] {
+  background-color: #a88c66;
+}
+.architech-document [class~="text-slate-100"] { color: #f2efe9; }
+.architech-document [class~="text-slate-200"] { color: #e4e0d7; }
+.architech-document [class~="text-slate-300"] { color: var(--doc-secondary); }
+.architech-document [class~="text-slate-400"] { color: var(--doc-muted); }
+.architech-document [class~="text-slate-500"] { color: #959083; }
+.architech-document [class~="text-sky-200"],
+.architech-document [class~="text-sky-300"],
+.architech-document [class~="text-sky-400"] {
+  color: var(--doc-brass);
+}
+.architech-document [class~="text-rose-400"] {
+  color: #c49f8c;
+}
+.architech-document [class*="hover:text-sky"]:hover {
+  color: #f1dbc0;
+}
+.architech-document [class*="hover:border-sky"]:hover {
+  border-color: #c5aa84;
+}
+.architech-document [class*="hover:bg-slate"]:hover {
+  background-color: var(--doc-surface-hover);
+}
+.architech-document [class*="shadow-["],
+.architech-document [class~="shadow-inner"] {
+  box-shadow: none;
+}
+
+/* Wiki catalog controls, entries, badges, and command table. */
+.architech-document :is(button, input, a):focus-visible {
+  outline: 2px solid #dfc79f;
+  outline-offset: 3px;
+}
+.architech-document input {
+  color: var(--doc-ink);
+  caret-color: var(--doc-brass);
+}
+.architech-document input::placeholder {
+  color: #969083;
+}
+.architech-document input:focus {
+  border-color: var(--doc-brass);
+  --tw-ring-color: rgba(197,170,132,.15);
+}
+.architech-document button[aria-pressed="true"] {
+  background-color: rgba(197,170,132,.17);
+  color: #f1ddbd;
+  border-color: #c5aa84;
+}
+.architech-document table {
+  color: var(--doc-secondary);
+}
+.architech-document thead {
+  background: #2b2c26;
+  color: #e4ddd0;
+}
+.architech-document tbody tr {
+  border-color: var(--doc-line);
+}
+.architech-document kbd {
+  color: #e5dac7;
+  background: #171816;
+  border-color: var(--doc-line-strong);
+}
+
+/* Preserve warning meaning with muted amber instead of generic neon orange. */
+.architech-document [class*="border-amber"] {
+  border-color: rgba(197,170,132,.45);
+}
+.architech-document [class*="bg-amber"] {
+  background-color: rgba(197,170,132,.11);
+}
+.architech-document [class*="text-amber"] {
+  color: #e4c59b;
+}
