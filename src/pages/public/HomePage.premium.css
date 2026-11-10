@@ -994,7 +994,10 @@
 /* Tablet: retain the same chapters, loosen composition responsibly. */
 @media (max-width: 950px) {
   .architech-home .at-hero > .at-hero-grid > .at-hero-copy { width: min(600px,77vw); }
-  .architech-home .at-intro-inner { grid-template-columns: 1fr; gap: 32px; }
+  .architech-home .at-testimonial-inner { grid-template-columns: minmax(210px,.82fr) minmax(0,1.18fr); gap: 32px; }
+  .architech-home .at-testimonial-copy { padding: 25px 0; }
+  .architech-home .at-testimonial-portrait { min-height: 360px; }
+  .architech-home .at-testimonial-stage, .architech-home .at-testimonial-skin { min-height: 330px; }
   .architech-home .at-ranking-layout,
   .architech-home .at-faq-layout { grid-template-columns: 1fr; gap: 43px; }
   .architech-home .at-ranking .at-section-heading,
@@ -1054,15 +1057,34 @@
     border-radius: 5px;
   }
   .architech-home .at-hero .at-gallery .at-gallery-thumbs button img { border-radius: 5px; }
-  .architech-home .at-intro-inner { padding: 80px 0; }
-  .architech-home .at-intro-quote { font-size: clamp(26px,6.8vw,36px); line-height: 1.33; }
+  .architech-home .at-testimonial-inner {
+    grid-template-columns: 1fr;
+    width: calc(100% - 42px);
+    padding: 50px 0 72px;
+    gap: 16px;
+  }
+  .architech-home .at-testimonial-portrait { max-width: none; min-height: 285px; border: 0; }
+  .architech-home .at-testimonial-stage, .architech-home .at-testimonial-skin { min-height: 260px; height: 270px; }
+  .architech-home .at-testimonial-stage { max-width: 320px; margin: 0 auto; }
+  .architech-home .at-testimonial-portrait-caption { padding: 6px 0 0; text-align: center; }
+  .architech-home .at-testimonial-copy { padding: 13px 0 0; }
+  .architech-home .at-testimonial-meta { gap: 11px; margin-bottom: 20px; }
+  .architech-home .at-testimonial-name { font-size: 22px; }
+  .architech-home .at-testimonial-role { font-size: 12px; }
+  .architech-home .at-intro-quote.at-testimonial-quote { font-size: clamp(27px,6.5vw,38px); line-height: 1.34; }
+  .architech-home .at-testimonial-open-quote { height: 33px; font-size: 63px; }
+  .architech-home .at-testimonial-signature { margin-top: 25px; }
   .architech-home .at-chapter { min-height: 700px; }
   .architech-home .at-chapter .at-chapter-image img { object-position: 50% center; }
   .architech-home .at-chapter .at-chapter-shade,
-  .architech-home .at-chapter:nth-child(even) .at-chapter-shade {
+  .architech-home .at-chapter:nth-child(even) .at-chapter-shade,
+  .architech-home .at-chapter--01 .at-chapter-shade,
+  .architech-home .at-chapter--02 .at-chapter-shade,
+  .architech-home .at-chapter--03 .at-chapter-shade,
+  .architech-home .at-chapter--04 .at-chapter-shade {
     background:
-      linear-gradient(0deg,rgba(23,24,22,.93),rgba(23,24,22,.54) 55%,rgba(23,24,22,.17) 88%),
-      linear-gradient(to bottom,#171816,transparent 22%,transparent 77%,#171816);
+      linear-gradient(0deg,rgba(23,24,22,.93),rgba(23,24,22,.58) 58%,rgba(23,24,22,.2) 90%),
+      linear-gradient(to bottom,#171816,transparent 22%,transparent 75%,#171816);
   }
   .architech-home .at-chapter .at-chapter-content,
   .architech-home .at-chapter:nth-child(even) .at-chapter-content {
@@ -1071,8 +1093,10 @@
     margin: 0 23px;
     padding: 85px 0;
   }
-  .architech-home .at-chapter .at-chapter-title { font-size: clamp(41px,10vw,68px); margin: 15px 0 21px; }
-  .architech-home .at-chapter .at-chapter-description { font-size: 16px; line-height: 1.65; margin-bottom: 21px; }
+  .architech-home .at-chapter .at-chapter-title { font-size: clamp(40px,10vw,66px); margin: 18px 0 20px; }
+  .architech-home .at-chapter .at-chapter-description { font-size: 16px; line-height: 1.64; margin-bottom: 25px; }
+  .architech-home .at-chapter-scene { display: none; }
+  .architech-home .at-chapter-kicker { font-size: 11px; }
   .architech-home .at-community,
   .architech-home .at-ranking,
   .architech-home .at-faq { padding: 88px 0; }
