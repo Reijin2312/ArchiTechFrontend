@@ -829,7 +829,7 @@
   .architech-home .at-hero .at-ip-block { width: 100%; max-width: none; margin-top: 18px; }
   .architech-home .at-hero .at-status-row { gap: 9px; font-size: 11px; }
   .architech-home .at-hero .at-hero-arrows { left: 21px; bottom: 26px; gap: 7px; }
-  .architech-home .at-hero .at-hero-arrows button { width: 43px; height: 45px; border-radius: 9px; }
+  .architech-home .at-hero .at-hero-arrows button { width: 46px; height: 46px; border-radius: 9px; }
   .architech-home .at-hero .at-scroll-cue { display: none; }
   .architech-home .at-hero .at-gallery .at-gallery-thumbs {
     max-width: min(60vw,310px);
@@ -840,9 +840,9 @@
     border-radius: 9px;
   }
   .architech-home .at-hero .at-gallery .at-gallery-thumbs button {
-    flex-basis: 35px;
-    width: 35px;
-    height: 35px;
+    flex-basis: 44px;
+    width: 44px;
+    height: 44px;
     border-radius: 5px;
   }
   .architech-home .at-hero .at-gallery .at-gallery-thumbs button img { border-radius: 5px; }
