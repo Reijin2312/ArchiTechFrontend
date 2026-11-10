@@ -959,39 +959,11 @@ function TopPlayersSection({
   const rangePillLayoutId = `leaderboard-range-pill-${useId().replace(/:/g, '')}`
   */
 
-  if (loading) {
-    return (
-      <div className="rounded-2xl border border-slate-800 bg-linear-to-b from-slate-900/70 to-slate-900/20 p-5 backdrop-blur-md backdrop-saturate-150">
-        <div className="mb-4 flex items-center justify-between gap-2">
-          <div className="text-sm text-slate-300 font-arcane uppercase">{leadersPrefix} {rangeLabel}</div>
-          {/* Range switch is temporarily disabled.
-          <div className="inline-flex rounded-xl border border-slate-700 bg-slate-950/60 p-1">
-            {rangeTabs.map((tab) => (
-              <button
-                key={tab.value}
-                type="button"
-                onClick={() => onRangeChange(tab.value)}
-                className={`rounded-lg px-3 py-1.5 text-xs transition-colors ${
-                  range === tab.value ? 'bg-indigo-600 text-white' : 'text-slate-300 hover:bg-slate-800'
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-          */}
-        </div>
-        <div className="space-y-2">
-          {[0, 1, 2].map((idx) => (
-            <div key={idx} className="h-16 animate-pulse rounded-xl border border-slate-800 bg-slate-900/60" />
-          ))}
-        </div>
-      </div>
-    )
-  }
+  // Always present five places; missing API results never become fictional users.
+  const displayedPlayers = Array.from({ length: 5 }, (_, index) => players[index] ?? null)
 
   return (
-    <div className="rounded-2xl border border-slate-800 bg-linear-to-b from-slate-900/70 to-slate-900/20 p-5 backdrop-blur-md backdrop-saturate-150">
+    <div className="rounded-2xl border border-slate-800 bg-linear-to-b from-slate-900/70 to-slate-900/20 p-5 backdrop-blur-md backdrop-saturate-150" aria-busy={loading}>
       <div className="mb-4 flex items-center justify-between gap-2">
         <div className="text-sm text-slate-300 font-arcane uppercase">{leadersPrefix} {rangeLabel}</div>
         {/* Range switch is temporarily disabled.
@@ -1024,13 +996,38 @@ function TopPlayersSection({
         */}
       </div>
 
-      {players.length === 0 ? (
-        <div className="rounded-xl border border-slate-800 bg-slate-950/50 px-4 py-5 text-sm text-slate-400">
-          {language === 'ru' ? 'Пока нет данных для рейтинга.' : 'No leaderboard data yet.'}
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {players.map((player, index) => {
+      <div className="space-y-2" aria-live="polite">
+        {displayedPlayers.map((player, index) => {
+          if (!player) {
+            return (
+              <div
+                key={`vacant-${index + 1}`}
+                className="relative overflow-hidden rounded-xl border border-slate-800 bg-slate-950/60 px-3 py-2.5"
+                aria-label={language === 'ru' ? `Место ${index + 1}: нет данных` : `Rank ${index + 1}: no data`}
+              >
+                <div className="relative z-10 flex items-center gap-3">
+                  <div className="relative size-11 shrink-0 overflow-hidden rounded-xl border border-slate-700 bg-slate-900" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" className="h-full w-full p-2.5 text-slate-500" fill="none" stroke="currentColor" strokeWidth="1.5">
+                      <circle cx="12" cy="8" r="3.3" />
+                      <path d="M5.5 21v-1.8c0-3.7 2.8-5.8 6.5-5.8s6.5 2.1 6.5 5.8V21" />
+                    </svg>
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-semibold text-slate-400">#{index + 1}</span>
+                      <span className="truncate text-sm font-semibold text-slate-400">—</span>
+                    </div>
+                    <div className="text-[11px] text-slate-400">—</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-lg font-semibold leading-none text-slate-400">—</div>
+                    <div className="mt-1 text-[11px] text-slate-400">{language === 'ru' ? 'наиграно' : 'played'}</div>
+                  </div>
+                </div>
+              </div>
+            )
+          }
+
             const isKing = index === 0
             const isSilver = index === 1
             const isBronze = index === 2
@@ -1174,7 +1171,6 @@ function TopPlayersSection({
             )
           })}
         </div>
-      )}
     </div>
   )
 }
