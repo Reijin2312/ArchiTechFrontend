@@ -74,6 +74,14 @@ body.has-wallpaper:has(.at-legacy)::before {
   border: 1px solid var(--legacy-line);
   border-radius: 5px;
 }
+.at-legacy-world > picture,
+.at-legacy-detail-cover > picture,
+.at-legacy-season-card-image > picture,
+.at-legacy-gallery-item > picture {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
 .at-legacy-image {
   display: block;
   width: 100%;
