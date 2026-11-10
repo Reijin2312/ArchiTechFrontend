@@ -87,3 +87,57 @@ Manual review:
 7. Compare current page with the earlier commit in a separate tab to check typography and photo treatment.
 
 **Verification status:** GitHub source and static structure checks were performed. This environment does not have the repository's npm installation or an authenticated network path to clone its source into a browser runner. A local `npm run build` and visual review on the user's machine are required before merging to `main`.
+
+---
+
+## Editorial phase II — testimonial, photo essays and site chrome (2026-11-10)
+
+This iteration keeps the established homepage hero, existing server copy, real screenshots, links and routing. It redesigns only the material that follows the hero, plus the previously outdated shared header and footer.
+
+### Founder portrait / quote
+- The repeated full-width introductory paragraph was removed.
+- The intervening chapter is now a restrained founder's statement attributed to **Raijin**, the first member of the project's existing `TEAM_MEMBERS` array.
+- The displayed quotation is an **exact excerpt** from the existing Russian or English hero description, not new generated marketing copy.
+- The portrait loads the active `skinUrl` from the existing `/api/v1/users/by-name` endpoint and reuses the installed `skinview3d` viewer. If a server skin cannot be loaded, the existing profile avatar (or the project's avatar fallback) stays visible.
+- The WebGL code is lazy-loaded only as the section approaches the viewport; the static portrait's rendering loop pauses after loading. Avatar and 3D model crossfade after the actual skin is ready.
+- The scene uses a warm graphite matte backdrop, an understated byline, a comfortable serif quotation and no artificial shine or spinning gears.
+
+### Four alternating photograph chapters
+- Alternating left/right layouts retained, including the original headings, descriptions, action labels and destination links.
+- Each chapter uses a distinct local vignette according to where the text is placed, rather than the same blanket-darkening treatment everywhere.
+- Headings: Onest, roughly 47–83px; copy: Golos Text, 17–19px; scene credits reuse the existing handwritten screenshot titles and subtitles.
+- Backgrounds retain the actual Minecraft screenshot. Masked photographic edges fade into a shared `#171816` surface for softer transitions.
+- Small per-photo metadata anchors the section to real in-game builds; these annotations are hidden on very narrow screens.
+- Text enters only once, in four restrained steps: eyebrow, title, description, action. No letter-by-letter animation and no constant floating text.
+- Scroll-linked imagery uses a spring-filtered ±64px shift on capable desktop views. On mobile and with reduced motion enabled, the motion is removed.
+
+### Shared header + footer
+- The old cool-navy/saturated blue accents were replaced by warm graphite, understated brass and neutral text.
+- Desktop header: 70px composed navigation, clear current-page underline, light restrained links, quiet social icons and account control.
+- Mobile navigation becomes available before the desktop links start to crowd; the existing language picker and all original URLs are preserved.
+- Footer: logo, existing social destinations, the same four legal and informational links, unchanged disclaimer and copyright, with a composed editorial hierarchy.
+- A standalone `SiteChrome.css` scopes the header/footer changes and keeps them independent of page content.
+
+### Motion and accessibility references
+- [Apple HIG — Design principles](https://developer.apple.com/design/human-interface-guidelines/design-principles): consistency, hierarchy, simple controls, human details.
+- [Apple HIG — Layout](https://developer.apple.com/design/human-interface-guidelines/layout): alignment, grouping, readable flow, adaptation to different widths.
+- [Apple HIG — Motion](https://developer.apple.com/design/human-interface-guidelines/motion): purposeful motion, avoid distracting decoration, make motion optional.
+- [NN/g — Zigzag image-text layouts](https://www.nngroup.com/articles/zigzag-page-layout/): alternating positions can hinder utilitarian scanning, so here they support visual storytelling while labels and controls stay consistent.
+- [Smashing Magazine — Accessible text over images](https://www.smashingmagazine.com/2023/08/designing-accessible-text-over-images-part1/): per-image copy space and local gradient scrims.
+- [Chrome — Parallax scroll effects](https://developer.chrome.com/docs/modern-web-guidance/guides/ui-behaviors/parallax-scroll-effects): transforms, opacity, reduced motion.
+- [skinview3d — SkinViewer](https://skinview3d-docs.vercel.app/classes/SkinViewer.html): rendering control and skin-loading API.
+
+### Files in this phase
+- `src/pages/public/HomeQuote.tsx` (new, quoted excerpt and 3D portrait)
+- `src/pages/public/HomePage.tsx` (replaced duplicate intro, structured 4 chapters)
+- `src/pages/public/HomePage.premium.css` (testimonial and all four chapter styles + responsive rules)
+- `src/shared/ui/skin/Skin3DViewer.tsx` (optional background, noninteractive presentation, onReady, static-render pause)
+- `src/shared/ui/layout/SiteHeader.tsx` (navigation visual style only)
+- `src/shared/ui/layout/SiteFooter.tsx` (footer visual structure)
+- `src/shared/ui/layout/SiteChrome.css` (new shared chrome theme)
+
+### Verification
+Static source checks confirm all four chapters, live APIs, original gallery, all navigation destinations, original FAQ/team/leaderboard, translated labels, reduced-motion rules and valid CSS brace balance.
+**Runtime build and visual QA are still required** on a clone with npm dependencies. The authoring environment cannot resolve GitHub or npm from its shell, so claiming a successful Vite/browser test would be misleading.
+
+Inspect responsive widths 390/768/1024/1440/1920px, verify the actual Raijin public profile returns `skinUrl`, and test the quote avatar fallback by simulating a failed profile request. Check the loader's WebGL console for errors on devices without hardware acceleration.
