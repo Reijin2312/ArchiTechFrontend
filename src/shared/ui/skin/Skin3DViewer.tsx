@@ -13,9 +13,12 @@ type Skin3DViewerProps = {
   interactive?: boolean
   onReady?: () => void
   onError?: () => void
+  // Used by the homepage quote; other skin viewers retain their existing behavior.
+  portraitYaw?: number
+  followCursor?: boolean
 }
 
-export function Skin3DViewer({ className = '', skinUrl, autoRotate = false, animated = true, background = '#0f172a', interactive = true, onReady, onError }: Skin3DViewerProps) {
+export function Skin3DViewer({ className = '', skinUrl, autoRotate = false, animated = true, background = '#0f172a', interactive = true, onReady, onError, portraitYaw = 0, followCursor = false }: Skin3DViewerProps) {
   const { language } = useI18n()
   const wrapRef = useRef<HTMLDivElement | null>(null)
   const viewerRef = useRef<any>(null)
@@ -31,6 +34,8 @@ export function Skin3DViewer({ className = '', skinUrl, autoRotate = false, anim
       height: 480,
     })
     viewerRef.current = viewer
+    // Give the static portrait genuine depth without spinning the model.
+    viewer.playerObject.rotation.y = portraitYaw
 
     wrapRef.current.innerHTML = ''
     wrapRef.current.appendChild(viewer.canvas)
@@ -150,7 +155,55 @@ export function Skin3DViewer({ className = '', skinUrl, autoRotate = false, anim
 
     fitPixels()
 
+    // Mouse gaze is deliberately subtle: only the head reacts, not the body or camera.
+    // Render only while interpolating; no permanent WebGL animation loop is needed.
+    let gazeFrame: number | null = null
+    let targetYaw = 0
+    let targetPitch = 0
+    const updateGaze = () => {
+      gazeFrame = null
+      if (viewerRef.current !== viewer) return
+      const head = viewer.playerObject.skin.head
+      head.rotation.y += (targetYaw - head.rotation.y) * 0.14
+      head.rotation.x += (targetPitch - head.rotation.x) * 0.14
+      viewer.render()
+      if (Math.abs(targetYaw - head.rotation.y) > 0.002 || Math.abs(targetPitch - head.rotation.x) > 0.002) {
+        gazeFrame = window.requestAnimationFrame(updateGaze)
+      }
+    }
+    const scheduleGaze = () => {
+      if (gazeFrame === null) gazeFrame = window.requestAnimationFrame(updateGaze)
+    }
+    const onPointerMove = (event: PointerEvent) => {
+      if (event.pointerType !== 'mouse' || !wrapRef.current) return
+      const bounds = wrapRef.current.getBoundingClientRect()
+      if (bounds.bottom < 0 || bounds.top > window.innerHeight) return
+      const centerX = bounds.left + bounds.width * 0.5
+      const centerY = bounds.top + bounds.height * 0.37
+      const x = THREE.MathUtils.clamp((event.clientX - centerX) / (window.innerWidth * 0.5), -1, 1)
+      const y = THREE.MathUtils.clamp((event.clientY - centerY) / (window.innerHeight * 0.5), -1, 1)
+      targetYaw = x * 0.32
+      targetPitch = y * 0.16
+      scheduleGaze()
+    }
+    const resetGaze = () => {
+      targetYaw = 0
+      targetPitch = 0
+      scheduleGaze()
+    }
+    if (followCursor) {
+      window.addEventListener('pointermove', onPointerMove, { passive: true })
+      window.addEventListener('blur', resetGaze)
+      document.addEventListener('mouseleave', resetGaze)
+    }
+
     return () => {
+      if (gazeFrame !== null) window.cancelAnimationFrame(gazeFrame)
+      if (followCursor) {
+        window.removeEventListener('pointermove', onPointerMove)
+        window.removeEventListener('blur', resetGaze)
+        document.removeEventListener('mouseleave', resetGaze)
+      }
       window.removeEventListener('resize', onResize)
       roRef.current?.disconnect()
       controls.dispose()
@@ -158,7 +211,7 @@ export function Skin3DViewer({ className = '', skinUrl, autoRotate = false, anim
       viewerRef.current = null
       controlsRef.current = null
     }
-  }, [skinUrl, animated, background, interactive, onReady, onError])
+  }, [skinUrl, animated, background, interactive, onReady, onError, portraitYaw, followCursor])
 
   useEffect(() => {
     const viewer = viewerRef.current
