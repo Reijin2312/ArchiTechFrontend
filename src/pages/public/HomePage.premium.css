@@ -178,29 +178,6 @@
   margin-top: 30px;
   margin-bottom: 0;
 }
-.architech-home .at-end-link {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  min-height: 53px;
-  padding: 15px 25px;
-  border: 1px solid var(--at-control);
-  border-radius: 11px;
-  background: var(--at-control) !important;
-  color: var(--at-control-ink) !important;
-  box-shadow: 0 10px 25px rgba(0,0,0,.11) !important;
-  font: 600 14px/1.2 'Onest',sans-serif;
-  letter-spacing: -.015em;
-  transition: transform .42s var(--at-ease),background-color .25s ease,border-color .25s ease,box-shadow .3s ease;
-}
-.architech-home .at-end-link:hover {
-  transform: translateY(-2px);
-  background: #f5ede0 !important;
-  border-color: #f5ede0;
-  box-shadow: 0 14px 29px rgba(0,0,0,.16) !important;
-}
-.architech-home .at-end-link:active { transform: translateY(1px) scale(.985); }
 .architech-home .at-hero .at-primary-action {
   display: inline-flex;
   align-items: center;
@@ -1178,51 +1155,6 @@
 .architech-home .at-community .font-techno,
 .architech-home .at-ranking .font-techno { font-family: 'Onest',sans-serif; letter-spacing: -.035em; }
 
-/* Final photographic signature before the unchanged global footer. */
-.architech-home .at-end {
-  position: relative;
-  display: flex;
-  align-items: center;
-  min-height: 395px;
-  overflow: hidden;
-  background: var(--at-bg);
-  border-top: 1px solid var(--at-line);
-}
-.architech-home .at-end > img {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  filter: saturate(.8) brightness(.57);
-}
-.architech-home .at-end::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: linear-gradient(90deg,rgba(23,24,22,.84),rgba(23,24,22,.48) 65%,rgba(23,24,22,.42));
-}
-.architech-home .at-end-inner {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 30px;
-  padding: 90px 0;
-}
-.architech-home .at-end-inner img {
-  max-height: 92px;
-  width: auto;
-  height: auto;
-  object-fit: contain;
-  filter: none;
-}
-.architech-home .at-end-link { min-width: 196px; }
-.architech-home .at-reveal { will-change: transform,opacity; }
-
 /* Tablet: retain the same chapters, loosen composition responsibly. */
 @media (max-width: 950px) {
   .architech-home .at-hero > .at-hero-grid > .at-hero-copy { width: min(600px,77vw); }
@@ -1335,7 +1267,6 @@
   .architech-home .at-section-heading h2 { font-size: clamp(38px,8.5vw,60px); }
   .architech-home .at-team-editorial [class*="rounded-2xl"] { padding: 18px 0 !important; }
   .architech-home .at-faq-editorial [class*="rounded-2xl"] > button { min-height: 70px; padding: 19px 3px !important; }
-  .architech-home .at-end-inner { padding: 70px 0; }
 }
 
 /* This design never depends on motion for information or access. */
