@@ -126,9 +126,9 @@ export default function HomePage() {
 
   const thumbSpring: Transition = {
     type: 'spring',
-    stiffness: 260,
-    damping: 22,
-    mass: 0.6,
+    stiffness: 240,
+    damping: 32,
+    mass: 0.72,
   }
 
   const thumbVariants: Variants = {
@@ -138,9 +138,9 @@ export default function HomePage() {
       y: 0,
     },
     inactive: {
-      scale: 0.85,
-      opacity: 0.55,
-      y: 2,
+      scale: 1,
+      opacity: 0.7,
+      y: 0,
     },
   }
 
@@ -354,7 +354,7 @@ export default function HomePage() {
       const currentIndex = shots.indexOf(shot)
       const nextIndex = (currentIndex + 1 + shots.length) % shots.length
       changeTo(shots[nextIndex])
-    }, 5000)
+    }, 7300)
 
     return () => window.clearInterval(id)
   }, [shot, sliderPaused, disableInteractiveMotion])
@@ -500,12 +500,12 @@ export default function HomePage() {
             onTouchStart={handleTouchStart} onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd} onTouchCancel={handleTouchCancel}>
             <div className="at-gallery-frame">
-              <AnimatePresence initial={false} custom={direction}>
-                <motion.div key={shot} className="at-gallery-slide absolute inset-0" custom={direction}
-                  initial={disableInteractiveMotion ? {opacity:0} : {opacity:0,scale:1.055}}
+              <AnimatePresence initial={false}>
+                <motion.div key={shot} className="at-gallery-slide absolute inset-0"
+                  initial={disableInteractiveMotion ? {opacity:0} : {opacity:0,scale:1.018}}
                   animate={{opacity:1,scale:1}}
-                  exit={{opacity:0}}
-                  transition={{duration:disableInteractiveMotion ? .15 : .92,ease:[.22,1,.36,1]}}>
+                  exit={{opacity:0,scale:1}}
+                  transition={{duration:disableInteractiveMotion ? .16 : 1.28,ease:[.22,1,.36,1]}}>
                   <ResponsiveImage name={toName(shot) as keyof typeof IMAGES} alt={copy.galleryAlt} eager
                     width={1920} height={1080} sizes="100vw" className="h-full w-full object-cover"/>
                 </motion.div>
@@ -524,7 +524,8 @@ export default function HomePage() {
               {shots.map(src => (
                 <motion.button type="button" key={src} onClick={() => changeTo(src)}
                   variants={thumbVariants} animate={src===shot?'active':'inactive'}
-                  transition={thumbSpring} aria-label={copy.showScreenshot}
+                  transition={thumbSpring} aria-pressed={src===shot}
+                  aria-label={`${copy.showScreenshot}: ${shotMeta[src]?.title ?? ''}`}
                   className={src===shot?'ring-2 ring-stone-200':'opacity-75'}>
                   <ResponsiveImage name={toName(src) as keyof typeof IMAGES} alt=""
                     width={160} height={160} sizes="64px" className="h-full w-full object-cover" />
@@ -817,7 +818,8 @@ function ParallaxChapter({image,number,reduced,title,text,href,action}: {
 }) {
   const target = useRef<HTMLElement>(null)
   const {scrollYProgress} = useScroll({target,offset:['start end','end start']})
-  const y = useTransform(scrollYProgress,[0,1],[-95,95])
+  const yTarget = useTransform(scrollYProgress,[0,1],[-72,72])
+  const y = useSpring(yTarget, {stiffness:65,damping:29,mass:.75})
   return (
     <section ref={target} className="at-chapter">
       <motion.div className="at-chapter-image" style={reduced ? undefined : {y}}>
@@ -826,10 +828,10 @@ function ParallaxChapter({image,number,reduced,title,text,href,action}: {
       </motion.div>
       <div className="at-chapter-shade"/>
       <motion.div className="at-chapter-content"
-        initial={reduced ? false : {opacity:0,y:24}}
+        initial={reduced ? false : {opacity:0,y:17}}
         whileInView={{opacity:1,y:0}}
         viewport={{once:true,amount:.2}}
-        transition={{duration:.8,ease:[.22,1,.36,1]}}>
+        transition={{duration:.95,ease:[.22,1,.36,1]}}>
         <span className="at-kicker">{number} / ARCHITECH</span>
         <h2 className="at-chapter-title">{title}</h2>
         <p className="at-chapter-description">{text}</p>
