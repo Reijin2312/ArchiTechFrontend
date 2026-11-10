@@ -3,7 +3,7 @@ import { HomeQuote } from './HomeQuote'
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { SERVER_NAME, SERVER_IP, RULES_URL, SHOP_URL, WIKI_URL, LAUNCHER_DOWNLOAD_URL } from '@/shared/constants'
-import { AnimatePresence, motion, useReducedMotion, useScroll, useSpring, useTransform, type Variants, type Transition } from 'framer-motion'
+import { AnimatePresence, motion, useMotionValue, useReducedMotion, useScroll, useSpring, useTransform, type Variants, type Transition } from 'framer-motion'
 import { Seo } from '@/shared/seo/seo';
 import { routesMeta } from '@/shared/seo/routesMeta';
 import { ResponsiveImage } from '@/shared/ui/image/ResponsiveImage'
@@ -91,6 +91,24 @@ export default function HomePage() {
   const [leaderboardAvatars, setLeaderboardAvatars] = useState<Record<string, string>>({})
   const [leaderboardLoading, setLeaderboardLoading] = useState(true)
   const [galleryHover, setGalleryHover] = useState(false)
+  // Spring-damped mouse parallax moves the photograph, not the controls or copy.
+  const galleryOffsetX = useMotionValue(0)
+  const galleryOffsetY = useMotionValue(0)
+  const galleryPanX = useSpring(galleryOffsetX, { stiffness: 55, damping: 30, mass: 1.2 })
+  const galleryPanY = useSpring(galleryOffsetY, { stiffness: 55, damping: 30, mass: 1.2 })
+
+  function handleHeroPointerMove(event: React.PointerEvent<HTMLElement>) {
+    if (disableInteractiveMotion || isMobile || event.pointerType !== 'mouse') return
+    const bounds = event.currentTarget.getBoundingClientRect()
+    if (!bounds.width || !bounds.height) return
+    galleryOffsetX.set((0.5 - (event.clientX - bounds.left) / bounds.width) * 24)
+    galleryOffsetY.set((0.5 - (event.clientY - bounds.top) / bounds.height) * 24)
+  }
+
+  function resetGalleryParallax() {
+    galleryOffsetX.set(0)
+    galleryOffsetY.set(0)
+  }
   const shots = useMemo(
     () => [
       '/images/screen10.png',
@@ -442,7 +460,8 @@ export default function HomePage() {
 
     <div className="architech-home">
       <WorldAtmosphere reduced={disableInteractiveMotion || isMobile} />
-      <section className="at-hero" aria-label={copy.gallery}>
+      <section className="at-hero" aria-label={copy.gallery}
+        onPointerMove={handleHeroPointerMove} onPointerLeave={resetGalleryParallax} onPointerCancel={resetGalleryParallax}>
         <div className="at-hero-grid">
           <div className="at-hero-copy">
             <div className="at-hero-logo-wrap">
@@ -518,8 +537,10 @@ export default function HomePage() {
                   animate={{opacity:1,scale:1}}
                   exit={{opacity:0,scale:1}}
                   transition={{duration:disableInteractiveMotion ? .16 : 1.28,ease:[.22,1,.36,1]}}>
-                  <ResponsiveImage name={toName(shot) as keyof typeof IMAGES} alt={copy.galleryAlt} eager
-                    width={1920} height={1080} sizes="100vw" className="h-full w-full object-cover"/>
+                  <motion.div className="at-gallery-pan" style={disableInteractiveMotion || isMobile ? undefined : { x: galleryPanX, y: galleryPanY }}>
+                    <ResponsiveImage name={toName(shot) as keyof typeof IMAGES} alt={copy.galleryAlt} eager
+                      width={1920} height={1080} sizes="100vw" className="h-full w-full object-cover"/>
+                  </motion.div>
                 </motion.div>
               </AnimatePresence>
               <motion.div className="at-gallery-caption"
@@ -538,7 +559,13 @@ export default function HomePage() {
                 </AnimatePresence>
               </motion.div>
             </div>
-            <div className="at-gallery-thumbs">
+            <div className="at-gallery-thumbs" onKeyDown={event => {
+              if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
+              event.preventDefault()
+              const nextIndex = (activeIndex + (event.key === 'ArrowRight' ? 1 : -1) + shots.length) % shots.length
+              changeTo(shots[nextIndex])
+              event.currentTarget.querySelectorAll('button')[nextIndex]?.focus()
+            }}>
               {shots.map(src => (
                 <motion.button type="button" key={src} onClick={() => changeTo(src)}
                   variants={thumbVariants} animate={src===shot?'active':'inactive'}
@@ -552,21 +579,8 @@ export default function HomePage() {
             </div>
           </div>
         </div>
-        <div className="at-hero-arrows">
-          <button type="button" onClick={() => goRelative(-1)} aria-label={language==='ru'?'Предыдущий кадр':'Previous image'}>
-            <svg viewBox="0 0 24 24" className="size-5" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.65" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M19 12H5m7 7-7-7 7-7" />
-            </svg>
-          </button>
-          <button type="button" onClick={() => goRelative(1)} aria-label={language==='ru'?'Следующий кадр':'Next image'}>
-            <svg viewBox="0 0 24 24" className="size-5" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.65" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M5 12h14m-7-7 7 7-7 7" />
-            </svg>
-          </button>
-        </div>
-        <span className="at-scroll-cue" aria-hidden="true">{language==='ru'?'Прокрутите вниз':'Scroll to explore'}</span>
       </section>
-      <HomeQuote reduced={disableEntranceMotion} fallbackAvatar={avatars[TEAM_MEMBERS[0].name]} />
+      <HomeQuote reduced={disableEntranceMotion} />
       <section className="at-stories">
         <div className="at-stories-inner">
           <ParallaxChapter image="screen9.png" number="01" scene={shotMeta['/images/screen9.png']} reduced={disableInteractiveMotion || isMobile}
