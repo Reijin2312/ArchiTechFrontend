@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import './SiteChrome.css';
 import { Link, useLocation } from 'react-router-dom';
 import { authStore } from '@/shared/store/auth';
 import { SECTIONS as RULES_SECTIONS } from '@/pages/public/RulesPage';
@@ -56,14 +57,7 @@ export default function SiteHeader() {
   }, [pathname, search]);
 
   const linkCls = (active: boolean) =>
-    [
-      'relative px-2 py-1.5 text-sm transition-colors',
-      active
-        ? 'text-transparent bg-clip-text bg-gradient-to-r from-sky-400 to-blue-500 ' +
-          'after:absolute after:left-1.5 after:right-1.5 after:-bottom-[3px] after:h-[2px] after:rounded-full ' +
-          'after:bg-gradient-to-r after:from-sky-400 after:to-blue-500 after:content-[""]'
-        : 'text-slate-300 hover:text-sky-300',
-    ].join(' ');
+    active ? 'at-site-nav-link at-site-nav-link--active' : 'at-site-nav-link';
 
   const isActive = (to: string, end = false) => {
     const t = to || '/';
@@ -104,7 +98,7 @@ export default function SiteHeader() {
             <li key={it.id} className="flex items-start gap-2">
                 <span
                 className={`inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[10px] leading-none ${
-                    on ? 'border-sky-500 text-sky-300' : 'border-slate-700 text-slate-400'
+                    on ? 'border-[#baa07b] text-[#d5b993]' : 'border-slate-700 text-slate-400'
                   }`}
                 >
                   {i + 1}
@@ -112,7 +106,7 @@ export default function SiteHeader() {
                 <a
                   href={`#${it.id}`}
                   onClick={onItemClick}
-                  className={on ? 'text-sky-300' : 'text-slate-200 hover:text-sky-300'}
+                  className={on ? 'text-[#d5b993]' : 'text-slate-200 hover:text-[#d5b993]'}
                   aria-current={on ? 'true' : undefined}
                 >
                   {it.title}
@@ -127,11 +121,11 @@ export default function SiteHeader() {
 
   return (
     <>
-      <header className="sticky top-0 z-20 backdrop-blur supports-backdrop-filter:bg-slate-950/50 border-b border-slate-800">
-        <nav className="mx-auto max-w-7xl px-4 py-3 flex items-center justify-between">
+      <header className="at-site-header sticky top-0 z-20">
+        <nav className="at-site-header__nav mx-auto flex items-center justify-between">
           <Link
             to={MAIN_URL}
-            className="flex items-center gap-3 text-slate-100 focus-visible:outline2 focus-visible:outline-sky-500 rounded-xl px-1 -mx-1"
+            className="at-site-header__brand flex items-center gap-3 rounded-lg focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#c5aa84]"
             aria-label={t('header.homeAria')}
           >
             <img
@@ -141,10 +135,10 @@ export default function SiteHeader() {
               height={32}
               decoding="async"
             />
-            <span className="font-semibold tracking-wide">{SERVER_NAME}</span>
+            <span className="at-site-header__brand-name font-semibold">{SERVER_NAME}</span>
           </Link>
 
-          <div className="hidden md:flex items-center gap-6 text-sm">
+          <div className="at-site-header__links hidden md:flex items-center text-sm">
             <a
               href={MAIN_URL}
               className={linkCls(isActive(MAIN_URL, true))}
@@ -193,7 +187,7 @@ export default function SiteHeader() {
               href={TELEGRAM_URL}
               rel="noopener noreferrer"
               aria-label="Telegram"
-              className="hover:text-white text-slate-300"
+              className="at-site-header__social"
             >
               <SvgTelegram className="h-5" />
             </a>
@@ -201,18 +195,18 @@ export default function SiteHeader() {
               href={DISCORD_URL}
               rel="noopener noreferrer"
               aria-label="Discord"
-              className="hover:text-white text-slate-300"
+              className="at-site-header__social"
             >
               <SvgDiscord className="h-5" />
             </a>
 
-            <LanguageSwitcher />
+            <div className="at-site-language"><LanguageSwitcher /></div>
 
             {user ? (
               <>
                 <Link
                   to={`/u/${user.username}`}
-                  className="rounded-xl px-3 py-1.5 border border-slate-700 hover:border-slate-500"
+                  className="at-site-header__account"
                   title={t('header.profile')}
                 >
                   {user.username}
@@ -220,7 +214,7 @@ export default function SiteHeader() {
 
                 <Link
                   to={`/u/${user.username}`}
-                  className="ml-2 inline-flex h-8 w-8 overflow-hidden rounded-full border border-slate-700"
+                  className="at-site-header__userpic ml-1 inline-flex h-8 w-8 overflow-hidden rounded-full"
                   title={t('header.profile')}
                 >
                   {(user as any)?.avatarUrl ? (
@@ -243,19 +237,19 @@ export default function SiteHeader() {
             ) : (
               <Link
                 to={`/auth/login?next=${next}`}
-                className="rounded-xl px-3 py-1.5 border border-slate-700 hover:border-slate-500"
+                className="at-site-header__account"
               >
                 {t('header.login')}
               </Link>
             )}
           </div>
 
-          <div className="flex items-center gap-2 md:hidden">
-            <LanguageSwitcher />
+          <div className="at-site-header__mobile-controls flex items-center gap-2 md:hidden">
+            <div className="at-site-language"><LanguageSwitcher /></div>
             {user ? (
               <Link
                 to={`/u/${user.username}`}
-                className="inline-flex h-8 w-8 overflow-hidden rounded-full border border-slate-700"
+                className="at-site-header__userpic inline-flex h-10 w-10 overflow-hidden rounded-full"
                 title={t('header.profile')}
               >
                 {(user as any)?.avatarUrl ? (
@@ -277,7 +271,7 @@ export default function SiteHeader() {
             ) : (
               <Link
                 to={`/auth/login?next=${next}`}
-                className="inline-flex h-8 w-8 items-center justify-center overflow-hidden rounded-full border border-slate-700 text-xs text-slate-300"
+                className="at-site-header__mobile-login inline-flex h-10 w-10 items-center justify-center overflow-hidden rounded-full text-xs"
                 title={t('header.login')}
               >
                 {t('header.login').charAt(0)}
@@ -287,7 +281,7 @@ export default function SiteHeader() {
             <button
               type="button"
               onClick={() => setMobileOpen((v) => !v)}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-700 bg-slate-900/70 hover:bg-slate-800"
+              className="at-site-header__mobile-toggle inline-flex h-11 w-11 items-center justify-center"
               aria-label={mobileOpen ? t('header.closeMenu') : t('header.openMenu')}
             >
               {mobileOpen ? (
@@ -302,7 +296,7 @@ export default function SiteHeader() {
 
       {/* Мобильное выезжающее меню справа (оверлей поверх страницы) */}
       <div
-        className={`fixed inset-0 z-30 md:hidden transition-[opacity,visibility] ${
+        className={`at-site-mobile-shell fixed inset-0 z-30 md:hidden transition-[opacity,visibility] ${
           mobileOpen ? 'opacity-100 visible pointer-events-auto' : 'opacity-0 invisible pointer-events-none'
         }`}
       >
@@ -314,7 +308,7 @@ export default function SiteHeader() {
         />
 
         <div
-          className={`absolute inset-y-0 right-0 w-72 max-w-[80%] border-l border-slate-800 p-4 flex flex-col transform transition-transform bg-slate-950/40 backdrop-blur supports-backdrop-filter:bg-slate-950/50 ${
+          className={`at-site-drawer absolute inset-y-0 right-0 w-80 max-w-[86%] p-5 flex flex-col transform transition-transform ${
             mobileOpen ? 'translate-x-0' : 'translate-x-full'
           }`}
         >
@@ -337,8 +331,8 @@ export default function SiteHeader() {
             <a
               href={MAIN_URL}
               onClick={() => setMobileOpen(false)}
-              className={`rounded-lg px-3 py-2 ${
-                isActive(MAIN_URL, true) ? 'bg-slate-800 text-sky-300' : 'text-slate-200 hover:bg-slate-900'
+              className={`at-site-mobile-link rounded-lg px-3 py-3 ${
+                isActive(MAIN_URL, true) ? 'at-site-mobile-link--active' : ''
               }`}
             >
               {t('header.home')}
@@ -346,8 +340,8 @@ export default function SiteHeader() {
             <a
               href={ABOUT_URL}
               onClick={() => setMobileOpen(false)}
-              className={`rounded-lg px-3 py-2 ${
-                isActive(ABOUT_URL) ? 'bg-slate-800 text-sky-300' : 'text-slate-200 hover:bg-slate-900'
+              className={`at-site-mobile-link rounded-lg px-3 py-3 ${
+                isActive(ABOUT_URL) ? 'at-site-mobile-link--active' : ''
               }`}
             >
               {t('header.about')}
@@ -355,8 +349,8 @@ export default function SiteHeader() {
             <a
               href={RULES_URL}
               onClick={() => setMobileOpen(false)}
-              className={`rounded-lg px-3 py-2 ${
-                isActive(RULES_URL) ? 'bg-slate-800 text-sky-300' : 'text-slate-200 hover:bg-slate-900'
+              className={`at-site-mobile-link rounded-lg px-3 py-3 ${
+                isActive(RULES_URL) ? 'at-site-mobile-link--active' : ''
               }`}
             >
               {t('header.rules')}
@@ -364,8 +358,8 @@ export default function SiteHeader() {
             <a
               href={MAP_URL}
               onClick={() => setMobileOpen(false)}
-              className={`rounded-lg px-3 py-2 ${
-                isActive(MAP_URL) ? 'bg-slate-800 text-sky-300' : 'text-slate-200 hover:bg-slate-900'
+              className={`at-site-mobile-link rounded-lg px-3 py-3 ${
+                isActive(MAP_URL) ? 'at-site-mobile-link--active' : ''
               }`}
             >
               {t('header.map')}
@@ -373,8 +367,8 @@ export default function SiteHeader() {
             <a
               href={WIKI_URL}
               onClick={() => setMobileOpen(false)}
-              className={`rounded-lg px-3 py-2 ${
-                isActive(WIKI_URL) ? 'bg-slate-800 text-sky-300' : 'text-slate-200 hover:bg-slate-900'
+              className={`at-site-mobile-link rounded-lg px-3 py-3 ${
+                isActive(WIKI_URL) ? 'at-site-mobile-link--active' : ''
               }`}
             >
               {t('header.wiki')}
@@ -383,8 +377,8 @@ export default function SiteHeader() {
             <a
               href={CHAT_URL}
               onClick={() => setMobileOpen(false)}
-              className={`rounded-lg px-3 py-2 ${
-                isActive(CHAT_URL) ? 'bg-slate-800 text-sky-300' : 'text-slate-200 hover:bg-slate-900'
+              className={`at-site-mobile-link rounded-lg px-3 py-3 ${
+                isActive(CHAT_URL) ? 'at-site-mobile-link--active' : ''
               }`}
             >
               Chat
