@@ -579,7 +579,7 @@ export default function HomePage() {
           </div>
         </div>
       </section>
-      <HomeQuote reduced={disableEntranceMotion} />
+      <HomeQuote reduced={disableEntranceMotion} typewriterReduced={reduceMotion} />
       <section className="at-stories">
         <div className="at-stories-inner">
           <ParallaxChapter image="screen9.png" number="01" scene={shotMeta['/images/screen9.png']} reduced={disableInteractiveMotion || isMobile}
