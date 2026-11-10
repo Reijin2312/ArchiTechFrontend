@@ -11,9 +11,10 @@ type Skin3DViewerProps = {
   animated?: boolean
   background?: string
   interactive?: boolean
+  onReady?: () => void
 }
 
-export function Skin3DViewer({ className = '', skinUrl, autoRotate = false, animated = true, background = '#0f172a', interactive = true }: Skin3DViewerProps) {
+export function Skin3DViewer({ className = '', skinUrl, autoRotate = false, animated = true, background = '#0f172a', interactive = true, onReady }: Skin3DViewerProps) {
   const { language } = useI18n()
   const wrapRef = useRef<HTMLDivElement | null>(null)
   const viewerRef = useRef<any>(null)
@@ -123,6 +124,9 @@ export function Skin3DViewer({ className = '', skinUrl, autoRotate = false, anim
     }
 
     Promise.resolve(viewer.loadSkin(skinUrl as any))
+      .then(() => {
+        if (viewerRef.current === viewer) onReady?.()
+      })
       .catch(() => {})
       .finally(() => {
         if (viewerRef.current !== viewer) return
@@ -151,7 +155,7 @@ export function Skin3DViewer({ className = '', skinUrl, autoRotate = false, anim
       viewerRef.current = null
       controlsRef.current = null
     }
-  }, [skinUrl, animated, background, interactive])
+  }, [skinUrl, animated, background, interactive, onReady])
 
   useEffect(() => {
     const viewer = viewerRef.current
