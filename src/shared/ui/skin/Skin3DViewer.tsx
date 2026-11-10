@@ -16,9 +16,11 @@ type Skin3DViewerProps = {
   // Used by the homepage quote; other skin viewers retain their existing behavior.
   portraitYaw?: number
   followCursor?: boolean
+  // Only the homepage quote opts into extra framing space above the base line.
+  portraitFraming?: boolean
 }
 
-export function Skin3DViewer({ className = '', skinUrl, autoRotate = false, animated = true, background = '#0f172a', interactive = true, onReady, onError, portraitYaw = 0, followCursor = false }: Skin3DViewerProps) {
+export function Skin3DViewer({ className = '', skinUrl, autoRotate = false, animated = true, background = '#0f172a', interactive = true, onReady, onError, portraitYaw = 0, followCursor = false, portraitFraming = false }: Skin3DViewerProps) {
   const { language } = useI18n()
   const wrapRef = useRef<HTMLDivElement | null>(null)
   const viewerRef = useRef<any>(null)
@@ -67,7 +69,8 @@ export function Skin3DViewer({ className = '', skinUrl, autoRotate = false, anim
     cv.style.height = '100%'
     cv.style.display = 'block'
 
-    const PAD = 1.05
+    // The testimonial needs more breathing room around the shoes and head.
+    const PAD = portraitFraming ? 1.18 : 1.05
 
     const frameToFit = () => {
       const v = viewerRef.current
@@ -79,6 +82,10 @@ export function Skin3DViewer({ className = '', skinUrl, autoRotate = false, anim
       const box = new THREE.Box3().setFromObject(obj)
       const size = box.getSize(new THREE.Vector3())
       const center = box.getCenter(new THREE.Vector3())
+      // Aim a little below the model's midpoint so the character is positioned
+      // higher in the canvas. Keep the full object box for the distance fit.
+      const frameCenter = center.clone()
+      if (portraitFraming) frameCenter.y -= size.y * 0.045
 
       const el = wrapRef.current!
       const cw = Math.max(1, el.clientWidth)
@@ -95,13 +102,13 @@ export function Skin3DViewer({ className = '', skinUrl, autoRotate = false, anim
       const distH = halfW / Math.tan(hFovEffRad / 2)
       const dist = Math.max(distV, distH) * PAD
 
-      const oldTarget = (controlsRef.current?.target ?? center).clone()
+      const oldTarget = (controlsRef.current?.target ?? frameCenter).clone()
       const dir = v.camera.position.clone().sub(oldTarget)
       if (!isFinite(dir.length()) || dir.length() < 1e-3) dir.set(-0.35, 0.3, 1)
       dir.setLength(dist)
 
-      controlsRef.current?.target.copy(center)
-      v.camera.position.copy(center).add(dir)
+      controlsRef.current?.target.copy(frameCenter)
+      v.camera.position.copy(frameCenter).add(dir)
 
       v.camera.near = Math.max(0.01, dist / 100)
       v.camera.far = Math.max(v.camera.near * 10, dist * 100)
@@ -249,7 +256,7 @@ export function Skin3DViewer({ className = '', skinUrl, autoRotate = false, anim
       viewerRef.current = null
       controlsRef.current = null
     }
-  }, [skinUrl, animated, background, interactive, onReady, onError, portraitYaw, followCursor])
+  }, [skinUrl, animated, background, interactive, onReady, onError, portraitYaw, followCursor, portraitFraming])
 
   useEffect(() => {
     const viewer = viewerRef.current
