@@ -477,8 +477,7 @@ export default function HomePage() {
               </a>
               <a className="at-source-action" href="https://github.com/Reijin2312/ArchiTech_Launcher"
                 target="_blank" rel="noreferrer noopener" aria-label={copy.launcherSourceAria} title={copy.launcherSource}>
-                <SvgGitHub className="size-5 shrink-0" />
-                <span className="at-source-label">{copy.launcherSource}</span>
+                <SvgGitHub className="size-5 shrink-0" aria-hidden="true" />
               </a>
             </div>
             <div className="at-ip-block">
