@@ -141,3 +141,36 @@ Static source checks confirm all four chapters, live APIs, original gallery, all
 **Runtime build and visual QA are still required** on a clone with npm dependencies. The authoring environment cannot resolve GitHub or npm from its shell, so claiming a successful Vite/browser test would be misleading.
 
 Inspect responsive widths 390/768/1024/1440/1920px, verify the actual Raijin public profile returns `skinUrl`, and test the quote avatar fallback by simulating a failed profile request. Check the loader's WebGL console for errors on devices without hardware acceleration.
+
+---
+
+## Phase III — editorial team showcase and avatar reliability
+
+The original homepage roster could look unfinished because the earlier `TeamGrid` still shipped sky-blue glass, blur glows and different card structures. A global CSS override collapsed those structures into incoherent rows. This phase deliberately **does not change** that shared component on any other page.
+
+### Visual reference and rationale
+- [Awwwards editorial team grid](https://www.awwwards.com/inspiration/desktop-23): variations in the visual importance of portraits, restrained type hierarchy and thin alignment.
+- [Awwwards Heights Agency](https://www.awwwards.com/inspiration/team-heights-agency): clean portraits, name and role as legible caption hierarchy.
+- [IN FOCUS team presentation](https://infocusinc.com/news/in-focus/): spare dark treatment, strong photograph-first layout without generic glows.
+- [Apple Human Interface Guidelines / Layout](https://developer.apple.com/design/human-interface-guidelines/layout): grouping, hierarchy, alignment, adapting to available widths.
+- [Minecraft skin/avatar API docs](https://github.com/thejacedev/McHeads-API): reference for potential future authentic Minecraft head renders, *not* used as a source of portraits in this implementation.
+
+### Implemented
+- Homepage now imports `HomeTeam` rather than directly mounting the legacy `TeamGrid`.
+- Founder Raijin gets a featured photographic/portrait block with name, unchanged role and real existing CurseForge, Modrinth, GitHub destinations.
+- Other four contributors appear in a 2×2 editorial grid, each name and role linking to the existing on-site profile.
+- Former-administrator marking, retirement year and the original reason tooltip are retained and localized.
+- Portraits first try the existing `useTeamAvatars` profile avatar URLs. If the URL is missing or fails, an inline pixel-art placeholder displays instead. Image-state checks prevent broken-image glyphs or stale photos.
+- The repo was missing `public/images/avatar-fallback.png`; a neutral local `avatar-fallback.svg` was added and `TEAM_AVATAR_FALLBACK` now references that real asset for other components, including the founder quote.
+- No unrelated site-wide list, routing, translation or API change.
+- Motion: a single staggered section reveal (0.66s), subtle image hover and arrow shift; no blur-reveal, float animations or idle loops.
+- Desktop 2-column members, mobile single-column members. Reduced-motion mode removes cosmetic animation.
+
+### Files
+- `src/pages/public/HomeTeam.tsx` — new homepage-specific roster with resilient portrait loading
+- `src/pages/public/HomePage.tsx` — single import/use swap
+- `src/pages/public/HomePage.premium.css` — replace old team overrides with cohesive editorial layout
+- `public/images/avatar-fallback.svg` — local neutral avatar asset
+- `src/shared/data/team.ts` — correct the fallback asset path
+
+Static checks are useful but do not substitute for browser review: verify all profile images, blocked image requests, the 2×2 mobile breakpoint and keyboard focus. npm/build/browser verification was not available in the tool environment.
