@@ -1,0 +1,222 @@
+@import url('https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=Onest:wght@400;500;600;700&display=swap');
+
+/* ArchiTech chrome — shared navigation and footer, no page-content overrides. */
+.at-site-header, .at-site-drawer, .at-site-footer {
+  --chrome-bg: #1b1c19;
+  --chrome-deep: #171816;
+  --chrome-ink: #f0ece5;
+  --chrome-muted: #bdb7ab;
+  --chrome-brass: #c5aa84;
+  --chrome-rule: rgba(236,230,216,.17);
+  color: var(--chrome-ink);
+  font-family: 'Golos Text', Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+.at-site-header {
+  z-index: 20;
+  background: rgba(24,25,22,.97);
+  border-bottom: 1px solid var(--chrome-rule);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.at-site-header__nav {
+  width: min(calc(100% - 8vw),1380px);
+  min-height: 70px;
+  margin-inline: auto;
+  padding: 0;
+  gap: 26px;
+}
+.at-site-header__brand {
+  display: inline-flex;
+  align-items: center;
+  min-width: max-content;
+  color: #f0ece5;
+  text-decoration: none;
+  transition: opacity .25s ease;
+}
+.at-site-header__brand:hover { opacity: .83; }
+.at-site-header__brand img { width: 31px; height: 31px; object-fit: contain; }
+.at-site-header__brand-name {
+  font: 600 15px/1.25 'Onest',sans-serif;
+  letter-spacing: -.025em;
+}
+.at-site-header__links { gap: clamp(13px,1.8vw,26px); }
+.at-site-nav-link {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-height: 48px;
+  padding: 0 1px;
+  color: #bdb7ad;
+  white-space: nowrap;
+  text-decoration: none;
+  font: 500 13px/1.4 'Golos Text',sans-serif;
+  transition: color .25s ease;
+}
+.at-site-nav-link::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 8px;
+  height: 1px;
+  background: #c5aa84;
+  transform-origin: center;
+  transform: scaleX(0);
+  transition: transform .35s cubic-bezier(.22,1,.36,1);
+}
+.at-site-nav-link:hover, .at-site-nav-link--active { color: #eee9e0; }
+.at-site-nav-link--active::after { transform: scaleX(1); }
+.at-site-header__social {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  min-height: 44px;
+  color: #bbb6ac;
+  transition: color .24s ease, transform .28s cubic-bezier(.22,1,.36,1);
+}
+.at-site-header__social:hover { color: #f3e6d4; transform: translateY(-1px); }
+.at-site-header__account {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 0 17px;
+  border: 1px solid rgba(239,231,217,.34);
+  border-radius: 9px;
+  color: #eee8dd;
+  text-decoration: none;
+  font: 600 12px/1.3 'Onest',sans-serif;
+  transition: background-color .23s ease,border-color .23s ease;
+}
+.at-site-header__account:hover {
+  background: rgba(238,231,219,.085);
+  border-color: rgba(239,231,217,.62);
+}
+.at-site-header__userpic {
+  border: 1px solid rgba(238,231,218,.3);
+  background: #30312b;
+}
+.at-site-header__mobile-login,
+.at-site-header__mobile-toggle {
+  border: 1px solid rgba(239,231,217,.3);
+  border-radius: 10px;
+  background: rgba(240,234,223,.045);
+  color: #eee8df;
+  transition: background .23s ease,border-color .23s ease;
+}
+.at-site-header__mobile-login:hover,
+.at-site-header__mobile-toggle:hover { background: rgba(240,234,223,.12); border-color: #c5aa84; }
+.at-site-header a:focus-visible,
+.at-site-header button:focus-visible,
+.at-site-drawer a:focus-visible,
+.at-site-drawer button:focus-visible,
+.at-site-footer a:focus-visible {
+  outline: 2px solid #cdb38c;
+  outline-offset: 4px;
+}
+.at-site-language button[aria-haspopup="menu"] {
+  width: 40px;
+  height: 40px;
+  border: 1px solid rgba(239,231,217,.28);
+  border-radius: 50%;
+  background: rgba(240,234,223,.04);
+  transition: background .2s ease,border-color .2s ease;
+}
+.at-site-language button[aria-haspopup="menu"]:hover {
+  border-color: rgba(239,231,217,.6);
+  background: rgba(240,234,223,.1);
+}
+.at-site-language [role="menu"] {
+  z-index: 60;
+  border: 1px solid rgba(235,228,216,.24);
+  border-radius: 11px;
+  background: #23241f;
+  box-shadow: 0 18px 40px rgba(0,0,0,.27);
+  backdrop-filter: none;
+}
+.at-site-language [role="menuitemradio"] {
+  color: #ddd7cb;
+  border-radius: 7px;
+}
+.at-site-language [role="menuitemradio"]:hover,
+.at-site-language [role="menuitemradio"][aria-checked="true"] {
+  background: rgba(197,170,132,.13);
+  color: #f5eee3;
+}
+.at-site-mobile-shell > button:first-child { background: rgba(10,12,11,.65); }
+.at-site-drawer {
+  border-left: 1px solid rgba(239,231,217,.19);
+  background: #20211d;
+  box-shadow: -14px 0 46px rgba(0,0,0,.28);
+  color: #eee9df;
+}
+.at-site-mobile-link {
+  display: flex;
+  align-items: center;
+  min-height: 47px;
+  color: #d1cbbf;
+  text-decoration: none;
+  font: 500 14px/1.4 'Golos Text',sans-serif;
+  transition: color .22s ease,background-color .22s ease;
+}
+.at-site-mobile-link:hover { background: rgba(239,231,217,.07); color: #f0ebdf; }
+.at-site-mobile-link--active {
+  background: rgba(197,170,132,.12);
+  color: #dec59f;
+}
+.at-site-drawer [class*="text-[#d5b993]"] { color: #dec59f; }
+.at-site-drawer [class*="border-slate"] { border-color: rgba(240,233,220,.2); }
+.at-site-drawer [class*="bg-slate"] { background-color: #292a24; }
+.at-site-drawer [class*="text-slate"] { color: #c9c2b7; }
+
+/* A quiet editorial footer, not a second advertisement. */
+.at-site-footer {
+  border-top: 1px solid rgba(237,229,217,.18);
+  background: #171816;
+  padding: 61px 0 30px;
+}
+.at-site-footer__inner { width: min(calc(100% - 10vw),1380px); margin: 0 auto; }
+.at-site-footer__top { display:flex;justify-content:space-between;align-items:center;gap:28px; }
+.at-site-footer__brand { display:inline-flex;align-items:center;gap:13px;color:#f0ece5;text-decoration:none;font:600 19px/1.3 'Onest',sans-serif;letter-spacing:-.025em; }
+.at-site-footer__brand img { width:32px;height:32px;object-fit:contain; }
+.at-site-footer__socials { display:flex;gap:12px;align-items:center; }
+.at-site-footer__socials a {
+  display:grid;place-items:center;width:45px;height:45px;border:1px solid rgba(235,226,213,.24);
+  border-radius:10px;color:#d0c8ba;transition:border-color .25s ease,color .25s ease,background-color .25s ease;
+}
+.at-site-footer__socials a:hover { border-color:rgba(235,226,213,.58);color:#f4e9d9;background:rgba(240,234,223,.055); }
+.at-site-footer__nav { display:flex;flex-wrap:wrap;gap:14px 32px;margin-top:38px; }
+.at-site-footer__nav a { color:#c9c2b7;text-decoration:none;font:500 13px/1.5 'Golos Text',sans-serif;transition:color .22s ease; }
+.at-site-footer__nav a:hover { color:#f0e7d9; }
+.at-site-footer__divider { height:1px;background:rgba(237,229,217,.16);margin:41px 0 26px; }
+.at-site-footer__disclaimer { max-width:980px;color:#aaa498;font:400 12px/1.75 'Golos Text',sans-serif; }
+.at-site-footer__disclaimer p { margin:0; }
+.at-site-footer__bottom { display:flex;justify-content:space-between;gap:20px;align-items:center;margin-top:26px; }
+.at-site-footer__copyright { color:#968f84;font:400 11px/1.5 'Golos Text',sans-serif; }
+.at-site-footer__mark { color:#c5aa84;font:600 10px/1.4 'Golos Text',sans-serif;letter-spacing:.16em; }
+@media(max-width:1100px) {
+  .at-site-header__nav { width:calc(100% - 40px);gap:16px; }
+  .at-site-header__links { gap:13px; }
+  .at-site-nav-link { font-size:12px; }
+}
+@media(max-width:850px) {
+  .at-site-header__nav { min-height:62px; width:calc(100% - 36px); }
+  .at-site-footer { padding:48px 0 26px; }
+  .at-site-footer__inner { width:calc(100% - 40px); }
+  .at-site-footer__nav { gap:14px 25px; }
+}
+@media(max-width:620px) {
+  .at-site-header__brand-name { font-size:14px; }
+  .at-site-footer__top { align-items:flex-start; }
+  .at-site-footer__brand { font-size:17px; }
+  .at-site-footer__nav { margin-top:32px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .at-site-footer__divider { margin:32px 0 22px; }
+  .at-site-footer__bottom { flex-direction:column;align-items:flex-start;gap:12px; }
+}
+@media(prefers-reduced-motion:reduce) {
+  .at-site-header *, .at-site-drawer *, .at-site-footer * { transition:none!important;animation:none!important; }
+}
