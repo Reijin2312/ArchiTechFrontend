@@ -6,6 +6,7 @@ import { motion } from 'framer-motion';
 import { LeftNav as BaseLeftNav, RightToc as BaseRightToc, Section as BaseSection, Kbd, Callout, pageVariants } from '@/shared/ui/layout/PageSidebar';
 import { useIsMobile } from '@/shared/ui/utils/useIsMobile';
 import { useI18n } from '@/shared/i18n/I18nProvider';
+import './DocumentPages.atelier.css';
 
 export type TocItem = { id: string; title: string };
 
@@ -46,7 +47,7 @@ export default function RulesPage() {
     <>
     <Seo {...routesMeta['/rules']} />
     <motion.div
-      className="mx-auto w-full max-w-7xl grid grid-cols-12 gap-6 px-4 py-6 text-slate-100"
+      className="architech-document architech-rules mx-auto w-full max-w-7xl grid grid-cols-12 gap-6 px-4 py-6 text-slate-100"
       variants={isMobile ? undefined : pageVariants}
       initial={isMobile ? false : 'hidden'}
       animate={isMobile ? false : 'show'}
@@ -195,7 +196,7 @@ const EN_RULES: Array<{ id: string; items: React.ReactNode[] }> = [
 function EnglishRules({ isMobile }: { isMobile: boolean }) {
   return <>
     <Seo {...routesMeta['/rules']} />
-    <motion.div className="mx-auto grid w-full max-w-7xl grid-cols-12 gap-6 px-4 py-6 text-slate-100" variants={isMobile ? undefined : pageVariants} initial={isMobile ? false : 'hidden'} animate={isMobile ? false : 'show'}>
+    <motion.div className="architech-document architech-rules mx-auto grid w-full max-w-7xl grid grid-cols-12 gap-6 px-4 py-6 text-slate-100" variants={isMobile ? undefined : pageVariants} initial={isMobile ? false : 'hidden'} animate={isMobile ? false : 'show'}>
       <aside className="hidden md:block md:col-span-3"><BaseLeftNav items={EN_SECTIONS} disableMotion={isMobile} blurIntensity="xl" bgOpacity="60" /></aside>
       <main className="col-span-12 md:col-span-6">
         <h1 className="mb-4 text-center text-[22px] font-bold md:text-[24px]">Server rules</h1>
