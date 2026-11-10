@@ -1076,64 +1076,88 @@
 .architech-home .at-rank-editorial .relative.size-11 { border: 1px solid rgba(241,235,222,.3) !important; border-radius: 8px !important; }
 .architech-home .at-rank-editorial .animate-pulse { animation: none !important; }
 
-/* FAQ: fast to scan, no ornaments competing with the original language. */
+/* FAQ: original two-column editorial layout, plain long-form answers. */
 .architech-home .at-faq {
   padding: 130px 0 160px;
   background: #1b1c19;
 }
 .architech-home .at-faq-editorial { border-top: 1px solid var(--at-line); }
-.architech-home .at-faq-editorial > div { gap: 0 !important; }
-.architech-home .at-faq-editorial [class*="rounded-2xl"] {
-  border: 0 !important;
-  border-radius: 0 !important;
-  background: transparent !important;
-  box-shadow: none !important;
-  backdrop-filter: none !important;
-}
-.architech-home .at-faq-editorial .pointer-events-none.absolute { display: none !important; }
-.architech-home .at-faq-editorial [class*="rounded-2xl"] > button {
+.architech-home .at-faq-rows { display: grid; gap: 0; }
+.architech-home .at-faq-row { border-bottom: 1px solid var(--at-line); }
+.architech-home .at-faq-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
   width: 100%;
   min-height: 76px;
-  padding: 25px 4px !important;
-  border-bottom: 1px solid var(--at-line) !important;
-  border-radius: 0 !important;
-  background: transparent !important;
+  padding: 25px 4px;
+  border: 0;
   color: var(--at-ink);
+  background: transparent;
+  text-align: left;
   font: 500 clamp(16px,1.35vw,18px)/1.4 'Golos Text',sans-serif;
-  transition: background-color .25s ease,color .25s ease;
+  cursor: pointer;
+  transition: color .25s ease, background-color .25s ease;
 }
-.architech-home .at-faq-editorial [class*="rounded-2xl"] > button:hover {
-  background: rgba(244,239,230,.035) !important;
-  color: #ffffff;
+.architech-home .at-faq-trigger:hover,
+.architech-home .at-faq-trigger[aria-expanded="true"] {
+  color: #fff;
+  background: rgba(244,239,230,.035);
 }
-.architech-home .at-faq-editorial [class*="rounded-2xl"] > div { padding: 23px 4px 30px !important; }
-.architech-home .at-faq-editorial [class*="rounded-xl"] {
-  border: 1px solid var(--at-line) !important;
-  border-radius: 10px !important;
-  background: rgba(245,239,229,.034) !important;
+.architech-home .at-faq-trigger:focus-visible {
+  outline: 2px solid var(--at-brass);
+  outline-offset: -2px;
 }
-.architech-home .at-faq-editorial [class*="text-sky"],
-.architech-home .at-faq-editorial [class*="text-indigo"],
-.architech-home .at-faq-editorial [class*="text-emerald"] { color: var(--at-brass) !important; }
-.architech-home .at-faq-editorial [class*="bg-sky"],
-.architech-home .at-faq-editorial [class*="bg-indigo"],
-.architech-home .at-faq-editorial [class*="bg-emerald"] { background: rgba(197,170,132,.11) !important; }
-.architech-home .at-faq-editorial [class*="text-slate-300"] { color: var(--at-ink-secondary) !important; }
-.architech-home .at-faq-editorial [class*="text-slate-400"] { color: var(--at-ink-muted) !important; }
-.architech-home .at-faq-editorial a[class*="rounded-xl"],
-.architech-home .at-faq-editorial a[class*="rounded-full"] {
-  border-color: var(--at-line-strong) !important;
-  border-radius: 9px !important;
-  color: var(--at-ink) !important;
-  background: rgba(240,235,224,.08) !important;
-  transition: background .25s ease,border-color .25s ease;
+.architech-home .at-faq-question { display: inline-flex; align-items: center; gap: 12px; min-width: 0; }
+.architech-home .at-faq-question-icon {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  color: var(--at-brass);
 }
-.architech-home .at-faq-editorial a[class*="rounded-xl"]:hover,
-.architech-home .at-faq-editorial a[class*="rounded-full"]:hover {
-  background: rgba(240,235,224,.16) !important;
-  border-color: var(--at-ink-secondary) !important;
+.architech-home .at-faq-chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  color: var(--at-brass);
 }
-.architech-home .at-faq-editorial .font-techno,
+.architech-home .at-faq-panel { overflow: hidden; }
+.architech-home .at-faq-answer {
+  max-width: 74ch;
+  padding: 0 4px 27px;
+  color: var(--at-ink-secondary);
+  font: 400 15.5px/1.75 'Golos Text',sans-serif;
+}
+.architech-home .at-faq-answer p { margin: 0; }
+.architech-home .at-faq-answer p + p { margin-top: 10px; }
+.architech-home .at-faq-answer strong { color: #eee7db; font-weight: 600; }
+.architech-home .at-faq-answer a {
+  color: #ddc29b;
+  text-decoration: underline;
+  text-decoration-color: rgba(221,194,155,.65);
+  text-underline-offset: 3px;
+  transition: color .2s ease, text-decoration-color .2s ease;
+}
+.architech-home .at-faq-answer a:hover,
+.architech-home .at-faq-answer a:focus-visible {
+  color: #fff0da;
+  text-decoration-color: currentColor;
+}
+.architech-home .at-faq-steps,
+.architech-home .at-faq-prose ul {
+  margin: 0;
+  padding-left: 22px;
+}
+.architech-home .at-faq-steps { list-style: decimal; }
+.architech-home .at-faq-steps li + li { margin-top: 15px; }
+.architech-home .at-faq-steps li::marker { color: var(--at-brass); font-weight: 600; }
+.architech-home .at-faq-steps li a { display: inline-block; margin-top: 3px; }
+.architech-home .at-faq-prose ul { margin: 10px 0 12px; list-style: none; padding-left: 0; }
+.architech-home .at-faq-prose ul li + li { margin-top: 5px; }
+.architech-home .at-faq-prose ul li { color: var(--at-ink-secondary); }
+.architech-home .at-faq .font-techno,
 .architech-home .at-community .font-techno,
 .architech-home .at-ranking .font-techno { font-family: 'Onest',sans-serif; letter-spacing: -.035em; }
 
@@ -1235,7 +1259,7 @@
   .architech-home .at-faq { padding: 88px 0; }
   .architech-home .at-section-heading h2 { font-size: clamp(38px,8.5vw,60px); }
   .architech-home .at-team-editorial [class*="rounded-2xl"] { padding: 18px 0 !important; }
-  .architech-home .at-faq-editorial [class*="rounded-2xl"] > button { min-height: 70px; padding: 19px 3px !important; }
+  .architech-home .at-faq-trigger { min-height: 70px; padding: 19px 3px; }
 }
 
 /* This design never depends on motion for information or access. */
