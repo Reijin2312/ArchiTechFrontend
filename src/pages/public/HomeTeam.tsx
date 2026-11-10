@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { motion, type Variants } from 'framer-motion'
 import type { TeamMember } from '@/shared/data/team'
 import { SvgArrowUpRight, SvgCurseForge, SvgGitHub, SvgModrinth } from '@/shared/ui/image/Icons'
@@ -26,13 +26,12 @@ function MinecraftPortrait({ name, src, prominent = false }: {
   src?: string
   prominent?: boolean
 }) {
-  const [loaded, setLoaded] = useState(false)
-  const [failed, setFailed] = useState(false)
-
-  useEffect(() => {
-    setLoaded(false)
-    setFailed(false)
-  }, [src])
+  const [imageStatus, setImageStatus] = useState<{ src?: string; loaded: boolean; failed: boolean }>({
+    src, loaded: false, failed: false,
+  })
+  // State from the previous source must not conceal a new portrait or reveal an old one.
+  const loaded = imageStatus.src === src && imageStatus.loaded
+  const failed = imageStatus.src === src && imageStatus.failed
 
   return (
     <span className={prominent ? 'at-staff-portrait at-staff-portrait--large' : 'at-staff-portrait'}>
@@ -58,8 +57,8 @@ function MinecraftPortrait({ name, src, prominent = false }: {
           height={prominent ? 224 : 80}
           decoding="async"
           loading="lazy"
-          onLoad={() => setLoaded(true)}
-          onError={() => { setFailed(true); setLoaded(false) }}
+          onLoad={() => setImageStatus({ src, loaded: true, failed: false })}
+          onError={() => setImageStatus({ src, loaded: false, failed: true })}
         />
       )}
       <span className="sr-only">{name}</span>
