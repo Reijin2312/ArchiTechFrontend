@@ -455,16 +455,20 @@ export default function HomePage() {
               <a className="at-primary-action" href={LAUNCHER_DOWNLOAD_URL}>
                 <SvgDownload className="size-4" /> {copy.downloadLauncher}
               </a>
-              <a className="at-source-action inline-flex items-center gap-2" href="https://github.com/Reijin2312/ArchiTech_Launcher"
+              <a className="at-source-action" href="https://github.com/Reijin2312/ArchiTech_Launcher"
                 target="_blank" rel="noreferrer noopener" aria-label={copy.launcherSourceAria} title={copy.launcherSource}>
-                <SvgGitHub className="size-5" />
+                <SvgGitHub className="size-5 shrink-0" />
+                <span className="at-source-label">{copy.launcherSource}</span>
               </a>
             </div>
             <div className="at-ip-block">
               <div className="px-3 grid place-items-center border-r">IP</div>
               <div className="flex-1 grid place-items-center px-3 font-mono">{SERVER_IP}</div>
-              <button type="button" onClick={copyIp} className="px-3 border-l" title={copy.copyIp} aria-label={copy.copyIp}>
+              <button type="button" onClick={copyIp} className="px-3 border-l"
+                title={copyOk === 'ok' ? copy.copied : copyOk === 'err' ? copy.error : copy.copyIp}
+                aria-label={copyOk === 'ok' ? copy.copied : copyOk === 'err' ? copy.error : copy.copyIp}>
                 {copyOk === 'ok' ? <SvgCheck className="size-5"/> : <SvgCopy className="size-5"/>}
+                <span className="sr-only" aria-live="polite">{copyOk === 'ok' ? copy.copied : copyOk === 'err' ? copy.error : ''}</span>
               </button>
             </div>
             <div className="at-status-row flex flex-wrap items-center">
@@ -518,13 +522,19 @@ export default function HomePage() {
                 </motion.div>
               </AnimatePresence>
               <motion.div className="at-gallery-caption"
-                initial={false} animate={{opacity:galleryHover?1:.85}}
-                transition={{duration:.3}}>
-                <div>
-                  <div className="text-[10px] tracking-wider">{copy.gallery} · {String(activeIndex+1).padStart(2,'0')} / {shots.length}</div>
-                  <div className="mt-1 text-sm font-semibold">{activeShotMeta.title}</div>
-                  <div className="text-xs text-stone-300">{activeShotMeta.subtitle}</div>
-                </div>
+                initial={false} animate={{opacity:galleryHover?1:.94}}
+                transition={{duration:.26}}>
+                <AnimatePresence mode="wait" initial={false}>
+                  <motion.div key={shot}
+                    initial={disableInteractiveMotion ? {opacity:0} : {opacity:0,y:5}}
+                    animate={{opacity:1,y:0}}
+                    exit={disableInteractiveMotion ? {opacity:0} : {opacity:0,y:-4}}
+                    transition={{duration:disableInteractiveMotion?.12:.33,ease:[.22,1,.36,1]}}>
+                    <div className="at-gallery-eyebrow">{copy.gallery} · {String(activeIndex+1).padStart(2,'0')} / {shots.length}</div>
+                    <div className="at-gallery-title">{activeShotMeta.title}</div>
+                    <div className="at-gallery-subtitle">{activeShotMeta.subtitle}</div>
+                  </motion.div>
+                </AnimatePresence>
               </motion.div>
             </div>
             <div className="at-gallery-thumbs">
@@ -542,8 +552,16 @@ export default function HomePage() {
           </div>
         </div>
         <div className="at-hero-arrows">
-          <button type="button" onClick={() => goRelative(-1)} aria-label={language==='ru'?'Предыдущий кадр':'Previous image'}>←</button>
-          <button type="button" onClick={() => goRelative(1)} aria-label={language==='ru'?'Следующий кадр':'Next image'}>→</button>
+          <button type="button" onClick={() => goRelative(-1)} aria-label={language==='ru'?'Предыдущий кадр':'Previous image'}>
+            <svg viewBox="0 0 24 24" className="size-5" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.65" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M19 12H5m7 7-7-7 7-7" />
+            </svg>
+          </button>
+          <button type="button" onClick={() => goRelative(1)} aria-label={language==='ru'?'Следующий кадр':'Next image'}>
+            <svg viewBox="0 0 24 24" className="size-5" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.65" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M5 12h14m-7-7 7 7-7 7" />
+            </svg>
+          </button>
         </div>
         <span className="at-scroll-cue" aria-hidden="true">{language==='ru'?'Прокрутите вниз':'Scroll to explore'}</span>
       </section>
