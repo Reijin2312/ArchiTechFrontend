@@ -55,6 +55,7 @@ export const router = createBrowserRouter([
       { path: '/shop', element: <Navigate to="/start" replace />},
       { path: '/wiki', element: <WikiPage/>},
       { path: '/about', element: <AboutServerPage />},
+      { path: '/about/seasons/:seasonNumber', element: <AboutServerPage />},
       { path: '/contacts', element: <ContactsPage />},
       { path: '/map', element: <MapPage />},
       { path: '/terms', element: <UserAgreementPage/>},
