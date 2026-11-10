@@ -803,13 +803,6 @@ export default function HomePage() {
           </div>
         </div>
       </section>
-      <section className="at-end">
-        <img src="/images/screen2.webp" alt="" loading="lazy" aria-hidden="true"/>
-        <div className="at-container at-end-inner">
-          <img src="/images/logo.webp" alt={SERVER_NAME} width={360} height={95} className="h-auto max-w-[70vw]" />
-          <a className="at-end-link" href={LAUNCHER_DOWNLOAD_URL}>{copy.downloadLauncher} ↗</a>
-        </div>
-      </section>
     </div>
 
             </>
