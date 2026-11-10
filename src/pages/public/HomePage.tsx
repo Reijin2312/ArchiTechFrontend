@@ -609,209 +609,116 @@ export default function HomePage() {
       </section>
       <section className="at-faq">
         <div className="at-container at-faq-layout">
-          <div className="at-section-heading"><div><span className="at-kicker">ARCHITECH / FAQ</span><h2>{copy.faq}</h2></div></div>
+          <div className="at-section-heading">
+            <div><span className="at-kicker">ARCHITECH / FAQ</span><h2>{copy.faq}</h2></div>
+          </div>
           <div className="at-faq-editorial">
-                  <motion.section
-        className="at-faq-editorial"
-        variants={faqContainer}
-        initial={disableEntranceMotion ? undefined : 'hidden'}
-        whileInView={disableEntranceMotion ? undefined : 'show'}
-        viewport={{ once: true, margin: '-10% 0px' }}
-      >
-        
+            <motion.section
+              className="at-faq-list"
+              variants={faqContainer}
+              initial={disableEntranceMotion ? undefined : 'hidden'}
+              whileInView={disableEntranceMotion ? undefined : 'show'}
+              viewport={{ once: true, margin: '-10% 0px' }}
+            >
+              <motion.div className="at-faq-rows">
+                <motion.div variants={disableEntranceMotion ? undefined : faqItem}>
+                  <Faq icon={<SvgRoute className="size-5" />} q={copy.faqItems.start} a={<StepsGuide />} />
+                </motion.div>
 
-        <motion.div className="grid gap-3">
-          <motion.div variants={disableEntranceMotion ? undefined : faqItem}>
-          <Faq icon={<SvgRoute className="size-5" />} q={copy.faqItems.start} a={<StepsGuide disableMotion={disableEntranceMotion} />} />
-          </motion.div>
+                <motion.div variants={disableEntranceMotion ? undefined : faqItem}>
+                  <Faq
+                    q={copy.faqItems.launcher}
+                    icon={<SvgLauncher className="size-5" />}
+                    a={<p>{copy.faqItems.launcherAnswer}</p>}
+                  />
+                </motion.div>
 
-          <motion.div variants={disableEntranceMotion ? undefined : faqItem}>
-            <Faq
-              q={copy.faqItems.launcher}
-              icon={<SvgLauncher className="size-5" />}
-              a={
-                <FaqInfoCard label={copy.faqItems.launcherLabel}>
-                  {copy.faqItems.launcherAnswer}
-                </FaqInfoCard>
-              }
-            />
-          </motion.div>
+                <motion.div variants={disableEntranceMotion ? undefined : faqItem}>
+                  <Faq
+                    q={copy.faqItems.safety}
+                    icon={<SvgShield className="size-5" />}
+                    a={
+                      <p>
+                        {copy.faqItems.safetyBefore}{' '}
+                        <a href="https://github.com/Reijin2312/ArchiTech_Launcher" target="_blank" rel="noreferrer noopener">
+                          {copy.faqItems.safetyLink}
+                        </a>
+                        {copy.faqItems.safetyAfter}
+                      </p>
+                    }
+                  />
+                </motion.div>
 
-          <motion.div variants={disableEntranceMotion ? undefined : faqItem}>
-            <Faq
-              q={copy.faqItems.safety}
-              icon={<SvgShield className="size-5" />}
-              a={
-                <FaqInfoCard label={copy.faqItems.safetyLabel}>
-                  {copy.faqItems.safetyBefore}{' '}
-                  <a
-                    href="https://github.com/Reijin2312/ArchiTech_Launcher"
-                    target="_blank"
-                    rel="noreferrer noopener"
-                    className="text-sky-300 underline decoration-sky-400/60 underline-offset-2 hover:text-sky-200"
-                  >
-                    {copy.faqItems.safetyLink}
-                  </a>
-                  {copy.faqItems.safetyAfter}
-                </FaqInfoCard>
-              }
-            />
-          </motion.div>
+                <motion.div variants={disableEntranceMotion ? undefined : faqItem}>
+                  <Faq
+                    q={copy.faqItems.free}
+                    icon={<SvgUserPlus className="size-5" />}
+                    a={<p>{copy.faqItems.freeAnswer}</p>}
+                  />
+                </motion.div>
 
-          <motion.div variants={disableEntranceMotion ? undefined : faqItem}>
-            <Faq
-              q={copy.faqItems.free}
-              icon={<SvgUserPlus className="size-5" />}
-              a={
-                <FaqInfoCard label={copy.faqItems.freeLabel}>
-                  {copy.faqItems.freeAnswer}
-                </FaqInfoCard>
-              }
-            />
-          </motion.div>
+                <motion.div variants={disableEntranceMotion ? undefined : faqItem}>
+                  <Faq
+                    q={copy.faqItems.license}
+                    icon={<SvgShield className="size-5" />}
+                    a={<p>{copy.faqItems.licenseAnswer}</p>}
+                  />
+                </motion.div>
 
-          <motion.div variants={disableEntranceMotion ? undefined : faqItem}>
-            <Faq
-              q={copy.faqItems.license}
-              icon={<SvgShield className="size-5" />}
-              a={
-                <FaqInfoCard label={copy.faqItems.licenseLabel}>
-                  {copy.faqItems.licenseAnswer}
-                </FaqInfoCard>
-              }
-            />
-          </motion.div>
+                <motion.div variants={disableEntranceMotion ? undefined : faqItem}>
+                  <Faq
+                    q={copy.faqItems.mods}
+                    icon={<SvgModpack className="size-5" />}
+                    a={
+                      <p>
+                        {copy.faqItems.modsAnswer}{' '}
+                        <a href={`${WIKI_URL}#mods`}>{copy.faqItems.modsLink}</a>
+                      </p>
+                    }
+                  />
+                </motion.div>
 
-          <motion.div variants={disableEntranceMotion ? undefined : faqItem}>
-            <Faq
-              q={copy.faqItems.mods}
-              icon={<SvgModpack className="size-5" />}
-              a={
-                <FaqInfoCard label={copy.faqItems.modsLabel}>
-                  <>
-                    <span>{copy.faqItems.modsAnswer}</span>{' '}
-                    <a
-                      href={`${WIKI_URL}#mods`}
-                      className="mt-2 inline-flex text-sky-300 underline decoration-sky-400/60 underline-offset-2 hover:text-sky-200"
-                    >
-                      {copy.faqItems.modsLink}
-                    </a>
-                  </>
-                </FaqInfoCard>
-              }
-            />
-          </motion.div>
+                <motion.div variants={disableEntranceMotion ? undefined : faqItem}>
+                  <Faq
+                    q={copy.faqItems.skins}
+                    icon={<SvgSkin className="size-5" />}
+                    a={<p>{copy.faqItems.skinsAnswer}</p>}
+                  />
+                </motion.div>
 
-          <motion.div variants={disableEntranceMotion ? undefined : faqItem}>
-            <Faq
-              q={copy.faqItems.skins}
-              icon={<SvgSkin className="size-5" />}
-              a={
-                <FaqInfoCard label={copy.faqItems.skinsLabel}>
-                  {copy.faqItems.skinsAnswer}
-                </FaqInfoCard>
-              }
-            />
-          </motion.div>
-
-          <motion.div variants={disableEntranceMotion ? undefined : faqItem}>
-          <Faq
-            q={copy.faqItems.wipes}
-            icon={<SvgMcBlockGrass className="size-5" />}
-            a={
-              <div className="relative overflow-hidden rounded-2xl border border-slate-800 bg-linear-to-br from-slate-950/80 via-slate-900/60 to-slate-900/20 backdrop-blur-md backdrop-saturate-150 px-4 py-4 sm:px-5 sm:py-5 group transition">
-                <div className="pointer-events-none absolute -top-20 -right-16 h-40 w-40 rounded-full bg-emerald-500/10 blur-3xl" />
-                <div className="pointer-events-none absolute -bottom-24 -left-20 h-40 w-40 rounded-full bg-sky-500/10 blur-3xl" />
-
-                <div className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-indigo-500/40 via-sky-500/60 to-emerald-500/40 opacity-80" />
-
-                <div className="flex items-start gap-3">
-                  <div className="space-y-1">
-                    <div className="inline-flex items-center gap-2 text-[11px] uppercase tracking-wide text-slate-400">
-                      <span className="rounded-full border border-slate-700/80 bg-slate-950/60 px-2 py-0.5">
-                        {copy.faqItems.wipesLabel}
-                      </span>
-                    </div>
-                    <p className="text-sm text-slate-300">
-                      <b>{copy.faqItems.wipesStrong}</b>
-                      {copy.faqItems.wipesAnswer}
-                    </p>
-                  </div>
-                </div>
-
-                <dl className="mt-4 grid gap-2 text-[11px] text-slate-300 sm:grid-cols-3">
-                  <div className="rounded-xl border border-slate-800 bg-slate-950/60 px-3 py-2">
-                    <dt className="text-slate-400">{copy.faqItems.fullWipe}</dt>
-                    <dd className="font-medium text-slate-100">
-                      {copy.faqItems.never}
-                    </dd>
-                  </div>
-                  <div className="rounded-xl border border-slate-800 bg-slate-950/60 px-3 py-2">
-                    <dt className="text-slate-400">{copy.faqItems.currentSeason}</dt>
-                    <dd className="font-medium text-slate-100">
-                      {copy.faqItems.partial}
-                    </dd>
-                  </div>
-                  <div className="rounded-xl border border-slate-800 bg-slate-950/60 px-3 py-2">
-                    <dt className="text-slate-400">{copy.faqItems.bases}</dt>
-                    <dd className="font-medium text-slate-100">
-                      {copy.faqItems.unaffected}
-                    </dd>
-                  </div>
-                </dl>
-              </div>
-            }
-            />
-            </motion.div>
-
-            <motion.div variants={disableEntranceMotion ? undefined : faqItem}>
-            <Faq
-              q={copy.faqItems.rules}
-              icon={<SvgShield className="size-5" />}
-              a={
-                <div className="relative overflow-hidden rounded-2xl border border-slate-800 bg-linear-to-br from-slate-950/80 via-slate-900/60 to-slate-900/20 backdrop-blur-md backdrop-saturate-150 px-4 py-4 sm:px-5 sm:py-5 group transition">
-                  <div className="pointer-events-none absolute -top-24 -left-16 h-40 w-40 rounded-full bg-rose-500/12 blur-3xl" />
-                  <div className="pointer-events-none absolute -bottom-24 -right-20 h-40 w-40 rounded-full bg-amber-400/10 blur-3xl" />
-
-                  <div className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-emerald-500/40 via-sky-500/60 to-indigo-500/40 opacity-80" />
-
-                  <div className="flex items-start gap-3">
-                    <div className="mt-0.5 size-9 shrink-0 grid place-items-center rounded-xl bg-emerald-600/20 text-emerald-300">
-                      <span className="text-sm font-semibold">!</span>
-                    </div>
-                    <div className="space-y-1">
-                      <div className="inline-flex items-center gap-2 text-[11px] uppercase tracking-wide text-slate-400">
-                        <span className="rounded-full border border-slate-700/80 bg-slate-950/60 px-2 py-0.5">
-                          {copy.faqItems.rulesLabel}
-                        </span>
+                <motion.div variants={disableEntranceMotion ? undefined : faqItem}>
+                  <Faq
+                    q={copy.faqItems.wipes}
+                    icon={<SvgMcBlockGrass className="size-5" />}
+                    a={
+                      <div className="at-faq-prose">
+                        <p><strong>{copy.faqItems.wipesStrong}</strong>{copy.faqItems.wipesAnswer}</p>
+                        <p>{copy.faqItems.fullWipe}: {copy.faqItems.never}</p>
+                        <p>{copy.faqItems.currentSeason}: {copy.faqItems.partial}</p>
+                        <p>{copy.faqItems.bases}: {copy.faqItems.unaffected}</p>
                       </div>
-                      <div className="text-sm font-semibold text-slate-100">
-                        {copy.faqItems.rulesTruth}
-                      </div>
-                      <ul className="mt-1 space-y-1 text-sm text-slate-300">
-                        <li>{copy.faqItems.rule1}</li>
-                        <li>{copy.faqItems.rule2}</li>
-                        <li>{copy.faqItems.rule3}</li>
-                      </ul>
-                    </div>
-                  </div>
+                    }
+                  />
+                </motion.div>
 
-                  <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-slate-400">
-                    <span className="rounded-full border border-slate-700/80 bg-slate-950/60 px-2 py-1">
-                      {copy.faqItems.rulesDetails}
-                    </span>
-                    <Link to=
-                      {RULES_URL}
-                      className="inline-flex items-center gap-1 rounded-full border border-emerald-500/70 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-300 hover:bg-emerald-500/20 hover:border-emerald-400 transition"
-                    >
-                      {copy.faqItems.rulesOpen}
-                    </Link>
-                  </div>
-                </div>
-              }
-            />
-            </motion.div>
-            </motion.div>
+                <motion.div variants={disableEntranceMotion ? undefined : faqItem}>
+                  <Faq
+                    q={copy.faqItems.rules}
+                    icon={<SvgShield className="size-5" />}
+                    a={
+                      <div className="at-faq-prose">
+                        <p><strong>{copy.faqItems.rulesTruth}</strong></p>
+                        <ul>
+                          <li>{copy.faqItems.rule1}</li>
+                          <li>{copy.faqItems.rule2}</li>
+                          <li>{copy.faqItems.rule3}</li>
+                        </ul>
+                        <p>{copy.faqItems.rulesDetails} <Link to={RULES_URL}>{copy.faqItems.rulesOpen}</Link></p>
+                      </div>
+                    }
+                  />
+                </motion.div>
+              </motion.div>
             </motion.section>
           </div>
         </div>
@@ -1175,132 +1082,22 @@ function TopPlayersSection({
   )
 }
 
-function StepsGuide({ disableMotion }: { disableMotion?: boolean }) {
-  const { language } = useI18n();
-  const copy = homeTranslations[language].steps;
-  const spring: Transition = { type: 'spring', stiffness: 380, damping: 26, mass: 0.6 }
-
-  const container: Variants = {
-    hidden: { opacity: 0 },
-    show:   { opacity: 1, transition: { staggerChildren: 0.06 } }
-  }
-
-  const item: Variants = {
-    hidden: { opacity: 0, y: 14, scale: 0.98, filter: 'blur(6px)' },
-    show:   { opacity: 1, y: 0,  scale: 1,    filter: 'blur(0px)', transition: spring }
-  }
+function StepsGuide() {
+  const { language } = useI18n()
+  const copy = homeTranslations[language].steps
 
   return (
-    <motion.div
-      className="grid gap-4 md:grid-cols-3"
-      variants={disableMotion ? undefined : container}
-      initial={disableMotion ? undefined : 'hidden'}
-      whileInView={disableMotion ? undefined : 'show'}
-      viewport={disableMotion ? undefined : { once: true, margin: '-10% 0px' }}
-    >
-
-    <motion.div
-      variants={disableMotion ? undefined : item}
-      whileHover={{ y: -6, scale: 1.01 }}
-      whileTap={{ scale: 0.99 }}
-      className="relative rounded-2xl border border-slate-800 bg-slate-900/40 overflow-hidden will-change-transform"
-    >
-      
-    <motion.span
-      aria-hidden
-      className="absolute inset-x-0 top-0 h-0.5 bg-linear-to-r from-indigo-500 via-sky-500 to-emerald-500 origin-left"
-      initial={disableMotion ? undefined : { scaleX: 0 }}
-      animate={disableMotion ? undefined : { scaleX: 1 }}
-      transition={disableMotion ? undefined : { duration: 0.5 }}
-    />
-
-    <div className="p-5">
-      <div className="size-10 rounded-xl bg-sky-600/20 grid place-items-center text-sky-300 mb-3">
-        <SvgUserPlus className="h-5" />
-      </div>
-      <div className="text-lg font-semibold mb-2">{copy.register}</div>
-      <div className="min-h-[112px] rounded-xl border border-slate-800 bg-slate-900/60 p-4">
-        <Link to="/auth/login" className="inline-flex rounded-xl px-4 py-2 bg-indigo-600 hover:bg-indigo-500">
-          {copy.registerAction}
-        </Link>
-        <div className="text-xs text-slate-400 mt-3">{copy.registerHint}</div>
-      </div>
-    </div>
-    </motion.div>
-
-    <motion.div
-      variants={disableMotion ? undefined : item}
-      whileHover={{ y: -6, scale: 1.01 }}
-      whileTap={{ scale: 0.99 }}
-      className="relative rounded-2xl border border-slate-800 bg-slate-900/40 overflow-hidden will-change-transform"
-    >
-
-    <motion.span
-      aria-hidden
-      className="absolute inset-x-0 top-0 h-0.5 bg-linear-to-r from-indigo-500 via-sky-500 to-emerald-500 origin-left"
-      initial={disableMotion ? undefined : { scaleX: 0 }}
-      animate={disableMotion ? undefined : { scaleX: 1 }}
-      transition={disableMotion ? undefined : { duration: 0.6, delay: 0.05 }}
-    />
-
-    <div className="p-5">
-      <div className="size-10 rounded-xl bg-indigo-600/20 grid place-items-center text-indigo-300 mb-3">
-        <SvgLauncher className="h-5" />
-      </div>
-      <div className="text-lg font-semibold mb-2">{copy.launcher}</div>
-      <div className="min-h-[112px] rounded-xl border border-slate-800 bg-slate-900/60 p-4">
-        <a href={LAUNCHER_DOWNLOAD_URL} className="inline-flex rounded-xl px-4 py-2 bg-indigo-600 hover:bg-indigo-500">
-          {copy.launcherAction}
-        </a>
-        <div className="text-xs text-slate-400 mt-3">{copy.launcherHint}</div>
-      </div>
-    </div>
-  </motion.div>
-
-  <motion.div
-    variants={disableMotion ? undefined : item}
-    whileHover={{ y: -6, scale: 1.01 }}
-    whileTap={{ scale: 0.99 }}
-    className="relative rounded-2xl border border-slate-800 bg-slate-900/40 overflow-hidden will-change-transform"
-  >
-    
-  <motion.span
-    aria-hidden
-    className="absolute inset-x-0 top-0 h-0.5 bg-linear-to-r from-indigo-500 via-sky-500 to-emerald-500 origin-left"
-    initial={disableMotion ? undefined : { scaleX: 0 }}
-    animate={disableMotion ? undefined : { scaleX: 1 }}
-    transition={disableMotion ? undefined : { duration: 0.6, delay: 0.1 }}
-  />
-
-  <div className="p-5">
-      <div className="size-10 rounded-xl bg-teal-600/20 grid place-items-center text-teal-300 mb-3">
-        <SvgMcBlockGrass className="h-5" />
-      </div>
-      <div className="text-lg font-semibold mb-2">{copy.join}</div>
-      <div className="min-h-[112px] rounded-xl border border-slate-800 bg-slate-900/60 p-4">
-        <div className="rounded-xl border border-teal-500/30 bg-teal-500/10 px-4 py-3 text-center text-sm text-teal-100">
-          {copy.joinHint}
-        </div>
-    </div>
-  </div>
-  </motion.div>
-  </motion.div>
-  )
-}
-
-function FaqInfoCard({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="relative overflow-hidden rounded-2xl border border-slate-800 bg-linear-to-br from-slate-950/80 via-slate-900/60 to-slate-900/20 px-4 py-4 sm:px-5 sm:py-5">
-      <div className="pointer-events-none absolute -right-16 -top-20 h-40 w-40 rounded-full bg-sky-500/10 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-24 -left-20 h-40 w-40 rounded-full bg-indigo-500/10 blur-3xl" />
-      <div className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-indigo-500/40 via-sky-500/60 to-emerald-500/40" />
-      <div className="relative">
-        <div className="mb-2 inline-flex rounded-full border border-slate-700/80 bg-slate-950/60 px-2 py-0.5 text-[11px] uppercase tracking-wide text-slate-400">
-          {label}
-        </div>
-        <div className="text-sm text-slate-300">{children}</div>
-      </div>
-    </div>
+    <ol className="at-faq-steps">
+      <li>
+        <p>{copy.register}. {copy.registerHint}.</p>
+        <Link to="/auth/login">{copy.registerAction}</Link>
+      </li>
+      <li>
+        <p>{copy.launcher}. {copy.launcherHint}.</p>
+        <a href={LAUNCHER_DOWNLOAD_URL}>{copy.launcherAction}</a>
+      </li>
+      <li><p>{copy.join}. {copy.joinHint}</p></li>
+    </ol>
   )
 }
 
@@ -1308,17 +1105,20 @@ function Faq({ q, a, icon }: { q: string; a: React.ReactNode; icon?: React.React
   const [open, setOpen] = useState(false)
 
   return (
-    <div className="rounded-2xl border border-slate-800 overflow-hidden backdrop-blur-md backdrop-saturate-150">
+    <div className="at-faq-row">
       <button
-        onClick={() => setOpen(v => !v)}
-        className="w-full text-left px-4 py-3 bg-slate-900/50 hover:bg-slate-900/70 flex items-center justify-between"
+        type="button"
+        onClick={() => setOpen(value => !value)}
+        aria-expanded={open}
+        className="at-faq-trigger"
       >
-        <span className="flex items-center gap-3 font-medium">
-          {icon && <span className="shrink-0 text-sky-300" aria-hidden="true">{icon}</span>}
+        <span className="at-faq-question">
+          {icon && <span className="at-faq-question-icon" aria-hidden="true">{icon}</span>}
           <span>{q}</span>
         </span>
         <motion.span
-          className="text-slate-400 inline-block"
+          className="at-faq-chevron"
+          aria-hidden="true"
           animate={{ rotate: open ? 180 : 0 }}
           transition={{ type: 'spring', stiffness: 400, damping: 24 }}
         >
@@ -1334,14 +1134,12 @@ function Faq({ q, a, icon }: { q: string; a: React.ReactNode; icon?: React.React
             animate={{ height: 'auto', opacity: 1, filter: 'blur(0px)' }}
             exit={{ height: 0, opacity: 0, filter: 'blur(6px)' }}
             transition={{ duration: 0.3, ease: 'easeInOut' }}
-            className="overflow-hidden"
+            className="at-faq-panel"
           >
-            <div className="px-4 py-3 text-sm text-slate-300">{a}</div>
+            <div className="at-faq-answer">{a}</div>
           </motion.div>
         )}
       </AnimatePresence>
-
     </div>
   )
 }
-
