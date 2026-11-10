@@ -69,8 +69,8 @@ export function Skin3DViewer({ className = '', skinUrl, autoRotate = false, anim
     cv.style.height = '100%'
     cv.style.display = 'block'
 
-    // The testimonial needs more breathing room around the shoes and head.
-    const PAD = portraitFraming ? 1.18 : 1.05
+    // The testimonial uses a close portrait fit with enough margin for the entire skin.
+    const PAD = portraitFraming ? 1.10 : 1.05
 
     const frameToFit = () => {
       const v = viewerRef.current
@@ -85,7 +85,7 @@ export function Skin3DViewer({ className = '', skinUrl, autoRotate = false, anim
       // Aim a little below the model's midpoint so the character is positioned
       // higher in the canvas. Keep the full object box for the distance fit.
       const frameCenter = center.clone()
-      if (portraitFraming) frameCenter.y -= size.y * 0.045
+      if (portraitFraming) frameCenter.y -= size.y * 0.02
 
       const el = wrapRef.current!
       const cw = Math.max(1, el.clientWidth)
