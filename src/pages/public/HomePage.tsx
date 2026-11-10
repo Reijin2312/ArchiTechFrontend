@@ -354,6 +354,18 @@ export default function HomePage() {
     return () => window.clearInterval(id)
   }, [shot, sliderPaused, disableInteractiveMotion])
 
+  // Warm the next full-resolution screenshot so the crossfade is not waiting on a cold image.
+  // The responsive AVIF variant matches the browser viewport rather than forcing an original PNG.
+  useEffect(() => {
+    const next = shots[(shots.indexOf(shot) + 1) % shots.length]
+    const entry = IMAGES[toName(next)]
+    if (!entry) return
+    const targetWidth = Math.min(1920, Math.max(640, window.innerWidth * (window.devicePixelRatio || 1)))
+    const variant = entry.avif.find(item => item.w >= targetWidth)
+    const image = new Image()
+    image.src = variant?.path ?? entry.avif[entry.avif.length - 1]?.path ?? entry.original.avif
+  }, [shot, shots])
+
   const onlineText = useMemo(() => {
     if (!status) return "-"
     if (!status.online) return 'Offline'
