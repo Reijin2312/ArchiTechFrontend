@@ -38,7 +38,9 @@ body.has-wallpaper:has(.at-legacy)::before {
   font-weight: 600;
   text-wrap: balance;
 }
-.at-legacy :is(h1,h2,h3,p,figure) { margin: 0; }
+/* Do not reset figure margins on centered .at-legacy-shell covers. */
+.at-legacy :is(h1,h2,h3,p) { margin: 0; }
+.at-legacy figure:not(.at-legacy-shell) { margin: 0; }
 .at-legacy a { color: inherit; text-decoration: none; }
 .at-legacy :is(a,button):focus-visible { outline: 2px solid #e5cca4; outline-offset: 4px; }
 .at-legacy-shell { width: min(calc(100% - 9vw), 1320px); margin-inline: auto; }
