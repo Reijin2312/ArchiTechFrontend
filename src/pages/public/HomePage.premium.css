@@ -220,7 +220,7 @@
   opacity: .92;
   transition: color .25s ease, opacity .25s ease;
 }
-.architech-home .at-hero .at-source-action svg { width: 22px; height: 22px; }
+.architech-home .at-hero .at-source-action svg { width: 31px; height: 31px; }
 .architech-home .at-hero .at-source-action:hover { color: #fff8ee; opacity: 1; }
 .architech-home .at-hero .at-source-action:focus-visible { outline: 2px solid #e4ded3; outline-offset: 2px; }
 .architech-home .at-hero .at-source-action:active { opacity: .75; }
