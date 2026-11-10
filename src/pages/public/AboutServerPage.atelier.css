@@ -1,0 +1,461 @@
+@import url('https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=Onest:wght@400;500;600;700;800&display=swap');
+
+/*
+ * ARCHITECH / LEGACY — an editorial archive, not a nested dashboard.
+ * Shared with the homepage: restrained graphite, warm ink, brass details.
+ * Season catalog: /about; individual stories: /about/seasons/:seasonNumber.
+ */
+body:has(.at-legacy) { background: #171816; }
+body.has-wallpaper:has(.at-legacy)::before {
+  background-image: none;
+  background-color: #171816;
+}
+.at-legacy {
+  --legacy-bg: #171816;
+  --legacy-surface: #20211e;
+  --legacy-surface-hover: #262821;
+  --legacy-ink: #f2efe9;
+  --legacy-secondary: #cec8be;
+  --legacy-muted: #aaa498;
+  --legacy-brass: #c5aa84;
+  --legacy-line: rgba(238,232,220,.18);
+  --legacy-line-strong: rgba(238,232,220,.33);
+  position: relative;
+  isolation: isolate;
+  min-height: 90vh;
+  overflow: clip;
+  background: var(--legacy-bg);
+  color: var(--legacy-ink);
+  font: 400 16px/1.6 'Golos Text', sans-serif;
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+.at-legacy *, .at-legacy *::before, .at-legacy *::after { box-sizing: border-box; }
+.at-legacy :is(h1,h2,h3) {
+  color: var(--legacy-ink);
+  font-family: 'Onest', sans-serif;
+  font-weight: 600;
+  text-wrap: balance;
+}
+.at-legacy :is(h1,h2,h3,p,figure) { margin: 0; }
+.at-legacy a { color: inherit; text-decoration: none; }
+.at-legacy :is(a,button):focus-visible { outline: 2px solid #e5cca4; outline-offset: 4px; }
+.at-legacy-shell { width: min(calc(100% - 9vw), 1320px); margin-inline: auto; }
+.at-legacy-kicker, .at-legacy-card-label {
+  color: var(--legacy-brass);
+  font: 600 12px/1.5 'Golos Text', sans-serif;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+
+/* Introduction — the photography follows the narrative, never competes with it. */
+.at-legacy-intro { padding-top: clamp(74px,9vw,135px); padding-bottom: clamp(42px,5vw,72px); }
+.at-legacy-intro h1 {
+  margin-top: 22px;
+  font-size: clamp(44px, 5.6vw, 78px);
+  line-height: 1.09;
+  letter-spacing: -.055em;
+}
+.at-legacy-intro h1 span { color: var(--legacy-brass); }
+.at-legacy-lead {
+  max-width: 76ch;
+  margin-top: 30px !important;
+  color: var(--legacy-secondary);
+  font-size: clamp(17px,1.5vw,20px);
+  line-height: 1.73;
+  text-wrap: pretty;
+}
+.at-legacy-world, .at-legacy-detail-cover {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 2.2 / 1;
+  background: #252620;
+  border: 1px solid var(--legacy-line);
+  border-radius: 5px;
+}
+.at-legacy-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.at-legacy-world::after, .at-legacy-detail-cover::after {
+  content: '';
+  position: absolute;
+  inset: 55% 0 0;
+  background: linear-gradient(180deg,transparent,rgba(14,15,13,.55));
+  pointer-events: none;
+}
+.at-legacy-world figcaption, .at-legacy-detail-cover figcaption {
+  position: absolute;
+  z-index: 1;
+  bottom: 24px;
+  left: 28px;
+  color: #f0e6d8;
+  font: 600 12px/1.4 'Golos Text',sans-serif;
+  letter-spacing: .12em;
+  text-shadow: 0 1px 9px rgba(0,0,0,.55);
+}
+.at-legacy-values {
+  display: grid;
+  grid-template-columns: repeat(3,minmax(0,1fr));
+  gap: 0;
+  margin-top: 55px;
+  padding-block: 34px 56px;
+  border-top: 1px solid var(--legacy-line);
+  border-bottom: 1px solid var(--legacy-line);
+}
+.at-legacy-value { padding: 0 clamp(20px,3vw,38px); }
+.at-legacy-value:first-child { padding-left: 0; }
+.at-legacy-value:not(:last-child) { border-right: 1px solid var(--legacy-line); }
+.at-legacy-value-index {
+  color: var(--legacy-brass);
+  font: 600 12px/1.4 'Golos Text', sans-serif;
+  letter-spacing: .08em;
+}
+.at-legacy-value h2 {
+  margin-top: 13px;
+  font-size: clamp(19px,1.7vw,23px);
+  line-height: 1.27;
+  letter-spacing: -.028em;
+}
+.at-legacy-value p {
+  max-width: 45ch;
+  margin-top: 13px;
+  color: var(--legacy-secondary);
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+/* Season cards — image first, then era, date, excerpt and clear destination. */
+.at-legacy-seasons-section { padding-block: clamp(90px,10vw,145px) 130px; scroll-margin-top: 100px; }
+.at-legacy-section-head {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 22px;
+  margin-bottom: 38px;
+  padding-bottom: 25px;
+  border-bottom: 1px solid var(--legacy-line);
+}
+.at-legacy-section-head h2 {
+  margin-top: 12px;
+  font-size: clamp(36px,4vw,55px);
+  line-height: 1.13;
+  letter-spacing: -.047em;
+}
+.at-legacy-seasons-period, .at-legacy-section-count {
+  color: var(--legacy-muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.at-legacy-seasons-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 25px; }
+.at-legacy-season-grid-item { min-width: 0; }
+.at-legacy-season-card {
+  display: block;
+  height: 100%;
+  overflow: hidden;
+  border: 1px solid var(--legacy-line);
+  border-radius: 5px;
+  background: var(--legacy-surface);
+  transition: border-color .28s ease,background-color .28s ease,transform .42s cubic-bezier(.22,1,.36,1);
+}
+.at-legacy-season-card:hover {
+  border-color: rgba(197,170,132,.55);
+  background: var(--legacy-surface-hover);
+  transform: translateY(-3px);
+}
+.at-legacy-season-card-image {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 16 / 9;
+  background: #2b2d27;
+}
+.at-legacy-season-card-image .at-legacy-image { transition: transform .85s cubic-bezier(.22,1,.36,1); }
+.at-legacy-season-card:hover .at-legacy-image { transform: scale(1.045); }
+.at-legacy-image-number {
+  position: absolute;
+  right: 20px;
+  bottom: 17px;
+  padding: 5px 9px;
+  color: #fff5e5;
+  background: rgba(23,24,22,.72);
+  font: 600 12px/1.4 'Golos Text',sans-serif;
+  letter-spacing: .07em;
+  border-radius: 3px;
+}
+.at-legacy-season-card-content { padding: clamp(22px,2.6vw,35px); }
+.at-legacy-season-card-topline { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.at-legacy-current {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #dfc49a;
+  font: 600 12px/1.4 'Golos Text',sans-serif;
+}
+.at-legacy-current::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: #c5aa84; }
+.at-legacy-season-card h3 {
+  margin-top: 17px;
+  font-size: clamp(27px,2.8vw,39px);
+  line-height: 1.16;
+  letter-spacing: -.045em;
+}
+.at-legacy-season-period {
+  display: block;
+  margin-top: 10px;
+  color: var(--legacy-secondary);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.at-legacy-season-card-content p {
+  display: -webkit-box;
+  max-width: 69ch;
+  min-height: 3.35em;
+  overflow: hidden;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  margin-top: 19px;
+  color: var(--legacy-muted);
+  font-size: 15.5px;
+  line-height: 1.65;
+}
+.at-legacy-season-open {
+  display: inline-flex;
+  gap: 22px;
+  align-items: center;
+  margin-top: 25px;
+  padding-bottom: 7px;
+  border-bottom: 1px solid var(--legacy-brass);
+  color: #eee6d8;
+  font: 600 16px/1.4 'Onest',sans-serif;
+}
+.at-legacy-season-open span { color: var(--legacy-brass); transition: transform .3s ease; }
+.at-legacy-season-card:hover .at-legacy-season-open span { transform: translate(3px,-3px); }
+
+/* Individual season — one readable story, events, photographs and real people. */
+.at-legacy-detail-header { padding-top: clamp(60px,8vw,108px); padding-bottom: 39px; }
+.at-legacy-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 13px;
+  color: var(--legacy-secondary) !important;
+  font-size: 15px;
+  transition: color .2s ease;
+}
+.at-legacy-back span { color: var(--legacy-brass); font-size: 22px; }
+.at-legacy-back:hover { color: #f8f3e9 !important; }
+.at-legacy-detail-topline {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 18px;
+  margin-top: clamp(45px,6vw,82px);
+}
+.at-legacy-detail-header h1 {
+  max-width: 1120px;
+  margin-top: 15px;
+  font-size: clamp(49px,6vw,88px);
+  line-height: 1.07;
+  letter-spacing: -.059em;
+}
+.at-legacy-detail-period {
+  margin-top: 19px !important;
+  color: var(--legacy-secondary);
+  font-size: clamp(16px,1.5vw,19px);
+}
+.at-legacy-detail-rule { height: 1px; margin-top: 38px; background: var(--legacy-line); }
+.at-legacy-detail-cover { aspect-ratio: 2.05 / 1; }
+.at-legacy-detail-story {
+  display: grid;
+  grid-template-columns: minmax(170px,.36fr) minmax(0,1fr);
+  gap: clamp(36px,6vw,105px);
+  padding-top: clamp(74px,8vw,125px);
+}
+.at-legacy-detail-story--events { padding-bottom: clamp(70px,8vw,115px); }
+.at-legacy-detail-side h2 {
+  margin-top: 11px;
+  font-size: clamp(25px,2.5vw,35px);
+  line-height: 1.17;
+  letter-spacing: -.042em;
+}
+.at-legacy-reading { min-width: 0; }
+.at-legacy-reading p {
+  max-width: 72ch;
+  color: #ddd7ce;
+  font-size: clamp(17px,1.35vw,19px);
+  line-height: 1.85;
+  text-wrap: pretty;
+}
+.at-legacy-events { list-style: none; padding: 0; margin: 0; }
+.at-legacy-events li {
+  display: grid;
+  grid-template-columns: 40px minmax(0,1fr);
+  align-items: baseline;
+  gap: clamp(15px,2vw,29px);
+  padding: 16px 0 19px;
+  border-top: 1px solid var(--legacy-line);
+  color: var(--legacy-secondary);
+  font-size: clamp(16px,1.2vw,18px);
+  line-height: 1.7;
+}
+.at-legacy-events li:last-child { border-bottom: 1px solid var(--legacy-line); }
+.at-legacy-event-index { color: var(--legacy-brass); font: 600 12px/1.6 'Golos Text',sans-serif; }
+.at-legacy-gallery-section { padding-bottom: clamp(88px,9vw,135px); }
+.at-legacy-gallery { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 20px; }
+.at-legacy-gallery-item {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 16 / 9;
+  border: 1px solid var(--legacy-line);
+  border-radius: 5px;
+  background: #292b27;
+}
+.at-legacy-gallery-item:only-child { grid-column: 1 / -1; max-width: 850px; }
+.at-legacy-gallery-item figcaption {
+  position: absolute;
+  right: 18px;
+  bottom: 16px;
+  z-index: 2;
+  padding: 5px 8px;
+  color: #f4eade;
+  border-radius: 3px;
+  background: rgba(16,17,15,.68);
+  font: 600 12px/1.35 'Golos Text',sans-serif;
+}
+.at-legacy-players-section { padding-bottom: clamp(85px,8vw,120px); }
+.at-legacy-players { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 13px; }
+.at-legacy-player {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--legacy-line);
+  border-radius: 5px;
+  background: var(--legacy-surface);
+  transition: background-color .25s ease,border-color .25s ease;
+}
+.at-legacy-player:hover { border-color: var(--legacy-line-strong); background: var(--legacy-surface-hover); }
+.at-legacy-avatar {
+  display: grid;
+  place-items: center;
+  flex: 0 0 58px;
+  width: 58px;
+  height: 58px;
+  overflow: hidden;
+  border-radius: 7px;
+  border: 1px solid var(--legacy-line);
+  background: #363932;
+  color: #d7c2a1;
+  font: 600 24px/1 'Onest',sans-serif;
+}
+.at-legacy-avatar img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.at-legacy-player-info { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 3px; }
+.at-legacy-player-info strong {
+  color: #efeae2;
+  font: 600 16px/1.3 'Onest',sans-serif;
+  overflow-wrap: anywhere;
+}
+.at-legacy-player-info small { color: var(--legacy-muted); font-size: 13px; line-height: 1.5; }
+.at-legacy-player-arrow { align-self: flex-start; color: var(--legacy-brass); font-size: 18px; }
+.at-legacy-season-nav {
+  display: grid;
+  grid-template-columns: repeat(2,minmax(0,1fr));
+  gap: 20px;
+  padding-top: 27px;
+  padding-bottom: clamp(78px,8vw,120px);
+  border-top: 1px solid var(--legacy-line);
+}
+.at-legacy-season-nav a { display: flex; flex-direction: column; gap: 7px; min-width: 0; }
+.at-legacy-season-nav a:last-child { text-align: right; align-items: flex-end; }
+.at-legacy-season-nav a span { color: var(--legacy-brass); font-size: 13px; }
+.at-legacy-season-nav a strong { color: var(--legacy-ink); font: 600 clamp(17px,1.6vw,22px)/1.3 'Onest',sans-serif; }
+.at-legacy-season-nav a:hover strong { color: #ddc19b; }
+
+/* The end of the archive is a quiet invitation, not an electric-blue banner. */
+.at-legacy-join { border-top: 1px solid var(--legacy-line); background: #1e201c; }
+.at-legacy-join-inner { padding-block: clamp(75px,9vw,125px); text-align: center; }
+.at-legacy-join h2 {
+  margin-top: 15px;
+  font-size: clamp(34px,4.6vw,61px);
+  line-height: 1.12;
+  letter-spacing: -.052em;
+}
+.at-legacy-join p {
+  max-width: 61ch;
+  margin: 22px auto 0;
+  color: var(--legacy-secondary);
+  font-size: 17px;
+  line-height: 1.73;
+}
+.at-legacy-actions { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 16px; margin-top: 31px; }
+.at-legacy-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 22px;
+  min-height: 51px;
+  padding: 12px 23px;
+  border-radius: 5px;
+  font: 600 15px/1.4 'Onest',sans-serif;
+  transition: background-color .25s ease,color .25s ease,border-color .25s ease;
+}
+.at-legacy-action--primary { background: #e6ddcf; border: 1px solid #e6ddcf; color: #25231f !important; }
+.at-legacy-action--primary:hover { background: #f5ecdf; border-color: #f5ecdf; }
+.at-legacy-action--secondary { background: transparent; border: 1px solid var(--legacy-line-strong); color: #f0eade; }
+.at-legacy-action--secondary:hover { background: rgba(238,232,220,.07); border-color: #e4d5bd; }
+.at-legacy-action span { font-size: 19px; line-height: 1; }
+.at-legacy-join-links { display: flex; justify-content: center; flex-wrap: wrap; gap: 22px; margin-top: 35px; }
+.at-legacy-join-links a { color: var(--legacy-muted); font-size: 14px; }
+.at-legacy-join-links a:hover { color: var(--legacy-ink); }
+
+@media (max-width: 1000px) {
+  .at-legacy-values { gap: 0; }
+  .at-legacy-detail-story { grid-template-columns: minmax(140px,.32fr) minmax(0,1fr); gap: 35px; }
+  .at-legacy-players { grid-template-columns: repeat(2,minmax(0,1fr)); }
+}
+@media (max-width: 720px) {
+  .at-legacy-shell { width: calc(100% - 36px); }
+  .at-legacy-intro { padding-top: 64px; padding-bottom: 37px; }
+  .at-legacy-intro h1 { font-size: clamp(38px,9.5vw,56px); }
+  .at-legacy-lead { font-size: 16.5px; line-height: 1.75; margin-top: 21px !important; }
+  .at-legacy-world, .at-legacy-detail-cover { aspect-ratio: 1.35 / 1; }
+  .at-legacy-world figcaption, .at-legacy-detail-cover figcaption { left: 17px; bottom: 14px; font-size: 11px; }
+  .at-legacy-values { grid-template-columns: 1fr; margin-top: 34px; padding-block: 8px; }
+  .at-legacy-value, .at-legacy-value:first-child { padding: 22px 0; }
+  .at-legacy-value:not(:last-child) { border: 0; border-bottom: 1px solid var(--legacy-line); }
+  .at-legacy-value h2 { font-size: 22px; }
+  .at-legacy-seasons-section { padding-block: 81px 85px; }
+  .at-legacy-section-head { margin-bottom: 25px; padding-bottom: 20px; }
+  .at-legacy-section-head h2 { font-size: clamp(35px,8vw,45px); }
+  .at-legacy-seasons-grid { grid-template-columns: 1fr; gap: 17px; }
+  .at-legacy-season-card-content { padding: 22px; }
+  .at-legacy-season-card h3 { font-size: 30px; }
+  .at-legacy-detail-header { padding-top: 44px; }
+  .at-legacy-detail-topline { margin-top: 50px; }
+  .at-legacy-detail-header h1 { font-size: clamp(41px,9.5vw,60px); }
+  .at-legacy-detail-story { grid-template-columns: 1fr; gap: 22px; padding-top: 76px; }
+  .at-legacy-detail-side h2 { font-size: 31px; }
+  .at-legacy-reading p { font-size: 17px; line-height: 1.78; }
+  .at-legacy-detail-story--events { padding-bottom: 82px; }
+  .at-legacy-events li { grid-template-columns: 30px minmax(0,1fr); gap: 10px; }
+  .at-legacy-gallery-section { padding-bottom: 82px; }
+  .at-legacy-gallery { grid-template-columns: 1fr; gap: 13px; }
+  .at-legacy-gallery-item:only-child { grid-column: auto; }
+  .at-legacy-players-section { padding-bottom: 80px; }
+  .at-legacy-players { grid-template-columns: 1fr; gap: 10px; }
+  .at-legacy-player { padding: 14px; }
+  .at-legacy-season-nav { gap: 12px; padding-bottom: 76px; }
+  .at-legacy-join-inner { padding-block: 82px; }
+  .at-legacy-join h2 { font-size: clamp(34px,8vw,49px); }
+  .at-legacy-join p { font-size: 16px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .at-legacy *, .at-legacy *::before, .at-legacy *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}
