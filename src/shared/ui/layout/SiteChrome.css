@@ -198,6 +198,13 @@
 .at-site-footer__bottom { display:flex;justify-content:space-between;gap:20px;align-items:center;margin-top:26px; }
 .at-site-footer__copyright { color:#968f84;font:400 11px/1.5 'Golos Text',sans-serif; }
 .at-site-footer__mark { color:#c5aa84;font:600 10px/1.4 'Golos Text',sans-serif;letter-spacing:.16em; }
+/* The existing five-link desktop navigation needs more room than the
+   Tailwind md breakpoint; switch to the full mobile drawer before it crowds. */
+@media(max-width:1060px) {
+  .at-site-header__links { display:none !important; }
+  .at-site-header__mobile-controls { display:flex !important; }
+  .at-site-mobile-shell { display:block !important; }
+}
 @media(max-width:1100px) {
   .at-site-header__nav { width:calc(100% - 40px);gap:16px; }
   .at-site-header__links { gap:13px; }
