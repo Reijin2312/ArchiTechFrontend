@@ -208,29 +208,21 @@
 .architech-home .at-hero .at-source-action {
   display: inline-flex;
   align-items: center;
-  justify-content: flex-start;
-  gap: 10px;
-  width: auto;
-  min-height: 55px;
-  padding: 0 1px;
+  justify-content: center;
+  flex: 0 0 50px;
+  width: 50px;
+  height: 50px;
+  padding: 0;
   border: 0;
-  border-radius: 0;
+  border-radius: 10px;
   background: transparent;
   color: #e4ded3;
-  font: 500 13px/1.2 'Onest',sans-serif;
-  letter-spacing: -.006em;
-  white-space: nowrap;
-  opacity: .96;
+  opacity: .92;
   transition: color .25s ease, opacity .25s ease;
 }
-.architech-home .at-hero .at-source-action svg { width: 19px; height: 19px; }
-.architech-home .at-hero .at-source-action .at-source-label {
-  border-bottom: 1px solid rgba(230,221,207,.35);
-  padding: 3px 0;
-  transition: border-color .2s ease;
-}
+.architech-home .at-hero .at-source-action svg { width: 22px; height: 22px; }
 .architech-home .at-hero .at-source-action:hover { color: #fff8ee; opacity: 1; }
-.architech-home .at-hero .at-source-action:hover .at-source-label { border-color: #e4ded3; }
+.architech-home .at-hero .at-source-action:focus-visible { outline: 2px solid #e4ded3; outline-offset: 2px; }
 .architech-home .at-hero .at-source-action:active { opacity: .75; }
 .architech-home .at-ip-block {
   display: inline-flex;
@@ -1140,16 +1132,6 @@
   .architech-home .at-hero .at-hero-description { max-width: 100%; font-size: 15.5px; line-height: 1.64; letter-spacing: -.012em; }
   .architech-home .at-hero .at-hero-action-row { margin-top: 22px; }
   .architech-home .at-hero .at-primary-action { min-height: 50px; padding: 0 19px; }
-  .architech-home .at-hero .at-source-action {
-    min-height: 50px;
-    width: 50px;
-    justify-content: center;
-    border: 1px solid rgba(238,232,220,.33);
-    border-radius: 10px;
-    background: rgba(13,14,13,.35);
-  }
-  .architech-home .at-hero .at-source-action .at-source-label { display: none; }
-  .architech-home .at-hero .at-source-action:hover { background: rgba(238,232,220,.12); }
   .architech-home .at-hero .at-ip-block { width: 100%; max-width: none; margin-top: 18px; }
   .architech-home .at-hero .at-status-row { gap: 9px; font-size: 12px; }
   .architech-home .at-hero .at-gallery .at-gallery-thumbs {
