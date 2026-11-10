@@ -1126,7 +1126,7 @@
 .architech-home .at-faq-panel { overflow: hidden; }
 .architech-home .at-faq-answer {
   max-width: 74ch;
-  padding: 0 4px 27px;
+  padding: 27px 4px;
   color: var(--at-ink-secondary);
   font: 400 15.5px/1.75 'Golos Text',sans-serif;
 }
