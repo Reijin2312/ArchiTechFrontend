@@ -361,11 +361,11 @@
 .architech-home .at-hero .at-gallery .at-gallery-caption {
   position: absolute;
   z-index: 5;
-  bottom: 114px;
+  bottom: 121px;
   right: 5vw;
   left: auto;
   top: auto;
-  max-width: min(450px,35vw);
+  max-width: min(470px,37vw);
   padding: 0;
   text-align: right;
   opacity: 1;
@@ -378,25 +378,27 @@
   background: transparent;
   box-shadow: none;
 }
-.architech-home .at-gallery-caption div[class*="tracking-wider"] {
-  color: #d9c4a2;
-  font: 600 11px/1.5 'Golos Text',sans-serif;
-  letter-spacing: .1em;
+.architech-home .at-gallery-caption .at-gallery-eyebrow {
+  margin: 0 0 6px;
+  color: #e2c9a5;
+  font: 600 11.5px/1.45 'Golos Text',sans-serif;
+  letter-spacing: .105em;
   text-transform: uppercase;
 }
-.architech-home .at-gallery-caption div[class*="font-semibold"] {
-  color: var(--at-ink);
-  font: 600 20px/1.25 'Onest',sans-serif;
+.architech-home .at-gallery-caption .at-gallery-title {
+  color: #faf5ed;
+  font: 600 20px/1.27 'Onest',sans-serif;
   letter-spacing: -.025em;
 }
-.architech-home .at-gallery-caption div[class*="text-stone-300"] {
-  color: #d4cec4;
-  font: 400 13px/1.5 'Golos Text',sans-serif;
+.architech-home .at-gallery-caption .at-gallery-subtitle {
+  margin-top: 3px;
+  color: #ddd4c7;
+  font: 400 13.5px/1.45 'Golos Text',sans-serif;
 }
 .architech-home .at-hero .at-gallery .at-gallery-thumbs {
   position: absolute;
   z-index: 5;
-  bottom: 30px;
+  bottom: 29px;
   right: 5vw;
   left: auto;
   display: flex;
@@ -404,21 +406,21 @@
   justify-content: flex-end;
   width: auto !important;
   max-width: min(630px,61vw);
-  gap: 9px;
+  gap: 8px;
   margin: 0;
-  padding: 9px;
+  padding: 7px;
   overflow-x: auto;
   scrollbar-width: none;
-  border: 1px solid rgba(238,232,220,.20);
-  border-radius: 12px;
-  background: rgba(16,17,16,.65);
+  border: 1px solid rgba(238,232,220,.19);
+  border-radius: 11px;
+  background: rgba(13,14,13,.56);
 }
 .architech-home .at-hero .at-gallery .at-gallery-thumbs::-webkit-scrollbar { display: none; }
 .architech-home .at-hero .at-gallery .at-gallery-thumbs button {
   display: block;
-  flex: 0 0 54px;
-  width: 54px;
-  height: 47px;
+  flex: 0 0 57px;
+  width: 57px;
+  height: 51px;
   aspect-ratio: auto;
   overflow: hidden;
   border: 0;
@@ -441,7 +443,7 @@
 .architech-home .at-hero .at-hero-arrows {
   position: absolute;
   z-index: 5;
-  bottom: 33px;
+  bottom: 28px;
   left: max(5vw,calc((100vw - 1380px)/2));
   display: inline-flex;
   gap: 8px;
@@ -449,15 +451,14 @@
 .architech-home .at-hero .at-hero-arrows button {
   display: grid;
   place-items: center;
-  width: 51px;
-  height: 52px;
-  border: 1px solid rgba(238,232,220,.45);
-  border-radius: 11px;
-  background: rgba(20,21,20,.58);
-  color: #f3eee6;
-  font: 400 22px/1 'Onest',sans-serif;
+  width: 54px;
+  height: 54px;
+  border: 1px solid rgba(238,232,220,.38);
+  border-radius: 10px;
+  background: rgba(16,17,16,.48);
+  color: #f4eee5;
   box-shadow: none;
-  transition: background-color .24s ease,transform .34s var(--at-ease),border-color .24s ease;
+  transition: background-color .24s ease,transform .3s var(--at-ease),border-color .24s ease;
 }
 .architech-home .at-hero .at-hero-arrows button:hover {
   border-color: rgba(238,232,220,.9);
@@ -471,8 +472,8 @@
   bottom: 115px;
   left: max(5vw,calc((100vw - 1380px)/2));
   color: var(--at-ink-secondary);
-  font: 600 10px/1.4 'Golos Text',sans-serif;
-  letter-spacing: .12em;
+  font: 600 11px/1.4 'Golos Text',sans-serif;
+  letter-spacing: .10em;
   text-transform: uppercase;
 }
 .architech-home .at-hero .at-scroll-cue::after {
