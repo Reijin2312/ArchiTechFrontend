@@ -27,5 +27,5 @@ export const TEAM_MEMBERS: TeamMember[] = [
   { name: 'Explyp', role: 'Python-программист' },
 ];
 
-export const TEAM_AVATAR_FALLBACK = '/images/avatar-fallback.png';
+export const TEAM_AVATAR_FALLBACK = '/images/avatar-fallback.svg';
 
