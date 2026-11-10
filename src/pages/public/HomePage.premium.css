@@ -695,6 +695,10 @@
 .architech-home .at-chapter:nth-child(even) .at-chapter-content {
   margin-left: auto;
   margin-right: max(5vw,calc((100vw - 1380px)/2));
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
 }
 .architech-home .at-chapter-kicker {
   display: inline-flex;
@@ -1078,6 +1082,8 @@
   .architech-home .at-chapter .at-chapter-content,
   .architech-home .at-chapter:nth-child(even) .at-chapter-content {
     align-self: flex-end;
+    align-items: flex-start;
+    text-align: left;
     width: calc(100% - 46px);
     margin: 0 23px;
     padding: 85px 0;
