@@ -12,7 +12,7 @@ import { SvgUserPlus, SvgSkin, SvgMcBlockGrass, SvgModpack, SvgRoute, SvgLaunche
 import { useIsMobile } from '@/shared/ui/utils/useIsMobile';
 import { TEAM_MEMBERS } from '@/shared/data/team';
 import { useTeamAvatars } from '@/shared/hooks/useTeamAvatars';
-import { TeamGrid } from '@/shared/ui/card/TeamGrid';
+import { HomeTeam } from './HomeTeam';
 import { useI18n } from '@/shared/i18n/I18nProvider';
 import { homeTranslations } from '@/shared/i18n/translations';
 
@@ -582,7 +582,7 @@ export default function HomePage() {
       <section className="at-community">
         <div className="at-container">
           <div className="at-section-heading"><div><span className="at-kicker">ARCHITECH / COMMUNITY</span><h2>{copy.team}</h2></div></div>
-          <div className="at-team-editorial"><TeamGrid team={TEAM_MEMBERS} avatars={avatars} disableMotion={disableEntranceMotion}/></div>
+          <div className="at-team-editorial"><HomeTeam team={TEAM_MEMBERS} avatars={avatars} disableMotion={disableEntranceMotion}/></div>
         </div>
       </section>
       <section className="at-ranking">
