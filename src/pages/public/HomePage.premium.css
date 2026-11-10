@@ -750,77 +750,75 @@
   letter-spacing: -.052em;
   color: var(--at-ink);
 }
-/* Team / studio roster.
-   One intentional founder feature followed by a quiet two-column team index.
-   Unlike the legacy TeamGrid this layout has no glass surfaces, blue glow or
-   fallback-image dependency. */
+/* Team pyramid: founder at the center, four equal team members below.
+   Typography, quiet surfaces, and spacing do the work — no billboard portraits. */
 .architech-home .at-staff {
-  display: grid;
-  gap: 19px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 48px;
+  width: 100%;
 }
 .architech-home .at-staff-feature {
   position: relative;
-  display: grid;
-  grid-template-columns: clamp(200px, 23vw, 320px) minmax(0, 1fr);
-  min-height: 320px;
-  overflow: hidden;
-  border: 1px solid rgba(236,228,213,.18);
-  border-radius: 3px;
-  background: #22241f;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: min(100%, 510px);
+  min-height: 0;
+  padding: 32px 30px 29px;
+  text-align: center;
+  border: 1px solid rgba(236,228,213,.20);
+  border-top: 2px solid #c3a47a;
+  border-radius: 5px;
+  background: radial-gradient(ellipse at 50% 0%,rgba(196,165,118,.10),transparent 68%),#22241f;
+}
+.architech-home .at-staff-feature::after {
+  content: '';
+  position: absolute;
+  bottom: -37px;
+  left: 50%;
+  width: 1px;
+  height: 36px;
+  background: linear-gradient(to bottom,rgba(195,164,122,.55),transparent);
+  pointer-events: none;
 }
 .architech-home .at-staff-feature-photo {
-  position: relative;
-  display: block;
-  min-height: 320px;
-  overflow: hidden;
-  color: inherit;
-  background: #30332b;
-  isolation: isolate;
-}
-.architech-home .at-staff-portrait {
-  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  flex: none;
-  width: 72px;
-  height: 72px;
-  overflow: hidden;
-  border-radius: 8px;
-  background: #343831;
-  border: 1px solid rgba(239,230,212,.13);
+  color: inherit;
+  text-decoration: none;
 }
-.architech-home .at-staff-portrait--large {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  border: 0;
-  border-radius: 0;
-  background: #363a32;
-}
-.architech-home .at-staff-pixel-head {
-  position: absolute;
+.architech-home .at-staff-portrait {
+  position: relative;
   display: grid;
   place-items: center;
+  flex: none;
+  width: 76px;
+  height: 76px;
+  overflow: hidden;
+  border: 1px solid rgba(232,221,201,.19);
+  border-radius: 9px;
+  background: #343831;
+}
+.architech-home .at-staff-portrait--large {
+  width: 112px;
+  height: 112px;
+  border-radius: 12px;
+  background: #383c34;
+}
+.architech-home .at-staff-monogram {
+  position: absolute;
   inset: 0;
-  color: #aa987c;
-  background:
-    linear-gradient(160deg,rgba(197,170,132,.09),transparent 52%),
-    #343831;
+  display: grid;
+  place-items: center;
+  color: #ad9f86;
+  font: 600 30px/1 'Onest',sans-serif;
+  letter-spacing: -.055em;
+  background: linear-gradient(145deg,rgba(197,170,132,.09),transparent 65%);
 }
-.architech-home .at-staff-pixel-head svg {
-  display: block;
-  width: 77%;
-  max-width: 94px;
-  height: auto;
-  aspect-ratio: 1;
-  image-rendering: pixelated;
-}
-.architech-home .at-staff-portrait--large .at-staff-pixel-head svg {
-  max-width: 220px;
-  width: 64%;
-}
+.architech-home .at-staff-portrait--large .at-staff-monogram { font-size: 49px; }
 .architech-home .at-staff-portrait-image {
   position: absolute;
   inset: 0;
@@ -829,117 +827,97 @@
   height: 100%;
   object-fit: cover;
   opacity: 0;
-  filter: saturate(.81);
-  transition: opacity .45s ease,transform .65s cubic-bezier(.22,1,.36,1),filter .3s ease;
+  transition: opacity .35s ease;
 }
 .architech-home .at-staff-portrait-image--loaded { opacity: 1; }
-.architech-home .at-staff-feature-photo:hover .at-staff-portrait-image--loaded {
-  transform: scale(1.035);
-  filter: saturate(.95);
-}
-.architech-home .at-staff-photo-index {
-  position: absolute;
-  bottom: 18px;
-  left: 22px;
-  z-index: 2;
-  color: #faf4e9;
-  font: 600 10px/1.4 'Golos Text',sans-serif;
-  letter-spacing: .14em;
-  text-shadow: 0 1px 8px rgba(0,0,0,.35);
-}
 .architech-home .at-staff-feature-body {
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  align-items: flex-start;
+  align-items: center;
   min-width: 0;
-  padding: clamp(34px,4.5vw,67px) clamp(34px,5.5vw,90px);
-}
-.architech-home .at-staff-eyebrow {
-  margin: 0 0 20px;
-  color: #c7ac85;
-  font: 600 11px/1.5 'Golos Text',sans-serif;
-  letter-spacing: .095em;
+  width: 100%;
+  padding: 0;
 }
 .architech-home .at-staff-founder-name {
   display: inline-flex;
   align-items: center;
-  gap: 19px;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 18px;
   max-width: 100%;
   color: #f0ebe3;
-  font: 600 clamp(38px,4.6vw,65px)/1.1 'Onest',sans-serif;
-  letter-spacing: -.054em;
+  font: 600 clamp(36px,3.6vw,47px)/1.14 'Onest',sans-serif;
+  letter-spacing: -.052em;
   text-decoration: none;
 }
 .architech-home .at-staff-founder-name span { overflow-wrap: anywhere; }
 .architech-home .at-staff-founder-name .at-staff-arrow {
-  width: 26px;
-  height: 26px;
+  width: 24px;
+  height: 24px;
   flex: none;
-  color: #c9ad85;
-  transition: transform .3s cubic-bezier(.22,1,.36,1);
+  color: #c6a77b;
+  transition: transform .28s cubic-bezier(.22,1,.36,1);
 }
 .architech-home .at-staff-founder-name:hover { color: #fff8ed; }
 .architech-home .at-staff-founder-name:hover .at-staff-arrow { transform: translate(3px,-3px); }
 .architech-home .at-staff-founder-role {
-  margin: 12px 0 0;
-  color: #c6c0b4;
-  font: 400 clamp(15px,1.25vw,18px)/1.5 'Golos Text',sans-serif;
+  margin: 9px 0 0;
+  color: #c3bcaf;
+  font: 400 clamp(14px,1.2vw,16px)/1.5 'Golos Text',sans-serif;
 }
 .architech-home .at-staff-socials {
   display: flex;
-  flex-wrap: wrap;
-  gap: 11px 22px;
   align-items: center;
-  margin-top: clamp(24px,3vw,39px);
-  padding-top: 22px;
-  border-top: 1px solid rgba(237,229,214,.17);
+  justify-content: center;
+  gap: 14px;
+  margin-top: 23px;
 }
 .architech-home .at-staff-socials a {
-  display: inline-flex;
-  align-items: center;
-  gap: 9px;
-  padding: 6px 0;
-  min-height: 38px;
-  color: #d7cabc;
+  display: inline-grid;
+  place-items: center;
+  width: 49px;
+  height: 49px;
+  flex: 0 0 49px;
+  border: 1px solid rgba(232,221,201,.17);
+  border-radius: 9px;
+  color: #ddd4c5;
   text-decoration: none;
-  font: 500 12px/1.45 'Golos Text',sans-serif;
-  transition: color .23s ease;
+  background: rgba(255,255,255,.018);
+  transition: border-color .25s ease,background-color .25s ease,transform .28s cubic-bezier(.22,1,.36,1);
 }
-.architech-home .at-staff-socials a:hover { color: #f3eadc; }
-.architech-home .at-staff-socials a svg { width: 18px; height: 18px; flex:none; }
-.architech-home .at-staff-socials a:first-child svg { color: #d28a6b; }
-.architech-home .at-staff-socials a:nth-child(2) svg { color: #87bd91; }
-.architech-home .at-staff-feature-rule {
-  position: absolute;
-  top: -1px;
-  right: 0;
-  width: 82px;
-  height: 2px;
-  background: #bda17a;
+.architech-home .at-staff-socials a:hover {
+  border-color: rgba(232,221,201,.45);
+  background: rgba(232,221,201,.075);
+  transform: translateY(-2px);
 }
+.architech-home .at-staff-socials a svg { display:block; width: 30px; height: 30px; }
+.architech-home .at-staff-socials a:first-child svg { color: #d99677; }
+.architech-home .at-staff-socials a:nth-child(2) svg { color: #8bc596; }
 .architech-home .at-staff-grid {
   display: grid;
   grid-template-columns: repeat(2,minmax(0,1fr));
-  gap: 1px;
-  overflow: hidden;
-  border: 1px solid rgba(236,228,213,.16);
-  border-radius: 3px;
-  background: rgba(236,228,213,.16);
+  width: min(100%,1100px);
+  gap: 15px;
 }
 .architech-home .at-staff-person {
   display: flex;
   align-items: center;
   min-width: 0;
-  min-height: 137px;
-  gap: clamp(17px,2.2vw,27px);
-  padding: clamp(21px,2.2vw,29px) clamp(20px,2.5vw,34px);
-  background: #1d1f1b;
+  min-height: 126px;
+  gap: clamp(17px,2.2vw,25px);
+  padding: 22px clamp(20px,2.2vw,29px);
+  background: #20221e;
+  border: 1px solid rgba(236,228,213,.16);
+  border-radius: 5px;
   text-decoration: none;
   color: #f0ece5;
-  transition: background-color .3s ease;
+  transition: background-color .26s ease,border-color .26s ease,transform .32s cubic-bezier(.22,1,.36,1);
 }
-.architech-home .at-staff-person:hover { background: #262821; }
+.architech-home .at-staff-person:hover {
+  background: #262821;
+  border-color: rgba(236,228,213,.32);
+  transform: translateY(-2px);
+}
 .architech-home .at-staff-person-main {
   display: flex;
   flex-direction: column;
@@ -950,8 +928,8 @@
 .architech-home .at-staff-person-name {
   display: block;
   color: #ece8e1;
-  font: 600 clamp(16px,1.5vw,19px)/1.3 'Onest',sans-serif;
-  letter-spacing: -.021em;
+  font: 600 clamp(17px,1.55vw,20px)/1.3 'Onest',sans-serif;
+  letter-spacing: -.022em;
   overflow-wrap: anywhere;
 }
 .architech-home .at-staff-person-role {
@@ -966,47 +944,43 @@
   color: #c6ac87;
   font: 500 11px/1.5 'Golos Text',sans-serif;
 }
-.architech-home .at-staff-person-side {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  align-items: flex-end;
-  align-self: stretch;
-  flex: none;
-  gap: 9px;
-}
-.architech-home .at-staff-person-index {
-  color: #a39b8d;
-  font: 500 11px/1.3 'Golos Text',sans-serif;
-  font-variant-numeric: tabular-nums;
-}
-.architech-home .at-staff-person .at-staff-arrow {
+.architech-home .at-staff-person-arrow {
   display: block;
-  width: 18px;
-  height: 18px;
-  color: #c3ad8b;
-  opacity: .55;
-  transition: transform .3s cubic-bezier(.22,1,.36,1),opacity .2s ease;
+  flex: 0 0 20px;
+  width: 20px;
+  height: 20px;
+  color: #bda787;
+  opacity: .62;
+  transition: opacity .2s ease,transform .28s ease;
 }
-.architech-home .at-staff-person:hover .at-staff-arrow { transform: translate(3px,-3px); opacity: 1; }
-.architech-home .at-staff a:focus-visible { outline: 2px solid #dfc79f; outline-offset: -4px; }
-@media(max-width:1000px) {
-  .architech-home .at-staff-feature { grid-template-columns: minmax(205px,34%) minmax(0,1fr); }
-  .architech-home .at-staff-feature-body { padding: 31px 36px; }
-  .architech-home .at-staff-socials { gap: 4px 17px; }
-  .architech-home .at-staff-person { padding: 21px 19px; gap: 14px; }
+.architech-home .at-staff-person:hover .at-staff-person-arrow {
+  opacity: 1;
+  transform: translate(2px,-2px);
 }
-@media(max-width:720px) {
-  .architech-home .at-staff-feature { grid-template-columns: 1fr; }
-  .architech-home .at-staff-feature-photo { min-height: 265px; height: 265px; }
-  .architech-home .at-staff-feature-body { padding: 29px 25px 37px; }
-  .architech-home .at-staff-founder-name { font-size: clamp(36px,8vw,55px); }
-  .architech-home .at-staff-feature-rule { width: 52px; }
-  .architech-home .at-staff-grid { grid-template-columns: 1fr; }
-  .architech-home .at-staff-person { min-height: 111px; }
-  .architech-home .at-staff-portrait { width: 64px; height: 64px; }
-  .architech-home .at-staff-portrait--large { width: 100%; height: 100%; }
-  .architech-home .at-staff-photo-index { bottom: 15px; left: 17px; }
+.architech-home .at-staff a:focus-visible {
+  outline: 2px solid #dfc79f;
+  outline-offset: 3px;
+}
+@media(max-width:780px) {
+  .architech-home .at-staff { gap: 40px; }
+  .architech-home .at-staff-grid { gap: 12px; }
+  .architech-home .at-staff-person {
+    min-height: 117px;
+    gap: 15px;
+    padding: 17px;
+  }
+  .architech-home .at-staff-portrait { width: 63px; height: 63px; }
+  .architech-home .at-staff-portrait--large { width: 104px; height: 104px; }
+}
+@media(max-width:620px) {
+  .architech-home .at-staff { gap: 37px; }
+  .architech-home .at-staff-feature { padding: 29px 18px 27px; }
+  .architech-home .at-staff-feature::after { bottom: -30px; height: 29px; }
+  .architech-home .at-staff-grid { grid-template-columns: 1fr; gap: 10px; }
+  .architech-home .at-staff-person { min-height: 100px; }
+  .architech-home .at-staff-founder-name { font-size: clamp(34px,9vw,43px); }
+  .architech-home .at-staff-portrait { width: 62px; height: 62px; }
+  .architech-home .at-staff-portrait--large { width: 104px; height: 104px; }
 }
 @media(prefers-reduced-motion:reduce) {
   .architech-home .at-staff *,
