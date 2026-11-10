@@ -121,7 +121,6 @@ export default function HomePage() {
     shotMeta[shot] ??
     ({ title: copy.fallbackShot, subtitle: copy.fallbackShotSubtitle } as ShotMeta)
   const [activeIndex, setActiveIndex] = useState(0)
-  const [direction, setDirection] = useState<1 | -1>(1)
   const [sliderPaused, setSliderPaused] = useState(false)
 
   const thumbSpring: Transition = {
@@ -207,12 +206,8 @@ export default function HomePage() {
   function changeTo(newSrc: string) {
     if (newSrc === shot) return
 
-    const currIdx = shots.indexOf(shot)
     const nextIdx = shots.indexOf(newSrc)
-    if (currIdx !== -1 && nextIdx !== -1) {
-      setDirection(nextIdx > currIdx ? 1 : -1)
-      setActiveIndex(nextIdx)
-    }
+    if (nextIdx !== -1) setActiveIndex(nextIdx)
     setShot(newSrc)
   }
 
