@@ -446,7 +446,7 @@
   min-height: 445px;
   max-width: 475px;
   overflow: hidden;
-  border-right: 1px solid rgba(230,224,211,.13);
+  border-right: 1px solid rgba(230,224,211,.085);
 }
 .architech-home .at-testimonial-stage {
   position: relative;
@@ -465,7 +465,7 @@
   right: 0;
   height: 1px;
   content: "";
-  background: linear-gradient(90deg, transparent, rgba(217,207,184,.25) 30%, rgba(217,207,184,.25));
+  background: linear-gradient(90deg, transparent, rgba(217,207,184,.15) 30%, rgba(217,207,184,.15));
   pointer-events: none;
 }
 .architech-home .at-testimonial-skin {
@@ -486,28 +486,31 @@
 }
 .architech-home .at-testimonial-meta {
   display: grid;
-  gap: 21px;
+  gap: 16px;
   margin-bottom: 33px;
 }
-.architech-home .at-testimonial-author { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px 20px; }
+.architech-home .at-testimonial-meta .at-kicker {
+  font-size: 12px;
+}
+.architech-home .at-testimonial-author { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px 15px; }
 .architech-home .at-testimonial-name {
   color: #f1ebe2;
-  font: 600 24px/1.2 'Onest', sans-serif;
+  font: 600 26px/1.2 'Onest', sans-serif;
   letter-spacing: -.035em;
   text-decoration: none;
   transition: color .22s ease;
 }
 .architech-home .at-testimonial-name:hover { color: #d5b88d; }
 .architech-home .at-testimonial-role {
-  color: #b4ae9f;
-  font: 400 12px/1.5 'Golos Text', sans-serif;
+  color: #c6c0b6;
+  font: 400 15px/1.5 'Golos Text', sans-serif;
 }
 .architech-home .at-intro-quote.at-testimonial-quote {
   position: relative;
   max-width: 755px;
   margin: 0;
   color: #eae6de;
-  font: 400 clamp(30px, 3vw, 48px)/1.29 'Bona Nova', Georgia, serif;
+  font: 400 clamp(30px, 3vw, 44px)/1.29 'Bona Nova', Georgia, serif;
   letter-spacing: -.026em;
   text-wrap: balance;
 }
