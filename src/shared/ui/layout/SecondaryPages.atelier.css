@@ -146,23 +146,13 @@
 
 /* Profiles: keep user-selected inline themes/banners and progress ring geometry.
    Only neutral surfaces, common fonts and default accents get recoloured. */
-.at-secondary-profile > main [class*="bg-[radial-gradient"] {
-  background-image: radial-gradient(circle at 50% -20%,rgba(197,170,132,.12),rgba(23,24,22,.13) 55%);
-}
-.at-secondary-profile > main :is(
-  [class~="bg-sky-900/30"],[class~="bg-sky-900/40"]
-) { background-color: rgba(197,170,132,.14); }
+/* Profile gradients, accent surface colours and ring colours use Tailwind utilities. */
 .at-secondary-profile > main :is(
   [class~="from-amber-900/25"],[class~="from-slate-950"]
 ) { --tw-gradient-from: rgba(43,42,35,.75); }
-.at-secondary-profile > main :is(
-  [class~="ring-sky-300"],[class~="ring-emerald-300/90"]
-) { --tw-ring-color: #c5aa84; }
+
 
 /* Settings retain the original security, success and destructive-state colours. */
-.at-secondary-settings > main [class~="text-sky-300"],
-.at-secondary-settings > main [class~="text-sky-400"] { color: #d3b58b; }
-.at-secondary-settings > main [class~="bg-sky-500/20"] { background-color: rgba(197,170,132,.12); }
 .at-secondary-flow > main .card { background-color: rgba(32,34,30,.93); }
 
 @media (prefers-reduced-motion: reduce) {

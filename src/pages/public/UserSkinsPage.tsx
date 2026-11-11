@@ -420,7 +420,7 @@ export default function UserSkinsPage() {
                 <div className="h-[520px] animate-pulse rounded-2xl border border-[rgba(239,232,218,0.22)] bg-[rgba(33,35,31,0.91)]" />
               ) : (
                 <div className="relative z-10">
-                  <div className="relative h-[460px] overflow-hidden rounded-2xl border border-[rgba(239,232,218,0.22)] bg-[radial-gradient(circle_at_50%_-20%,rgba(56,189,248,.15),rgba(2,6,23,.95)_45%)] sm:h-[520px]">
+                  <div className="relative h-[460px] overflow-hidden rounded-2xl border border-[rgba(239,232,218,0.22)] bg-[radial-gradient(circle_at_50%_-20%,rgba(197,170,132,.12),rgba(23,24,22,.13)_55%)] sm:h-[520px]">
                     {carouselCards.map(({ index, delta, visible, skin: renderedSkin }) => {
                       const dropEnabled = self && busy === null && visible;
                       const isDropTarget = dragOverSlot === index;
@@ -467,7 +467,7 @@ export default function UserSkinsPage() {
                             !visible ? 'pointer-events-none' : ''
                           } ${isDropTarget ? 'border-[rgba(197,170,132,0.58)] shadow-[0_0_0_1px_rgba(56,189,248,.65),0_20px_52px_-20px_rgba(56,189,248,.75)]' : ''} ${
                             self ? 'cursor-pointer' : ''
-                          } ${isActiveSkin ? 'ring-2 ring-emerald-300/90 shadow-[0_0_0_1px_rgba(16,185,129,.55),0_18px_48px_-18px_rgba(16,185,129,.5)]' : ''} ${
+                          } ${isActiveSkin ? 'ring-2 ring-[#c5aa84] shadow-[0_0_0_1px_rgba(16,185,129,.55),0_18px_48px_-18px_rgba(16,185,129,.5)]' : ''} ${
                             !isActiveSkin && delta === 0 && visible
                               ? 'border-[rgba(197,170,132,0.58)] shadow-[0_18px_48px_-20px_rgba(56,189,248,.55)]'
                               : !isActiveSkin
@@ -549,7 +549,7 @@ export default function UserSkinsPage() {
                           onClick={() => setUploadModel('classic')}
                           className={`rounded-lg border px-3 py-1.5 text-xs ${
                             uploadModel === 'classic'
-                              ? 'border-[rgba(197,170,132,0.58)] bg-sky-900/40 text-[#d8bc91]'
+                              ? 'border-[rgba(197,170,132,0.58)] bg-[rgba(197,170,132,0.14)] text-[#d8bc91]'
                               : 'border-[rgba(239,232,218,0.22)] text-[#c9c3b8] hover:border-slate-500'
                           }`}
                         >
@@ -560,7 +560,7 @@ export default function UserSkinsPage() {
                           onClick={() => setUploadModel('slim')}
                           className={`rounded-lg border px-3 py-1.5 text-xs ${
                             uploadModel === 'slim'
-                              ? 'border-[rgba(197,170,132,0.58)] bg-sky-900/40 text-[#d8bc91]'
+                              ? 'border-[rgba(197,170,132,0.58)] bg-[rgba(197,170,132,0.14)] text-[#d8bc91]'
                               : 'border-[rgba(239,232,218,0.22)] text-[#c9c3b8] hover:border-slate-500'
                           }`}
                         >
@@ -583,7 +583,7 @@ export default function UserSkinsPage() {
                               type="button"
                               onClick={onApplySelectedSkin}
                               disabled={busy !== null || selectedSkinLegacy}
-                              className="rounded-lg border border-[rgba(197,170,132,0.58)] bg-sky-900/30 px-3 py-1.5 text-[#d8bc91] hover:border-[#cfb28c] disabled:cursor-not-allowed disabled:opacity-60"
+                              className="rounded-lg border border-[rgba(197,170,132,0.58)] bg-[rgba(197,170,132,0.14)] px-3 py-1.5 text-[#d8bc91] hover:border-[#cfb28c] disabled:cursor-not-allowed disabled:opacity-60"
                             >
                               {copy.skins.apply}
                             </button>

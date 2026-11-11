@@ -161,7 +161,7 @@ export default function UserAchievementsPage() {
               <div className="pointer-events-none absolute inset-0">
                 <div className="absolute -left-20 top-0 h-56 w-56 rounded-full bg-[rgba(197,170,132,0.11)] blur-3xl" />
                 <div className="absolute right-0 top-0 h-56 w-56 rounded-full bg-[rgba(197,170,132,0.11)] blur-3xl" />
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_-20%,rgba(251,191,36,.18),transparent_45%)]" />
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_-20%,rgba(197,170,132,.12),rgba(23,24,22,.13)_55%)]" />
               </div>
 
               <div className="relative z-10 mb-6 flex items-start justify-center">
@@ -230,8 +230,8 @@ export default function UserAchievementsPage() {
             <section className="relative overflow-hidden rounded-2xl border border-amber-400/25 bg-[linear-gradient(180deg,rgba(15,23,42,.9),rgba(9,14,28,.94))] p-4 shadow-[0_24px_60px_-34px_rgba(0,0,0,.95)]">
               <div className="pointer-events-none absolute inset-0">
                 <div className="absolute inset-0 bg-[repeating-linear-gradient(135deg,rgba(255,255,255,.02)_0px,rgba(255,255,255,.02)_2px,transparent_2px,transparent_8px)]" />
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0,rgba(251,191,36,.13),transparent_45%)]" />
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_0_100%,rgba(56,189,248,.08),transparent_40%)]" />
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_-20%,rgba(197,170,132,.12),rgba(23,24,22,.13)_55%)]" />
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_-20%,rgba(197,170,132,.12),rgba(23,24,22,.13)_55%)]" />
               </div>
               <div className="relative z-10 mb-3 flex flex-col items-center justify-center gap-1 text-center">
                 <h2 className="text-base font-semibold uppercase tracking-[0.12em] text-[#ead3ad]">{copy.achievements.pinned}</h2>
@@ -356,8 +356,8 @@ function PinnedRibbonItem({ achievement, language, fixed }: { achievement: Achie
   return (
     <article className="group w-32 shrink-0">
       <div className="relative rounded-xl border border-amber-300/25 bg-black/35 p-2 shadow-[0_14px_28px_-18px_rgba(0,0,0,.9)]">
-        <div className="pointer-events-none absolute inset-0 rounded-xl bg-[radial-gradient(circle_at_50%_0,rgba(251,191,36,.18),transparent_55%)]" />
-        <div className="relative mx-auto mb-2 grid h-16 w-16 place-items-center rounded-full border border-amber-200/35 bg-[radial-gradient(circle,rgba(251,191,36,.24),rgba(2,6,23,.6)_72%)] text-2xl">
+        <div className="pointer-events-none absolute inset-0 rounded-xl bg-[radial-gradient(circle_at_50%_-20%,rgba(197,170,132,.12),rgba(23,24,22,.13)_55%)]" />
+        <div className="relative mx-auto mb-2 grid h-16 w-16 place-items-center rounded-full border border-amber-200/35 bg-[radial-gradient(circle_at_50%_-20%,rgba(197,170,132,.12),rgba(23,24,22,.13)_55%)] text-2xl">
           {achievement.icon || '🏅'}
         </div>
         <div className="relative text-center">
@@ -381,7 +381,7 @@ function AchievementTile({ achievement, language, received }: { achievement: Ach
           : 'border-[rgba(239,232,218,0.22)] bg-[rgba(33,35,31,0.91)]'
       } min-h-24`}
     >
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_100%_0,rgba(251,191,36,.18),transparent_45%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_-20%,rgba(197,170,132,.12),rgba(23,24,22,.13)_55%)]" />
 
       {!unlocked && (
         <div className="absolute inset-0 bg-[rgba(25,27,24,0.85)] backdrop-blur-[1px]">

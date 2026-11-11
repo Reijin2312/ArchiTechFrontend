@@ -169,7 +169,7 @@ export default function UserProfilePage() {
                 <div className="flex items-center gap-2">
                   <Link
                     to={skinsHref}
-                    className="group inline-flex h-8 w-8 items-center justify-center rounded-full border border-[rgba(197,170,132,0.58)] bg-[radial-gradient(circle_at_30%_20%,rgba(56,189,248,.22),rgba(15,23,42,.92))] text-[#d8bc91] shadow-[0_0_0_1px_rgba(56,189,248,.12)_inset,0_10px_22px_-14px_rgba(0,0,0,.9)] transition hover:scale-105 hover:border-[#cfb28c] hover:text-[#f0dcc0]"
+                    className="group inline-flex h-8 w-8 items-center justify-center rounded-full border border-[rgba(197,170,132,0.58)] bg-[radial-gradient(circle_at_50%_-20%,rgba(197,170,132,.12),rgba(23,24,22,.13)_55%)] text-[#d8bc91] shadow-[0_0_0_1px_rgba(56,189,248,.12)_inset,0_10px_22px_-14px_rgba(0,0,0,.9)] transition hover:scale-105 hover:border-[#cfb28c] hover:text-[#f0dcc0]"
                     aria-label={copy.public.openSkins}
                     title={copy.public.skinGallery}
                   >
@@ -306,7 +306,7 @@ export default function UserProfilePage() {
               <h3 className="text-sm font-semibold text-[#d8bc91] font-techno">{copy.public.achievements}</h3>
               <Link
                 to={achievementsHref}
-                className="group inline-flex h-8 w-8 items-center justify-center rounded-full border border-[rgba(197,170,132,0.58)] bg-[radial-gradient(circle_at_30%_20%,rgba(56,189,248,.22),rgba(15,23,42,.92))] text-[#d8bc91] shadow-[0_0_0_1px_rgba(56,189,248,.12)_inset,0_10px_22px_-14px_rgba(0,0,0,.9)] transition hover:scale-105 hover:border-[#cfb28c] hover:text-[#f0dcc0]"
+                className="group inline-flex h-8 w-8 items-center justify-center rounded-full border border-[rgba(197,170,132,0.58)] bg-[radial-gradient(circle_at_50%_-20%,rgba(197,170,132,.12),rgba(23,24,22,.13)_55%)] text-[#d8bc91] shadow-[0_0_0_1px_rgba(56,189,248,.12)_inset,0_10px_22px_-14px_rgba(0,0,0,.9)] transition hover:scale-105 hover:border-[#cfb28c] hover:text-[#f0dcc0]"
                 aria-label={copy.public.openAchievements}
                 title={copy.public.allAchievements}
               >
