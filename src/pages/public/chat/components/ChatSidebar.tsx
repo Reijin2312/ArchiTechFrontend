@@ -105,7 +105,7 @@ function Checkbox({ checked, compact = false }: { checked: boolean; compact?: bo
         compact ? 'h-[30px] w-[30px] rounded-[9px]' : 'h-9 w-9 rounded-[11px]'
       } ${
         checked
-          ? 'border-[#8e77ef] bg-[#8e77ef] text-white'
+          ? 'border-[#c5aa84] bg-[#c5aa84] text-white'
           : 'border-white/35 bg-transparent text-transparent'
       }`}
     >
@@ -149,7 +149,7 @@ function TopMiniAvatars() {
         </div>
         <div
           className="grid h-[42px] w-[42px] place-items-center rounded-full text-[20px] ring-2 ring-[#1a1b20]"
-          style={{ background: 'linear-gradient(135deg, #7b3ff6 0%, #ff9d3f 100%)' }}
+          style={{ background: 'linear-gradient(135deg, #ad906a 0%, #ff9d3f 100%)' }}
         >
           T
         </div>
@@ -174,7 +174,7 @@ function ChatRow({
         type="button"
         onClick={onClick}
         className={`mx-auto mb-[10px] grid h-[64px] w-[64px] place-items-center rounded-[18px] outline-none transition-colors focus:outline-none focus-visible:outline-none focus-visible:ring-0 ${
-          item.selected ? 'bg-[#8f79ee]' : 'hover:bg-white/[0.035]'
+          item.selected ? 'bg-[#c5aa84]' : 'hover:bg-white/[0.035]'
         }`}
         title={item.name}
       >
@@ -209,7 +209,7 @@ function ChatRow({
       type="button"
       onClick={onClick}
       className={`mx-[8px] mb-[2px] flex w-[calc(100%-16px)] items-start gap-[12px] rounded-[16px] px-[12px] py-[11px] text-left outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-0 ${
-        item.selected ? 'bg-[#8f79ee] text-white' : 'text-white hover:bg-white/[0.035]'
+        item.selected ? 'bg-[#c5aa84] text-white' : 'text-white hover:bg-white/[0.035]'
       }`}
       style={item.selected ? { boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06)' } : undefined}
     >
@@ -248,7 +248,7 @@ function ChatRow({
           }`}
         >
           <div className="flex min-w-0 flex-1 items-center gap-[6px]">
-            {item.unread ? <span className="h-2 w-2 rounded-full bg-[#d6cbff]" /> : null}
+            {item.unread ? <span className="h-2 w-2 rounded-full bg-[#e9d7bd]" /> : null}
             <span className="truncate">{item.preview}</span>
           </div>
           <span className="inline-flex h-[14px] min-w-[14px] items-center justify-end leading-none">{item.outgoing ? deliveryIcon : null}</span>
@@ -633,7 +633,7 @@ export function ChatSidebar({
       <button
         type="button"
         onClick={() => setCreationMode('groupDetails')}
-        className="absolute bottom-[22px] right-[16px] grid h-[68px] w-[68px] place-items-center rounded-full bg-[#8e77ef] text-white shadow-[0_14px_30px_rgba(142,119,239,.45)] transition-transform hover:scale-[1.03]"
+        className="absolute bottom-[22px] right-[16px] grid h-[68px] w-[68px] place-items-center rounded-full bg-[#c5aa84] text-white shadow-[0_14px_30px_rgba(142,119,239,.45)] transition-transform hover:scale-[1.03]"
         aria-label="Continue to group details"
       >
         <ArrowRightIcon size={28} />
@@ -671,7 +671,7 @@ export function ChatSidebar({
           type="button"
           onClick={() => groupAvatarInputRef.current?.click()}
           disabled={isCreatingGroup}
-          className="mx-auto grid h-[190px] w-[190px] place-items-center overflow-hidden rounded-full bg-linear-to-br from-[#a795ea] to-[#7f6be8] text-white shadow-[0_18px_36px_rgba(142,119,239,0.45)] transition-transform hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-80"
+          className="mx-auto grid h-[190px] w-[190px] place-items-center overflow-hidden rounded-full bg-linear-to-br from-[#a795ea] to-[#ae936e] text-white shadow-[0_18px_36px_rgba(142,119,239,0.45)] transition-transform hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-80"
           aria-label="Pick group avatar"
         >
           {groupAvatarDataUrl ? (
@@ -699,7 +699,7 @@ export function ChatSidebar({
           onClick={() => {
             void handleSubmitGroup();
           }}
-          className="absolute bottom-[22px] right-[16px] grid h-[68px] w-[68px] place-items-center rounded-full bg-[#8e77ef] text-white shadow-[0_14px_30px_rgba(142,119,239,.45)] transition-transform hover:scale-[1.03]"
+          className="absolute bottom-[22px] right-[16px] grid h-[68px] w-[68px] place-items-center rounded-full bg-[#c5aa84] text-white shadow-[0_14px_30px_rgba(142,119,239,.45)] transition-transform hover:scale-[1.03]"
           aria-label="Create group"
         >
           {isCreatingGroup ? (
@@ -804,7 +804,7 @@ export function ChatSidebar({
             type="button"
             onClick={() => setIsCompactSearchOpen((prev) => !prev)}
             className={`grid h-[38px] w-[38px] place-items-center rounded-full transition-colors ${
-              isCompactSearchOpen ? 'bg-white/12 text-[#b39cff]' : 'text-white/78 hover:bg-white/10'
+              isCompactSearchOpen ? 'bg-white/12 text-[#e0c59e]' : 'text-white/78 hover:bg-white/10'
             }`}
             aria-label="Search chats"
           >
@@ -849,9 +849,9 @@ export function ChatSidebar({
       {!isTabsHidden ? (
         <div className="overflow-hidden px-[28px] pt-[4px]">
           <div className="flex items-end gap-[32px] whitespace-nowrap text-[17px] font-[600] text-white/78">
-            <div className="relative pb-[13px] text-[#9d83ff]">
+            <div className="relative pb-[13px] text-[#c5aa84]">
               Chats
-              <span className="absolute bottom-0 left-0 h-[2.5px] w-full rounded-full bg-[#9d83ff]" />
+              <span className="absolute bottom-0 left-0 h-[2.5px] w-full rounded-full bg-[#c5aa84]" />
             </div>
             <div className="pb-[13px]">ArchiTech</div>
             <div className="flex items-center gap-[8px] pb-[13px]">
@@ -913,7 +913,7 @@ export function ChatSidebar({
           <button
             type="button"
             onClick={() => setComposeMenuOpen((prev) => !prev)}
-            className="grid h-[68px] w-[68px] place-items-center rounded-full bg-[#8e77ef] text-white shadow-[0_14px_30px_rgba(142,119,239,.45)]"
+            className="grid h-[68px] w-[68px] place-items-center rounded-full bg-[#c5aa84] text-white shadow-[0_14px_30px_rgba(142,119,239,.45)]"
             aria-label={composeMenuOpen ? 'Close compose menu' : 'Open compose menu'}
           >
             {composeMenuOpen ? (
