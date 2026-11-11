@@ -1072,7 +1072,7 @@ export function SingleImageBubble({
         </div>
         <div
           className={`relative px-3 pb-2 pt-2 ${
-            isOwn ? 'bg-[#c5aa84] text-white' : 'bg-[#222327] text-white/95'
+            isOwn ? 'bg-[#c5aa84] text-white' : 'bg-[#242620] text-white/95'
           }`}
         >
           {replyPreview ? <ReplyPreviewBlock replyPreview={replyPreview} isOwn={isOwn} /> : null}
@@ -1103,7 +1103,7 @@ export function SingleImageBubble({
   return (
     <div
       className={`tg-bubble relative inline-block overflow-hidden p-0 ${
-        isOwn ? 'tg-right bg-[#c5aa84] text-white' : 'tg-left bg-[#222327] text-white/95'
+        isOwn ? 'tg-right bg-[#c5aa84] text-white' : 'tg-left bg-[#242620] text-white/95'
       } ${hideTail ? 'tg-tail-none' : ''}`}
       style={rootContainerStyle}
     >
@@ -1240,7 +1240,7 @@ export function MultiImageBubble({
         />
         <div
           className={`relative px-3 pb-2 pt-2 ${
-            isOwn ? 'bg-[#c5aa84] text-white' : 'bg-[#222327] text-white/95'
+            isOwn ? 'bg-[#c5aa84] text-white' : 'bg-[#242620] text-white/95'
           }`}
         >
           {replyPreview ? <ReplyPreviewBlock replyPreview={replyPreview} isOwn={isOwn} /> : null}
@@ -1271,7 +1271,7 @@ export function MultiImageBubble({
   return (
     <div
       className={`tg-bubble relative inline-block overflow-hidden p-0 ${
-        isOwn ? 'tg-right bg-[#c5aa84] text-white' : 'tg-left bg-[#222327] text-white/95'
+        isOwn ? 'tg-right bg-[#c5aa84] text-white' : 'tg-left bg-[#242620] text-white/95'
       } ${hideTail ? 'tg-tail-none' : ''}`}
       style={{ maxWidth: bubbleMaxWidthPx }}
     >

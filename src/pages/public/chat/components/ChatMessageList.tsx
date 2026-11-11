@@ -1470,7 +1470,7 @@ function MessageTextBubble({
 
   return (
     <div
-      className={`tg-bubble relative ${isOwn ? 'tg-right bg-[#c5aa84] text-white' : 'tg-left bg-[#222327] text-white/95'} ${hideTail ? 'tg-tail-none' : ''}`}
+      className={`tg-bubble relative ${isOwn ? 'tg-right bg-[#c5aa84] text-white' : 'tg-left bg-[#242620] text-white/95'} ${hideTail ? 'tg-tail-none' : ''}`}
       style={bubbleWidthStyle}
     >
       {replyPreview ? <ReplyPreviewBlock replyPreview={replyPreview} isOwn={isOwn} /> : null}
