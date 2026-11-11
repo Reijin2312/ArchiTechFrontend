@@ -913,7 +913,7 @@ function TopPlayersSection({
                 aria-label={language === 'ru' ? `Место ${index + 1}: нет данных` : `Rank ${index + 1}: no data`}
               >
                 <div className="relative z-10 flex items-center gap-3">
-                  <div className="relative size-11 shrink-0 overflow-hidden rounded-xl border border-slate-700 bg-slate-900" aria-hidden="true">
+                  <div className="relative size-11 shrink-0 overflow-hidden rounded-[8px] border border-[rgba(241,235,222,0.3)] bg-transparent shadow-none px-[5px] py-[23px] transition-[background-color] duration-[270ms] hover:bg-[rgba(244,239,230,0.035)]" aria-hidden="true">
                     <svg viewBox="0 0 24 24" className="h-full w-full p-2.5 text-slate-500" fill="none" stroke="currentColor" strokeWidth="1.5">
                       <circle cx="12" cy="8" r="3.3" />
                       <path d="M5.5 21v-1.8c0-3.7 2.8-5.8 6.5-5.8s6.5 2.1 6.5 5.8V21" />
@@ -958,7 +958,7 @@ function TopPlayersSection({
 
                 <div className="relative z-10 flex items-center gap-3">
                   <div
-                    className="relative size-11 shrink-0 overflow-hidden rounded-[8px] border border-[rgba(241,235,222,0.3)] bg-transparent shadow-none"
+                    className="relative size-11 shrink-0 overflow-hidden rounded-[8px] border border-[rgba(241,235,222,0.3)] bg-transparent shadow-none px-[5px] py-[23px] transition-[background-color] duration-[270ms] hover:bg-[rgba(244,239,230,0.035)]"
                   >
                     {avatar ? (
                       <img
