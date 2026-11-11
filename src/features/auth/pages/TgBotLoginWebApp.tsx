@@ -80,7 +80,7 @@ export default function TgBotLoginWebApp() {
 
   if (!loading && !tg) {
     return (
-      <div className="at-bot-login min-h-screen flex items-center justify-center bg-slate-900 text-white px-4">
+      <div className="at-bot-login min-h-screen flex items-center justify-center bg-[#242620] text-white px-4">
         <div className="max-w-md w-full space-y-4 text-center">
           <h1 className="text-2xl font-semibold">Откройте из Telegram</h1>
           <p>Эта форма работает только внутри Telegram-бота как WebApp. Откройте кнопку снова из бота.</p>
@@ -90,20 +90,20 @@ export default function TgBotLoginWebApp() {
   }
 
   return (
-    <div className="at-bot-login min-h-screen flex items-center justify-center bg-slate-900 text-white px-4">
-      <div className="w-full max-w-md bg-slate-800/70 border border-slate-700 rounded-2xl p-6 shadow-2xl space-y-4">
+    <div className="at-bot-login min-h-screen flex items-center justify-center bg-[#242620] text-white px-4">
+      <div className="w-full max-w-md bg-slate-800/70 border border-[rgba(239,232,218,0.22)] rounded-2xl p-6 shadow-2xl space-y-4">
         <div className="space-y-1">
           <h1 className="text-2xl font-semibold">Вход для бота</h1>
-          <p className="text-sm text-slate-300">
+          <p className="text-sm text-[#c9c3b8]">
             Ник и пароль отправятся в бота, не останутся в истории чата.
           </p>
         </div>
 
         <form className="space-y-4" onSubmit={handleSubmit}>
           <label className="block space-y-2">
-            <span className="text-sm text-slate-200">Ник</span>
+            <span className="text-sm text-[#c9c3b8]">Ник</span>
             <input
-              className="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-white focus:border-sky-400 focus:outline-none"
+              className="w-full rounded-lg bg-[#242620] border border-[rgba(239,232,218,0.22)] px-3 py-2 text-white focus:border-sky-400 focus:outline-none"
               value={nickname}
               onChange={(e) => setNickname(e.target.value)}
               placeholder="Ваш ник"
@@ -112,9 +112,9 @@ export default function TgBotLoginWebApp() {
           </label>
 
           <label className="block space-y-2">
-            <span className="text-sm text-slate-200">Пароль</span>
+            <span className="text-sm text-[#c9c3b8]">Пароль</span>
             <input
-              className="w-full rounded-lg bg-slate-900 border border-slate-700 px-3 py-2 text-white focus:border-sky-400 focus:outline-none"
+              className="w-full rounded-lg bg-[#242620] border border-[rgba(239,232,218,0.22)] px-3 py-2 text-white focus:border-sky-400 focus:outline-none"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -128,7 +128,7 @@ export default function TgBotLoginWebApp() {
 
           <button
             type="submit"
-            className="w-full rounded-lg bg-sky-500 hover:bg-sky-400 text-white font-semibold py-2 transition"
+            className="w-full rounded-lg bg-[#c8ae88] text-[#211f1b] hover:bg-[#e6d6bd] text-white font-semibold py-2 transition"
           >
             Отправить в бота
           </button>

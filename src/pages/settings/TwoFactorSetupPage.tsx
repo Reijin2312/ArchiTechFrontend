@@ -228,10 +228,10 @@ export default function TwoFactorSetupPage() {
                 </div>
               )}
 
-              <div className="rounded-2xl border border-slate-700 bg-slate-950/50 p-4">
-                <div className="mx-auto mb-4 w-fit rounded-xl border border-slate-700 bg-slate-900/70 p-3">
+              <div className="rounded-2xl border border-[rgba(239,232,218,0.22)] bg-slate-950/50 p-4">
+                <div className="mx-auto mb-4 w-fit rounded-xl border border-[rgba(239,232,218,0.22)] bg-[rgba(33,35,31,0.91)] p-3">
                   {qrLoading ? (
-                    <div className="grid h-[220px] w-[220px] place-items-center rounded-lg bg-slate-900 text-xs text-slate-400">
+                    <div className="grid h-[220px] w-[220px] place-items-center rounded-lg bg-[rgba(33,35,31,0.91)] text-xs text-[#aaa497]">
                       Генерация QR...
                     </div>
                   ) : qrDataUrl ? (
@@ -242,15 +242,15 @@ export default function TwoFactorSetupPage() {
                       loading="lazy"
                     />
                   ) : (
-                    <div className="grid h-[220px] w-[220px] place-items-center rounded-lg bg-slate-900 px-4 text-center text-xs text-red-300">
+                    <div className="grid h-[220px] w-[220px] place-items-center rounded-lg bg-[rgba(33,35,31,0.91)] px-4 text-center text-xs text-red-300">
                       {qrError || 'QR недоступен'}
                     </div>
                   )}
                 </div>
 
-                <p className="mb-2 text-xs text-slate-300">Или введите этот ключ вручную:</p>
+                <p className="mb-2 text-xs text-[#c9c3b8]">Или введите этот ключ вручную:</p>
                 <div className="flex flex-wrap items-center gap-2">
-                  <code className="rounded-lg bg-black/40 px-3 py-1 text-[12px] text-sky-300">{setupData.secret}</code>
+                  <code className="rounded-lg bg-black/40 px-3 py-1 text-[12px] text-[#d8bc91]">{setupData.secret}</code>
                   <button
                     type="button"
                     onClick={copySecret}
@@ -259,7 +259,7 @@ export default function TwoFactorSetupPage() {
                     className={`inline-flex h-8 w-8 items-center justify-center rounded-lg border transition ${
                       copied
                         ? 'border-emerald-400/60 bg-emerald-500/20 text-emerald-200'
-                        : 'border-slate-700 bg-slate-900/70 text-slate-200 hover:border-sky-400/60 hover:text-sky-200'
+                        : 'border-[rgba(239,232,218,0.22)] bg-[rgba(33,35,31,0.91)] text-[#c9c3b8] hover:border-[#cfb28c] hover:text-[#f0dcc0]'
                     }`}
                   >
                     {copied ? <CheckIcon /> : <CopyIcon />}
