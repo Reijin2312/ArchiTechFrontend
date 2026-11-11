@@ -6,12 +6,13 @@ import { http } from '@/shared/api/http';
 import { authStore } from '@/shared/store/auth';
 import { Button } from '@/shared/ui/button/Button';
 import { Input } from '@/shared/ui/form/Input';
-import AuthPageShell from '../components/AuthPageShell';
+import { Card } from '@/shared/ui/card/Card';
 import { FormHint } from '@/shared/ui/form/FormHint';
 import PasswordField from '../components/PasswordField';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import Turnstile from 'react-turnstile';
 import { useWallpaper } from '@/shared/ui/wallpaper/useWallpaper';
+import '../components/auth-pages.css';
 import { Seo } from '@/shared/seo/seo';
 import { notifyLauncher, requestDesktopToken } from '@/shared/auth/utils';
 import { useRedirectUri } from '@/shared/hooks/useRedirectUri';
@@ -290,96 +291,91 @@ export default function RegisterPage() {
 
   return (
     <>
-      <Seo title="Регистрация — ArchiTech MC" robots="noindex,follow" />
-      <AuthPageShell
-        mode="register"
-        title="Создать аккаунт"
-        description="Зарегистрируйтесь, чтобы войти в мир ArchiTech и сохранить всё, что построите."
-      >
-        {serverErr && <div className="at-auth-alert" role="alert">{serverErr}</div>}
+    <Seo title="Регистрация — ArchiTech MC" robots="noindex,follow" />
+    <div className="wrap at-auth-restyled at-auth-restyled--register">
+      <Card>
+        <h1 className="text-2xl mb-4 text-center">Регистрация</h1>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="at-auth-form">
-          <div className="at-auth-field">
-            <label className="at-auth-label" htmlFor="register-email">Почта</label>
-            <Input
-              id="register-email"
-              type="email"
-              placeholder="you@example.com"
-              autoComplete="email"
-              autoCapitalize="none"
-              spellCheck={false}
-              aria-invalid={!!errors.email}
-              aria-describedby={errors.email ? 'register-email-hint' : undefined}
-              {...register('email')}
-              error={!!errors.email}
-              className={errors.email ? 'is-err' : touchedFields.email && emailV && !errors.email ? 'is-ok' : ''}
-            />
-            <div id="register-email-hint"><FormHint error={!!errors.email}>{firstError(errors.email)}</FormHint></div>
+        {serverErr && (
+          <div className="error" role="alert" style={{ display: 'block' }}>
+            {serverErr}
           </div>
+        )}
 
-          <div className="at-auth-field">
-            <label className="at-auth-label" htmlFor="register-username">Ник</label>
-            <Input
-              id="register-username"
-              placeholder="Ник в Minecraft"
-              autoComplete="username"
-              autoCapitalize="none"
-              spellCheck={false}
-              aria-invalid={!!errors.username}
-              aria-describedby={errors.username ? 'register-username-hint' : undefined}
-              {...register('username')}
-              error={!!errors.username}
-              className={errors.username ? 'is-err' : touchedFields.username && userV && !errors.username ? 'is-ok' : ''}
-            />
-            <div id="register-username-hint"><FormHint error={!!errors.username}>{firstError(errors.username)}</FormHint></div>
-          </div>
+        <form onSubmit={handleSubmit(onSubmit)} className="grid gap-3">
+          <label className="label">Почта</label>
+          <Input
+            autoComplete="email"
+            {...register('email')}
+            error={!!errors.email}
+            className={errors.email ? 'is-err' : (touchedFields.email && emailV && !errors.email) ? 'is-ok' : ''}
+          />
+          <FormHint error={!!errors.email}>{firstError(errors.email)}</FormHint>
 
-          <div className="at-auth-field">
-            <label className="at-auth-label" htmlFor="register-password">Пароль</label>
-            <PasswordField
-              id="register-password"
-              placeholder="Минимум 8 символов"
-              autoComplete="new-password"
-              aria-invalid={!!errors.password}
-              aria-describedby={errors.password ? 'register-password-hint' : undefined}
-              {...register('password')}
-              error={!!errors.password}
-              className={errors.password ? 'is-err' : touchedFields.password && passV && !errors.password ? 'is-ok' : ''}
-            />
-            <div id="register-password-hint"><FormHint error={!!errors.password}>{firstError(errors.password)}</FormHint></div>
-          </div>
+          <label className="label">Ник</label>
+          <Input
+            autoComplete="username"
+            {...register('username')}
+            error={!!errors.username}
+            className={errors.username ? 'is-err' : (touchedFields.username && userV && !errors.username) ? 'is-ok' : ''}
+          />
+          <FormHint error={!!errors.username}>{firstError(errors.username)}</FormHint>
 
-          <div className="at-auth-field">
-            <label className="at-auth-label" htmlFor="register-password-repeat">Повторите пароль</label>
-            <PasswordField
-              id="register-password-repeat"
-              placeholder="Повторите пароль"
-              autoComplete="new-password"
-              aria-invalid={!!errors.password2}
-              aria-describedby={errors.password2 ? 'register-password-repeat-hint' : undefined}
-              {...register('password2')}
-              error={!!errors.password2}
-              className={errors.password2 ? 'is-err' : touchedFields.password2 && pass2V && !errors.password2 ? 'is-ok' : ''}
-            />
-            <div id="register-password-repeat-hint"><FormHint error={!!errors.password2}>{firstError(errors.password2)}</FormHint></div>
-          </div>
+          <label className="label">Пароль</label>
+          <PasswordField
+            autoComplete="new-password"
+            {...register('password')}
+            error={!!errors.password}
+            className={errors.password ? 'is-err' : (touchedFields.password && passV && !errors.password) ? 'is-ok' : ''}
+          />
+          <FormHint error={!!errors.password}>{firstError(errors.password)}</FormHint>
 
-          <div className="at-auth-terms">
+          <label className="label">Повторите пароль</label>
+          <PasswordField
+            autoComplete="new-password"
+            {...register('password2')}
+            error={!!errors.password2}
+            className={errors.password2 ? 'is-err' : (touchedFields.password2 && pass2V && !errors.password2) ? 'is-ok' : ''}
+          />
+          <FormHint error={!!errors.password2}>{firstError(errors.password2)}</FormHint>
+
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '20px 1fr',
+              alignItems: 'start',
+              columnGap: 8,
+              marginTop: 8,
+              width: '100%',
+              gridColumn: '1 / -1',
+            }}
+          >
             <input
               id="terms"
               type="checkbox"
               checked={termsAccepted}
               onChange={(e) => setTermsAccepted(e.target.checked)}
+              style={{
+                width: 16,
+                height: 16,
+                margin: 2,
+                padding: 0,
+                display: 'block',
+                flex: '0 0 16px',
+              }}
             />
-            <label htmlFor="terms">
+            <label htmlFor="terms" style={{ fontSize: 14, lineHeight: '20px', margin: 0 }}>
               Я принимаю{' '}
-              <a href="/terms" target="_blank" rel="noopener noreferrer">Условия использования сервисов</a>{' '}
-              и{' '}
-              <a href="/privacy" target="_blank" rel="noopener noreferrer">Политику конфиденциальности</a>.
+              <a href="/terms" target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'underline' }}>
+                Условия использования сервисов
+              </a>{' '}и{' '}
+              <a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'underline' }}>
+                Политику конфиденциальности
+              </a>.
             </label>
           </div>
 
-          <div className="at-auth-captcha">
+          <div style={{ width: '100%', display: 'flex', justifyContent: 'center', marginTop: 8 }}>
             <Turnstile
               sitekey="0x4AAAAAAB95ajuXGWziFGzi"
               theme="dark"
@@ -391,20 +387,33 @@ export default function RegisterPage() {
             />
           </div>
 
-          <div className="at-auth-form-actions">
+          <div style={{ marginTop: 12 }}>
             <Button
-              className="at-auth-primary"
               type="submit"
               disabled={!allFieldsValid || isSubmitting || !termsAccepted}
+              style={{ width: '100%', padding: '12px 16px' }}
             >
-              Зарегистрироваться <span aria-hidden="true">↗</span>
+            Зарегистрироваться
             </Button>
-            <div className="at-auth-switch">
-              <span>Уже есть аккаунт? <Link to="/auth/login">Войти</Link></span>
-            </div>
+
+            <Link
+              to="/auth/login"
+              style={{
+                display: 'block',
+                marginTop: 8,
+                textAlign: 'center',
+                textDecoration: 'underline',
+                fontSize: 14,
+                opacity: 0.9
+              }}
+            >
+              Уже есть аккаунт?
+            </Link>
           </div>
+
         </form>
-      </AuthPageShell>
+      </Card>
+    </div>
     </>
   );
 }
