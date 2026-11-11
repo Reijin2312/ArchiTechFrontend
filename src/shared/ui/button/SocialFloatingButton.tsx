@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { authStore } from '@/shared/store/auth';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SocialChatView } from './social/SocialChatView';
@@ -18,7 +18,12 @@ export function SocialFloatingButton() {
 
   const incomingCount = model.incomingRequests.length;
   const outgoingCount = model.outgoingRequests.length;
-  const hasNotifications = incomingCount > 0;
+  const unreadChatCount = model.chats.filter(chat => {
+    const message = chat.lastMessage;
+    return message && message.senderId !== model.userId && message.isRead === false;
+  }).length;
+  const notificationsCount = incomingCount + unreadChatCount;
+  const hasNotifications = notificationsCount > 0;
 
   return (
     <>
@@ -50,6 +55,14 @@ export function SocialFloatingButton() {
               <div className="flex items-center justify-between px-4 py-3 border-b border-[rgba(240,232,218,.15)] bg-[#252720]">
                 <h2 className="text-base font-semibold tracking-tight">ArchiTech · Чат</h2>
                 <div className="flex items-center gap-1">
+                  <Link to="/chat" title="Открыть отдельную страницу"
+                    aria-label="Открыть чат на отдельной странице"
+                    className="rounded-lg p-1 text-[#bfa982] transition-colors hover:bg-[#33352e]">
+                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                        d="M13 5h6v6m0-6-9 9M19 13v6H5V5h6" />
+                    </svg>
+                  </Link>
                   <button
                     onClick={() => model.setIsFullscreen(prev => !prev)}
                     className="p-1 hover:bg-[#33352e] rounded-lg transition-colors"
@@ -145,7 +158,7 @@ export function SocialFloatingButton() {
         >
           {hasNotifications && (
             <span className="absolute -top-1 -right-1 w-5 h-5 bg-rose-500 rounded-full flex items-center justify-center text-xs font-bold">
-              {incomingCount}
+              {notificationsCount}
             </span>
           )}
           <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
