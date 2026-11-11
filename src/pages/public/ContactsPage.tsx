@@ -173,7 +173,7 @@ export default function ContactsPage() {
               className="relative overflow-hidden rounded-2xl border border-[rgba(239,232,218,0.22)] bg-[rgba(25,27,24,0.85)] p-5 backdrop-blur-md"
             >
               <div className="pointer-events-none absolute inset-0 opacity-50 blur-3xl">
-                <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 via-purple-500/5 to-sky-500/10" />
+                <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(197,170,132,0.10),transparent_72%)]" />
               </div>
               <div className="relative flex flex-col gap-4">
                 <div className="flex items-center gap-3">

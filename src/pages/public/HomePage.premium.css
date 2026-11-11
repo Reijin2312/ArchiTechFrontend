@@ -1232,8 +1232,7 @@
   .architech-home .at-ranking,
   .architech-home .at-faq { padding: 88px 0; }
   .architech-home .at-section-heading h2 { font-size: clamp(38px,8.5vw,60px); }
-  .architech-home .at-team-editorial [class*="rounded-2xl"] { padding: 18px 0 !important; }
-  .architech-home .at-faq-trigger { min-height: 70px; padding: 19px 3px; }
+    .architech-home .at-faq-trigger { min-height: 70px; padding: 19px 3px; }
 }
 
 /* This design never depends on motion for information or access. */

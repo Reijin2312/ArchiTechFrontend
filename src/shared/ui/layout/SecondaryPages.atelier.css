@@ -142,14 +142,7 @@
   border-color: var(--at-restyle-line);
 }
 
-/* Contacts — remove only the old blue/purple glow, not the cards themselves. */
-.at-secondary-contacts > main [class*="from-indigo-500/10"] {
-  background-image: linear-gradient(135deg,rgba(197,170,132,.10),transparent 72%);
-}
-.at-secondary-contacts > main [class~="text-indigo-200"],
-.at-secondary-contacts > main [class~="text-violet-200"],
-.at-secondary-contacts > main [class~="text-emerald-200"],
-.at-secondary-contacts > main [class~="text-sky-200"] { color: #d6b98e; }
+/* Contacts gradient and accents are now Tailwind utilities. */
 
 /* Profiles: keep user-selected inline themes/banners and progress ring geometry.
    Only neutral surfaces, common fonts and default accents get recoloured. */
@@ -159,7 +152,6 @@
 .at-secondary-profile > main :is(
   [class~="bg-sky-900/30"],[class~="bg-sky-900/40"]
 ) { background-color: rgba(197,170,132,.14); }
-.at-secondary-profile > main [class~="text-techno-glow"] { text-shadow: none; }
 .at-secondary-profile > main :is(
   [class~="from-amber-900/25"],[class~="from-slate-950"]
 ) { --tw-gradient-from: rgba(43,42,35,.75); }
