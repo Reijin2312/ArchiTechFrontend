@@ -75,6 +75,7 @@ export function SocialSidebarContent({
             loading={loading}
             onSendRequest={sendFriendRequest}
             onCancelRequest={cancelRequest}
+            onOpenChat={openChatWith}
           />
         </motion.div>
       )}
