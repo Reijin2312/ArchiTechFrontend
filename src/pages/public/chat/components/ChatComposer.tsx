@@ -418,7 +418,7 @@ export function ChatComposer({ model }: ChatComposerProps) {
   const pendingDraftModal = pendingImageDraft ? (
     <div className="pointer-events-none fixed inset-0 z-[90]">
       <div
-        className="pointer-events-auto absolute w-[min(440px,calc(100vw-28px))] overflow-hidden rounded-[16px] bg-[#1a1b20]/98 text-white shadow-[0_22px_60px_rgba(0,0,0,.55)] ring-1 ring-[#8e77ef]/28"
+        className="pointer-events-auto absolute w-[min(440px,calc(100vw-28px))] overflow-hidden rounded-[16px] bg-[#1a1b20]/98 text-white shadow-[0_22px_60px_rgba(0,0,0,.55)] ring-1 ring-[#c5aa84]/28"
         style={{
           left: `${pendingPanelAnchor.x}px`,
           top: `${pendingPanelAnchor.y}px`,
@@ -433,7 +433,7 @@ export function ChatComposer({ model }: ChatComposerProps) {
           <button
             type="button"
             onClick={() => closePendingImageDraft()}
-            className="grid h-8 w-8 place-items-center rounded-full text-[#b79cff]/80 transition-colors hover:bg-[#8e77ef]/18 hover:text-white"
+            className="grid h-8 w-8 place-items-center rounded-full text-[#e0c59e]/80 transition-colors hover:bg-[#c5aa84]/18 hover:text-white"
             aria-label="Close media preview"
             disabled={isPendingImageApplying}
           >
@@ -498,8 +498,8 @@ export function ChatComposer({ model }: ChatComposerProps) {
         </div>
 
         <div className="px-4 pb-2">
-          <div className="text-[13px] font-[600] text-[#b79cff]">Caption</div>
-          <div className="mt-1 flex items-center gap-2 border-b border-[#8e77ef]/50 pb-1.5">
+          <div className="text-[13px] font-[600] text-[#e0c59e]">Caption</div>
+          <div className="mt-1 flex items-center gap-2 border-b border-[#c5aa84]/50 pb-1.5">
             <input
               value={pendingImageDraft.caption}
               onChange={(event) => {
@@ -514,11 +514,11 @@ export function ChatComposer({ model }: ChatComposerProps) {
           </div>
         </div>
 
-        <div className="grid grid-cols-3 border-t border-[#8e77ef]/30 px-2 py-1.5">
+        <div className="grid grid-cols-3 border-t border-[#c5aa84]/30 px-2 py-1.5">
           <button
             type="button"
             onClick={() => applyPendingImage('add')}
-            className="rounded-xl px-3 py-2 text-center text-[14px] font-[500] text-[#b79cff] transition-colors hover:bg-[#8e77ef]/14"
+            className="rounded-xl px-3 py-2 text-center text-[14px] font-[500] text-[#e0c59e] transition-colors hover:bg-[#c5aa84]/14"
             disabled={isPendingImageApplying}
           >
             Add
@@ -526,7 +526,7 @@ export function ChatComposer({ model }: ChatComposerProps) {
           <button
             type="button"
             onClick={() => closePendingImageDraft()}
-            className="rounded-xl px-3 py-2 text-center text-[14px] font-[500] text-[#b79cff] transition-colors hover:bg-[#8e77ef]/14"
+            className="rounded-xl px-3 py-2 text-center text-[14px] font-[500] text-[#e0c59e] transition-colors hover:bg-[#c5aa84]/14"
             disabled={isPendingImageApplying}
           >
             Cancel
@@ -534,7 +534,7 @@ export function ChatComposer({ model }: ChatComposerProps) {
           <button
             type="button"
             onClick={() => applyPendingImage('send')}
-            className="rounded-xl px-3 py-2 text-center text-[14px] font-[600] text-[#b79cff] transition-colors hover:bg-[#8e77ef]/14"
+            className="rounded-xl px-3 py-2 text-center text-[14px] font-[600] text-[#e0c59e] transition-colors hover:bg-[#c5aa84]/14"
             disabled={isPendingImageApplying}
           >
             Send
@@ -605,14 +605,14 @@ export function ChatComposer({ model }: ChatComposerProps) {
             <div className="flex w-full flex-col gap-2 py-2">
               {hasComposerState ? (
                 <div className="flex items-center gap-2">
-                  <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-[#9d83ff]">
+                  <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-[#c5aa84]">
                     {model.editingMessage ? <EditIcon /> : <ReplyArrowIcon />}
                   </div>
 
                   <div className="relative min-w-0 flex-1 overflow-hidden rounded-[10px] bg-[#353142]/92 px-4 py-2.5 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]">
-                    <span className="absolute bottom-0 left-0 top-0 w-[4px] bg-[#9d83ff]" />
+                    <span className="absolute bottom-0 left-0 top-0 w-[4px] bg-[#c5aa84]" />
                     <div className="pl-2 pr-7">
-                      <div className="text-[13px] font-[600] leading-none text-[#b79cff]">
+                      <div className="text-[13px] font-[600] leading-none text-[#e0c59e]">
                         {model.editingMessage ? 'Editing' : `Reply to ${replyingName}`}
                       </div>
                       <div className="mt-[5px] truncate text-[15px] leading-none text-white/62">
@@ -651,7 +651,7 @@ export function ChatComposer({ model }: ChatComposerProps) {
                       setIsEmojiPanelOpen((prev) => !prev);
                     }}
                     className={`transition-colors ${
-                      isEmojiPanelOpen ? 'text-[#b79cff]' : 'text-white/55 hover:text-white/78'
+                      isEmojiPanelOpen ? 'text-[#e0c59e]' : 'text-white/55 hover:text-white/78'
                     }`}
                     aria-label="Open emoji panel"
                   >
@@ -701,7 +701,7 @@ export function ChatComposer({ model }: ChatComposerProps) {
                   />
                   <PaperclipIcon size={22} strokeWidth={2.1} />
                   {model.attachedImages.length > 0 ? (
-                    <span className="absolute -right-2 -top-2 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-[#8e77ef] px-1 text-[10px] text-white">
+                    <span className="absolute -right-2 -top-2 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-[#c5aa84] px-1 text-[10px] text-white">
                       {model.attachedImages.length}
                     </span>
                   ) : null}
@@ -713,7 +713,7 @@ export function ChatComposer({ model }: ChatComposerProps) {
           <button
             type="button"
             onClick={handleSend}
-            className="grid h-[58px] w-[58px] place-items-center rounded-full bg-[#8e77ef] text-white shadow-[0_14px_28px_rgba(142,119,239,.42)] transition-opacity disabled:cursor-not-allowed disabled:opacity-55"
+            className="grid h-[58px] w-[58px] place-items-center rounded-full bg-[#c5aa84] text-white shadow-[0_14px_28px_rgba(142,119,239,.42)] transition-opacity disabled:cursor-not-allowed disabled:opacity-55"
             disabled={model.selectedChat === null || !canSend}
           >
             <SendIcon size={24} strokeWidth={2.2} />
