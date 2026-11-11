@@ -8,7 +8,7 @@ import { Seo } from '@/shared/seo/seo';
 import { routesMeta } from '@/shared/seo/routesMeta';
 import { ResponsiveImage } from '@/shared/ui/image/ResponsiveImage'
 import { IMAGES } from '@/shared/images.manifest'
-import { SvgUserPlus, SvgSkin, SvgMcBlockGrass, SvgModpack, SvgRoute, SvgLauncher, SvgDownload, SvgShield, SvgGitHub, SvgCheck, SvgCopy, SvgChevronDown, SvgCrown } from '@/shared/ui/image/Icons'
+import { SvgUserPlus, SvgSkin, SvgMcBlockGrass, SvgModpack, SvgRoute, SvgLauncher, SvgDownload, SvgShield, SvgGitHub, SvgCheck, SvgCopy, SvgChevronDown } from '@/shared/ui/image/Icons'
 import { useIsMobile } from '@/shared/ui/utils/useIsMobile';
 import { TEAM_MEMBERS } from '@/shared/data/team';
 import { useTeamAvatars } from '@/shared/hooks/useTeamAvatars';
@@ -839,174 +839,152 @@ function Badge({ label, ok, reduceMotion }: { label: string; ok: boolean | null;
   )
 }
 
+/** Keep the profile avatar source consistent with the team section.
+ * The initial remains visible while an image loads or if a user has no avatar.
+ */
+function LeaderboardPortrait({ name, src }: { name: string; src?: string }) {
+  const [imageStatus, setImageStatus] = useState<{ src?: string; loaded: boolean; failed: boolean }>({
+    src, loaded: false, failed: false,
+  })
+  const loaded = imageStatus.src === src && imageStatus.loaded
+  const failed = imageStatus.src === src && imageStatus.failed
+
+  return (
+    <span className="relative grid size-12 shrink-0 place-items-center overflow-hidden rounded-[9px] border border-[rgba(238,232,220,.25)] bg-[#2c2d28]">
+      <span className="font-[Onest] text-[17px] font-semibold text-[#c1b5a4]" aria-hidden="true">
+        {name.charAt(0).toUpperCase() || '?'}
+      </span>
+      {src && !failed && (
+        <img
+          key={src}
+          src={src}
+          alt=""
+          aria-hidden="true"
+          width={48}
+          height={48}
+          className={loaded
+            ? 'absolute inset-0 size-full object-cover opacity-100 transition-opacity duration-200'
+            : 'absolute inset-0 size-full object-cover opacity-0'}
+          loading="lazy"
+          decoding="async"
+          onLoad={() => setImageStatus({ src, loaded: true, failed: false })}
+          onError={() => setImageStatus({ src, loaded: false, failed: true })}
+        />
+      )}
+    </span>
+  )
+}
+
 function TopPlayersSection({
   players,
   avatars,
   loading,
   range,
-  // onRangeChange,
   disableMotion,
 }: {
   players: LeaderboardPlayer[]
   avatars: Record<string, string>
   loading: boolean
   range: LeaderboardRange
-  // onRangeChange: (range: LeaderboardRange) => void
   disableMotion?: boolean
 }) {
   const { language } = useI18n()
-  const rangeLabel = range === 'all' ? (language === 'ru' ? 'всё время' : 'all time') : range === '7d' ? '7d' : '30d'
-  const leadersPrefix = language === 'ru' ? 'Лидеры по игровому времени за' : 'Playtime leaders for'
-  /* Range tabs are temporarily hidden while the leaderboard is fixed to `all`.
-  const rangeTabs: Array<{ value: LeaderboardRange; label: string }> = [
-    { value: '7d', label: '7\u0434' },
-    { value: '30d', label: '30\u0434' },
-    { value: 'all', label: '\u0432\u0441\u0451' },
-  ]
-  const rangePillLayoutId = `leaderboard-range-pill-${useId().replace(/:/g, '')}`
-  */
-
-  // Always present five places; missing API results never become fictional users.
+  const isRu = language === 'ru'
+  const rangeLabel = range === 'all'
+    ? (isRu ? 'За всё время' : 'All time')
+    : range === '7d'
+      ? (isRu ? 'За 7 дней' : 'Last 7 days')
+      : (isRu ? 'За 30 дней' : 'Last 30 days')
+  // Keep five places without inventing additional players or statistics.
   const displayedPlayers = Array.from({ length: 5 }, (_, index) => players[index] ?? null)
 
   return (
     <div className="border-0 bg-transparent p-0 shadow-none" aria-busy={loading}>
-      <div className="mb-4 flex items-center justify-between gap-2">
-        <div className="text-sm text-slate-300 font-arcane uppercase">{leadersPrefix} {rangeLabel}</div>
-        {/* Range switch is temporarily disabled.
-        <div className="inline-flex rounded-xl border border-slate-700 bg-slate-950/60 p-1">
-          {rangeTabs.map((tab) => {
-            const active = range === tab.value
-            return (
-              <button
-                key={tab.value}
-                type="button"
-                onClick={() => onRangeChange(tab.value)}
-                className="relative rounded-lg px-3 py-1.5 text-xs text-slate-300 transition-colors hover:bg-slate-800"
-              >
-                {active && (
-                  <motion.span
-                    layoutId={rangePillLayoutId}
-                    transition={
-                      disableMotion
-                        ? { duration: 0 }
-                        : { type: 'spring', stiffness: 420, damping: 34, mass: 0.85 }
-                    }
-                    className="absolute inset-0 rounded-lg bg-indigo-600 shadow-[0_6px_18px_rgba(99,102,241,0.4)]"
-                  />
-                )}
-                <span className={`relative z-10 ${active ? 'text-white' : 'text-slate-300'}`}>{tab.label}</span>
-              </button>
-            )
-          })}
-        </div>
-        */}
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+        <h3 className="font-[Onest] text-[17px] font-medium leading-7 tracking-[-.018em] text-[#e9e4db]">
+          {isRu ? 'Лидеры по игровому времени' : 'Playtime leaders'}
+        </h3>
+        <span className="rounded-full border border-[rgba(197,170,132,.30)] px-3 py-1 font-[Onest] text-[12px] font-medium leading-5 text-[#d2ba98]">
+          {rangeLabel}
+        </span>
       </div>
-
-      <div className="space-y-2" aria-live="polite">
+      <div aria-live="polite">
         {displayedPlayers.map((player, index) => {
           if (!player) {
             return (
-              <div
-                key={`vacant-${index + 1}`}
-                className="relative overflow-hidden rounded-none border-0 border-b border-[var(--at-line)] bg-transparent px-[5px] py-[23px] shadow-none transition-[background-color] duration-[270ms] hover:bg-[rgba(244,239,230,0.035)]"
-                aria-label={language === 'ru' ? `Место ${index + 1}: нет данных` : `Rank ${index + 1}: no data`}
-              >
-                <div className="relative z-10 flex items-center gap-3">
-                  <div className="relative size-11 shrink-0 overflow-hidden rounded-[8px] border border-[rgba(241,235,222,0.3)] bg-transparent shadow-none px-[5px] py-[23px] transition-[background-color] duration-[270ms] hover:bg-[rgba(244,239,230,0.035)]" aria-hidden="true">
-                    <svg viewBox="0 0 24 24" className="h-full w-full p-2.5 text-slate-500" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <div key={'empty-' + (index + 1)}
+                className="border-b border-[var(--at-line)] px-1 py-5"
+                aria-label={isRu ? 'Место ' + (index + 1) + ': нет данных' : 'Rank ' + (index + 1) + ': no data'}>
+                <div className="flex items-center gap-4">
+                  <span className="grid size-12 shrink-0 place-items-center rounded-[9px] border border-[rgba(238,232,220,.20)] bg-[#292b26] text-[#aaa499]" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" className="size-6" fill="none" stroke="currentColor" strokeWidth="1.5">
                       <circle cx="12" cy="8" r="3.3" />
                       <path d="M5.5 21v-1.8c0-3.7 2.8-5.8 6.5-5.8s6.5 2.1 6.5 5.8V21" />
                     </svg>
+                  </span>
+                  <div className="flex min-w-0 flex-1 items-center gap-3">
+                    <span className="w-6 shrink-0 font-[Onest] text-[13px] font-semibold tabular-nums text-[#aaa49a]">
+                      {String(index + 1).padStart(2, '0')}
+                    </span>
+                    <span className="font-[Onest] text-[17px] font-medium text-[#aaa49a]">—</span>
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-semibold text-slate-400">#{index + 1}</span>
-                      <span className="truncate text-sm font-semibold text-slate-400">—</span>
-                    </div>
-                    <div className="text-[11px] text-slate-400">—</div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-lg font-semibold leading-none text-slate-400">—</div>
-                    <div className="mt-1 text-[11px] text-slate-400">{language === 'ru' ? 'наиграно' : 'played'}</div>
+                  <div className="min-w-[84px] text-right">
+                    <div className="font-[Onest] text-[23px] font-semibold text-[#aaa49a]">—</div>
                   </div>
                 </div>
               </div>
             )
           }
 
-            const isKing = index === 0
-            const isSilver = index === 1
-            const isBronze = index === 2
-            const avatar = avatars[player.username]
-            const hours = player.totalHours >= 10 ? Math.round(player.totalHours).toString() : player.totalHours.toFixed(1)
-            const rankTextTone = (isKing || isBronze) ? 'text-[#d8bf99]' : isSilver ? 'text-slate-200' : 'text-slate-400'
-            const nameTone = (isKing || isBronze) ? 'text-[#d8bf99]' : 'text-slate-100'
-            const hoursTone = isSilver ? 'text-slate-200' : 'text-[#d8bf99]'
+          const isFirst = index === 0
+          const rankTone = isFirst ? 'text-[#d9bd98]'
+            : index === 1 ? 'text-[#d0cfca]'
+            : index === 2 ? 'text-[#bfa88a]' : 'text-[#b4ada2]'
+          const hours = player.totalHours >= 10
+            ? Math.round(player.totalHours).toString()
+            : player.totalHours.toFixed(1)
 
-            return (
-              <Link
-                key={player.username}
-                to={`/u/${encodeURIComponent(player.username)}`}
-                aria-label={language === 'ru' ? `Открыть профиль ${player.username}` : `Open ${player.username}'s profile`}
-                className="block rounded-none border-0 border-b border-[var(--at-line)] bg-transparent shadow-none outline-none"
+          return (
+            <Link
+              key={player.username}
+              to={'/u/' + encodeURIComponent(player.username)}
+              aria-label={isRu ? 'Открыть профиль ' + player.username : 'Open profile ' + player.username}
+              className="group block border-b border-[var(--at-line)] bg-transparent outline-none transition-colors duration-200 hover:bg-[rgba(244,239,230,.035)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#bfa57d]"
+            >
+              <motion.div
+                whileHover={disableMotion ? undefined : { x: 3 }}
+                transition={{ duration: .22, ease: 'easeOut' }}
+                className="flex items-center gap-4 px-1 py-5"
               >
-                <motion.div
-                  whileHover={disableMotion ? undefined : { y: -2, scale: 1.005 }}
-                  className="relative overflow-hidden rounded-none border-0 border-b border-[var(--at-line)] bg-transparent px-[5px] py-[23px] shadow-none transition-[background-color] duration-[270ms] hover:bg-[rgba(244,239,230,0.035)]"
-                >
-
-                <div className="relative z-10 flex items-center gap-3">
-                  <div
-                    className="relative size-11 shrink-0 overflow-hidden rounded-[8px] border border-[rgba(241,235,222,0.3)] bg-transparent shadow-none px-[5px] py-[23px] transition-[background-color] duration-[270ms] hover:bg-[rgba(244,239,230,0.035)]"
-                  >
-                    {avatar ? (
-                      <img
-                        src={avatar}
-                        alt={player.username}
-                        className="h-full w-full object-cover"
-                        loading="lazy"
-                        decoding="async"
-                      />
-                    ) : (
-                      <div className="grid h-full w-full place-items-center text-sm font-semibold text-slate-300">
-                        {player.username[0]?.toUpperCase() ?? '?'}
-                      </div>
-                    )}
-
-                    {isKing && (
-                      <div className="absolute -right-1 -top-1 grid h-5 w-5 place-items-center rounded-full border border-amber-300/70 bg-amber-400/90 text-slate-950 shadow-[0_0_12px_rgba(251,191,36,0.65)]">
-                        <SvgCrown className="h-3 w-3" />
-                      </div>
-                    )}
+                <LeaderboardPortrait name={player.username} src={avatars[player.username]} />
+                <div className="min-w-0 flex-1">
+                  <div className="flex min-w-0 items-baseline gap-3">
+                    <span className={'w-6 shrink-0 font-[Onest] text-[13px] font-semibold tabular-nums ' + rankTone}>
+                      {String(player.rank).padStart(2, '0')}
+                    </span>
+                    <span className={'truncate font-[Onest] text-[17px] font-semibold leading-6 tracking-[-.018em] ' + (isFirst ? 'text-[#e9d2af]' : 'text-[#eeeae3]')}>
+                      {player.username}
+                    </span>
                   </div>
-
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className={`text-xs font-semibold ${rankTextTone}`}>
-                        #{player.rank}
-                      </span>
-                      <span className={`truncate text-sm font-semibold ${nameTone}`}>
-                        {player.username}
-                      </span>
-                    </div>
-                    <div className="text-[11px] text-slate-400">
-                      {player.activeDays} {language === 'ru' ? 'дн. активности ·' : 'active days ·'} {player.sessions} {language === 'ru' ? 'сессий' : 'sessions'}
-                    </div>
+                  <p className="mt-1 font-['Golos_Text'] text-[13px] leading-[1.5] text-[#b4ad9f]">
+                    {player.activeDays} {isRu ? 'дн. активности' : 'active days'}
+                    <span className="px-1.5 text-[#8a857d]" aria-hidden="true">·</span>
+                    {player.sessions} {isRu ? 'сессий' : 'sessions'}
+                  </p>
+                </div>
+                <div className="min-w-[84px] shrink-0 text-right">
+                  <div className={'font-[Onest] text-[23px] font-semibold leading-7 tracking-[-.03em] tabular-nums ' + (isFirst ? 'text-[#e5c99f]' : 'text-[#e7e2d9]')}>
+                    {hours}<span className="ml-0.5 text-[15px] font-medium">{isRu ? 'ч' : 'h'}</span>
                   </div>
-
-                  <div className="text-right">
-                    <div className={`text-lg font-semibold leading-none ${hoursTone}`}>
-                      {hours}{language === 'ru' ? 'ч' : 'h'}
-                    </div>
-                    <div className="mt-1 text-[11px] text-slate-400">{language === 'ru' ? 'наиграно' : 'played'}</div>
+                  <div className="mt-0.5 font-['Golos_Text'] text-[13px] leading-5 text-[#aaa497]">
+                    {isRu ? 'наиграно' : 'played'}
                   </div>
                 </div>
-                </motion.div>
-              </Link>
-            )
-          })}
-        </div>
+              </motion.div>
+            </Link>
+          )
+        })}
+      </div>
     </div>
   )
 }
