@@ -207,7 +207,7 @@ function ModCard({ mod }: { mod: ModCatalogItem }) {
     </>
   );
 
-  const className = 'group flex flex-wrap items-start gap-3 rounded-2xl border border-[rgba(238,232,220,0.19)] bg-[#252620] p-3 shadow-[0_12px_35px_-25px_rgba(56,189,248,.65)] transition hover:border-[#c5aa84] hover:bg-[#292a25] sm:flex-nowrap';
+  const className = 'group flex flex-wrap items-start gap-3 rounded-2xl border border-[rgba(238,232,220,0.19)] bg-[#252620] p-3 shadow-none transition hover:border-[#c5aa84] hover:bg-[#292a25] sm:flex-nowrap';
   const style = { contentVisibility: 'auto', containIntrinsicSize: '112px' } as React.CSSProperties;
   return mod.projectUrl ? (
     <a className={className} style={style} href={mod.projectUrl} target="_blank" rel="noreferrer" aria-label={t('mods.modrinthAria', { title: mod.title })}>
