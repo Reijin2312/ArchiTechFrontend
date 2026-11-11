@@ -103,6 +103,7 @@ try {
       }
     }
   }
+  for (const viewport of viewports) {
   // Deep-page coverage: the ranking was refactored from CSS selectors into JSX.
   for (const { name, route, selector } of [
     { name: 'ranking', route: '/', selector: '.at-rank-editorial' },
@@ -125,6 +126,7 @@ try {
       console.error('ERROR home/' + name + ' ' + viewport.width + ': ' + String(error));
       results.push({ route: 'home/' + name, viewport: viewport.width, error: String(error) });
     }
+  }
   }
 } finally {
   await browser.close();

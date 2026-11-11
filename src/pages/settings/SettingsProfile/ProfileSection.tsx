@@ -116,7 +116,7 @@ export function ProfileSection({
         <button
           disabled={busy === 'profile'}
           onClick={onSave}
-          className="rounded-xl bg-[#c8ae88] text-[#211f1b] px-4 py-2 text-sm font-medium text-white hover:bg-[#e6d6bd] disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-sky-600/20 transition-all"
+          className="rounded-xl bg-[#c8ae88] px-4 py-2 text-sm font-medium text-[#211f1b] hover:bg-[#e6d6bd] disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-sky-600/20 transition-all"
         >
           💾 {copy.saveProfile}
         </button>
