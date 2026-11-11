@@ -1,5 +1,4 @@
 name: Tailwind refactor checks
-
 on:
   pull_request:
     branches:
@@ -18,11 +17,10 @@ jobs:
         with:
           node-version: '22'
           cache: npm
-      - name: Install dependencies
-        run: npm ci
+      - run: npm ci
       - name: Typecheck and production bundle
         run: npm run build
-      - name: Check for leftover legacy CSS class selectors
+      - name: No old class selectors in migrated CSS files
         run: |
           node --input-type=module <<'NODE'
           import fs from 'node:fs';
@@ -35,6 +33,48 @@ jobs:
           for (const file of css) {
             const content = fs.readFileSync(file, 'utf8');
             const matches = content.match(/\[class(?:[~*^$|])?=/g) ?? [];
-            if (matches.length) throw new Error(`${file}: ${matches.length} legacy class selectors remain`);
+            if (matches.length) throw new Error(file + ': ' + matches.length + ' class selectors remain');
           }
           NODE
+
+  visual-parity:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Prepare original worktree and install
+        run: |
+          git fetch origin design/premium-steampunk-home
+          git worktree add --detach "$RUNNER_TEMP/architech-baseline" FETCH_HEAD
+          npm ci
+          npm ci --prefix "$RUNNER_TEMP/architech-baseline"
+          npm run build
+          npm run build --prefix "$RUNNER_TEMP/architech-baseline"
+          npm install --no-save --no-package-lock playwright
+          npx playwright install --with-deps chromium
+      - name: Launch built versions
+        run: |
+          (cd "$RUNNER_TEMP/architech-baseline" && nohup ./node_modules/.bin/vite preview --host 127.0.0.1 --port 4173 --strictPort > "$RUNNER_TEMP/base-vite.log" 2>&1 < /dev/null &)
+          nohup ./node_modules/.bin/vite preview --host 127.0.0.1 --port 4174 --strictPort > "$RUNNER_TEMP/head-vite.log" 2>&1 < /dev/null &
+          for port in 4173 4174; do
+            for i in $(seq 1 35); do
+              if curl -fsS "http://127.0.0.1:$port/" >/dev/null; then break; fi
+              sleep 1
+            done
+            curl -fIs "http://127.0.0.1:$port/" | head -1
+          done
+      - name: Compare browser screenshots
+        run: node scripts/check-visual-parity.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: tailwind-visual-parity-screenshots
+          path: artifacts/visual-parity
+          retention-days: 7
