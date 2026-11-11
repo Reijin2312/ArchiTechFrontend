@@ -6,7 +6,7 @@ import { http } from '@/shared/api/http';
 import { authStore } from '@/shared/store/auth';
 import { Button } from '@/shared/ui/button/Button';
 import { Input } from '@/shared/ui/form/Input';
-import AuthPageShell from '../components/AuthPageShell';
+import { Card } from '@/shared/ui/card/Card';
 import { FormHint } from '@/shared/ui/form/FormHint';
 import PasswordField from '../components/PasswordField';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
@@ -15,6 +15,7 @@ import { finalizeAuth } from '@/shared/auth/finalizeAuth';
 import { endpoints } from '@/shared/api/endpoints';
 import { normalizeErrorMessage, requestDesktopToken } from '@/shared/auth/utils';
 import { useWallpaper } from '@/shared/ui/wallpaper/useWallpaper';
+import '../components/auth-pages.css';
 import { Seo } from '@/shared/seo/seo';
 import { useSessionKeyStore } from '@/stores/sessionKeyStore';
 import { clearPendingLoginPassword, setPendingLoginPassword } from '@/shared/auth/pendingLoginPassword';
@@ -254,61 +255,50 @@ export default function LoginPage() {
 
   return (
     <>
-      <Seo title="Вход — ArchiTech MC" robots="noindex,follow" />
-      <AuthPageShell
-        mode="login"
-        title="Вход в аккаунт"
-        description="Войдите, чтобы продолжить игру, управлять профилем и подключить лаунчер."
-      >
-        {serverErr && <div className="at-auth-alert" role="alert">{serverErr}</div>}
+    <Seo title="Вход — ArchiTech MC" robots="noindex,follow" />
+    <div className="wrap at-auth-restyled at-auth-restyled--login">
+      <Card>
+        <h1 className="text-2xl mb-4 text-center">Вход</h1>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="at-auth-form">
-          <div className="at-auth-field">
-            <label className="at-auth-label" htmlFor="login-email">Почта</label>
-            <Input
-              id="login-email"
-              type="email"
-              placeholder="you@example.com"
-              autoComplete="email"
-              autoCapitalize="none"
-              spellCheck={false}
-              aria-invalid={!!errors.email}
-              aria-describedby={emailFieldHint ? 'login-email-hint' : undefined}
-              {...register('email')}
-              error={!!errors.email}
-              className={errors.email ? 'is-err' : touchedFields.email && emailValue && !errors.email ? 'is-ok' : ''}
-            />
-            <div id="login-email-hint"><FormHint error={!!emailFieldHint}>{emailFieldHint}</FormHint></div>
+        {serverErr && (
+          <div className="error" role="alert" style={{ display: 'block' }}>
+            {serverErr}
           </div>
+        )}
 
-          <div className="at-auth-field">
-            <label className="at-auth-label" htmlFor="login-password">Пароль</label>
-            <PasswordField
-              id="login-password"
-              placeholder="Введите пароль"
-              autoComplete="current-password"
-              aria-invalid={!!errors.password}
-              aria-describedby={passwordFieldHint ? 'login-password-hint' : undefined}
-              {...register('password')}
-              error={!!errors.password}
-              className={errors.password ? 'is-err' : touchedFields.password && passwordValue && !errors.password ? 'is-ok' : ''}
-            />
-            <div id="login-password-hint"><FormHint error={!!passwordFieldHint}>{passwordFieldHint}</FormHint></div>
-          </div>
+        <form onSubmit={handleSubmit(onSubmit)} className="grid gap-3">
+          <label className="label">Почта</label>
+          <Input
+            autoComplete="email"
+            {...register('email')}
+            error={!!errors.email}
+            className={errors.email ? 'is-err' : touchedFields.email && emailValue && !errors.email ? 'is-ok' : ''}
+          />
+          <FormHint error={!!emailFieldHint}>{emailFieldHint}</FormHint>
 
-          <div className="at-auth-form-actions">
-            <Button className="at-auth-primary" type="submit" disabled={!canSubmit}>
-              Войти <span aria-hidden="true">↗</span>
+          <label className="label">Пароль</label>
+          <PasswordField
+            autoComplete="current-password"
+            {...register('password')}
+            error={!!errors.password}
+            className={errors.password ? 'is-err' : touchedFields.password && passwordValue && !errors.password ? 'is-ok' : ''}
+          />
+          <FormHint error={!!passwordFieldHint}>{passwordFieldHint}</FormHint>
+
+          <div className="flex gap-2 mt-2">
+            <Button type="submit" disabled={!canSubmit}>
+              Войти
             </Button>
-            <div className="at-auth-switch">
-              <button className="at-auth-inline-link" type="button" onClick={startReset}>
-                Забыли пароль?
-              </button>
-              <span>Нет аккаунта? <Link to="/auth/register">Регистрация</Link></span>
-            </div>
+            <Button type="button" variant="ghost" onClick={startReset}>
+              Забыли пароль?
+            </Button>
+            <Link to="/auth/register" className="btn ghost">
+              Регистрация
+            </Link>
           </div>
         </form>
-      </AuthPageShell>
+      </Card>
+    </div>
     </>
   );
 }
