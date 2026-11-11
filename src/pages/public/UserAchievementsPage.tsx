@@ -377,7 +377,7 @@ function AchievementTile({ achievement, language, received }: { achievement: Ach
     <article
       className={`relative overflow-hidden rounded-xl border p-3 transition ${
         unlocked
-          ? 'border-amber-600/35 bg-linear-to-br from-amber-900/25 via-slate-900/70 to-slate-950/85'
+          ? 'border-amber-600/35 bg-linear-to-br from-amber-900/25 [.at-secondary-profile_&]:[--tw-gradient-from:rgba(43,42,35,0.75)] via-slate-900/70 to-slate-950/85'
           : 'border-[rgba(239,232,218,0.22)] bg-[rgba(33,35,31,0.91)]'
       } min-h-24`}
     >

@@ -147,11 +147,6 @@
 /* Profiles: keep user-selected inline themes/banners and progress ring geometry.
    Only neutral surfaces, common fonts and default accents get recoloured. */
 /* Profile gradients, accent surface colours and ring colours use Tailwind utilities. */
-.at-secondary-profile > main :is(
-  [class~="from-amber-900/25"],[class~="from-slate-950"]
-) { --tw-gradient-from: rgba(43,42,35,.75); }
-
-
 /* Settings retain the original security, success and destructive-state colours. */
 .at-secondary-flow > main .card { background-color: rgba(32,34,30,.93); }
 

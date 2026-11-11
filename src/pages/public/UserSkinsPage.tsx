@@ -486,7 +486,7 @@ export default function UserSkinsPage() {
                                 autoRotate={delta === 0}
                                 animated={delta === 0}
                               />
-                              <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-950 via-slate-950/90 to-transparent px-3 pb-3 pt-6">
+                              <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-950 [.at-secondary-profile_&]:[--tw-gradient-from:rgba(43,42,35,0.75)] via-slate-950/90 to-transparent px-3 pb-3 pt-6">
                                 <div className="truncate text-xs font-medium text-[#f2efe9]">{renderedSkin.name}</div>
                                 <div className="text-[11px] text-[#aaa497]">
                                   {fill(copy.skins.slot, { slot: index + 1 })} · {renderedSkin.model === 'slim' ? 'Slim' : 'Classic'}
