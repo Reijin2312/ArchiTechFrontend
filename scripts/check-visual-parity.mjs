@@ -27,7 +27,7 @@ const stableCss = [
   'canvas,video { visibility: hidden !important; }',
 ].join(' ');
 
-async function screenshot(origin, route, viewport, label) {
+async function screenshot(origin, route, viewport, label, selector = null) {
   const context = await browser.newContext({
     viewport, deviceScaleFactor: 1, reducedMotion: 'reduce',
     colorScheme: 'dark', locale: 'ru-RU',
@@ -46,7 +46,9 @@ async function screenshot(origin, route, viewport, label) {
   });
   await page.waitForTimeout(900);
   const filename = path.join(OUTPUT, label);
-  const png = await page.screenshot({ animations: 'disabled' });
+  const png = selector
+    ? await page.locator(selector).first().screenshot({ animations: 'disabled', timeout: 15000 })
+    : await page.screenshot({ animations: 'disabled' });
   await fs.writeFile(filename, png);
   const state = await page.evaluate(() => ({
     title: document.title,
@@ -99,6 +101,29 @@ try {
         console.error('ERROR ' + route + ' ' + viewport.width + ': ' + String(error));
         results.push({ route, viewport: viewport.width, error: String(error) });
       }
+    }
+  }
+  // Deep-page coverage: the ranking was refactored from CSS selectors into JSX.
+  for (const { name, route, selector } of [
+    { name: 'ranking', route: '/', selector: '.at-rank-editorial' },
+    { name: 'faq', route: '/', selector: '.at-faq-rows' },
+  ]) {
+    const filename = 'home-' + name + '-' + viewport.width;
+    try {
+      const a = await screenshot(BASE, route, viewport, filename + '-before.png', selector);
+      const b = await screenshot(HEAD, route, viewport, filename + '-after.png', selector);
+      const difference = await diffImage(a.png, b.png);
+      const record = {
+        route: 'home/' + name, viewport: viewport.width,
+        differentPixelFraction: Number(difference.toFixed(5)),
+        matchingPage: true, baseline: a.state, refactor: b.state,
+      };
+      results.push(record);
+      console.log((difference > threshold ? 'DIFF ' : 'PASS ') + record.route.padEnd(26) +
+        ' ' + viewport.width + 'px: ' + (difference * 100).toFixed(2) + '% changed');
+    } catch (error) {
+      console.error('ERROR home/' + name + ' ' + viewport.width + ': ' + String(error));
+      results.push({ route: 'home/' + name, viewport: viewport.width, error: String(error) });
     }
   }
 } finally {
