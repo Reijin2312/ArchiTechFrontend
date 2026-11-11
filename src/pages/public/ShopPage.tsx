@@ -17,7 +17,7 @@ export default function ShopPage() {
     <>
       <Seo {...routesMeta['/start']} />
       <motion.div
-        className="mx-auto w-full max-w-7xl grid grid-cols-12 gap-6 px-4 py-6 text-slate-100"
+        className="mx-auto w-full max-w-7xl grid grid-cols-12 gap-6 px-4 py-6 text-[#f2efe9]"
         variants={isMobile ? undefined : pageVariants}
         initial={isMobile ? false : 'hidden'}
         animate={isMobile ? false : 'show'}
@@ -36,34 +36,34 @@ export default function ShopPage() {
           <h1 className="mb-4 text-3xl font-bold text-[22px] md:text-[24px] text-center">{t('start.title')}</h1>
 
           <Callout title={t('start.freeAccess')}>
-            <p className="text-sm text-slate-300">
+            <p className="text-sm text-[#c9c3b8]">
               {t('start.lead')}
             </p>
           </Callout>
 
           <BaseSection id="how" n={1} title={t('start.registration')} disableMotion={isMobile}>
-            <ol className="list-decimal pl-6 space-y-2 text-slate-300">
-              <li><Link to="/auth/register" className="text-sky-300 underline underline-offset-2 hover:text-sky-200">{t('start.step1Link')}</Link>.</li>
-              <li><a href={LAUNCHER_DOWNLOAD_URL} className="text-sky-300 underline underline-offset-2 hover:text-sky-200">{t('start.step2Link')}</a> {t('start.step2Tail')}</li>
+            <ol className="list-decimal pl-6 space-y-2 text-[#c9c3b8]">
+              <li><Link to="/auth/register" className="text-[#d8bc91] underline underline-offset-2 hover:text-[#f0dcc0]">{t('start.step1Link')}</Link>.</li>
+              <li><a href={LAUNCHER_DOWNLOAD_URL} className="text-[#d8bc91] underline underline-offset-2 hover:text-[#f0dcc0]">{t('start.step2Link')}</a> {t('start.step2Tail')}</li>
               <li>{t('start.step3')}</li>
               <li>{t('start.step4')}</li>
             </ol>
           </BaseSection>
 
           <BaseSection id="discounts" n={2} title={t('start.launcher')} disableMotion={isMobile}>
-            <p className="text-slate-300 text-sm">
+            <p className="text-[#c9c3b8] text-sm">
               {t('start.launcherText')}
             </p>
-            <a href={LAUNCHER_DOWNLOAD_URL} className="mt-4 inline-flex rounded-xl bg-indigo-600 px-4 py-2 text-sm hover:bg-indigo-500">
+            <a href={LAUNCHER_DOWNLOAD_URL} className="mt-4 inline-flex rounded-xl bg-[#c8ae88] text-[#211f1b] px-4 py-2 text-sm hover:bg-[#e6d6bd]">
               {t('start.downloadLauncher')}
             </a>
           </BaseSection>
 
           <BaseSection id="policy" n={3} title={t('start.modpackTitle')} disableMotion={isMobile}>
-            <p className="text-slate-300 text-sm">
+            <p className="text-[#c9c3b8] text-sm">
               {t('start.modpackText')}
             </p>
-            <a href={`${WIKI_URL}#mods`} className="mt-3 inline-flex text-sm text-sky-300 underline underline-offset-2 hover:text-sky-200">
+            <a href={`${WIKI_URL}#mods`} className="mt-3 inline-flex text-sm text-[#d8bc91] underline underline-offset-2 hover:text-[#f0dcc0]">
               {t('start.modpackLink')}
             </a>
           </BaseSection>
@@ -74,7 +74,7 @@ export default function ShopPage() {
                 {t('start.licenseAnswer')}
               </QA>
               <QA q={t('start.sourceQuestion')}>
-                {t('start.sourceBefore')} <a href="https://github.com/Reijin2312/ArchiTech_Launcher" target="_blank" rel="noreferrer noopener" className="text-sky-300 underline underline-offset-2 hover:text-sky-200">{t('start.officialGithub')}</a>.
+                {t('start.sourceBefore')} <a href="https://github.com/Reijin2312/ArchiTech_Launcher" target="_blank" rel="noreferrer noopener" className="text-[#d8bc91] underline underline-offset-2 hover:text-[#f0dcc0]">{t('start.officialGithub')}</a>.
               </QA>
             </dl>
           </BaseSection>
@@ -92,14 +92,14 @@ function RightBox() {
   const { t } = useI18n();
   return (
     <div className="sticky top-20 space-y-3">
-      <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 backdrop-blur-md backdrop-saturate-150">
-        <div className="text-sm text-sky-300">{t('start.ready')}</div>
+      <div className="rounded-2xl border border-[rgba(239,232,218,0.22)] bg-[rgba(33,35,31,0.91)] p-4 backdrop-blur-md backdrop-saturate-150">
+        <div className="text-sm text-[#d8bc91]">{t('start.ready')}</div>
         <div className="mt-1 text-lg font-semibold">{t('start.readyAction')}</div>
-        <p className="mt-2 text-xs text-slate-400">{t('start.readyText')}</p>
+        <p className="mt-2 text-xs text-[#aaa497]">{t('start.readyText')}</p>
       </div>
 
-      <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 text-sm text-slate-300 backdrop-blur-md backdrop-saturate-150">
-        <div className="font-semibold mb-1 text-sky-300">{t('start.noManual')}</div>
+      <div className="rounded-2xl border border-[rgba(239,232,218,0.22)] bg-[rgba(33,35,31,0.91)] p-4 text-sm text-[#c9c3b8] backdrop-blur-md backdrop-saturate-150">
+        <div className="font-semibold mb-1 text-[#d8bc91]">{t('start.noManual')}</div>
         {t('start.noManualText')}
       </div>
     </div>
@@ -108,9 +108,9 @@ function RightBox() {
 
 function QA({ q, children }: { q: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-3 backdrop-blur-md backdrop-saturate-150">
+    <div className="rounded-xl border border-[rgba(239,232,218,0.22)] bg-[rgba(33,35,31,0.91)] p-3 backdrop-blur-md backdrop-saturate-150">
       <div className="font-semibold">{q}</div>
-      <div className="mt-1 text-slate-300 text-sm">{children}</div>
+      <div className="mt-1 text-[#c9c3b8] text-sm">{children}</div>
     </div>
   );
 }

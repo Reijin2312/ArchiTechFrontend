@@ -157,16 +157,16 @@ export default function UserAchievementsPage() {
       >
         <div className="min-h-dvh">
           <main className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6">
-            <section className="relative overflow-hidden rounded-3xl border border-slate-800 bg-slate-950/70 p-5 shadow-[0_24px_60px_-30px_rgba(0,0,0,.85)] md:p-6">
+            <section className="relative overflow-hidden rounded-3xl border border-[rgba(239,232,218,0.22)] bg-[rgba(25,27,24,0.85)] p-5 shadow-[0_24px_60px_-30px_rgba(0,0,0,.85)] md:p-6">
               <div className="pointer-events-none absolute inset-0">
-                <div className="absolute -left-20 top-0 h-56 w-56 rounded-full bg-sky-500/12 blur-3xl" />
-                <div className="absolute right-0 top-0 h-56 w-56 rounded-full bg-indigo-500/12 blur-3xl" />
+                <div className="absolute -left-20 top-0 h-56 w-56 rounded-full bg-[rgba(197,170,132,0.11)] blur-3xl" />
+                <div className="absolute right-0 top-0 h-56 w-56 rounded-full bg-[rgba(197,170,132,0.11)] blur-3xl" />
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_-20%,rgba(251,191,36,.18),transparent_45%)]" />
               </div>
 
               <div className="relative z-10 mb-6 flex items-start justify-center">
                 <div className="inline-flex items-center justify-center gap-4">
-                  <div className="h-14 w-14 overflow-hidden rounded-2xl border border-slate-700/80 bg-slate-900 shadow-[0_8px_24px_-12px_rgba(14,165,233,.45)]">
+                  <div className="h-14 w-14 overflow-hidden rounded-2xl border border-[rgba(239,232,218,0.22)] bg-[rgba(33,35,31,0.91)] shadow-[0_8px_24px_-12px_rgba(14,165,233,.45)]">
                     {user?.avatarUrl ? (
                       <img
                         src={user.avatarUrl}
@@ -176,19 +176,19 @@ export default function UserAchievementsPage() {
                         className="h-full w-full object-cover"
                       />
                     ) : (
-                      <div className="grid h-full w-full place-items-center text-lg font-semibold text-slate-300">
+                      <div className="grid h-full w-full place-items-center text-lg font-semibold text-[#c9c3b8]">
                         {(displayName?.charAt(0) || '?').toUpperCase()}
                       </div>
                     )}
                   </div>
                   <div className="text-center">
-                    <div className="text-xs uppercase tracking-[0.18em] text-slate-400">{copy.achievements.heading}</div>
-                    <h1 className="mt-1 text-2xl font-semibold text-slate-100 md:text-3xl">{displayName}</h1>
+                    <div className="text-xs uppercase tracking-[0.18em] text-[#aaa497]">{copy.achievements.heading}</div>
+                    <h1 className="mt-1 text-2xl font-semibold text-[#f2efe9] md:text-3xl">{displayName}</h1>
                   </div>
                 </div>
                 <Link
                   to={`/u/${encodeURIComponent(username)}`}
-                  className="absolute right-0 top-0 inline-flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-900/60 px-3 py-1.5 text-sm text-slate-200 hover:border-slate-500"
+                  className="absolute right-0 top-0 inline-flex items-center gap-2 rounded-xl border border-[rgba(239,232,218,0.22)] bg-[rgba(33,35,31,0.91)] px-3 py-1.5 text-sm text-[#c9c3b8] hover:border-slate-500"
                 >
                   <span aria-hidden="true">↩</span>
                   {copy.backToProfile}
@@ -202,17 +202,17 @@ export default function UserAchievementsPage() {
                   ))}
                 </div>
 
-                <div className="mx-auto w-full max-w-[280px] rounded-3xl border border-amber-500/30 bg-slate-950/70 p-5 shadow-[0_0_0_1px_rgba(251,191,36,.2)_inset,0_18px_45px_-28px_rgba(251,191,36,.55)]">
-                  <div className="mb-3 text-center text-xs uppercase tracking-[0.14em] text-amber-200/85">{copy.achievements.archiveRating}</div>
+                <div className="mx-auto w-full max-w-[280px] rounded-3xl border border-amber-500/30 bg-[rgba(25,27,24,0.85)] p-5 shadow-[0_0_0_1px_rgba(251,191,36,.2)_inset,0_18px_45px_-28px_rgba(251,191,36,.55)]">
+                  <div className="mb-3 text-center text-xs uppercase tracking-[0.14em] text-[#ead3ad]">{copy.achievements.archiveRating}</div>
                   <div
                     className="mx-auto grid h-44 w-44 place-items-center rounded-full p-[12px]"
                     style={{
                       background: `conic-gradient(from 200deg, rgba(14,165,233,.95) ${progress * 3.6}deg, rgba(51,65,85,.45) ${progress * 3.6}deg 360deg)`,
                     }}
                   >
-                    <div className="flex h-full w-full flex-col items-center justify-center rounded-full border border-slate-700 bg-slate-950/90 text-center">
+                    <div className="flex h-full w-full flex-col items-center justify-center rounded-full border border-[rgba(239,232,218,0.22)] bg-[rgba(25,27,24,0.85)] text-center">
                       <div className="text-4xl leading-none">🏆</div>
-                      <div className="mt-1 text-3xl leading-none font-semibold text-slate-100">
+                      <div className="mt-1 text-3xl leading-none font-semibold text-[#f2efe9]">
                         {unlockedCount}/{total}
                       </div>
                     </div>
@@ -234,7 +234,7 @@ export default function UserAchievementsPage() {
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_0_100%,rgba(56,189,248,.08),transparent_40%)]" />
               </div>
               <div className="relative z-10 mb-3 flex flex-col items-center justify-center gap-1 text-center">
-                <h2 className="text-base font-semibold uppercase tracking-[0.12em] text-amber-100">{copy.achievements.pinned}</h2>
+                <h2 className="text-base font-semibold uppercase tracking-[0.12em] text-[#ead3ad]">{copy.achievements.pinned}</h2>
               </div>
 
               {loading ? (
@@ -257,8 +257,8 @@ export default function UserAchievementsPage() {
             <section>
               <Card>
                 <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                  <h2 className="text-lg font-semibold text-slate-100">{copy.achievements.catalog}</h2>
-                  <div className="inline-flex rounded-xl border border-slate-700 bg-slate-900/80 p-1">
+                  <h2 className="text-lg font-semibold text-[#f2efe9]">{copy.achievements.catalog}</h2>
+                  <div className="inline-flex rounded-xl border border-[rgba(239,232,218,0.22)] bg-[rgba(33,35,31,0.91)] p-1">
                     {filters.map((item) => (
                       <button
                         key={item.id}
@@ -266,8 +266,8 @@ export default function UserAchievementsPage() {
                         onClick={() => setFilter(item.id)}
                         className={`rounded-lg px-3 py-1.5 text-sm transition ${
                           filter === item.id
-                            ? 'bg-sky-500/20 text-sky-200 shadow-[0_0_0_1px_rgba(56,189,248,.35)_inset]'
-                            : 'text-slate-300 hover:text-white'
+                            ? 'bg-[rgba(197,170,132,0.11)] text-[#d8bc91] shadow-[0_0_0_1px_rgba(56,189,248,.35)_inset]'
+                            : 'text-[#c9c3b8] hover:text-white'
                         }`}
                       >
                         {item.label}
@@ -281,7 +281,7 @@ export default function UserAchievementsPage() {
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                     placeholder={copy.achievements.search}
-                    className="w-full rounded-xl border border-slate-700 bg-slate-900/70 px-3 py-2 text-sm text-slate-100 outline-none placeholder:text-slate-500 focus:border-sky-500/60"
+                    className="w-full rounded-xl border border-[rgba(239,232,218,0.22)] bg-[rgba(33,35,31,0.91)] px-3 py-2 text-sm text-[#f2efe9] outline-none placeholder:text-slate-500 focus:border-sky-500/60"
                   />
                 </div>
 
@@ -293,7 +293,7 @@ export default function UserAchievementsPage() {
                   </div>
                 ) : visibleCatalog.length > 0 ? (
                   <>
-                    <div className="mb-3 text-xs text-slate-400">
+                    <div className="mb-3 text-xs text-[#aaa497]">
                       {fill(copy.achievements.shown, { shown: visibleCatalog.length, unlocked: unlockedCount, locked: lockedCount })}
                     </div>
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 2xl:grid-cols-3">
@@ -325,7 +325,7 @@ function Card(props: { children: React.ReactNode; className?: string }) {
   const customStyle = getThemeStyle();
   return (
     <section
-      className={`rounded-2xl border border-slate-800 bg-slate-950/65 p-4 shadow-[0_1px_0_#ffffff10_inset,0_20px_40px_-20px_#000] backdrop-blur-md backdrop-saturate-150 ${props.className ?? ''}`}
+      className={`rounded-2xl border border-[rgba(239,232,218,0.22)] bg-[rgba(25,27,24,0.85)] p-4 shadow-[0_1px_0_#ffffff10_inset,0_20px_40px_-20px_#000] backdrop-blur-md backdrop-saturate-150 ${props.className ?? ''}`}
       style={{ ...customStyle }}
     >
       {props.children}
@@ -337,16 +337,16 @@ function MetricCard({ metric }: { metric: Metric }) {
   const rightAligned = metric.id === 'deaths' || metric.id === 'playHours' || metric.id === 'walkedKm';
   return (
     <article
-      className={`rounded-2xl border border-slate-800/90 bg-slate-900/75 p-3 shadow-[0_10px_30px_-24px_rgba(56,189,248,.55)] ${
+      className={`rounded-2xl border border-[rgba(239,232,218,0.22)] bg-[rgba(33,35,31,0.91)] p-3 shadow-[0_10px_30px_-24px_rgba(56,189,248,.55)] ${
         rightAligned ? 'text-right' : ''
       }`}
     >
-      <div className={`mb-2 flex items-center gap-2 text-slate-400 ${rightAligned ? 'justify-end' : ''}`}>
+      <div className={`mb-2 flex items-center gap-2 text-[#aaa497] ${rightAligned ? 'justify-end' : ''}`}>
         <span className="text-lg">{metric.icon}</span>
         <span className="text-xs uppercase tracking-[0.08em]">{metric.label}</span>
       </div>
-      <div className="text-2xl font-semibold text-slate-100">{metric.value}</div>
-      <div className="text-xs text-slate-500">{metric.hint}</div>
+      <div className="text-2xl font-semibold text-[#f2efe9]">{metric.value}</div>
+      <div className="text-xs text-[#938e83]">{metric.hint}</div>
     </article>
   );
 }
@@ -361,7 +361,7 @@ function PinnedRibbonItem({ achievement, language, fixed }: { achievement: Achie
           {achievement.icon || '🏅'}
         </div>
         <div className="relative text-center">
-          <div className="truncate text-xs font-semibold uppercase tracking-[0.06em] text-amber-100">{achievement.title}</div>
+          <div className="truncate text-xs font-semibold uppercase tracking-[0.06em] text-[#ead3ad]">{achievement.title}</div>
           <div className="mt-0.5 text-[10px] text-amber-100/65">{unlockedAt ?? fixed}</div>
         </div>
       </div>
@@ -378,14 +378,14 @@ function AchievementTile({ achievement, language, received }: { achievement: Ach
       className={`relative overflow-hidden rounded-xl border p-3 transition ${
         unlocked
           ? 'border-amber-600/35 bg-linear-to-br from-amber-900/25 via-slate-900/70 to-slate-950/85'
-          : 'border-slate-800 bg-slate-900/70'
+          : 'border-[rgba(239,232,218,0.22)] bg-[rgba(33,35,31,0.91)]'
       } min-h-24`}
     >
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_100%_0,rgba(251,191,36,.18),transparent_45%)]" />
 
       {!unlocked && (
-        <div className="absolute inset-0 bg-slate-950/55 backdrop-blur-[1px]">
-          <div className="absolute right-2 top-2 rounded-full border border-slate-700 bg-slate-900/90 px-1.5 py-0.5 text-[11px] text-slate-300">
+        <div className="absolute inset-0 bg-[rgba(25,27,24,0.85)] backdrop-blur-[1px]">
+          <div className="absolute right-2 top-2 rounded-full border border-[rgba(239,232,218,0.22)] bg-[rgba(33,35,31,0.91)] px-1.5 py-0.5 text-[11px] text-[#c9c3b8]">
             🔒
           </div>
         </div>
@@ -394,13 +394,13 @@ function AchievementTile({ achievement, language, received }: { achievement: Ach
       <div className="relative z-10 flex items-start gap-3">
         <div className={`text-3xl ${unlocked ? '' : 'grayscale'}`}>{achievement.icon || '🏅'}</div>
         <div className="min-w-0 flex-1">
-          <div className={`truncate text-sm font-semibold ${unlocked ? 'text-amber-200' : 'text-slate-300'}`}>
+          <div className={`truncate text-sm font-semibold ${unlocked ? 'text-[#ead3ad]' : 'text-[#c9c3b8]'}`}>
             {achievement.title}
           </div>
-          <div className="mt-0.5 line-clamp-2 text-xs text-slate-400">{achievement.description}</div>
+          <div className="mt-0.5 line-clamp-2 text-xs text-[#aaa497]">{achievement.description}</div>
           {unlockedAt && (
-            <div className="mt-2 text-[11px] text-slate-500">
-              {received} <span className="text-slate-300">{unlockedAt}</span>
+            <div className="mt-2 text-[11px] text-[#938e83]">
+              {received} <span className="text-[#c9c3b8]">{unlockedAt}</span>
             </div>
           )}
         </div>
@@ -410,12 +410,12 @@ function AchievementTile({ achievement, language, received }: { achievement: Ach
 }
 
 function EmptyLoading({ className = 'h-20' }: { className?: string }) {
-  return <div className={`animate-pulse rounded-xl border border-slate-800 bg-slate-900 ${className}`} />;
+  return <div className={`animate-pulse rounded-xl border border-[rgba(239,232,218,0.22)] bg-[rgba(33,35,31,0.91)] ${className}`} />;
 }
 
 function EmptyText({ text }: { text: string }) {
   return (
-    <div className="rounded-xl border border-slate-800 bg-slate-900 p-5 text-center text-sm text-slate-400">{text}</div>
+    <div className="rounded-xl border border-[rgba(239,232,218,0.22)] bg-[rgba(33,35,31,0.91)] p-5 text-center text-sm text-[#aaa497]">{text}</div>
   );
 }
 
