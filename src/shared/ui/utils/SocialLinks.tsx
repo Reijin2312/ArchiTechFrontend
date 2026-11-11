@@ -18,12 +18,12 @@ type SocialLinksProps = {
 
 const SOCIAL_ICONS: Record<string, { icon: React.ReactNode; placeholder: string; color: string }> = {
   discord: { icon: <SvgDiscord className="h-5" />, placeholder: 'username#1234', color: 'text-indigo-400' },
-  telegram: { icon: <SvgTelegram className="h-5" />, placeholder: '@username', color: 'text-sky-400' },
+  telegram: { icon: <SvgTelegram className="h-5" />, placeholder: '@username', color: 'text-sky-400 [.at-secondary-skin_&]:text-[#d8bc91]' },
   vk: { icon: '🔵', placeholder: 'vk.com/username', color: 'text-blue-400' },
   youtube: { icon: '▶️', placeholder: '@channel', color: 'text-red-400' },
   twitch: { icon: '📺', placeholder: 'username', color: 'text-purple-400' },
-  github: { icon: '🐙', placeholder: 'username', color: 'text-slate-300' },
-  custom: { icon: '🔗', placeholder: 'https://...', color: 'text-slate-400' },
+  github: { icon: '🐙', placeholder: 'username', color: 'text-slate-300 [.at-secondary-skin_&]:text-[#c9c3b8]' },
+  custom: { icon: '🔗', placeholder: 'https://...', color: 'text-slate-400 [.at-secondary-skin_&]:text-[#aaa497]' },
 }
 
 export function SocialLinks({ links, onChange, editable = false, readOnly = false, className = '' }: SocialLinksProps) {
@@ -66,7 +66,7 @@ export function SocialLinks({ links, onChange, editable = false, readOnly = fals
           const config = SOCIAL_ICONS[link.type] || SOCIAL_ICONS.custom
           return (
             <div key={idx} className="flex items-center gap-2">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-slate-700 bg-slate-900">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-slate-700 [.at-secondary-skin_&]:border-[rgba(239,232,218,0.22)] bg-slate-900 [.at-secondary-skin_&]:bg-[rgba(33,35,31,0.91)]">
                 {typeof config.icon === 'string' ? (
                   <span className="text-lg">{config.icon}</span>
                 ) : (
@@ -78,7 +78,7 @@ export function SocialLinks({ links, onChange, editable = false, readOnly = fals
                 value={link.value}
                 onChange={(e) => handleChange(idx, e.target.value)}
                 placeholder={config.placeholder}
-                className="flex-1 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm outline-none focus:border-slate-500"
+                className="flex-1 rounded-lg border border-slate-700 [.at-secondary-skin_&]:border-[rgba(239,232,218,0.22)] bg-slate-900 [.at-secondary-skin_&]:bg-[rgba(33,35,31,0.91)] px-3 py-2 text-sm outline-none focus:border-slate-500"
               />
               <button
                 type="button"
@@ -97,7 +97,7 @@ export function SocialLinks({ links, onChange, editable = false, readOnly = fals
               key={type}
               type="button"
               onClick={() => handleAdd(type as SocialLink['type'])}
-              className="rounded-lg border border-slate-700 px-3 py-1.5 text-xs hover:border-slate-500"
+              className="rounded-lg border border-slate-700 [.at-secondary-skin_&]:border-[rgba(239,232,218,0.22)] px-3 py-1.5 text-xs hover:border-slate-500"
             >
               + {type}
             </button>
@@ -111,14 +111,14 @@ export function SocialLinks({ links, onChange, editable = false, readOnly = fals
               setEditLinks(normalizedLinks)
               setEditing(false)
             }}
-            className="rounded-lg border border-slate-700 px-3 py-1.5 text-sm hover:border-slate-500"
+            className="rounded-lg border border-slate-700 [.at-secondary-skin_&]:border-[rgba(239,232,218,0.22)] px-3 py-1.5 text-sm hover:border-slate-500"
           >
             {language === 'ru' ? 'Отмена' : 'Cancel'}
           </button>
           <button
             type="button"
             onClick={handleSave}
-            className="rounded-lg bg-sky-600 px-3 py-1.5 text-sm hover:bg-sky-500"
+            className="rounded-lg bg-sky-600 [.at-secondary-skin_&]:bg-[#c8ae88] [.at-secondary-skin_&]:text-[#211f1b] px-3 py-1.5 text-sm hover:bg-sky-500 [.at-secondary-skin_&]:hover:bg-[#e6d6bd]"
           >
             {language === 'ru' ? 'Сохранить' : 'Save'}
           </button>
@@ -134,12 +134,12 @@ export function SocialLinks({ links, onChange, editable = false, readOnly = fals
           <button
             type="button"
             onClick={() => setEditing(true)}
-            className="w-full rounded-xl border border-dashed border-slate-700 py-3 text-sm text-slate-400 hover:border-slate-500 hover:text-slate-300"
+            className="w-full rounded-xl border border-dashed border-slate-700 [.at-secondary-skin_&]:border-[rgba(239,232,218,0.22)] py-3 text-sm text-slate-400 [.at-secondary-skin_&]:text-[#aaa497] hover:border-slate-500 hover:text-slate-300"
           >
             + {language === 'ru' ? 'Добавить соцсети' : 'Add social links'}
           </button>
         ) : (
-          <div className="text-sm text-slate-500">{language === 'ru' ? 'Не указаны' : 'Not specified'}</div>
+          <div className="text-sm text-slate-500 [.at-secondary-skin_&]:text-[#938e83]">{language === 'ru' ? 'Не указаны' : 'Not specified'}</div>
         )
       ) : (
         <div className="flex flex-wrap justify-center gap-2">
@@ -151,7 +151,7 @@ export function SocialLinks({ links, onChange, editable = false, readOnly = fals
                 href={link.type === 'custom' ? link.value : `#${link.value}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className={`flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-900/60 px-3 py-1.5 text-sm hover:border-slate-500 transition-colors ${config.color}`}
+                className={`flex items-center gap-2 rounded-lg border border-slate-700 [.at-secondary-skin_&]:border-[rgba(239,232,218,0.22)] bg-slate-900/60 [.at-secondary-skin_&]:bg-[rgba(33,35,31,0.91)] px-3 py-1.5 text-sm hover:border-slate-500 transition-colors ${config.color}`}
                 title={link.label || link.value}
               >
                 {typeof config.icon === 'string' ? (
@@ -167,7 +167,7 @@ export function SocialLinks({ links, onChange, editable = false, readOnly = fals
             <button
               type="button"
               onClick={() => setEditing(true)}
-              className="rounded-lg border border-slate-700 px-3 py-1.5 text-sm hover:border-slate-500"
+              className="rounded-lg border border-slate-700 [.at-secondary-skin_&]:border-[rgba(239,232,218,0.22)] px-3 py-1.5 text-sm hover:border-slate-500"
             >
               ✏️
             </button>

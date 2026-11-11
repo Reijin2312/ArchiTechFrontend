@@ -601,7 +601,7 @@ export function ChatComposer({ model }: ChatComposerProps) {
         data-chat-composer-container="true"
       >
         <div className="relative mx-auto flex w-full max-w-[960px] items-end gap-[10px]">
-          <div className="flex min-h-[58px] flex-1 items-center gap-[12px] rounded-[20px] bg-[#1a1b20] px-[16px] shadow-[0_10px_18px_rgba(0,0,0,.35)] ring-1 ring-white/5">
+          <div className="flex min-h-[58px] flex-1 items-center gap-[12px] rounded-[20px] bg-[#242620] px-[16px] shadow-[0_10px_18px_rgba(0,0,0,.35)] ring-1 ring-white/5">
             <div className="flex w-full flex-col gap-2 py-2">
               {hasComposerState ? (
                 <div className="flex items-center gap-2">

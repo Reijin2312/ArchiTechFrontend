@@ -29,7 +29,7 @@ export default function PrivacyPolicyPage() {
   return (
     <>
     <Seo {...routesMeta['/privacy']} />
-    <div className="mx-auto w-full max-w-7xl grid grid-cols-12 gap-6 px-4 py-6 text-slate-100">
+    <div className="mx-auto w-full max-w-7xl grid grid-cols-12 gap-6 px-4 py-6 text-[#f2efe9]">
       <aside className="hidden md:block md:col-span-3">
         <LeftNav items={PRIVACY_SECTIONS} />
       </aside>
@@ -37,13 +37,13 @@ export default function PrivacyPolicyPage() {
       <main className="col-span-12 md:col-span-6">
         <h1 className="mb-4 text-3xl font-bold text-[22px] md:text-[24px] text-center">Политика конфиденциальности проекта</h1>
         <Callout title="Подсказка по навигации">
-          <ul className="text-sm text-slate-300 space-y-1">
+          <ul className="text-sm text-[#c9c3b8] space-y-1">
             <li>Переходите по разделам слева или используйте быстрый поиск по странице: <Kbd>Ctrl</Kbd> + <Kbd>F</Kbd> (Windows / Linux), <Kbd>Cmd</Kbd> + <Kbd>F</Kbd> (macOS).</li>
           </ul>
         </Callout>
 
         <Section id="id1" title="Общие положения" n={1}>
-         <ol className="list-decimal pl-6 space-y-2 text-slate-300">
+         <ol className="list-decimal pl-6 space-y-2 text-[#c9c3b8]">
             <li>Обработка персональных данных осуществляется по праву Российской Федерации, включая Федеральный закон № 152‑ФЗ «О персональных данных» и связанные акты.</li>
             <li>Политика является неотъемлемой частью Пользовательского соглашения и действует во всей экосистеме «ArchiTech» (веб‑сайт https://architech-mc.ru и поддомены, игровые серверы, магазин, Wiki, карта, API и иные сервисы).</li>
             <li>Политика распространяется исключительно на наши Сервисы. Мы не контролируем и не отвечаем за сайты третьих лиц, на которые могут вести ссылки из Сервисов.</li>
@@ -52,7 +52,7 @@ export default function PrivacyPolicyPage() {
         </Section>
 
         <Section id="id2" title="Состав данных и цели обработки" n={2}>
-          <ol className="list-decimal pl-6 space-y-2 text-slate-300">
+          <ol className="list-decimal pl-6 space-y-2 text-[#c9c3b8]">
             <li>
               Мы можем получать следующие категории данных:
               <ul className="list-disc pl-6 mt-2 space-y-2">
@@ -80,20 +80,20 @@ export default function PrivacyPolicyPage() {
 
 
         <Section id="id3" title="Cookies и подобные технологии" n={3}>
-          <ol className="list-decimal pl-6 space-y-2 text-slate-300">
+          <ol className="list-decimal pl-6 space-y-2 text-[#c9c3b8]">
             <li>Мы используем cookies и иные локальные идентификаторы для обеспечения работы Сервисов, а также для статистики и улучшения пользовательского опыта.</li>
             <li>Вы можете ограничить или отключить использование cookies в настройках браузера. Это может повлиять на доступность отдельных функций.</li>
           </ol>
         </Section>
 
         <Section id="id4" title="Правовые основания обработки" n={4}>
-          <ol className="list-decimal pl-6 space-y-2 text-slate-300">
+          <ol className="list-decimal pl-6 space-y-2 text-[#c9c3b8]">
             <li>Обработка осуществляется на одном или нескольких основаниях: согласие пользователя; исполнение договора (Пользовательского соглашения); исполнение требований закона; реализация законных интересов Администрации при соблюдении прав субъектов данных.</li>
           </ol>
         </Section>
 
         <Section id="id5" title="Передача третьим лицам и трансграничная передача" n={5}>
-          <ol className="list-decimal pl-6 space-y-2 text-slate-300">
+          <ol className="list-decimal pl-6 space-y-2 text-[#c9c3b8]">
             <li> Мы можем поручать обработку данных уполномоченным лицам (процессорам) при условии заключения договора о конфиденциальности и безопасности. </li>
             <li> Передача данных третьим лицам также возможна, если она необходима для: исполнения закона; предотвращения злоупотреблений; защиты прав и законных интересов «ArchiTech» и/или третьих лиц; исполнения запросов госорганов при наличии законных оснований.</li>
             <li> Трансграничная передача допускается при соблюдении требований законодательства о персональных данных. </li>
@@ -101,7 +101,7 @@ export default function PrivacyPolicyPage() {
         </Section>
 
         <Section id="id6" title="Права пользователя (субъекта персональных данных)" n={6}>
-          <ol className="list-decimal pl-6 space-y-2 text-slate-300">
+          <ol className="list-decimal pl-6 space-y-2 text-[#c9c3b8]">
             <li>
               Пользователь вправе:
               <ul className="list-disc pl-6 mt-2 space-y-2">
@@ -117,7 +117,7 @@ export default function PrivacyPolicyPage() {
         </Section>
 
         <Section id="id7" title="Сроки хранения и безопасность" n={7}>
-          <ol className="list-decimal pl-6 space-y-2 text-slate-300">
+          <ol className="list-decimal pl-6 space-y-2 text-[#c9c3b8]">
             <li>Данные хранятся столько, сколько необходимо для целей обработки, либо в сроки, установленные законом и внутренними регламентами.</li>
             <li>Мы применяем организационные и технические меры защиты, соразмерные рискам, включая контроль доступа, журналирование, резервное копирование и защиту каналов связи.</li>
             <li>Пользователь обязан соблюдать меры по защите своего аккаунта и средств аутентификации. Риски, связанные с передачей учетных данных третьим лицам, несет Пользователь.</li>
@@ -125,41 +125,41 @@ export default function PrivacyPolicyPage() {
         </Section>
 
         <Section id="id8" title="Ссылки на сторонние ресурсы" n={8}>
-          <ol className="list-decimal pl-6 space-y-2 text-slate-300">
+          <ol className="list-decimal pl-6 space-y-2 text-[#c9c3b8]">
             <li>Мы не отвечаем за содержание и политику обработки данных на сайтах третьих лиц, даже если ссылки на них размещены в наших Сервисах. Перед вводом данных рекомендуем ознакомиться с их политиками конфиденциальности.</li>
           </ol>
         </Section>
 
         <Section id="id9" title="Коммуникации и рассылки" n={9}>
-          <ol className="list-decimal pl-6 space-y-2 text-slate-300">
+          <ol className="list-decimal pl-6 space-y-2 text-[#c9c3b8]">
             <li>Мы можем направлять сервисные сообщения о важных изменениях и событиях, влияющих на использование Сервисов.</li>
             <li>Информационные и маркетинговые сообщения направляются при наличии соответствующего правового основания и могут быть отключены через предусмотренные механизмы.</li>
           </ol>
         </Section>
 
         <Section id="id10" title="Ограничение ответственности" n={10}>
-          <ol className="list-decimal pl-6 space-y-2 text-slate-300">
+          <ol className="list-decimal pl-6 space-y-2 text-[#c9c3b8]">
             <li>Мы стремимся выполнять эту Политику, но не можем гарантировать абсолютную защиту при воздействии факторов вне нашего контроля.</li>
             <li>Сервисы и размещённая информация предоставляются по принципу «как есть». Мы не отвечаем за убытки, вызванные ограничением доступа к Сервисам или сбоями инфраструктуры, если иное не предусмотрено законом.</li>
           </ol>
         </Section>
 
         <Section id="id11" title="Порядок разрешения споров" n={11}>
-          <ol className="list-decimal pl-6 space-y-2 text-slate-300">
+          <ol className="list-decimal pl-6 space-y-2 text-[#c9c3b8]">
             <li>До обращения в суд стороны предпринимают попытку досудебного урегулирования: обмен претензиями в письменной форме и срок ответа до 30 календарных дней с даты получения.</li>
             <li>Споры подлежат разрешению по праву Российской Федерации с подсудностью по месту нахождения Администрации, если иное не установлено императивными нормами.</li>
           </ol>
         </Section>
 
         <Section id="id12" title="Изменения Политики" n={12}>
-          <ol className="list-decimal pl-6 space-y-2 text-slate-300">
+          <ol className="list-decimal pl-6 space-y-2 text-[#c9c3b8]">
             <li>Мы вправе обновлять Политику. Дата публикации текущей редакции указана в начале документа. Продолжение использования Сервисов означает согласие с новой редакцией.</li>
           </ol>
         </Section>
 
         <Section id="id13" title="Контакты оператора" n={13}>
-          <ol className="list-decimal pl-6 space-y-2 text-slate-300">
-            <p className="text-slate-300">
+          <ol className="list-decimal pl-6 space-y-2 text-[#c9c3b8]">
+            <p className="text-[#c9c3b8]">
             По вопросам обработки персональных данных и реализации прав субъектов данных: privacy@architech-mc.ru.
             </p>
           </ol>

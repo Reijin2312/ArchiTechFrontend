@@ -109,17 +109,17 @@ const gridVariants: Variants = {
 };
 
 const ICONS: Record<ContactCardConfig['icon'], React.ReactNode> = {
-  support: <SvgHeadphones className="h-5 w-5 text-indigo-200" />,
-  moderation: <SvgShield className="h-5 w-5 text-emerald-200" />,
-  telegram: <SvgTelegram className="h-5 w-5 text-sky-200" />,
-  discord: <SvgDiscord className="h-5 w-5 text-violet-200" />,
+  support: <SvgHeadphones className="h-5 w-5 text-[#d6b98e]" />,
+  moderation: <SvgShield className="h-5 w-5 text-[#d6b98e]" />,
+  telegram: <SvgTelegram className="h-5 w-5 text-[#d6b98e]" />,
+  discord: <SvgDiscord className="h-5 w-5 text-[#d6b98e]" />,
 };
 
 function ContactActionButton({ action }: { action: ContactAction }) {
   const className =
     action.variant === 'secondary'
-      ? 'inline-flex items-center gap-1 rounded-xl border border-slate-700/70 px-4 py-2 text-sm text-slate-200 transition hover:border-slate-500 hover:text-white'
-      : 'inline-flex items-center gap-1 rounded-xl bg-sky-600/90 px-4 py-2 text-sm font-medium text-white shadow shadow-sky-900/50 transition hover:bg-sky-500';
+      ? 'inline-flex items-center gap-1 rounded-xl border border-[rgba(239,232,218,0.22)] px-4 py-2 text-sm text-[#c9c3b8] transition hover:border-slate-500 hover:text-white'
+      : 'inline-flex items-center gap-1 rounded-xl bg-[#c8ae88] px-4 py-2 text-sm font-medium text-[#211f1b] shadow shadow-sky-900/50 transition hover:bg-[#e6d6bd]';
 
   const rel = action.external ? 'noreferrer noopener' : undefined;
   const target = action.external ? '_blank' : undefined;
@@ -144,18 +144,18 @@ export default function ContactsPage() {
   return (
     <>
       <Seo {...routesMeta['/contacts']} />
-      <div className="relative mx-auto max-w-7xl px-4 py-10 text-slate-100">
+      <div className="relative mx-auto max-w-7xl px-4 py-10 text-[#f2efe9]">
         <motion.section
           className="mx-auto max-w-4xl text-center mb-10"
           initial={disableMotion ? undefined : { opacity: 0, y: 20, filter: 'blur(8px)' }}
           animate={disableMotion ? undefined : { opacity: 1, y: 0, filter: 'blur(0px)' }}
           transition={{ duration: 0.5, ease: 'easeOut' }}
         >
-          <p className="text-sm uppercase tracking-[0.35em] text-slate-400">{language === 'ru' ? 'Связь' : 'Get in touch'}</p>
+          <p className="text-sm uppercase tracking-[0.35em] text-[#aaa497]">{language === 'ru' ? 'Связь' : 'Get in touch'}</p>
           <h1 className="mt-3 text-3xl font-semibold leading-tight">
             {language === 'ru' ? 'Контакты ArchiTech MC' : 'ArchiTech MC contacts'}
           </h1>
-          <p className="mt-4 text-base text-slate-300">
+          <p className="mt-4 text-base text-[#c9c3b8]">
             {language === 'ru' ? 'Здесь всё, что нужно для связи: техподдержка, модерация, Discord и Telegram. Без лишнего — просто выбирайте нужный канал.' : 'Everything you need to reach us: technical support, moderation, Discord, and Telegram. Pick the channel that fits your question.'}
           </p>
         </motion.section>
@@ -170,28 +170,28 @@ export default function ContactsPage() {
             <motion.article
               key={card.id}
               variants={disableMotion ? undefined : cardVariants}
-              className="relative overflow-hidden rounded-2xl border border-slate-800 bg-slate-950/60 p-5 backdrop-blur-md"
+              className="relative overflow-hidden rounded-2xl border border-[rgba(239,232,218,0.22)] bg-[rgba(25,27,24,0.85)] p-5 backdrop-blur-md"
             >
               <div className="pointer-events-none absolute inset-0 opacity-50 blur-3xl">
-                <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 via-purple-500/5 to-sky-500/10" />
+                <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(197,170,132,0.10),transparent_72%)]" />
               </div>
               <div className="relative flex flex-col gap-4">
                 <div className="flex items-center gap-3">
-                  <div className="grid h-12 w-12 place-items-center rounded-2xl border border-slate-800 bg-slate-900/80">
+                  <div className="grid h-12 w-12 place-items-center rounded-2xl border border-[rgba(239,232,218,0.22)] bg-[rgba(33,35,31,0.91)]">
                     {ICONS[card.icon]}
                   </div>
                   <div>
-                    <div className="text-sm uppercase tracking-[0.18em] text-slate-400">{card.badge}</div>
-                    <h2 className="text-xl font-semibold text-slate-50">{card.title}</h2>
+                    <div className="text-sm uppercase tracking-[0.18em] text-[#aaa497]">{card.badge}</div>
+                    <h2 className="text-xl font-semibold text-[#f2efe9]">{card.title}</h2>
                   </div>
                 </div>
-                <p className="text-sm text-slate-300">{card.description}</p>
+                <p className="text-sm text-[#c9c3b8]">{card.description}</p>
                 <div className="flex flex-wrap gap-2">
                   {card.actions.map((action) => (
                     <ContactActionButton key={action.label} action={action} />
                   ))}
                 </div>
-                {card.meta && <p className="text-xs text-slate-400">{card.meta}</p>}
+                {card.meta && <p className="text-xs text-[#aaa497]">{card.meta}</p>}
               </div>
             </motion.article>
           ))}
@@ -205,7 +205,7 @@ export default function ContactsPage() {
           transition={{ duration: 0.5, ease: 'easeOut' }}
         >
           <div className="flex flex-col gap-3 mb-6 text-center">
-            <p className="text-sm uppercase tracking-[0.35em] text-slate-400">{language === 'ru' ? 'Команда' : 'Team'}</p>
+            <p className="text-sm uppercase tracking-[0.35em] text-[#aaa497]">{language === 'ru' ? 'Команда' : 'Team'}</p>
             <h2 className="text-2xl font-semibold">{language === 'ru' ? 'Администрация и команда' : 'Staff and project team'}</h2>
           </div>
           <TeamGrid team={TEAM_MEMBERS} avatars={avatars} disableMotion={disableMotion} />

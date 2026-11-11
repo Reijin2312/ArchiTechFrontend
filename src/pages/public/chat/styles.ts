@@ -162,12 +162,12 @@ export const chatPageStyles = `
   }
   .tg-right::after {
     right: -6px;
-    background: #967ef0;
+    background: #c5aa84;
     clip-path: polygon(0 0, 100% 100%, 0 100%);
   }
   .tg-left::after {
     left: -6px;
-    background: #222327;
+    background: #292b27;
     clip-path: polygon(100% 0, 100% 100%, 0 100%);
   }
   .tg-tail-none::after { display: none; }

@@ -77,8 +77,8 @@ export function GroupAddMembersPanel({
   const selectedCount = selectedIds.length;
 
   return (
-    <aside className="relative h-full w-full border-l border-white/10 bg-[#14151a] shadow-[-16px_0_38px_rgba(0,0,0,0.4)]">
-      <div className="flex h-full flex-col bg-[#1a1b20]">
+    <aside className="relative h-full w-full border-l border-white/10 bg-[#171816] shadow-[-16px_0_38px_rgba(0,0,0,0.4)]">
+      <div className="flex h-full flex-col bg-[#242620]">
         <div className="flex h-[78px] items-center gap-3 px-4">
           <button
             type="button"
@@ -92,7 +92,7 @@ export function GroupAddMembersPanel({
         </div>
 
         <div className="px-4 pb-2">
-          <div className="flex h-[50px] items-center gap-3 rounded-[16px] bg-[#1f2026] px-4 text-white/65 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]">
+          <div className="flex h-[50px] items-center gap-3 rounded-[16px] bg-[#242620] px-4 text-white/65 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]">
             <SearchIcon size={20} />
             <input
               type="text"

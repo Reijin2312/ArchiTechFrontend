@@ -18,7 +18,7 @@ export function SocialSidebarTabs({
 
   return (
 
-    <div className="flex gap-1 px-2 py-2 border-b border-slate-800 bg-slate-900/40">
+    <div className="flex gap-1 px-2 py-2 border-b border-slate-800 [.at-secondary-skin_&]:border-[rgba(239,232,218,0.22)] bg-slate-900/40 [.at-secondary-skin_&]:bg-[rgba(33,35,31,0.91)]">
       <TabButton
         active={activeTab === 'chat'}
         onClick={() => setActiveTab('chat')}

@@ -67,7 +67,7 @@ export function TeamGrid({ team, avatars, disableMotion, className }: TeamGridPr
               height={112}
               loading="lazy"
               decoding="async"
-              className="h-full min-h-28 w-28 rounded-2xl border border-slate-700/90 bg-slate-800 object-cover"
+              className="h-full min-h-28 w-28 rounded-2xl border border-slate-700/90 bg-slate-800 [.at-secondary-skin_&]:bg-[#34362f] object-cover"
               onError={(event) => {
                 const img = event.currentTarget as HTMLImageElement;
                 if (!img.src.endsWith(TEAM_AVATAR_FALLBACK)) img.src = TEAM_AVATAR_FALLBACK;
@@ -78,8 +78,8 @@ export function TeamGrid({ team, avatars, disableMotion, className }: TeamGridPr
           <div className="flex min-w-0 flex-1 flex-col justify-center">
             <div className="text-[10px] uppercase tracking-[0.16em] text-sky-300/90">{copy.lead}</div>
             <a href={`/u/${encodeURIComponent(leader.name)}`} className="mt-2 block min-w-0">
-              <div className="truncate text-lg font-semibold text-slate-100">{leader.name}</div>
-              <div className="text-sm text-slate-300">{localizedRole(leader.name, leader.role, copy)}</div>
+              <div className="truncate text-lg font-semibold text-slate-100 [.at-secondary-skin_&]:text-[#f2efe9]">{leader.name}</div>
+              <div className="text-sm text-slate-300 [.at-secondary-skin_&]:text-[#c9c3b8]">{localizedRole(leader.name, leader.role, copy)}</div>
             </a>
 
             {(leader.curseForgeUrl || leader.modrinthUrl || leader.githubUrl) && (
@@ -113,7 +113,7 @@ export function TeamGrid({ team, avatars, disableMotion, className }: TeamGridPr
                     href={leader.githubUrl}
                     target="_blank"
                     rel="noreferrer noopener"
-                    className="grid size-9 place-items-center text-slate-300 transition-transform hover:scale-110 hover:text-white"
+                    className="grid size-9 place-items-center text-slate-300 [.at-secondary-skin_&]:text-[#c9c3b8] transition-transform hover:scale-110 hover:text-white"
                     aria-label="GitHub Reijin2312"
                     title="GitHub"
                   >
@@ -135,7 +135,7 @@ export function TeamGrid({ team, avatars, disableMotion, className }: TeamGridPr
               variants={disableMotion ? undefined : teamItem}
               whileHover={disableMotion ? undefined : { y: -4, scale: 1.01 }}
               whileTap={disableMotion ? undefined : { scale: 0.99 }}
-              className="group relative overflow-hidden rounded-2xl border border-slate-800 bg-linear-to-b from-slate-900/60 to-slate-900/20 p-4 backdrop-blur-md backdrop-saturate-150 will-change-transform"
+              className="group relative overflow-hidden rounded-2xl border border-slate-800 [.at-secondary-skin_&]:border-[rgba(239,232,218,0.22)] bg-linear-to-b from-slate-900/60 to-slate-900/20 p-4 backdrop-blur-md backdrop-saturate-150 will-change-transform"
             >
               <a href={`/u/${encodeURIComponent(member.name)}`} className="flex items-center gap-3">
                 <img
@@ -150,7 +150,7 @@ export function TeamGrid({ team, avatars, disableMotion, className }: TeamGridPr
                       ? copy.retiredTitle.replace('{reason}', language === 'ru' ? (member.retirementReason ?? copy.left) : copy.left).replace('{year}', String(member.retiredSince))
                       : undefined
                   }
-                  className={`size-12 rounded-xl border border-slate-700 bg-slate-800 object-cover transition duration-300 ${
+                  className={`size-12 rounded-xl border border-slate-700 [.at-secondary-skin_&]:border-[rgba(239,232,218,0.22)] bg-slate-800 [.at-secondary-skin_&]:bg-[#34362f] object-cover transition duration-300 ${
                     member.retiredSince
                       ? 'grayscale opacity-65 group-hover:grayscale-0 group-hover:opacity-100'
                       : ''
@@ -162,13 +162,13 @@ export function TeamGrid({ team, avatars, disableMotion, className }: TeamGridPr
                 />
                 <div className="min-w-0">
                   <div className="truncate font-medium">{member.name}</div>
-                  <div className="flex flex-wrap items-center gap-1.5 text-sm text-slate-400">
+                  <div className="flex flex-wrap items-center gap-1.5 text-sm text-slate-400 [.at-secondary-skin_&]:text-[#aaa497]">
                     <span className={member.retiredSince ? 'line-through decoration-slate-500' : undefined}>
                       {localizedRole(member.name, member.role, copy)}
                     </span>
                     {member.retiredSince && (
                       <span
-                        className="rounded-md bg-slate-800/80 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-slate-500"
+                        className="rounded-md bg-slate-800/80 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-slate-500 [.at-secondary-skin_&]:text-[#938e83]"
                         title={copy.retiredTitle.replace('{reason}', language === 'ru' ? (member.retirementReason ?? copy.left) : copy.left).replace('{year}', String(member.retiredSince))}
                       >
                         retired {member.retiredSince}

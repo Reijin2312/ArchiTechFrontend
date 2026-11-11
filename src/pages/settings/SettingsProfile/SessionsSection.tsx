@@ -77,13 +77,13 @@ function badgeClass(status: Status | string) {
     case 'active':
       return 'rounded-md border border-green-800 px-2 py-0.5 text-green-400';
     case 'expired':
-      return 'rounded-md border border-slate-700 px-2 py-0.5 text-slate-400';
+      return 'rounded-md border border-[rgba(239,232,218,0.22)] px-2 py-0.5 text-[#aaa497]';
     case 'replaced':
-      return 'rounded-md border border-amber-800 px-2 py-0.5 text-amber-300';
+      return 'rounded-md border border-amber-800 px-2 py-0.5 text-[#ead3ad]';
     case 'revoked':
       return 'rounded-md border border-red-800 px-2 py-0.5 text-red-300';
     default:
-      return 'rounded-md border border-slate-700 px-2 py-0.5 text-slate-400';
+      return 'rounded-md border border-[rgba(239,232,218,0.22)] px-2 py-0.5 text-[#aaa497]';
   }
 }
 
@@ -106,7 +106,7 @@ export function SessionsSection({
   const copy = profileTranslations[language].settings;
   return (
     <Card className="mt-6">
-      <h2 className="mb-3 text-sm font-semibold text-sky-300">{copy.sessions}</h2>
+      <h2 className="mb-3 text-sm font-semibold text-[#d3b58b]">{copy.sessions}</h2>
 
       {/* фильтры статусов */}
       <div className="mb-3 flex flex-wrap gap-2 text-xs">
@@ -116,7 +116,7 @@ export function SessionsSection({
             type="button"
             onClick={() => setShow({ ...show, [k]: !show[k] })}
             className={`rounded-lg border px-2.5 py-1 ${
-              show[k] ? 'border-sky-700 text-sky-300' : 'border-slate-700 text-slate-400 hover:border-slate-500'
+              show[k] ? 'border-[rgba(197,170,132,0.58)] text-[#d3b58b]' : 'border-[rgba(239,232,218,0.22)] text-[#aaa497] hover:border-slate-500'
             }`}
             title={k}
           >
@@ -126,14 +126,14 @@ export function SessionsSection({
         <button
           type="button"
           onClick={() => setShow({ active: true, expired: true, replaced: true, revoked: true })}
-          className="rounded-lg border border-slate-700 px-2.5 py-1 text-slate-300 hover:border-slate-500"
+          className="rounded-lg border border-[rgba(239,232,218,0.22)] px-2.5 py-1 text-[#c9c3b8] hover:border-slate-500"
         >
           {copy.all}
         </button>
         <button
           type="button"
           onClick={() => setShow({ active: true, expired: false, replaced: false, revoked: false })}
-          className="rounded-lg border border-slate-700 px-2.5 py-1 text-slate-300 hover:border-slate-500"
+          className="rounded-lg border border-[rgba(239,232,218,0.22)] px-2.5 py-1 text-[#c9c3b8] hover:border-slate-500"
         >
           {copy.activeOnly}
         </button>
@@ -145,18 +145,18 @@ export function SessionsSection({
           type="datetime-local"
           value={from}
           onChange={(e) => setFrom(e.target.value)}
-          className="rounded-lg border border-slate-800 bg-slate-900 px-2 py-1"
+          className="rounded-lg border border-[rgba(239,232,218,0.22)] bg-[rgba(33,35,31,0.91)] px-2 py-1"
         />
         <input
           type="datetime-local"
           value={to}
           onChange={(e) => setTo(e.target.value)}
-          className="rounded-lg border border-slate-800 bg-slate-900 px-2 py-1"
+          className="rounded-lg border border-[rgba(239,232,218,0.22)] bg-[rgba(33,35,31,0.91)] px-2 py-1"
         />
         <select
           value={sortBy}
           onChange={(e) => setSortBy(e.target.value as SortKey)}
-          className="rounded-lg border border-slate-800 bg-slate-900 px-2 py-1"
+          className="rounded-lg border border-[rgba(239,232,218,0.22)] bg-[rgba(33,35,31,0.91)] px-2 py-1"
         >
           <option value="created_desc">{copy.newestFirst}</option>
           <option value="created_asc">{copy.newestLast}</option>
@@ -171,7 +171,7 @@ export function SessionsSection({
             setTo('');
             setSortBy('created_desc');
           }}
-          className="rounded-lg border border-slate-700 px-2.5 py-1 hover:border-slate-500"
+          className="rounded-lg border border-[rgba(239,232,218,0.22)] px-2.5 py-1 hover:border-slate-500"
         >
           {copy.resetFilters}
         </button>
@@ -179,7 +179,7 @@ export function SessionsSection({
 
       <div className="space-y-2">
         {visibleSessions.length === 0 ? (
-          <div className="rounded-xl border border-slate-800 bg-slate-900 p-4 text-sm text-slate-400">
+          <div className="rounded-xl border border-[rgba(239,232,218,0.22)] bg-[rgba(33,35,31,0.91)] p-4 text-sm text-[#aaa497]">
             {copy.noSessions}
           </div>
         ) : (
@@ -190,20 +190,20 @@ export function SessionsSection({
             const deviceIcon = getDeviceIcon(s.ua);
             
             return (
-              <div key={s.tokenId} className="rounded-xl border border-slate-800 bg-slate-900 p-4 text-xs hover:border-slate-700 transition-colors">
+              <div key={s.tokenId} className="rounded-xl border border-[rgba(239,232,218,0.22)] bg-[rgba(33,35,31,0.91)] p-4 text-xs hover:border-slate-700 transition-colors">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-2">
                       <span className="text-lg">{deviceIcon}</span>
                       <div className="flex-1 min-w-0">
-                        <div className="font-semibold text-slate-200 flex items-center gap-2">
+                        <div className="font-semibold text-[#c9c3b8] flex items-center gap-2">
                           {deviceName}
                           {browser && (
-                            <span className="text-slate-400 font-normal">· {browser}</span>
+                            <span className="text-[#aaa497] font-normal">· {browser}</span>
                           )}
                         </div>
                         {s.deviceId && (
-                          <div className="text-slate-500 font-mono text-[10px] truncate mt-0.5">
+                          <div className="text-[#938e83] font-mono text-[10px] truncate mt-0.5">
                             ID: {s.deviceId}
                           </div>
                         )}
@@ -211,13 +211,13 @@ export function SessionsSection({
                     </div>
                     
                     {s.ip && (
-                      <div className="flex items-center gap-1.5 text-slate-400 mb-1">
+                      <div className="flex items-center gap-1.5 text-[#aaa497] mb-1">
                         <span>📍</span>
                         <span className="font-mono">{s.ip}</span>
                       </div>
                     )}
                     
-                    <div className="text-slate-500 space-y-0.5 mt-2">
+                    <div className="text-[#938e83] space-y-0.5 mt-2">
                       <div>🕐 {copy.created} {fmt(s.createdAt, language)}</div>
                       <div>⏰ {copy.expires} {fmt(s.expiresAt, language)}</div>
                       {s.revokedAt && <div>🚫 {copy.revoked} {fmt(s.revokedAt, language)}</div>}
@@ -240,11 +240,11 @@ export function SessionsSection({
                 </div>
                 
                 {s.ua && (
-                  <details className="mt-3 pt-3 border-t border-slate-800">
-                    <summary className="cursor-pointer text-slate-500 hover:text-slate-400 text-[10px]">
+                  <details className="mt-3 pt-3 border-t border-[rgba(239,232,218,0.22)]">
+                    <summary className="cursor-pointer text-[#938e83] hover:text-slate-400 text-[10px]">
                       User Agent
                     </summary>
-                    <div className="mt-2 p-2 bg-slate-950 rounded text-[10px] font-mono text-slate-400 break-all">
+                    <div className="mt-2 p-2 bg-[rgba(25,27,24,0.85)] rounded text-[10px] font-mono text-[#aaa497] break-all">
                       {s.ua}
                     </div>
                   </details>
@@ -256,7 +256,7 @@ export function SessionsSection({
         <div className="flex justify-end">
           <button
             onClick={onRefresh}
-            className="rounded-lg border border-slate-700 px-2.5 py-1 text-[11px] hover:border-slate-500"
+            className="rounded-lg border border-[rgba(239,232,218,0.22)] px-2.5 py-1 text-[11px] hover:border-slate-500"
           >
             🔄 {copy.refresh}
           </button>

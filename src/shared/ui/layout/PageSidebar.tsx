@@ -47,20 +47,20 @@ type LeftNavProps = {
 export function LeftNav({ items, blurIntensity = 'md', bgOpacity = '40', disableMotion = false }: LeftNavProps) {
   const { language } = useI18n();
   const blurClass = blurIntensity === 'xl' ? 'backdrop-blur-xl' : 'backdrop-blur-md';
-  const bgClass = bgOpacity === '60' ? 'bg-slate-950/60' : 'bg-slate-950/40';
+  const bgClass = bgOpacity === '60' ? 'bg-[color:var(--ui-deep)]' : 'bg-[color:var(--ui-deep)]';
   
   return (
-    <nav className={`sticky top-20 rounded-2xl border border-slate-800/80 ${bgClass} p-4 ${blurClass} backdrop-saturate-150`}>
+    <nav className={`sticky top-20 rounded-2xl border border-[color:var(--ui-line)] ${bgClass} p-4 ${blurClass} backdrop-saturate-150`}>
       <motion.div
         variants={disableMotion ? undefined : sideNavVariants}
         initial={disableMotion ? false : 'hidden'}
         animate={disableMotion ? false : 'show'}
       >
-        <h2 className="mb-3 text-sky-400 text-sm font-semibold">{language === 'ru' ? 'Разделы' : 'Sections'}</h2>
+        <h2 className="mb-3 text-[color:var(--ui-accent)] text-sm font-semibold">{language === 'ru' ? 'Разделы' : 'Sections'}</h2>
         <ul className="space-y-2 text-sm">
           {items.map((s) => (
             <li key={s.id}>
-              <a href={`#${s.id}`} className="text-slate-300 hover:text-sky-300">
+              <a href={`#${s.id}`} className="text-[color:var(--ui-secondary)] hover:text-[color:var(--ui-nav-hover)]">
                 {s.title}
               </a>
             </li>
@@ -111,27 +111,27 @@ export function RightToc({
   }, [items, disableMotion]);
 
   const blurClass = blurIntensity === 'xl' ? 'backdrop-blur-xl' : 'backdrop-blur-md';
-  const bgClass = bgOpacity === '60' ? 'bg-slate-950/60' : 'bg-slate-950/40';
+  const bgClass = bgOpacity === '60' ? 'bg-[color:var(--ui-deep)]' : 'bg-[color:var(--ui-deep)]';
   
   return (
-    <nav className={`sticky top-20 rounded-2xl border border-slate-800/80 ${bgClass} p-4 ${blurClass} backdrop-saturate-150`}>
+    <nav className={`sticky top-20 rounded-2xl border border-[color:var(--ui-line)] ${bgClass} p-4 ${blurClass} backdrop-saturate-150`}>
       <motion.div
         variants={disableMotion ? undefined : tocVariants}
         initial={disableMotion ? false : 'hidden'}
         animate={disableMotion ? false : 'show'}
       >
-        <div className="mb-2 text-slate-300 text-sm">{language === 'ru' ? 'На этой странице' : 'On this page'}</div>
+        <div className="mb-2 text-[color:var(--ui-secondary)] text-sm">{language === 'ru' ? 'На этой странице' : 'On this page'}</div>
         <ol className="space-y-2 text-sm">
           {items.map((it, i) => {
             const on = active === it.id;
             return (
               <li key={it.id} className="flex items-start gap-2">
-                <span className={`mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-xs ${on ? 'border-sky-500 text-sky-300' : 'border-slate-700 text-slate-400'}`}>
+                <span className={`mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-xs ${on ? 'border-[color:var(--ui-accent)] bg-[color:var(--ui-nav-active-bg)] text-[color:var(--ui-nav-active-text)]' : 'border-[color:var(--ui-nav-inactive-border)] bg-[color:var(--ui-nav-inactive-bg)] text-[color:var(--ui-muted)]'}`}>
                   {i + 1}
                 </span>
                 <a
                   href={`#${it.id}`}
-                  className={`${on ? 'text-sky-300' : 'text-slate-300 hover:text-sky-300'}${linkTransition ? ' transition-colors' : ''}`}
+                  className={`${on ? 'text-[color:var(--ui-accent)]' : 'text-[color:var(--ui-secondary)] hover:text-[color:var(--ui-nav-hover)]'}${linkTransition ? ' transition-colors' : ''}`}
                 >
                   {it.title}
                 </a>
@@ -161,18 +161,18 @@ export function Section({ id, title, n, children, disableMotion = false }: Secti
         whileInView={disableMotion ? undefined : 'show'}
         viewport={disableMotion ? undefined : { once: true, amount: 0.01 }}
       >
-        <h2 className="mb-3 inline-flex items-center gap-2 rounded-full bg-slate-900/60 px-3 py-1.5 text-lg font-semibold">
-          <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-sky-600 text-slate-50 text-sm">{n}</span>
+        <h2 className="mb-3 inline-flex items-center gap-2 rounded-full bg-[color:var(--ui-surface)] px-3 py-1.5 text-lg font-semibold">
+          <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-[color:var(--ui-accent-fill)] text-[color:var(--ui-accent-fill-ink)] text-sm">{n}</span>
           {title}
         </h2>
-        <div className="mb-8 rounded-2xl border border-slate-800 bg-slate-900/60 p-4 backdrop-blur-md backdrop-saturate-150">{children}</div>
+        <div className="mb-8 rounded-2xl border border-[color:var(--ui-line)] bg-[color:var(--ui-surface)] p-4 backdrop-blur-md backdrop-saturate-150">{children}</div>
       </motion.div>
     </section>
   );
 }
 
 export function Kbd({ children }: { children: React.ReactNode }) {
-  return <kbd className="rounded-md border border-slate-700 bg-slate-900 px-1.5 py-0.5 text-xs">{children}</kbd>;
+  return <kbd className="rounded-md border border-[color:var(--ui-line)] bg-[color:var(--ui-surface)] px-1.5 py-0.5 text-xs">{children}</kbd>;
 }
 
 type CalloutProps = {
@@ -182,7 +182,7 @@ type CalloutProps = {
 
 export function Callout({ title, children }: CalloutProps) {
   return (
-    <div className="mb-6 rounded-2xl border border-slate-800 bg-slate-900/60 p-4 backdrop-blur-md backdrop-saturate-150">
+    <div className="mb-6 rounded-2xl border border-[color:var(--ui-line)] bg-[color:var(--ui-surface)] p-4 backdrop-blur-md backdrop-saturate-150">
       <div className="mb-1 text-base font-semibold">{title}</div>
       {children}
     </div>

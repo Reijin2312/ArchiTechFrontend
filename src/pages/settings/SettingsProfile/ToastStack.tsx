@@ -28,7 +28,7 @@ export function ToastStack({ toasts, onClose }: ToastStackProps) {
             } ${
               toast.type === 'error'
                 ? 'border-red-800 bg-red-950/80 text-red-100'
-                : 'border-sky-700 bg-sky-950/80 text-sky-100'
+                : 'border-[rgba(197,170,132,0.58)] bg-sky-950/80 text-[#d8bc91]'
             }`}
           >
             <div className="flex items-start gap-3">
@@ -37,7 +37,7 @@ export function ToastStack({ toasts, onClose }: ToastStackProps) {
                 type="button"
                 aria-label={language === 'ru' ? 'Закрыть уведомление' : 'Close notification'}
                 onClick={() => onClose(toast.id)}
-                className="text-xs text-slate-300 transition-colors hover:text-white"
+                className="text-xs text-[#c9c3b8] transition-colors hover:text-white"
               >
                 ✕
               </button>

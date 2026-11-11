@@ -94,7 +94,7 @@ export function AccountSection({
 
   return (
     <Card className="mt-6">
-      <h2 className="mb-4 text-sm font-semibold text-sky-300">{copy.account}</h2>
+      <h2 className="mb-4 text-sm font-semibold text-[#d3b58b]">{copy.account}</h2>
 
       <InputRow label="Email">
         <div className="flex w-full items-stretch gap-2">
@@ -108,7 +108,7 @@ export function AccountSection({
           <button
             type="button"
             onClick={() => navigate('/settings/email')}
-            className="flex items-center justify-center rounded-xl border border-slate-700 px-3 py-2 text-sm hover:border-slate-500 hover:bg-slate-800"
+            className="flex items-center justify-center rounded-xl border border-[rgba(239,232,218,0.22)] px-3 py-2 text-sm hover:border-slate-500 hover:bg-slate-800"
             title={copy.changeEmail}
           >
             <svg
@@ -140,7 +140,7 @@ export function AccountSection({
             type="button"
             disabled={busy === 'pwd'}
             onClick={handlePasswordReset}
-            className="flex items-center justify-center rounded-xl border border-slate-700 px-3 py-2 text-sm hover:border-slate-500 hover:bg-slate-800 disabled:opacity-50"
+            className="flex items-center justify-center rounded-xl border border-[rgba(239,232,218,0.22)] px-3 py-2 text-sm hover:border-slate-500 hover:bg-slate-800 disabled:opacity-50"
             title={copy.changePassword}
           >
             <svg
@@ -170,7 +170,7 @@ export function AccountSection({
               newUsername.trim().toLowerCase() === currentUsername.toLowerCase()
             }
             onClick={onUsernameChange}
-            className="flex items-center justify-center rounded-xl border border-slate-700 px-3 py-2 text-sm hover:border-slate-500 hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="flex items-center justify-center rounded-xl border border-[rgba(239,232,218,0.22)] px-3 py-2 text-sm hover:border-slate-500 hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             title={copy.changeUsername}
           >
             <svg
@@ -193,18 +193,18 @@ export function AccountSection({
         )}
       </InputRow>
 
-      <div className="mt-6 rounded-xl border border-slate-800 bg-slate-900/50 p-3">
+      <div className="mt-6 rounded-xl border border-[rgba(239,232,218,0.22)] bg-[rgba(33,35,31,0.91)] p-3">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h3 className="text-sm font-semibold text-sky-300">{copy.twoFa}</h3>
-            <p className="mt-1 text-xs text-slate-400">Google Authenticator (TOTP)</p>
+            <h3 className="text-sm font-semibold text-[#d3b58b]">{copy.twoFa}</h3>
+            <p className="mt-1 text-xs text-[#aaa497]">Google Authenticator (TOTP)</p>
           </div>
           {!twoFaLoading && (
             <span
               className={`rounded-full px-2 py-1 text-[11px] font-medium ${
                 isTwoFaEnabled
                   ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                  : 'bg-slate-700/60 text-slate-300 border border-slate-600'
+                  : 'bg-slate-700/60 text-[#c9c3b8] border border-[rgba(239,232,218,0.22)]'
               }`}
             >
               {isTwoFaEnabled ? copy.enabled : copy.disabled}
@@ -213,7 +213,7 @@ export function AccountSection({
         </div>
 
         {twoFaError && <p className="mt-3 text-xs text-red-400">{twoFaError}</p>}
-        {twoFaLoading && <p className="mt-3 text-xs text-slate-400">{copy.twoFaLoading}</p>}
+        {twoFaLoading && <p className="mt-3 text-xs text-[#aaa497]">{copy.twoFaLoading}</p>}
 
         {!twoFaLoading && (
           <div className="mt-3 space-y-3">
@@ -230,12 +230,12 @@ export function AccountSection({
                 <button
                   type="button"
                   onClick={openTwoFaSetupPage}
-                  className="rounded-xl border border-slate-700 px-3 py-2 text-sm hover:border-slate-500 hover:bg-slate-800"
+                  className="rounded-xl border border-[rgba(239,232,218,0.22)] px-3 py-2 text-sm hover:border-slate-500 hover:bg-slate-800"
                 >
                   {copy.twoFaSetup}
                 </button>
                 {twoFaStatus?.pendingSetup && (
-                  <p className="text-xs text-amber-300">
+                  <p className="text-xs text-[#ead3ad]">
                     {copy.twoFaPending}
                   </p>
                 )}

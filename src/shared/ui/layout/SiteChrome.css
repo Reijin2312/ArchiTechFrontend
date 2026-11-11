@@ -168,10 +168,7 @@
   background: rgba(197,170,132,.12);
   color: #dec59f;
 }
-.at-site-drawer [class*="text-[#d5b993]"] { color: #dec59f; }
-.at-site-drawer [class*="border-slate"] { border-color: rgba(240,233,220,.2); }
-.at-site-drawer [class*="bg-slate"] { background-color: #292a24; }
-.at-site-drawer [class*="text-slate"] { color: #c9c2b7; }
+/* Drawer utility colours are declared as scoped Tailwind variants in SiteHeader. */
 
 /* A quiet editorial footer, not a second advertisement. */
 .at-site-footer {

@@ -104,7 +104,7 @@ export default function TwoFactorDisablePage() {
 
           {!loadingStatus && !statusError && step === 'already' && (
             <div className="space-y-4">
-              <div className="rounded-xl border border-slate-700 bg-slate-900/60 px-4 py-3 text-sm text-slate-200">
+              <div className="rounded-xl border border-[rgba(239,232,218,0.22)] bg-[rgba(33,35,31,0.91)] px-4 py-3 text-sm text-[#c9c3b8]">
                 Двухфакторная аутентификация уже отключена.
               </div>
               <div className="flex gap-2">

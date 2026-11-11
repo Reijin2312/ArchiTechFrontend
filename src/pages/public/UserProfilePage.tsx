@@ -169,7 +169,7 @@ export default function UserProfilePage() {
                 <div className="flex items-center gap-2">
                   <Link
                     to={skinsHref}
-                    className="group inline-flex h-8 w-8 items-center justify-center rounded-full border border-sky-500/35 bg-[radial-gradient(circle_at_30%_20%,rgba(56,189,248,.22),rgba(15,23,42,.92))] text-sky-200 shadow-[0_0_0_1px_rgba(56,189,248,.12)_inset,0_10px_22px_-14px_rgba(0,0,0,.9)] transition hover:scale-105 hover:border-sky-300/60 hover:text-sky-100"
+                    className="group inline-flex h-8 w-8 items-center justify-center rounded-full border border-[rgba(197,170,132,0.58)] bg-[radial-gradient(circle_at_50%_-20%,rgba(197,170,132,.12),rgba(23,24,22,.13)_55%)] text-[#d8bc91] shadow-[0_0_0_1px_rgba(56,189,248,.12)_inset,0_10px_22px_-14px_rgba(0,0,0,.9)] transition hover:scale-105 hover:border-[#cfb28c] hover:text-[#f0dcc0]"
                     aria-label={copy.public.openSkins}
                     title={copy.public.skinGallery}
                   >
@@ -183,7 +183,7 @@ export default function UserProfilePage() {
               </div>
               <div className="h-[400px] md:flex-1 md:h-auto">
                 <Skin3DViewer
-                  className="h-full w-full overflow-hidden rounded-xl border border-slate-800 bg-slate-900"
+                  className="h-full w-full overflow-hidden rounded-xl border border-[rgba(239,232,218,0.22)] bg-[rgba(33,35,31,0.91)]"
                   skinUrl={(user as any)?.skinUrl || ''}
                 />
               </div>
@@ -210,7 +210,7 @@ export default function UserProfilePage() {
               <button
                 type="button"
                 onClick={handleShareProfile}
-                className="absolute right-14 top-4 z-10 inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-700 bg-slate-900/70 text-slate-200 hover:border-slate-500 hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-300 backdrop-blur-sm"
+                className="absolute right-14 top-4 z-10 inline-flex h-9 w-9 items-center justify-center rounded-xl border border-[rgba(239,232,218,0.22)] bg-[rgba(33,35,31,0.91)] text-[#c9c3b8] hover:border-slate-500 hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-300 backdrop-blur-sm"
                 aria-label={copy.public.share}
                 title={copy.public.share}
               >
@@ -222,7 +222,7 @@ export default function UserProfilePage() {
               </button>
               <a
                 href="/settings/profile"
-                className="absolute right-4 top-4 z-10 inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-700 bg-slate-900/70 text-slate-200 hover:border-slate-500 hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-300 backdrop-blur-sm"
+                className="absolute right-4 top-4 z-10 inline-flex h-9 w-9 items-center justify-center rounded-xl border border-[rgba(239,232,218,0.22)] bg-[rgba(33,35,31,0.91)] text-[#c9c3b8] hover:border-slate-500 hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-300 backdrop-blur-sm"
                 aria-label={copy.public.edit}
               >
                 <svg
@@ -249,7 +249,7 @@ export default function UserProfilePage() {
 
             <div className="pt-4 text-center">
               {showDisplayName && (
-                <div className="mb-1 text-xl font-semibold text-slate-300 font-techno">
+                <div className="mb-1 text-xl font-semibold text-[#c9c3b8] font-techno">
                   {displayName}
                 </div>
               )}
@@ -260,17 +260,17 @@ export default function UserProfilePage() {
               </div>
 
               {(user as any)?.customStatus && (
-                <div className="mb-2 text-sm text-slate-300 font-arcane">
+                <div className="mb-2 text-sm text-[#c9c3b8] font-arcane">
                   {(user as any).customStatus}
                 </div>
               )}
 
-              <div className="mb-4 text-xs text-slate-400 font-arcane">
+              <div className="mb-4 text-xs text-[#aaa497] font-arcane">
                 {since && <span>{fill(copy.public.since, { date: since })}</span>}
-                {self && <span className="ml-2 rounded-md border border-slate-700 px-2 py-0.5 text-sky-400">{copy.public.self}</span>}
+                {self && <span className="ml-2 rounded-md border border-[rgba(239,232,218,0.22)] px-2 py-0.5 text-[#d8bc91]">{copy.public.self}</span>}
               </div>
 
-              <p className="mx-auto max-w-2xl whitespace-pre-wrap text-sm text-slate-200">
+              <p className="mx-auto max-w-2xl whitespace-pre-wrap text-sm text-[#c9c3b8]">
                 {loading ? '…' : user?.bio || copy.public.emptyBio}
               </p>
 
@@ -286,7 +286,7 @@ export default function UserProfilePage() {
 
               {!self && (
                 <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
-                  <button className="rounded-xl border border-slate-700 px-3 py-1.5 text-sm hover:border-slate-500">
+                  <button className="rounded-xl border border-[rgba(239,232,218,0.22)] px-3 py-1.5 text-sm hover:border-slate-500">
                     {copy.public.message}
                   </button>
                   <button className="rounded-xl border border-red-800 px-3 py-1.5 text-sm text-red-400 hover:bg-red-900/20">
@@ -303,10 +303,10 @@ export default function UserProfilePage() {
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           <Card>
             <div className="mb-3 flex items-center justify-between gap-3">
-              <h3 className="text-sm font-semibold text-sky-300 font-techno">{copy.public.achievements}</h3>
+              <h3 className="text-sm font-semibold text-[#d8bc91] font-techno">{copy.public.achievements}</h3>
               <Link
                 to={achievementsHref}
-                className="group inline-flex h-8 w-8 items-center justify-center rounded-full border border-sky-500/35 bg-[radial-gradient(circle_at_30%_20%,rgba(56,189,248,.22),rgba(15,23,42,.92))] text-sky-200 shadow-[0_0_0_1px_rgba(56,189,248,.12)_inset,0_10px_22px_-14px_rgba(0,0,0,.9)] transition hover:scale-105 hover:border-sky-300/60 hover:text-sky-100"
+                className="group inline-flex h-8 w-8 items-center justify-center rounded-full border border-[rgba(197,170,132,0.58)] bg-[radial-gradient(circle_at_50%_-20%,rgba(197,170,132,.12),rgba(23,24,22,.13)_55%)] text-[#d8bc91] shadow-[0_0_0_1px_rgba(56,189,248,.12)_inset,0_10px_22px_-14px_rgba(0,0,0,.9)] transition hover:scale-105 hover:border-[#cfb28c] hover:text-[#f0dcc0]"
                 aria-label={copy.public.openAchievements}
                 title={copy.public.allAchievements}
               >
@@ -371,7 +371,7 @@ function Card(props: { children: React.ReactNode; className?: string; style?: Re
   
   return (
     <section
-      className={`rounded-2xl border border-slate-800 backdrop-blur-md backdrop-saturate-150 p-4 shadow-[0_1px_0_#ffffff10_inset,0_20px_40px_-20px_#000] ${props.className || ''}`}
+      className={`rounded-2xl border border-[rgba(239,232,218,0.22)] backdrop-blur-md backdrop-saturate-150 p-4 shadow-[0_1px_0_#ffffff10_inset,0_20px_40px_-20px_#000] ${props.className || ''}`}
       style={finalStyle}
     >
       {props.children}
@@ -381,9 +381,9 @@ function Card(props: { children: React.ReactNode; className?: string; style?: Re
 
 function Avatar({ url, loading, online, copy }: { url?: string; loading: boolean; online?: boolean; copy: typeof profileTranslations.ru }) {
   return (
-    <div className="relative h-32 w-32 rounded-3xl border-2 border-sky-700/50 bg-slate-900 shadow-[0_8px_24px_rgba(2,132,199,0.25)]">
+    <div className="relative h-32 w-32 rounded-3xl border-2 border-[rgba(197,170,132,0.58)] bg-[rgba(33,35,31,0.91)] shadow-[0_8px_24px_rgba(2,132,199,0.25)]">
       {loading ? (
-        <div className="h-full w-full animate-pulse rounded-3xl bg-slate-800" />
+        <div className="h-full w-full animate-pulse rounded-3xl bg-[#34362f]" />
       ) : url ? (
         <img
           src={url}
@@ -393,7 +393,7 @@ function Avatar({ url, loading, online, copy }: { url?: string; loading: boolean
           className="h-full w-full rounded-3xl object-cover"
         />
       ) : (
-        <div className="flex h-full w-full items-center justify-center rounded-3xl text-slate-400">AVA</div>
+        <div className="flex h-full w-full items-center justify-center rounded-3xl text-[#aaa497]">AVA</div>
       )}
       {typeof online === 'boolean' && !loading && (
         <span
@@ -412,8 +412,8 @@ function Avatar({ url, loading, online, copy }: { url?: string; loading: boolean
 
 function Empty({ loading, text }: { loading: boolean; text: string }) {
   return loading ? (
-    <div className="h-20 animate-pulse rounded-xl bg-slate-800" />
+    <div className="h-20 animate-pulse rounded-xl bg-[#34362f]" />
   ) : (
-    <div className="rounded-xl border border-slate-800 bg-slate-900 p-6 text-center text-sm text-slate-400">{text}</div>
+    <div className="rounded-xl border border-[rgba(239,232,218,0.22)] bg-[rgba(33,35,31,0.91)] p-6 text-center text-sm text-[#aaa497]">{text}</div>
   );
 }

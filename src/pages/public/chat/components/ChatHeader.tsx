@@ -87,7 +87,7 @@ export function ChatHeader({
   const canToggleGroupInfo = !isMessageSearchOpen && selectedChat?.chatType === 'GROUP';
 
   return (
-    <div className="relative flex h-[66px] items-center justify-between bg-[#1a1b20] px-[18px] shadow-[inset_0_-1px_0_rgba(255,255,255,0.045)]">
+    <div className="relative flex h-[66px] items-center justify-between bg-[#242620] px-[18px] shadow-[inset_0_-1px_0_rgba(255,255,255,0.045)]">
       <div className="flex min-w-0 items-center gap-[12px]">
         {selectedChat ? (
           <Avatar
@@ -97,13 +97,13 @@ export function ChatHeader({
             avatarUrl={selectedChat.avatarUrl}
           />
         ) : (
-          <div className="grid h-[44px] w-[44px] place-items-center rounded-full bg-[#2a2b31] text-xs text-white/50">
+          <div className="grid h-[44px] w-[44px] place-items-center rounded-full bg-[#33352e] text-xs text-white/50">
             ?
           </div>
         )}
 
         {isMessageSearchOpen ? (
-          <div className="flex h-[44px] min-w-[220px] flex-1 items-center gap-2 rounded-full bg-[#111216] px-[14px] text-white/70 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)]">
+          <div className="flex h-[44px] min-w-[220px] flex-1 items-center gap-2 rounded-full bg-[#171816] px-[14px] text-white/70 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)]">
             <SearchIcon size={20} strokeWidth={2.3} />
             <input
               ref={searchInputRef}
@@ -217,7 +217,7 @@ export function ChatHeader({
             </button>
 
             {menuOpen ? (
-              <div className="absolute right-0 top-[calc(100%+10px)] z-20 min-w-[180px] overflow-hidden rounded-xl border border-white/10 bg-[#1e1f26] shadow-2xl">
+              <div className="absolute right-0 top-[calc(100%+10px)] z-20 min-w-[180px] overflow-hidden rounded-xl border border-white/10 bg-[#242620] shadow-2xl">
                 <button
                   type="button"
                   onClick={onNavigateHome}

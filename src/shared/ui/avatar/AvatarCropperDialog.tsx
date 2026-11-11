@@ -71,12 +71,12 @@ export function AvatarCropperDialog({ src, onClose, onCropped }: Props) {
         className="absolute inset-0 bg-black/60"
         onClick={onClose}
       />
-      <div className="relative z-10 w-full max-w-md rounded-2xl border border-slate-800 bg-slate-950 p-4 shadow-xl">
-        <h2 className="mb-3 text-sm font-semibold text-sky-300">
+      <div className="relative z-10 w-full max-w-md rounded-2xl border border-slate-800 [.at-secondary-skin_&]:border-[rgba(239,232,218,0.22)] bg-slate-950 [.at-secondary-skin_&]:bg-[rgba(25,27,24,0.85)] p-4 shadow-xl">
+        <h2 className="mb-3 text-sm font-semibold text-sky-300 [.at-secondary-skin_&]:text-[#d8bc91]">
           {language === 'ru' ? 'Обрезка аватара' : 'Crop avatar'}
         </h2>
 
-        <div className="relative h-72 w-full overflow-hidden rounded-xl bg-slate-900">
+        <div className="relative h-72 w-full overflow-hidden rounded-xl bg-slate-900 [.at-secondary-skin_&]:bg-[rgba(33,35,31,0.91)]">
           <Cropper
             image={src}
             crop={crop}
@@ -106,14 +106,14 @@ export function AvatarCropperDialog({ src, onClose, onCropped }: Props) {
           <button
             type="button"
             onClick={onClose}
-            className="rounded-xl border border-slate-700 px-3 py-1.5 text-sm hover:border-slate-500"
+            className="rounded-xl border border-slate-700 [.at-secondary-skin_&]:border-[rgba(239,232,218,0.22)] px-3 py-1.5 text-sm hover:border-slate-500"
           >
             {language === 'ru' ? 'Отмена' : 'Cancel'}
           </button>
           <button
             type="button"
             onClick={handleConfirm}
-            className="rounded-xl border border-sky-700 px-3 py-1.5 text-sm text-sky-300 hover:border-sky-500"
+            className="rounded-xl border border-sky-700 [.at-secondary-skin_&]:border-[rgba(197,170,132,0.58)] px-3 py-1.5 text-sm text-sky-300 [.at-secondary-skin_&]:text-[#d8bc91] hover:border-sky-500 [.at-secondary-skin_&]:hover:border-[#cfb28c]"
           >
             {language === 'ru' ? 'Обрезать и сохранить' : 'Crop and save'}
           </button>

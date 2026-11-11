@@ -380,15 +380,15 @@ export default function UserSkinsPage() {
       >
         <div className="min-h-dvh">
           <main className="mx-auto flex w-full max-w-[1400px] flex-col gap-6 px-4 py-6">
-            <section className="relative overflow-hidden rounded-2xl border border-slate-800 bg-slate-950/70 p-5 shadow-[0_24px_60px_-30px_rgba(0,0,0,.8)]">
+            <section className="relative overflow-hidden rounded-2xl border border-[rgba(239,232,218,0.22)] bg-[rgba(25,27,24,0.85)] p-5 shadow-[0_24px_60px_-30px_rgba(0,0,0,.8)]">
               <div className="pointer-events-none absolute inset-0">
-                <div className="absolute -left-20 top-0 h-56 w-56 rounded-full bg-sky-500/12 blur-3xl" />
-                <div className="absolute right-0 top-0 h-56 w-56 rounded-full bg-indigo-500/12 blur-3xl" />
+                <div className="absolute -left-20 top-0 h-56 w-56 rounded-full bg-[rgba(197,170,132,0.11)] blur-3xl" />
+                <div className="absolute right-0 top-0 h-56 w-56 rounded-full bg-[rgba(197,170,132,0.11)] blur-3xl" />
               </div>
 
               <div className="relative z-10 mb-6 flex items-start justify-center">
                 <div className="inline-flex items-center justify-center gap-4">
-                  <div className="h-14 w-14 overflow-hidden rounded-2xl border border-slate-700/80 bg-slate-900 shadow-[0_8px_24px_-12px_rgba(14,165,233,.45)]">
+                  <div className="h-14 w-14 overflow-hidden rounded-2xl border border-[rgba(239,232,218,0.22)] bg-[rgba(33,35,31,0.91)] shadow-[0_8px_24px_-12px_rgba(14,165,233,.45)]">
                     {user?.avatarUrl ? (
                       <img
                         src={user.avatarUrl}
@@ -398,29 +398,29 @@ export default function UserSkinsPage() {
                         className="h-full w-full object-cover"
                       />
                     ) : (
-                      <div className="grid h-full w-full place-items-center text-lg font-semibold text-slate-300">
+                      <div className="grid h-full w-full place-items-center text-lg font-semibold text-[#c9c3b8]">
                         {(displayName?.charAt(0) || '?').toUpperCase()}
                       </div>
                     )}
                   </div>
                   <div className="text-center">
-                    <div className="text-xs uppercase tracking-[0.16em] text-slate-400">{copy.skins.heading}</div>
-                    <h1 className="mt-1 text-2xl font-semibold text-slate-100 md:text-3xl">{displayName}</h1>
+                    <div className="text-xs uppercase tracking-[0.16em] text-[#aaa497]">{copy.skins.heading}</div>
+                    <h1 className="mt-1 text-2xl font-semibold text-[#f2efe9] md:text-3xl">{displayName}</h1>
                   </div>
                 </div>
                 <Link
                   to={profileHref}
-                  className="absolute right-0 top-0 inline-flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-900/70 px-3 py-1.5 text-sm text-slate-200 hover:border-slate-500"
+                  className="absolute right-0 top-0 inline-flex items-center gap-2 rounded-xl border border-[rgba(239,232,218,0.22)] bg-[rgba(33,35,31,0.91)] px-3 py-1.5 text-sm text-[#c9c3b8] hover:border-slate-500"
                 >
                   <span aria-hidden="true">←</span> {copy.backToProfile}
                 </Link>
               </div>
 
               {loading ? (
-                <div className="h-[520px] animate-pulse rounded-2xl border border-slate-800 bg-slate-900/50" />
+                <div className="h-[520px] animate-pulse rounded-2xl border border-[rgba(239,232,218,0.22)] bg-[rgba(33,35,31,0.91)]" />
               ) : (
                 <div className="relative z-10">
-                  <div className="relative h-[460px] overflow-hidden rounded-2xl border border-slate-800 bg-[radial-gradient(circle_at_50%_-20%,rgba(56,189,248,.15),rgba(2,6,23,.95)_45%)] sm:h-[520px]">
+                  <div className="relative h-[460px] overflow-hidden rounded-2xl border border-[rgba(239,232,218,0.22)] bg-[radial-gradient(circle_at_50%_-20%,rgba(197,170,132,.12),rgba(23,24,22,.13)_55%)] sm:h-[520px]">
                     {carouselCards.map(({ index, delta, visible, skin: renderedSkin }) => {
                       const dropEnabled = self && busy === null && visible;
                       const isDropTarget = dragOverSlot === index;
@@ -465,13 +465,13 @@ export default function UserSkinsPage() {
                           }}
                           className={`absolute left-1/2 top-1/2 h-[290px] w-[198px] overflow-hidden rounded-2xl border text-left transition-[transform,opacity,border-color,box-shadow] duration-700 ease-[cubic-bezier(.22,1,.36,1)] will-change-transform sm:h-[350px] sm:w-[238px] ${
                             !visible ? 'pointer-events-none' : ''
-                          } ${isDropTarget ? 'border-sky-300 shadow-[0_0_0_1px_rgba(56,189,248,.65),0_20px_52px_-20px_rgba(56,189,248,.75)]' : ''} ${
+                          } ${isDropTarget ? 'border-[rgba(197,170,132,0.58)] shadow-[0_0_0_1px_rgba(56,189,248,.65),0_20px_52px_-20px_rgba(56,189,248,.75)]' : ''} ${
                             self ? 'cursor-pointer' : ''
-                          } ${isActiveSkin ? 'ring-2 ring-emerald-300/90 shadow-[0_0_0_1px_rgba(16,185,129,.55),0_18px_48px_-18px_rgba(16,185,129,.5)]' : ''} ${
+                          } ${isActiveSkin ? 'ring-2 ring-[#c5aa84] shadow-[0_0_0_1px_rgba(16,185,129,.55),0_18px_48px_-18px_rgba(16,185,129,.5)]' : ''} ${
                             !isActiveSkin && delta === 0 && visible
-                              ? 'border-sky-400/80 shadow-[0_18px_48px_-20px_rgba(56,189,248,.55)]'
+                              ? 'border-[rgba(197,170,132,0.58)] shadow-[0_18px_48px_-20px_rgba(56,189,248,.55)]'
                               : !isActiveSkin
-                                ? 'border-slate-700/80 hover:border-slate-500'
+                                ? 'border-[rgba(239,232,218,0.22)] hover:border-slate-500'
                                 : ''
                           }`}
                           style={cardStyle(delta, visible)}
@@ -481,27 +481,27 @@ export default function UserSkinsPage() {
                           {renderedSkin ? (
                             <div className="relative h-full w-full">
                               <Skin3DViewer
-                                className="h-full w-full bg-slate-950"
+                                className="h-full w-full bg-[rgba(25,27,24,0.85)]"
                                 skinUrl={renderedSkin.url}
                                 autoRotate={delta === 0}
                                 animated={delta === 0}
                               />
-                              <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-950 via-slate-950/90 to-transparent px-3 pb-3 pt-6">
-                                <div className="truncate text-xs font-medium text-slate-100">{renderedSkin.name}</div>
-                                <div className="text-[11px] text-slate-400">
+                              <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-950 [.at-secondary-profile_&]:[--tw-gradient-from:rgba(43,42,35,0.75)] via-slate-950/90 to-transparent px-3 pb-3 pt-6">
+                                <div className="truncate text-xs font-medium text-[#f2efe9]">{renderedSkin.name}</div>
+                                <div className="text-[11px] text-[#aaa497]">
                                   {fill(copy.skins.slot, { slot: index + 1 })} · {renderedSkin.model === 'slim' ? 'Slim' : 'Classic'}
                                 </div>
                               </div>
                             </div>
                           ) : (
-                            <div className="flex h-full flex-col items-center justify-center gap-2 bg-slate-950/85 text-center">
-                              <div className="text-3xl text-slate-500">+</div>
-                              <div className="text-xs text-slate-400">{fill(copy.skins.emptySlot, { slot: index + 1 })}</div>
+                            <div className="flex h-full flex-col items-center justify-center gap-2 bg-[rgba(25,27,24,0.85)] text-center">
+                              <div className="text-3xl text-[#938e83]">+</div>
+                              <div className="text-xs text-[#aaa497]">{fill(copy.skins.emptySlot, { slot: index + 1 })}</div>
                             </div>
                           )}
                           {isDropTarget && (
-                            <div className="pointer-events-none absolute inset-0 z-10 grid place-items-center bg-sky-500/10 backdrop-blur-[1px]">
-                              <div className="rounded-lg border border-sky-300/70 bg-slate-950/85 px-3 py-1.5 text-xs text-sky-200">
+                            <div className="pointer-events-none absolute inset-0 z-10 grid place-items-center bg-[rgba(197,170,132,0.11)] backdrop-blur-[1px]">
+                              <div className="rounded-lg border border-sky-300/70 bg-[rgba(25,27,24,0.85)] px-3 py-1.5 text-xs text-[#d8bc91]">
                                 {copy.skins.drop}
                               </div>
                             </div>
@@ -513,7 +513,7 @@ export default function UserSkinsPage() {
                     <button
                       type="button"
                       onClick={moveCarouselLeft}
-                      className="absolute left-3 top-1/2 z-20 -translate-y-1/2 rounded-full border border-slate-700 bg-slate-900/75 p-2.5 text-slate-100 hover:border-slate-500 sm:left-5"
+                      className="absolute left-3 top-1/2 z-20 -translate-y-1/2 rounded-full border border-[rgba(239,232,218,0.22)] bg-[rgba(33,35,31,0.91)] p-2.5 text-[#f2efe9] hover:border-slate-500 sm:left-5"
                       aria-label={copy.skins.previous}
                     >
                       ‹
@@ -521,7 +521,7 @@ export default function UserSkinsPage() {
                     <button
                       type="button"
                       onClick={moveCarouselRight}
-                      className="absolute right-3 top-1/2 z-20 -translate-y-1/2 rounded-full border border-slate-700 bg-slate-900/75 p-2.5 text-slate-100 hover:border-slate-500 sm:right-5"
+                      className="absolute right-3 top-1/2 z-20 -translate-y-1/2 rounded-full border border-[rgba(239,232,218,0.22)] bg-[rgba(33,35,31,0.91)] p-2.5 text-[#f2efe9] hover:border-slate-500 sm:right-5"
                       aria-label={copy.skins.next}
                     >
                       ›
@@ -533,7 +533,7 @@ export default function UserSkinsPage() {
                           type="button"
                           onClick={() => setSelectedSlot(index)}
                           className={`h-2.5 rounded-full transition-all ${
-                            index === selectedSlot ? 'w-8 bg-sky-400' : slots[index] ? 'w-2.5 bg-slate-500' : 'w-2.5 bg-slate-700'
+                            index === selectedSlot ? 'w-8 bg-[#c8ae88] text-[#211f1b]' : slots[index] ? 'w-2.5 bg-slate-500' : 'w-2.5 bg-[#404037]'
                           }`}
                           aria-label={fill(copy.skins.select, { slot: index + 1 })}
                         />
@@ -549,8 +549,8 @@ export default function UserSkinsPage() {
                           onClick={() => setUploadModel('classic')}
                           className={`rounded-lg border px-3 py-1.5 text-xs ${
                             uploadModel === 'classic'
-                              ? 'border-sky-700 bg-sky-900/40 text-sky-200'
-                              : 'border-slate-700 text-slate-300 hover:border-slate-500'
+                              ? 'border-[rgba(197,170,132,0.58)] bg-[rgba(197,170,132,0.14)] text-[#d8bc91]'
+                              : 'border-[rgba(239,232,218,0.22)] text-[#c9c3b8] hover:border-slate-500'
                           }`}
                         >
                           Classic
@@ -560,15 +560,15 @@ export default function UserSkinsPage() {
                           onClick={() => setUploadModel('slim')}
                           className={`rounded-lg border px-3 py-1.5 text-xs ${
                             uploadModel === 'slim'
-                              ? 'border-sky-700 bg-sky-900/40 text-sky-200'
-                              : 'border-slate-700 text-slate-300 hover:border-slate-500'
+                              ? 'border-[rgba(197,170,132,0.58)] bg-[rgba(197,170,132,0.14)] text-[#d8bc91]'
+                              : 'border-[rgba(239,232,218,0.22)] text-[#c9c3b8] hover:border-slate-500'
                           }`}
                         >
                           Slim
                         </button>
                       </div>
 
-                      <div className="mt-3 flex flex-wrap items-center justify-center gap-2 text-sm text-slate-300">
+                      <div className="mt-3 flex flex-wrap items-center justify-center gap-2 text-sm text-[#c9c3b8]">
                         <button
                           type="button"
                           onClick={() => openFileChooser(selectedSlot)}
@@ -583,7 +583,7 @@ export default function UserSkinsPage() {
                               type="button"
                               onClick={onApplySelectedSkin}
                               disabled={busy !== null || selectedSkinLegacy}
-                              className="rounded-lg border border-sky-700 bg-sky-900/30 px-3 py-1.5 text-sky-100 hover:border-sky-500 disabled:cursor-not-allowed disabled:opacity-60"
+                              className="rounded-lg border border-[rgba(197,170,132,0.58)] bg-[rgba(197,170,132,0.14)] px-3 py-1.5 text-[#d8bc91] hover:border-[#cfb28c] disabled:cursor-not-allowed disabled:opacity-60"
                             >
                               {copy.skins.apply}
                             </button>
@@ -602,7 +602,7 @@ export default function UserSkinsPage() {
                               type="button"
                               onClick={onAddCurrentSkinToSlot}
                               disabled={busy !== null}
-                              className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5 text-slate-200 hover:border-slate-500 disabled:opacity-60"
+                              className="rounded-lg border border-[rgba(239,232,218,0.22)] bg-[rgba(33,35,31,0.91)] px-3 py-1.5 text-[#c9c3b8] hover:border-slate-500 disabled:opacity-60"
                             >
                               {copy.skins.save}
                             </button>
@@ -610,12 +610,12 @@ export default function UserSkinsPage() {
                         )}
                       </div>
 
-                      <div className="mt-3 text-center text-xs text-slate-300">
+                      <div className="mt-3 text-center text-xs text-[#c9c3b8]">
                         {copy.skins.hint}
                       </div>
-                      <div className="text-center text-[11px] text-slate-500">{copy.skins.fileHint}</div>
+                      <div className="text-center text-[11px] text-[#938e83]">{copy.skins.fileHint}</div>
                       {legacySlotsCount > 0 && (
-                        <div className="mt-3 rounded-xl border border-amber-700/60 bg-amber-950/30 p-3 text-center text-xs text-amber-200">
+                        <div className="mt-3 rounded-xl border border-amber-700/60 bg-amber-950/30 p-3 text-center text-xs text-[#ead3ad]">
                           {fill(copy.skins.legacyCount, { count: legacySlotsCount })}
                         </div>
                       )}
@@ -632,7 +632,7 @@ export default function UserSkinsPage() {
                       />
                     </>
                   ) : (
-                    <div className="mt-4 text-center text-sm text-slate-500">
+                    <div className="mt-4 text-center text-sm text-[#938e83]">
                       {copy.skins.ownerOnly}
                     </div>
                   )}

@@ -32,7 +32,7 @@ export function ProfileBanner({ bannerUrl, editable = false, onUpload, loading =
       maxSize={5 * 1024 * 1024}
       className={className}
     >
-      <div className="relative h-48 w-full overflow-hidden rounded-2xl border border-slate-800 bg-linear-to-br from-indigo-950/50 via-slate-900/50 to-slate-950/50">
+      <div className="relative h-48 w-full overflow-hidden rounded-2xl border border-slate-800 [.at-secondary-skin_&]:border-[rgba(239,232,218,0.22)] bg-linear-to-br from-indigo-950/50 via-slate-900/50 to-slate-950/50">
         {displayUrl ? (
           <ImageWithLoader
             src={displayUrl}
@@ -42,7 +42,7 @@ export function ProfileBanner({ bannerUrl, editable = false, onUpload, loading =
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center pointer-events-none">
-            <div className="text-center text-slate-500">
+            <div className="text-center text-slate-500 [.at-secondary-skin_&]:text-[#938e83]">
               <div className="mb-2 text-4xl">🖼️</div>
               {editable && <div className="text-sm">Перетащите изображение или кликните для загрузки</div>}
             </div>
@@ -50,7 +50,7 @@ export function ProfileBanner({ bannerUrl, editable = false, onUpload, loading =
         )}
 
         {editable && (
-          <label className="absolute bottom-4 right-4 z-20 cursor-pointer rounded-xl border border-slate-700 bg-slate-950/80 px-3 py-2 text-sm backdrop-blur-sm hover:border-slate-500 transition-colors pointer-events-auto">
+          <label className="absolute bottom-4 right-4 z-20 cursor-pointer rounded-xl border border-slate-700 [.at-secondary-skin_&]:border-[rgba(239,232,218,0.22)] bg-slate-950/80 [.at-secondary-skin_&]:bg-[rgba(25,27,24,0.85)] px-3 py-2 text-sm backdrop-blur-sm hover:border-slate-500 transition-colors pointer-events-auto">
             <input
               type="file"
               accept="image/*"
@@ -66,8 +66,8 @@ export function ProfileBanner({ bannerUrl, editable = false, onUpload, loading =
         )}
 
         {loading && (
-          <div className="absolute inset-0 z-30 flex items-center justify-center bg-slate-950/60 backdrop-blur-sm pointer-events-none">
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-700 border-t-sky-500" />
+          <div className="absolute inset-0 z-30 flex items-center justify-center bg-slate-950/60 [.at-secondary-skin_&]:bg-[rgba(25,27,24,0.85)] backdrop-blur-sm pointer-events-none">
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-700 [.at-secondary-skin_&]:border-[rgba(239,232,218,0.22)] border-t-sky-500" />
           </div>
         )}
       </div>

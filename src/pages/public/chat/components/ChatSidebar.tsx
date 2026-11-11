@@ -595,7 +595,7 @@ export function ChatSidebar({
       </div>
 
       <div className="px-4 pb-2">
-        <div className="flex h-[50px] items-center gap-3 rounded-[16px] bg-[#1f2026] px-4 text-white/65 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]">
+        <div className="flex h-[50px] items-center gap-3 rounded-[16px] bg-[#242620] px-4 text-white/65 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]">
           <SearchIcon size={20} strokeWidth={2.35} />
           <input
             type="text"
@@ -610,7 +610,7 @@ export function ChatSidebar({
   );
 
   const renderGroupMembersScreen = () => (
-    <div className="flex h-full flex-col bg-[#1a1b20]">
+    <div className="flex h-full flex-col bg-[#242620]">
       {renderCreationHeader('Add Members', closeCreationFlow, memberQuery, setMemberQuery, 'Add people...')}
 
       <div className="tg-scroll flex-1 overflow-y-auto pb-[86px] pt-1">
@@ -642,7 +642,7 @@ export function ChatSidebar({
   );
 
   const renderGroupDetailsScreen = () => (
-    <div className="flex h-full flex-col bg-[#1a1b20]">
+    <div className="flex h-full flex-col bg-[#242620]">
       <div className="flex h-[78px] items-center gap-3 px-4">
         <button
           type="button"
@@ -681,7 +681,7 @@ export function ChatSidebar({
           )}
         </button>
 
-        <div className="mt-8 rounded-[18px] border border-white/10 bg-[#1c1d23] px-4 py-2.5 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.03)]">
+        <div className="mt-8 rounded-[18px] border border-white/10 bg-[#242620] px-4 py-2.5 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.03)]">
           <input
             value={groupTitle}
             onChange={(event) => setGroupTitle(event.target.value)}
@@ -713,7 +713,7 @@ export function ChatSidebar({
   );
 
   const renderPrivateChatScreen = () => (
-    <div className="flex h-full flex-col bg-[#1a1b20]">
+    <div className="flex h-full flex-col bg-[#242620]">
       {renderCreationHeader('New Private Chat', closeCreationFlow, privateQuery, setPrivateQuery, 'Search people...')}
 
       <div className="tg-scroll flex-1 overflow-y-auto pb-[30px] pt-1">
@@ -745,7 +745,7 @@ export function ChatSidebar({
 
   if (creationMode === 'groupMembers') {
     return (
-      <aside className="tg-sidebar hidden h-full flex-col bg-[#1a1b20] lg:flex" style={{ width }}>
+      <aside className="tg-sidebar hidden h-full flex-col bg-[#242620] lg:flex" style={{ width }}>
         {renderGroupMembersScreen()}
       </aside>
     );
@@ -753,7 +753,7 @@ export function ChatSidebar({
 
   if (creationMode === 'groupDetails') {
     return (
-      <aside className="tg-sidebar hidden h-full flex-col bg-[#1a1b20] lg:flex" style={{ width }}>
+      <aside className="tg-sidebar hidden h-full flex-col bg-[#242620] lg:flex" style={{ width }}>
         {renderGroupDetailsScreen()}
       </aside>
     );
@@ -761,7 +761,7 @@ export function ChatSidebar({
 
   if (creationMode === 'privateChat') {
     return (
-      <aside className="tg-sidebar hidden h-full flex-col bg-[#1a1b20] lg:flex" style={{ width }}>
+      <aside className="tg-sidebar hidden h-full flex-col bg-[#242620] lg:flex" style={{ width }}>
         {renderPrivateChatScreen()}
       </aside>
     );
@@ -769,7 +769,7 @@ export function ChatSidebar({
 
   return (
     <aside
-      className="tg-sidebar hidden h-full flex-col bg-[#1a1b20] lg:flex"
+      className="tg-sidebar hidden h-full flex-col bg-[#242620] lg:flex"
       style={{ width }}
     >
       <div className="flex h-[66px] items-center gap-[14px] px-[16px] pt-[4px]">
@@ -778,7 +778,7 @@ export function ChatSidebar({
         </button>
 
         {!isSearchHidden ? (
-          <div className="flex h-[42px] flex-1 items-center gap-[10px] rounded-full bg-[#111216] px-[18px] text-white/45 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)]">
+          <div className="flex h-[42px] flex-1 items-center gap-[10px] rounded-full bg-[#171816] px-[18px] text-white/45 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)]">
             <SearchIcon size={20} strokeWidth={2.4} />
             <div className="relative min-w-0 flex-1">
               <input
@@ -821,7 +821,7 @@ export function ChatSidebar({
 
       {isSearchHidden && isCompactSearchOpen ? (
         <div className="px-[12px] pb-[8px]">
-          <div className="flex h-[38px] items-center gap-2 rounded-full bg-[#111216] px-[12px] text-white/55 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)]">
+          <div className="flex h-[38px] items-center gap-2 rounded-full bg-[#171816] px-[12px] text-white/55 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)]">
             <SearchIcon size={17} strokeWidth={2.4} />
             <div className="relative min-w-0 flex-1">
               <input

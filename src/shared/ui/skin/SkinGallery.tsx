@@ -43,7 +43,7 @@ export function SkinGallery({
   return (
     <div className={className}>
       <div className="mb-3 flex items-center justify-between">
-        <div className="text-sm font-semibold text-slate-300">
+        <div className="text-sm font-semibold text-slate-300 [.at-secondary-skin_&]:text-[#c9c3b8]">
           Сохранённые скины ({skins.length}/{maxSkins})
         </div>
         {currentSkinUrl && skins.length < maxSkins && (
@@ -53,7 +53,7 @@ export function SkinGallery({
               const name = prompt('Название скина:')
               if (name) onSave(name.trim(), currentSkinUrl, 'classic')
             }}
-            className="rounded-lg border border-sky-700 px-2.5 py-1 text-xs text-sky-300 hover:bg-sky-900/20"
+            className="rounded-lg border border-sky-700 [.at-secondary-skin_&]:border-[rgba(197,170,132,0.58)] px-2.5 py-1 text-xs text-sky-300 [.at-secondary-skin_&]:text-[#d8bc91] hover:bg-sky-900/20 [.at-secondary-skin_&]:hover:bg-[#e6d6bd]"
           >
             💾 Сохранить текущий
           </button>
@@ -61,7 +61,7 @@ export function SkinGallery({
       </div>
 
       {skins.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-slate-700 p-6 text-center text-sm text-slate-500">
+        <div className="rounded-xl border border-dashed border-slate-700 [.at-secondary-skin_&]:border-[rgba(239,232,218,0.22)] p-6 text-center text-sm text-slate-500 [.at-secondary-skin_&]:text-[#938e83]">
           <div className="mb-2 text-2xl">👕</div>
           У вас пока нет сохранённых скинов
         </div>
@@ -79,8 +79,8 @@ export function SkinGallery({
                   exit={{ opacity: 0, scale: 0.8 }}
                   className={`group relative overflow-hidden rounded-xl border transition-all ${
                     isCurrent
-                      ? 'border-sky-500 ring-2 ring-sky-500/40'
-                      : 'border-slate-700 hover:border-slate-500'
+                      ? 'border-sky-500 [.at-secondary-skin_&]:border-[rgba(197,170,132,0.58)] ring-2 ring-sky-500/40'
+                      : 'border-slate-700 [.at-secondary-skin_&]:border-[rgba(239,232,218,0.22)] hover:border-slate-500'
                   }`}
                 >
                   <button
@@ -88,7 +88,7 @@ export function SkinGallery({
                     onClick={() => onSelect(skin)}
                     className="w-full"
                   >
-                    <div className="aspect-square w-full bg-slate-900">
+                    <div className="aspect-square w-full bg-slate-900 [.at-secondary-skin_&]:bg-[rgba(33,35,31,0.91)]">
                       <img
                         src={skin.url}
                         alt={skin.name}
@@ -97,11 +97,11 @@ export function SkinGallery({
                         decoding="async"
                       />
                     </div>
-                    <div className="bg-slate-900/80 px-2 py-1.5 backdrop-blur-sm">
-                      <div className="truncate text-xs font-medium text-slate-200">
+                    <div className="bg-slate-900/80 [.at-secondary-skin_&]:bg-[rgba(33,35,31,0.91)] px-2 py-1.5 backdrop-blur-sm">
+                      <div className="truncate text-xs font-medium text-slate-200 [.at-secondary-skin_&]:text-[#c9c3b8]">
                         {skin.name}
                       </div>
-                      <div className="text-[10px] text-slate-500">
+                      <div className="text-[10px] text-slate-500 [.at-secondary-skin_&]:text-[#938e83]">
                         {skin.model === 'slim' ? 'Slim' : 'Classic'}
                       </div>
                     </div>
@@ -113,7 +113,7 @@ export function SkinGallery({
                     className={`absolute right-2 top-2 rounded-lg border px-2 py-1 text-xs transition-all ${
                       deleteConfirm === skin.id
                         ? 'border-red-700 bg-red-900/80 text-red-200'
-                        : 'border-slate-700 bg-slate-900/80 text-slate-300 opacity-0 group-hover:opacity-100'
+                        : 'border-slate-700 [.at-secondary-skin_&]:border-[rgba(239,232,218,0.22)] bg-slate-900/80 [.at-secondary-skin_&]:bg-[rgba(33,35,31,0.91)] text-slate-300 [.at-secondary-skin_&]:text-[#c9c3b8] opacity-0 group-hover:opacity-100'
                     }`}
                     title={deleteConfirm === skin.id ? 'Нажмите ещё раз для удаления' : 'Удалить'}
                   >
@@ -121,7 +121,7 @@ export function SkinGallery({
                   </button>
 
                   {isCurrent && (
-                    <div className="absolute left-2 top-2 rounded-full bg-sky-500 px-2 py-0.5 text-[10px] font-medium text-white">
+                    <div className="absolute left-2 top-2 rounded-full bg-sky-500 [.at-secondary-skin_&]:bg-[#c8ae88] [.at-secondary-skin_&]:text-[#211f1b] px-2 py-0.5 text-[10px] font-medium text-white">
                       ✓ Текущий
                     </div>
                   )}

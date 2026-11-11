@@ -85,30 +85,30 @@ export function DangerZoneSection({ onLogout }: DangerZoneSectionProps) {
       {delOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/60" onClick={() => setDelOpen(false)} />
-          <div className="relative z-10 w-[520px] max-w-[95vw] rounded-2xl border border-slate-800 bg-slate-950 p-5 shadow-xl">
+          <div className="relative z-10 w-[520px] max-w-[95vw] rounded-2xl border border-[rgba(239,232,218,0.22)] bg-[rgba(25,27,24,0.85)] p-5 shadow-xl">
             <h3 className="mb-2 text-base font-semibold text-red-300">{copy.deleteAccount}</h3>
-            <p className="mb-4 text-sm text-slate-300">
+            <p className="mb-4 text-sm text-[#c9c3b8]">
               {copy.deleteConfirm}
             </p>
 
             <div className="mb-3">
-              <label className="mb-1 block text-xs text-slate-400">{copy.confirmation}</label>
+              <label className="mb-1 block text-xs text-[#aaa497]">{copy.confirmation}</label>
               <input
                 value={delConfirm}
                 onChange={(e) => setDelConfirm(e.target.value)}
                 placeholder="DELETE"
-                className="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm outline-none focus:border-slate-500"
+                className="w-full rounded-xl border border-[rgba(239,232,218,0.22)] bg-[rgba(33,35,31,0.91)] px-3 py-2 text-sm outline-none focus:border-slate-500"
               />
             </div>
 
             <div className="mb-3">
-              <label className="mb-1 block text-xs text-slate-400">{copy.password}</label>
+              <label className="mb-1 block text-xs text-[#aaa497]">{copy.password}</label>
               <input
                 type="password"
                 value={delPwd}
                 onChange={(e) => setDelPwd(e.target.value)}
                 placeholder="••••••••"
-                className="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm outline-none focus:border-slate-500"
+                className="w-full rounded-xl border border-[rgba(239,232,218,0.22)] bg-[rgba(33,35,31,0.91)] px-3 py-2 text-sm outline-none focus:border-slate-500"
               />
             </div>
 
@@ -119,7 +119,7 @@ export function DangerZoneSection({ onLogout }: DangerZoneSectionProps) {
             <div className="flex justify-end gap-2">
               <button
                 onClick={() => setDelOpen(false)}
-                className="rounded-xl border border-slate-700 px-3 py-2 text-sm hover:border-slate-500"
+                className="rounded-xl border border-[rgba(239,232,218,0.22)] px-3 py-2 text-sm hover:border-slate-500"
               >
                 {copy.cancel}
               </button>

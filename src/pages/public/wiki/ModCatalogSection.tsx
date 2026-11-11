@@ -95,11 +95,11 @@ export function ModCatalogSection({ disableMotion }: { disableMotion?: boolean }
         type="button"
         onClick={() => setExpanded((value) => !value)}
         aria-expanded={expanded}
-        className="flex w-full items-center justify-between gap-4 rounded-xl border border-slate-700 bg-slate-900/70 px-4 py-3 text-left transition hover:border-sky-500/50 hover:bg-slate-900"
+        className="flex w-full items-center justify-between gap-4 rounded-xl border border-[rgba(238,232,220,0.19)] bg-[#252620] px-4 py-3 text-left transition hover:border-[#c5aa84] hover:bg-[#292a25]"
       >
         <span>
-          <span className="block text-sm font-semibold text-slate-100">{expanded ? t('mods.hide') : t('mods.show')}</span>
-          {!expanded && <span className="mt-0.5 block text-xs text-slate-400">{t('mods.collapsedHint')}</span>}
+          <span className="block text-sm font-semibold text-[#f2efe9]">{expanded ? t('mods.hide') : t('mods.show')}</span>
+          {!expanded && <span className="mt-0.5 block text-xs text-[#aaa598]">{t('mods.collapsedHint')}</span>}
         </span>
         <ChevronIcon expanded={expanded} />
       </button>
@@ -107,7 +107,7 @@ export function ModCatalogSection({ disableMotion }: { disableMotion?: boolean }
       {expanded && <div className="mt-4">
       <div className="mb-4 space-y-3">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm text-slate-300">
+          <p className="text-sm text-[#c9c4b9]">
             {catalog?.ready ? modCountLabel(catalog.total, language, t) : t('mods.loading')}
           </p>
           <label className="relative block w-full sm:w-64">
@@ -116,7 +116,7 @@ export function ModCatalogSection({ disableMotion }: { disableMotion?: boolean }
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder={t('mods.search')}
-              className="w-full rounded-xl border border-slate-700 bg-slate-950/80 py-2 pl-9 pr-3 text-sm outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-500/15"
+              className="w-full rounded-xl border border-[rgba(238,232,220,0.19)] bg-[#171816] py-2 pl-9 pr-3 text-sm outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-500/15"
             />
           </label>
         </div>
@@ -131,7 +131,7 @@ export function ModCatalogSection({ disableMotion }: { disableMotion?: boolean }
                   type="button"
                   onClick={() => toggleTag(tag)}
                   aria-pressed={active}
-                  className={`shrink-0 rounded-full border px-3 py-1 text-xs transition ${active ? 'border-sky-400 bg-sky-500/20 text-sky-200' : 'border-slate-700 bg-slate-900/70 text-slate-300 hover:border-slate-500'}`}
+                  className={`shrink-0 rounded-full border px-3 py-1 text-xs transition ${active ? 'border-[rgba(197,170,132,0.55)] bg-[#a88c66] text-[#c5aa84]' : 'border-[rgba(238,232,220,0.19)] bg-[#252620] text-[#c9c4b9] hover:border-slate-500'}`}
                 >
                   {displayTag(tag, language)}
                 </button>
@@ -142,7 +142,7 @@ export function ModCatalogSection({ disableMotion }: { disableMotion?: boolean }
       </div>
 
       {error && (
-        <div className="rounded-xl border border-amber-400/30 bg-amber-500/10 p-4 text-sm text-amber-100">
+        <div className="rounded-xl border border-[rgba(197,170,132,0.45)] bg-[rgba(197,170,132,0.11)] p-4 text-sm text-[#e4c59b]">
           {t('mods.error')}
         </div>
       )}
@@ -155,7 +155,7 @@ export function ModCatalogSection({ disableMotion }: { disableMotion?: boolean }
             {filtered.slice(0, visibleCount).map((mod) => <ModCard key={mod.id} mod={mod} />)}
           </div>
           {filtered.length === 0 && (
-            <div className="rounded-xl border border-slate-800 bg-slate-900/60 px-4 py-8 text-center text-sm text-slate-400">
+            <div className="rounded-xl border border-[rgba(238,232,220,0.19)] bg-[#252620] px-4 py-8 text-center text-sm text-[#aaa598]">
               {t('mods.empty')}
             </div>
           )}
@@ -164,7 +164,7 @@ export function ModCatalogSection({ disableMotion }: { disableMotion?: boolean }
             <button
               type="button"
               onClick={() => setVisibleCount((count) => Math.min(count + PAGE_SIZE, filtered.length))}
-              className="mt-3 w-full rounded-xl border border-slate-700 bg-slate-900/70 py-2 text-sm text-slate-300 hover:border-sky-500/60 hover:text-sky-200"
+              className="mt-3 w-full rounded-xl border border-[rgba(238,232,220,0.19)] bg-[#252620] py-2 text-sm text-[#c9c4b9] hover:border-[#c5aa84] hover:text-[#f1dbc0]"
             >
               {t('mods.more')}
             </button>
@@ -181,7 +181,7 @@ function ModCard({ mod }: { mod: ModCatalogItem }) {
   const environment = mod.client && mod.server ? t('mods.clientServer') : mod.client ? t('mods.client') : t('mods.server');
   const content = (
     <>
-      <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl border border-sky-400/15 bg-slate-950/80 shadow-inner">
+      <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl border border-[rgba(197,170,132,0.55)] bg-[#171816] shadow-none">
         <FallbackModIcon />
         {mod.iconUrl ? (
           <img src={mod.iconUrl} alt="" width={56} height={56} loading="lazy" decoding="async" onError={(event) => { event.currentTarget.style.display = 'none'; }} className="absolute inset-0 h-full w-full object-cover" />
@@ -189,10 +189,10 @@ function ModCard({ mod }: { mod: ModCatalogItem }) {
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex min-w-0 flex-wrap items-baseline gap-x-2">
-          <h3 className="min-w-0 truncate font-semibold text-slate-100 group-hover:text-sky-200">{mod.title}</h3>
-          <span className="truncate text-xs text-slate-500">{t('mods.by', { author: mod.author })}</span>
+          <h3 className="min-w-0 truncate font-semibold text-[#f2efe9] group-hover:text-sky-200">{mod.title}</h3>
+          <span className="truncate text-xs text-[#959083]">{t('mods.by', { author: mod.author })}</span>
         </div>
-        <p className="mt-1 line-clamp-2 text-sm leading-5 text-slate-300">{mod.description}</p>
+        <p className="mt-1 line-clamp-2 text-sm leading-5 text-[#c9c4b9]">{mod.description}</p>
         <div className="mt-2 flex flex-wrap gap-1.5">
           <Tag>{environment}</Tag>
           {mod.version && <Tag>v{mod.version}</Tag>}
@@ -200,14 +200,14 @@ function ModCard({ mod }: { mod: ModCatalogItem }) {
           {mod.tags.length > 3 && <Tag>+{mod.tags.length - 3}</Tag>}
         </div>
       </div>
-      <div className="flex w-full shrink-0 justify-end gap-4 border-t border-slate-800/80 pt-2 text-xs text-slate-400 sm:w-[6.75rem] sm:flex-col sm:items-end sm:gap-2 sm:border-0 sm:pt-0">
+      <div className="flex w-full shrink-0 justify-end gap-4 border-t border-[rgba(238,232,220,0.19)] pt-2 text-xs text-[#aaa598] sm:w-[6.75rem] sm:flex-col sm:items-end sm:gap-2 sm:border-0 sm:pt-0">
         <Stat icon="download" value={compact(mod.downloads, language)} label={t('mods.downloads')} />
         <Stat icon="heart" value={compact(mod.followers, language)} label={t('mods.followers')} />
       </div>
     </>
   );
 
-  const className = 'group flex flex-wrap items-start gap-3 rounded-2xl border border-slate-800 bg-slate-900/65 p-3 shadow-[0_12px_35px_-25px_rgba(56,189,248,.65)] transition hover:border-sky-500/35 hover:bg-slate-900/85 sm:flex-nowrap';
+  const className = 'group flex flex-wrap items-start gap-3 rounded-2xl border border-[rgba(238,232,220,0.19)] bg-[#252620] p-3 shadow-none transition hover:border-[#c5aa84] hover:bg-[#292a25] sm:flex-nowrap';
   const style = { contentVisibility: 'auto', containIntrinsicSize: '112px' } as React.CSSProperties;
   return mod.projectUrl ? (
     <a className={className} style={style} href={mod.projectUrl} target="_blank" rel="noreferrer" aria-label={t('mods.modrinthAria', { title: mod.title })}>
@@ -217,7 +217,7 @@ function ModCard({ mod }: { mod: ModCatalogItem }) {
 }
 
 function Tag({ children }: { children: React.ReactNode }) {
-  return <span className="rounded-full border border-slate-700/80 bg-slate-950/60 px-2 py-0.5 text-[11px] text-slate-400">{children}</span>;
+  return <span className="rounded-full border border-[rgba(238,232,220,0.19)] bg-[#171816] px-2 py-0.5 text-[11px] text-[#aaa598]">{children}</span>;
 }
 
 function Stat({ icon, value, label }: { icon: 'download' | 'heart'; value: string; label: string }) {
@@ -234,9 +234,9 @@ function ModCardsSkeleton() {
   return (
     <div className="space-y-2.5" aria-label={t('mods.loadingAria')}>
       {[0, 1, 2].map((value) => (
-        <div key={value} className="flex animate-pulse gap-3 rounded-2xl border border-slate-800 bg-slate-900/60 p-3">
-          <div className="h-14 w-14 rounded-xl bg-slate-800" />
-          <div className="flex-1 space-y-2"><div className="h-4 w-1/2 rounded bg-slate-800" /><div className="h-3 w-full rounded bg-slate-800" /><div className="h-3 w-2/3 rounded bg-slate-800" /></div>
+        <div key={value} className="flex animate-pulse gap-3 rounded-2xl border border-[rgba(238,232,220,0.19)] bg-[#252620] p-3">
+          <div className="h-14 w-14 rounded-xl bg-[#34352f]" />
+          <div className="flex-1 space-y-2"><div className="h-4 w-1/2 rounded bg-[#34352f]" /><div className="h-3 w-full rounded bg-[#34352f]" /><div className="h-3 w-2/3 rounded bg-[#34352f]" /></div>
         </div>
       ))}
     </div>
@@ -259,21 +259,21 @@ function modCountLabel(count: number, language: 'ru' | 'en', t: (key: Translatio
 }
 
 function ChevronIcon({ expanded }: { expanded: boolean }) {
-  return <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={`h-5 w-5 shrink-0 text-sky-400 transition-transform ${expanded ? 'rotate-180' : ''}`}><path d="m6 9 6 6 6-6" /></svg>;
+  return <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={`h-5 w-5 shrink-0 text-[#c5aa84] transition-transform ${expanded ? 'rotate-180' : ''}`}><path d="m6 9 6 6 6-6" /></svg>;
 }
 
 function SearchIcon() {
-  return <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500"><circle cx="11" cy="11" r="6.5" /><path d="m16 16 4 4" /></svg>;
+  return <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#959083]"><circle cx="11" cy="11" r="6.5" /><path d="m16 16 4 4" /></svg>;
 }
 
 function DownloadIcon() {
-  return <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4 text-sky-400"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 20h14" /></svg>;
+  return <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4 text-[#c5aa84]"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 20h14" /></svg>;
 }
 
 function HeartIcon() {
-  return <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4 text-rose-400"><path d="M20.8 5.8a5.5 5.5 0 0 0-7.8 0L12 6.9l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 22l8.8-8.4a5.5 5.5 0 0 0 0-7.8Z" /></svg>;
+  return <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4 text-[#c49f8c]"><path d="M20.8 5.8a5.5 5.5 0 0 0-7.8 0L12 6.9l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 22l8.8-8.4a5.5 5.5 0 0 0 0-7.8Z" /></svg>;
 }
 
 function FallbackModIcon() {
-  return <svg aria-hidden="true" viewBox="0 0 56 56" fill="none" className="h-full w-full p-3 text-sky-400"><path d="m28 8 17 9.5v20L28 48l-17-10.5v-20L28 8Z" stroke="currentColor" strokeWidth="2"/><path d="m11 17.5 17 10 17-10M28 27.5V48" stroke="currentColor" strokeWidth="2"/></svg>;
+  return <svg aria-hidden="true" viewBox="0 0 56 56" fill="none" className="h-full w-full p-3 text-[#c5aa84]"><path d="m28 8 17 9.5v20L28 48l-17-10.5v-20L28 8Z" stroke="currentColor" strokeWidth="2"/><path d="m11 17.5 17 10 17-10M28 27.5V48" stroke="currentColor" strokeWidth="2"/></svg>;
 }

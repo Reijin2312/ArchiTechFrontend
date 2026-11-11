@@ -20,9 +20,9 @@ export function Skin3DPreview({ skinUrl, className = '', autoRotate = false, com
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="absolute inset-0 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm rounded-xl z-10"
+            className="absolute inset-0 flex items-center justify-center bg-slate-900/60 [.at-secondary-skin_&]:bg-[rgba(33,35,31,0.91)] backdrop-blur-sm rounded-xl z-10"
           >
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-700 border-t-sky-500" />
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-700 [.at-secondary-skin_&]:border-[rgba(239,232,218,0.22)] border-t-sky-500" />
           </motion.div>
         )}
       </AnimatePresence>

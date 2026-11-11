@@ -30,18 +30,18 @@ export function SearchUsers({
             value={query}
             onChange={(event) => onQueryChange(event.target.value)}
             placeholder="Search by nickname..."
-            className="w-full rounded-lg border border-slate-800 bg-slate-900/60 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full rounded-lg border border-slate-800 [.at-secondary-skin_&]:border-[rgba(239,232,218,0.22)] bg-slate-900/60 [.at-secondary-skin_&]:bg-[rgba(33,35,31,0.91)] px-3 py-2 text-sm text-slate-100 [.at-secondary-skin_&]:text-[#f2efe9] placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             autoFocus
           />
         </div>
       ) : null}
 
       {loading ? (
-        <div className="py-6 text-center text-sm text-slate-400">Searching...</div>
+        <div className="py-6 text-center text-sm text-slate-400 [.at-secondary-skin_&]:text-[#aaa497]">Searching...</div>
       ) : null}
 
       {!loading && query.length >= 2 && results.length === 0 ? (
-        <div className="py-6 text-center text-sm text-slate-400">No users found</div>
+        <div className="py-6 text-center text-sm text-slate-400 [.at-secondary-skin_&]:text-[#aaa497]">No users found</div>
       ) : null}
 
       {!loading && results.length > 0 ? (
@@ -51,7 +51,7 @@ export function SearchUsers({
               key={user.userId}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="flex items-center gap-2 rounded-lg border border-slate-800 bg-slate-900/40 p-2"
+              className="flex items-center gap-2 rounded-lg border border-slate-800 [.at-secondary-skin_&]:border-[rgba(239,232,218,0.22)] bg-slate-900/40 [.at-secondary-skin_&]:bg-[rgba(33,35,31,0.91)] p-2"
             >
               <Link to={`/u/${user.username}`} className="flex min-w-0 flex-1 items-center gap-2">
                 {user.avatarUrl ? (
@@ -62,17 +62,17 @@ export function SearchUsers({
                         : `/media/${user.avatarUrl}`
                     }
                     alt={user.username}
-                    className="h-10 w-10 rounded-lg border border-slate-700 object-cover"
+                    className="h-10 w-10 rounded-lg border border-slate-700 [.at-secondary-skin_&]:border-[rgba(239,232,218,0.22)] object-cover"
                   />
                 ) : (
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-slate-700 bg-slate-800 text-sm text-slate-400">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-slate-700 [.at-secondary-skin_&]:border-[rgba(239,232,218,0.22)] bg-slate-800 [.at-secondary-skin_&]:bg-[#34362f] text-sm text-slate-400 [.at-secondary-skin_&]:text-[#aaa497]">
                     {user.username[0]?.toUpperCase()}
                   </div>
                 )}
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-sm font-medium">{user.username}</div>
                   {user.displayName ? (
-                    <div className="truncate text-xs text-slate-400">{user.displayName}</div>
+                    <div className="truncate text-xs text-slate-400 [.at-secondary-skin_&]:text-[#aaa497]">{user.displayName}</div>
                   ) : null}
                 </div>
               </Link>
@@ -86,7 +86,7 @@ export function SearchUsers({
                 <button
                   type="button"
                   onClick={() => onCancelRequest(user.userId)}
-                  className="rounded border border-amber-700/50 bg-amber-500/10 px-2 py-1 text-xs text-amber-300 hover:bg-amber-500/20"
+                  className="rounded border border-amber-700/50 bg-amber-500/10 [.at-secondary-skin_&]:bg-[rgba(197,170,132,0.11)] px-2 py-1 text-xs text-amber-300 [.at-secondary-skin_&]:text-[#ead3ad] hover:bg-amber-500/20"
                 >
                   Cancel
                 </button>
@@ -100,7 +100,7 @@ export function SearchUsers({
                 <button
                   type="button"
                   onClick={() => onSendRequest(user.userId)}
-                  className="rounded bg-indigo-600 px-2 py-1 text-xs hover:bg-indigo-500"
+                  className="rounded bg-indigo-600 [.at-secondary-skin_&]:bg-[#c8ae88] [.at-secondary-skin_&]:text-[#211f1b] px-2 py-1 text-xs hover:bg-indigo-500 [.at-secondary-skin_&]:hover:bg-[#e6d6bd]"
                 >
                   Add
                 </button>

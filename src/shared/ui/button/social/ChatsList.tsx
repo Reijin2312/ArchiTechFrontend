@@ -42,8 +42,8 @@ export function ChatsList({
   if (chats.length === 0) {
     return (
       <div className="py-8 text-center">
-        <p className="text-sm text-slate-400">No chats yet</p>
-        <p className="mt-1 text-xs text-slate-500">Open a chat with a friend to start</p>
+        <p className="text-sm text-slate-400 [.at-secondary-skin_&]:text-[#aaa497]">No chats yet</p>
+        <p className="mt-1 text-xs text-slate-500 [.at-secondary-skin_&]:text-[#938e83]">Open a chat with a friend to start</p>
       </div>
     );
   }
@@ -169,18 +169,18 @@ export function ChatsList({
             className={[
               'group flex w-full items-center gap-3 rounded-xl border px-3 py-2 text-left transition-all',
               isSelected
-                ? 'border-sky-500/50 bg-sky-500/20'
-                : 'border-slate-800 bg-slate-900/40 hover:border-slate-700 hover:bg-slate-900/70',
+                ? 'border-sky-500/50 bg-sky-500/20 [.at-secondary-skin_&]:bg-[rgba(197,170,132,0.11)]'
+                : 'border-slate-800 [.at-secondary-skin_&]:border-[rgba(239,232,218,0.22)] bg-slate-900/40 [.at-secondary-skin_&]:bg-[rgba(33,35,31,0.91)] hover:border-slate-700 hover:bg-slate-900/70',
             ].join(' ')}
           >
             {avatarUrl ? (
               <img
                 src={avatarUrl}
                 alt={displayName}
-                className="h-12 w-12 rounded-full border border-slate-700/70 object-cover"
+                className="h-12 w-12 rounded-full border border-slate-700/70 [.at-secondary-skin_&]:border-[rgba(239,232,218,0.22)] object-cover"
               />
             ) : (
-              <div className="flex h-12 w-12 items-center justify-center rounded-full border border-slate-700/70 bg-slate-800 text-lg font-semibold text-slate-300">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full border border-slate-700/70 [.at-secondary-skin_&]:border-[rgba(239,232,218,0.22)] bg-slate-800 [.at-secondary-skin_&]:bg-[#34362f] text-lg font-semibold text-slate-300 [.at-secondary-skin_&]:text-[#c9c3b8]">
                 {displayName[0]?.toUpperCase()}
               </div>
             )}
@@ -188,15 +188,15 @@ export function ChatsList({
             <div className="min-w-0 flex-1">
               <div className="mb-0.5 flex items-start justify-between gap-2">
                 <div
-                  className={`truncate text-sm font-semibold ${hasUnread || isSelected ? 'text-white' : 'text-slate-200'}`}
+                  className={`truncate text-sm font-semibold ${hasUnread || isSelected ? 'text-white' : 'text-slate-200 [.at-secondary-skin_&]:text-[#c9c3b8]'}`}
                 >
                   {displayName}
                 </div>
                 {lastMsg ? (
                   <div className="shrink-0 text-right">
-                    <div className="text-[11px] text-slate-500">{formatDate(lastMsg.createdAt)}</div>
+                    <div className="text-[11px] text-slate-500 [.at-secondary-skin_&]:text-[#938e83]">{formatDate(lastMsg.createdAt)}</div>
                     {isOutgoing ? (
-                      <div className={`text-[10px] ${lastMsg.isRead ? 'text-sky-300' : 'text-slate-500'}`}>
+                      <div className={`text-[10px] ${lastMsg.isRead ? 'text-sky-300 [.at-secondary-skin_&]:text-[#d8bc91]' : 'text-slate-500 [.at-secondary-skin_&]:text-[#938e83]'}`}>
                         {lastMsg.isRead ? 'read' : 'sent'}
                       </div>
                     ) : null}
@@ -207,16 +207,16 @@ export function ChatsList({
               {lastMsg ? (
                 <div className="flex items-center gap-2">
                   <div
-                    className={`flex-1 truncate text-xs ${hasUnread ? 'font-medium text-slate-200' : 'text-slate-400'}`}
+                    className={`flex-1 truncate text-xs ${hasUnread ? 'font-medium text-slate-200 [.at-secondary-skin_&]:text-[#c9c3b8]' : 'text-slate-400 [.at-secondary-skin_&]:text-[#aaa497]'}`}
                   >
                     {preview}
                   </div>
                   {hasUnread ? (
-                    <span className="h-2 w-2 shrink-0 rounded-full bg-sky-400" />
+                    <span className="h-2 w-2 shrink-0 rounded-full bg-sky-400 [.at-secondary-skin_&]:bg-[#c8ae88] [.at-secondary-skin_&]:text-[#211f1b]" />
                   ) : null}
                 </div>
               ) : (
-                <div className="text-xs text-slate-500">No messages yet</div>
+                <div className="text-xs text-slate-500 [.at-secondary-skin_&]:text-[#938e83]">No messages yet</div>
               )}
             </div>
           </motion.button>

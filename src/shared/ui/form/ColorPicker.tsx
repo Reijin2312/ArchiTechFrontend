@@ -98,10 +98,10 @@ export function ColorPicker({ value, onChange, className = '' }: ColorPickerProp
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 rounded-lg border border-slate-700 px-3 py-2 hover:border-slate-500 transition-colors"
+        className="flex items-center gap-2 rounded-lg border border-slate-700 [.at-secondary-skin_&]:border-[rgba(239,232,218,0.22)] px-3 py-2 hover:border-slate-500 transition-colors"
       >
         <div
-          className="h-6 w-6 rounded border border-slate-600"
+          className="h-6 w-6 rounded border border-slate-600 [.at-secondary-skin_&]:border-[rgba(239,232,218,0.22)]"
           style={{ backgroundColor: value }}
         />
         <span className="text-sm font-mono uppercase">{value}</span>
@@ -113,7 +113,7 @@ export function ColorPicker({ value, onChange, className = '' }: ColorPickerProp
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="absolute left-0 top-full z-50 mt-2 w-64 rounded-xl border border-slate-700 bg-slate-900 p-4 shadow-2xl"
+            className="absolute left-0 top-full z-50 mt-2 w-64 rounded-xl border border-slate-700 [.at-secondary-skin_&]:border-[rgba(239,232,218,0.22)] bg-slate-900 [.at-secondary-skin_&]:bg-[rgba(33,35,31,0.91)] p-4 shadow-2xl"
           >
             <div
               ref={gradientRef}
@@ -167,7 +167,7 @@ export function ColorPicker({ value, onChange, className = '' }: ColorPickerProp
                   className={`h-8 w-8 rounded border-2 transition-all hover:scale-110 ${
                     value.toLowerCase() === color.toLowerCase()
                       ? 'border-white ring-2 ring-sky-500'
-                      : 'border-slate-700'
+                      : 'border-slate-700 [.at-secondary-skin_&]:border-[rgba(239,232,218,0.22)]'
                   }`}
                   style={{ backgroundColor: color }}
                   title={color}
@@ -185,7 +185,7 @@ export function ColorPicker({ value, onChange, className = '' }: ColorPickerProp
                     onChange(val)
                   }
                 }}
-                className="w-full rounded-lg border border-slate-700 bg-slate-800 px-2 py-1 text-center text-xs font-mono uppercase outline-none focus:border-slate-500"
+                className="w-full rounded-lg border border-slate-700 [.at-secondary-skin_&]:border-[rgba(239,232,218,0.22)] bg-slate-800 [.at-secondary-skin_&]:bg-[#34362f] px-2 py-1 text-center text-xs font-mono uppercase outline-none focus:border-slate-500"
                 placeholder="#0ea5e9"
               />
             </div>

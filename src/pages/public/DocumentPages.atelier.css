@@ -25,6 +25,20 @@ body.has-wallpaper:has(.architech-document)::before {
   --doc-brass: #c5aa84;
   --doc-line: rgba(238, 232, 220, .19);
   --doc-line-strong: rgba(238, 232, 220, .33);
+  --ui-primary: #f2efe9;
+  --ui-secondary: #c9c4b9;
+  --ui-muted: #aaa598;
+  --ui-accent: #c5aa84;
+  --ui-deep: #171816;
+  --ui-surface: #252620;
+  --ui-line: var(--doc-line);
+  --ui-nav-active-bg: #c5aa84;
+  --ui-nav-active-text: #1c1c19;
+  --ui-nav-inactive-bg: #262721;
+  --ui-nav-inactive-border: var(--doc-line-strong);
+  --ui-nav-hover: #f2efe9;
+  --ui-accent-fill: #a88c66;
+  --ui-accent-fill-ink: #25231f;
   color: var(--doc-ink);
   font-family: 'Golos Text', sans-serif;
   font-synthesis: none;
@@ -57,31 +71,15 @@ body.has-wallpaper:has(.architech-document)::before {
 .architech-document aside nav > div > div {
   color: var(--doc-secondary);
 }
-.architech-document aside nav a {
-  color: var(--doc-secondary);
-  text-decoration: none;
-}
+.architech-document aside nav a { text-decoration: none; }
 .architech-document aside nav a:hover,
 .architech-document aside nav a:focus-visible {
   color: var(--doc-ink);
 }
-.architech-document aside nav ol li > span {
-  border-color: var(--doc-line-strong);
-  color: var(--doc-muted);
-  background: #262721;
-}
-.architech-document aside nav ol li > span[class~="border-sky-500"] {
-  color: #1c1c19;
-  background: var(--doc-brass);
-  border-color: var(--doc-brass);
-}
-.architech-document aside nav ol a[class~="text-sky-300"] {
-  color: var(--doc-brass);
-}
+/* Numbered navigation states are defined directly by PageSidebar Tailwind classes. */
 
 /* Editorial section headings and reading surfaces; no geometry changes. */
 .architech-document main section > div > h2 {
-  background: transparent;
   border-radius: 8px;
   color: #eeeae2;
 }
@@ -112,65 +110,7 @@ body.has-wallpaper:has(.architech-document)::before {
   color: #eae5da;
 }
 
-/* Recolour existing Tailwind utility surfaces without changing their layout. */
-.architech-document :is(
-  [class~="bg-slate-950/40"], [class~="bg-slate-950/60"],
-  [class~="bg-slate-950/80"]
-) {
-  background-color: #171816;
-}
-.architech-document :is(
-  [class~="bg-slate-900"], [class~="bg-slate-900/60"],
-  [class~="bg-slate-900/65"], [class~="bg-slate-900/70"]
-) {
-  background-color: #252620;
-}
-.architech-document [class~="bg-slate-800"] {
-  background-color: #34352f;
-}
-.architech-document :is(
-  [class~="border-slate-700"], [class~="border-slate-700/80"],
-  [class~="border-slate-800"], [class~="border-slate-800/80"]
-) {
-  border-color: var(--doc-line);
-}
-.architech-document :is(
-  [class~="border-sky-400"], [class~="border-sky-400/15"],
-  [class~="border-sky-500"]
-) {
-  border-color: rgba(197,170,132,.55);
-}
-.architech-document :is(
-  [class~="bg-sky-600"], [class~="bg-sky-500/20"]
-) {
-  background-color: #a88c66;
-}
-.architech-document [class~="text-slate-100"] { color: #f2efe9; }
-.architech-document [class~="text-slate-200"] { color: #e4e0d7; }
-.architech-document [class~="text-slate-300"] { color: var(--doc-secondary); }
-.architech-document [class~="text-slate-400"] { color: var(--doc-muted); }
-.architech-document [class~="text-slate-500"] { color: #959083; }
-.architech-document [class~="text-sky-200"],
-.architech-document [class~="text-sky-300"],
-.architech-document [class~="text-sky-400"] {
-  color: var(--doc-brass);
-}
-.architech-document [class~="text-rose-400"] {
-  color: #c49f8c;
-}
-.architech-document [class*="hover:text-sky"]:hover {
-  color: #f1dbc0;
-}
-.architech-document [class*="hover:border-sky"]:hover {
-  border-color: #c5aa84;
-}
-.architech-document [class*="hover:bg-slate"]:hover {
-  background-color: var(--doc-surface-hover);
-}
-.architech-document [class*="shadow-["],
-.architech-document [class~="shadow-inner"] {
-  box-shadow: none;
-}
+/* Legacy Tailwind colour overrides migrated into the document components. */
 
 /* Wiki catalog controls, entries, badges, and command table. */
 .architech-document :is(button, input, a):focus-visible {
@@ -207,15 +147,4 @@ body.has-wallpaper:has(.architech-document)::before {
   color: #e5dac7;
   background: #171816;
   border-color: var(--doc-line-strong);
-}
-
-/* Preserve warning meaning with muted amber instead of generic neon orange. */
-.architech-document [class~="border-amber-400/30"] {
-  border-color: rgba(197,170,132,.45);
-}
-.architech-document [class~="bg-amber-500/10"] {
-  background-color: rgba(197,170,132,.11);
-}
-.architech-document [class~="text-amber-100"] {
-  color: #e4c59b;
 }

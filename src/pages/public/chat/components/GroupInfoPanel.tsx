@@ -833,7 +833,7 @@ function TelegramSwitch({
       aria-pressed={checked}
     >
       <span
-        className={`absolute h-[16px] w-[16px] rounded-full border border-[#1d1e26] bg-[#1a1b22] transition-transform ${
+        className={`absolute h-[16px] w-[16px] rounded-full border border-[#1d1e26] bg-[#242620] transition-transform ${
           checked ? 'translate-x-[22px]' : 'translate-x-[2px]'
         }`}
       />
@@ -915,7 +915,7 @@ function GroupInfoLinkRow({ item }: { item: GroupInfoLinkItem }) {
       rel="noopener noreferrer"
       className="flex items-start gap-3 border-b border-white/6 px-4 py-3 transition-colors hover:bg-white/[0.045]"
     >
-      <div className="mt-0.5 h-[64px] w-[64px] shrink-0 overflow-hidden rounded-[10px] bg-[#2a2b34]">
+      <div className="mt-0.5 h-[64px] w-[64px] shrink-0 overflow-hidden rounded-[10px] bg-[#33352e]">
         {resolvedThumbnail ? (
           <img src={resolvedThumbnail} alt={resolvedSource} className="h-full w-full object-cover" />
         ) : (
@@ -965,7 +965,7 @@ function GroupMediaGridThumb({
     <button
       type="button"
       onClick={onClick}
-      className="relative block aspect-square overflow-hidden bg-[#272832] transition-opacity hover:opacity-95"
+      className="relative block aspect-square overflow-hidden bg-[#33352e] transition-opacity hover:opacity-95"
     >
       <span
         aria-hidden="true"
@@ -2151,7 +2151,7 @@ export function GroupInfoPanel({
   return (
     <aside
       ref={panelRef}
-      className="relative h-full w-full border-l border-white/10 bg-[#14151a] shadow-[-16px_0_38px_rgba(0,0,0,0.4)]"
+      className="relative h-full w-full border-l border-white/10 bg-[#171816] shadow-[-16px_0_38px_rgba(0,0,0,0.4)]"
     >
       <div ref={scrollRef} className="tg-scroll h-full overflow-y-auto" onScroll={handlePanelScroll}>
         <div className="relative h-[328px] overflow-hidden">
@@ -2280,7 +2280,7 @@ export function GroupInfoPanel({
           </div>
         </div>
 
-        <div className="mt-[14px] bg-[#16171d]">
+        <div className="mt-[14px] bg-[#171816]">
           <div className="flex border-b border-t border-white/8 px-2">
             {GROUP_INFO_TABS.map((tab) => {
               const isActive = tab.id === activeTab;
@@ -3601,7 +3601,7 @@ export function GroupInfoPanel({
 
       {showUnsavedGroupEditDialog ? (
         <div className="fixed inset-0 z-[131] grid place-items-center bg-black/56 px-4">
-          <div className="w-full max-w-[640px] rounded-[24px] bg-[#1f2026] p-6 shadow-[0_18px_56px_rgba(0,0,0,0.6)]">
+          <div className="w-full max-w-[640px] rounded-[24px] bg-[#242620] p-6 shadow-[0_18px_56px_rgba(0,0,0,0.6)]">
             <div className="text-[18px] font-[700] text-white/95">Unsaved Changes</div>
             <div className="mt-5 text-[17px] leading-[1.35] text-white/90">
               Are you sure you want to discard all changes?
@@ -3634,7 +3634,7 @@ export function GroupInfoPanel({
 
       {showUnsavedMemberDialog ? (
         <div className="fixed inset-0 z-[130] grid place-items-center bg-black/56 px-4">
-          <div className="w-full max-w-[640px] rounded-[24px] bg-[#1f2026] p-6 shadow-[0_18px_56px_rgba(0,0,0,0.6)]">
+          <div className="w-full max-w-[640px] rounded-[24px] bg-[#242620] p-6 shadow-[0_18px_56px_rgba(0,0,0,0.6)]">
             <div className="text-[18px] font-[700] text-white/95">Unsaved Changes</div>
             <div className="mt-5 text-[17px] leading-[1.35] text-white/90">
               Are you sure you want to discard all changes?
@@ -3685,7 +3685,7 @@ export function GroupInfoPanel({
                 void runGroupAction('leave', onLeaveGroup, 'Failed to leave group');
               }}
               disabled={groupActionPending !== null}
-              className="rounded-[10px] border border-white/16 bg-[#1e1f26] px-3 py-2 text-[13px] font-[600] text-white/78 transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+              className="rounded-[10px] border border-white/16 bg-[#242620] px-3 py-2 text-[13px] font-[600] text-white/78 transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {groupActionPending === 'leave' ? 'Leaving...' : 'Leave'}
             </button>

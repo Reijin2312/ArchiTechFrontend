@@ -32,7 +32,7 @@ export function CircleRecordingOverlay({ stream }: CircleRecordingOverlayProps) 
   return (
     <div className="pointer-events-none absolute inset-0 z-[21] flex items-center justify-center px-4">
       <div className="relative h-[min(68vw,18rem)] w-[min(68vw,18rem)] rounded-full border-[4px] border-[#e0c59e]/75 shadow-[0_22px_50px_rgba(110,84,205,0.46)]">
-        <div className="h-full w-full overflow-hidden rounded-full bg-[#0f1115]">
+        <div className="h-full w-full overflow-hidden rounded-full bg-[#171816]">
           <video
             ref={videoRef}
             muted
