@@ -1,6 +1,6 @@
 export const chatWallpaperSvg = encodeURIComponent(`
 <svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" shape-rendering="crispEdges">
-  <g fill="none" stroke="#4b1f66" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter">
+  <g fill="none" stroke="#665b44" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter">
     <g opacity="0.76" transform="translate(14 11)">
       <rect x="0" y="0" width="28" height="28"/>
       <path d="M0 10h28M0 19h28M10 0v28M19 0v28"/>
