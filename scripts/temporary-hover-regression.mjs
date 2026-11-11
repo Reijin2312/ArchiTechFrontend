@@ -16,8 +16,17 @@ try {
     return route.fulfill({status:404, contentType:'application/json',body:'{}'});
   });
   await page.goto('http://127.0.0.1:5173/',{waitUntil:'domcontentloaded',timeout:30000});
-  const row=page.locator('.at-ranking a .at-rank-leaf').first();
-  await row.waitFor({timeout:20000});
+  const row=page.locator('.at-ranking a.at-rank-row').first();
+  try {
+    await row.waitFor({timeout:15000});
+  } catch (err) {
+    console.log('DEBUG page URL',page.url(),'title',await page.title());
+    console.log('DEBUG ranking count',await page.locator('.at-ranking').count(),
+      'links',await page.locator('.at-ranking a').count(),
+      'FAQ',await page.locator('.at-faq-trigger').count());
+    console.log('DEBUG app content', (await page.locator('body').innerText()).slice(0,1800));
+    throw err;
+  }
   const readX = locator => locator.evaluate(el=>{
     const transform = getComputedStyle(el).transform;
     return transform==='none'?0:new DOMMatrixReadOnly(transform).m41;

@@ -947,9 +947,9 @@ function TopPlayersSection({
               key={player.username}
               to={'/u/' + encodeURIComponent(player.username)}
               aria-label={isRu ? 'Открыть профиль ' + player.username : 'Open profile ' + player.username}
-              className="group relative block border-b border-[var(--at-line)] bg-transparent outline-none transition-colors duration-200 before:pointer-events-none before:absolute before:left-0 before:top-1/2 before:h-8 before:w-px before:-translate-y-1/2 before:bg-[#bca176] before:opacity-0 before:transition-opacity before:duration-300 hover:bg-[rgba(244,239,230,.035)] hover:before:opacity-70 focus-visible:bg-[rgba(244,239,230,.035)] focus-visible:before:opacity-70 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#bfa57d]"
+              className="at-rank-row group relative block border-b border-[var(--at-line)] bg-transparent outline-none before:pointer-events-none before:absolute before:left-0 before:top-1/2 before:h-8 before:w-px before:-translate-y-1/2 before:bg-[#bca176] before:opacity-0 before:transition-opacity before:duration-300 hover:bg-[rgba(244,239,230,.035)] hover:before:opacity-70 focus-visible:bg-[rgba(244,239,230,.035)] focus-visible:before:opacity-70 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#bfa57d]"
             >
-              <div className="at-rank-leaf flex items-center gap-4 px-1 py-5">
+              <div className="flex items-center gap-4 px-1 py-5">
                 <LeaderboardPortrait name={player.username} src={avatars[player.username]} />
                 <div className="min-w-0 flex-1">
                   <div className="flex min-w-0 items-baseline gap-3">

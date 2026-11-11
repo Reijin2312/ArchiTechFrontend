@@ -1058,17 +1058,17 @@
   margin: 0;
   padding: 0;
 }
-/* The leaderboard behaves like a row sliding out of a paper archive.
-   Use native hover/focus rather than a disabled Framer Motion handler. */
-.architech-home .at-rank-leaf {
-  transition: transform .26s cubic-bezier(.22,1,.36,1);
+/* The whole record moves as one sheet: underline, background and avatar included. */
+.architech-home .at-ranking .at-rank-row {
+  transition: transform .26s cubic-bezier(.22,1,.36,1),
+              background-color .2s ease;
 }
 @media (hover: hover) and (pointer: fine) {
-  .architech-home .at-ranking a:hover .at-rank-leaf {
+  .architech-home .at-ranking .at-rank-row:hover {
     transform: translateX(6px);
   }
 }
-.architech-home .at-ranking a:focus-visible .at-rank-leaf {
+.architech-home .at-ranking .at-rank-row:focus-visible {
   transform: translateX(6px);
 }
 
@@ -1275,8 +1275,8 @@
 
 /* This design never depends on motion for information or access. */
 @media (prefers-reduced-motion: reduce) {
-  .architech-home .at-ranking a:hover .at-rank-leaf,
-  .architech-home .at-ranking a:focus-visible .at-rank-leaf {
+  .architech-home .at-ranking .at-rank-row:hover,
+  .architech-home .at-ranking .at-rank-row:focus-visible {
     transform: none !important;
   }
   .architech-home .at-faq-trigger .at-faq-question,
