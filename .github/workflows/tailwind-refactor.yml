@@ -58,7 +58,7 @@ jobs:
           npm run build
           npm run build --prefix "$RUNNER_TEMP/architech-baseline"
           npm install --no-save --no-package-lock playwright
-          npx playwright install --with-deps chromium
+          # GitHub ubuntu-latest already includes stable Chrome.
       - name: Launch built versions
         run: |
           (cd "$RUNNER_TEMP/architech-baseline" && nohup ./node_modules/.bin/vite preview --host 127.0.0.1 --port 4173 --strictPort > "$RUNNER_TEMP/base-vite.log" 2>&1 < /dev/null &)

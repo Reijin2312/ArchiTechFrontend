@@ -14,7 +14,7 @@ const routes = [
 const viewports = [{ width: 1440, height: 900 }, { width: 390, height: 844 }];
 const threshold = Number(process.env.MAX_DIFFERING_PIXEL_FRACTION ?? 0.035);
 
-const browser = await chromium.launch({ headless: true });
+const browser = await chromium.launch({ headless: true, channel: 'chrome' });
 const results = [];
 await fs.mkdir(OUTPUT, { recursive: true });
 const stableCss = [
