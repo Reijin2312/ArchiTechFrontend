@@ -1,0 +1,40 @@
+name: Tailwind refactor checks
+
+on:
+  pull_request:
+    branches:
+      - design/premium-steampunk-home
+  push:
+    branches:
+      - refactor/tailwind-visual-parity
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Typecheck and production bundle
+        run: npm run build
+      - name: Check for leftover legacy CSS class selectors
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const css = [
+            'src/pages/public/chat/ChatPage.atelier.css',
+            'src/pages/public/DocumentPages.atelier.css',
+            'src/pages/public/HomePage.premium.css',
+            'src/shared/ui/layout/SiteChrome.css',
+          ];
+          for (const file of css) {
+            const content = fs.readFileSync(file, 'utf8');
+            const matches = content.match(/\[class(?:[~*^$|])?=/g) ?? [];
+            if (matches.length) throw new Error(`${file}: ${matches.length} legacy class selectors remain`);
+          }
+          NODE
