@@ -28,11 +28,10 @@ import DeviceLoginDonePage from '@/features/auth/pages/DeviceLoginDonePage';
 import LoginTwoFactorPage from '@/features/auth/pages/LoginTwoFactorPage';
 import UserAchievementsPage from '@/pages/public/UserAchievementsPage';
 import UserSkinsPage from '@/pages/public/UserSkinsPage';
-import ChatPage from '@/pages/public/ChatPage';
 
 export const router = createBrowserRouter([
   { path: '/tg-login', element: <TgBotLoginWebApp /> },
-  { path: '/chat', element: <ChatPage /> },
+  { path: '/chat', element: <Navigate to="/?chat=open" replace /> },
   {
     path: '/',
     element: <Layout />,
