@@ -1,0 +1,229 @@
+@import url('https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=Onest:wght@400;500;600;700&family=Bona+Nova:wght@400;700&display=swap');
+
+/*
+ * ArchiTech — remaining pages, scoped visual rebrand only.
+ * Never edit geometry, size, display, grid, flex, positioning, animation or
+ * dynamic profile theme backgrounds. The root class is route-gated in Layout.
+ * The homepage, rules, wiki, legacy, login, register and map are not targeted.
+ */
+.at-secondary-skin {
+  --at-restyle-ink: #f2efe9;
+  --at-restyle-secondary: #c9c3b8;
+  --at-restyle-muted: #aaa497;
+  --at-restyle-brass: #c5aa84;
+  --at-restyle-line: rgba(239,232,218,.22);
+  --at-restyle-surface: rgba(33,35,31,.91);
+  --at-restyle-surface-muted: rgba(25,27,24,.85);
+}
+.at-secondary-skin > main {
+  color: var(--at-restyle-ink);
+  font-family: 'Golos Text',sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+.at-secondary-skin > main :is(h1,h2,h3,h4) {
+  font-family: 'Onest',sans-serif;
+  letter-spacing: -.025em;
+}
+.at-secondary-skin > main .font-techno { font-family: 'Onest',sans-serif; letter-spacing: -.025em; }
+.at-secondary-skin > main .font-arcane { font-family: 'Bona Nova',Georgia,serif; letter-spacing: 0; }
+.at-secondary-skin > main .text-techno-glow { text-shadow: none; }
+.at-secondary-skin > main ::selection { background: #c5aa84; color: #171816; }
+
+/* Keep existing card dimensions and all slot contents; replace only their finish. */
+.at-secondary-skin > main .card {
+  color: var(--at-restyle-ink);
+  border-color: var(--at-restyle-line);
+  background-color: var(--at-restyle-surface);
+  box-shadow: 0 12px 35px rgba(0,0,0,.17);
+  backdrop-filter: blur(12px) saturate(105%);
+}
+.at-secondary-skin > main .btn { font-family: 'Onest',sans-serif; }
+.at-secondary-skin > main .btn.primary {
+  color: #25231f;
+  background: #e7dcca;
+  border: 1px solid #e7dcca;
+}
+.at-secondary-skin > main .btn.primary:not(:disabled):hover {
+  color: #1b1b19;
+  background: #f4eadd;
+  border-color: #f4eadd;
+}
+.at-secondary-skin > main .btn.primary:disabled {
+  color: #a9a296;
+  background: #393b34;
+  border-color: var(--at-restyle-line);
+}
+.at-secondary-skin > main .btn.ghost {
+  color: #dfc49d;
+  background-color: transparent;
+  border-color: var(--at-restyle-line);
+}
+.at-secondary-skin > main .btn.ghost:not(:disabled):hover {
+  background-color: rgba(197,170,132,.08);
+  border-color: var(--at-restyle-brass);
+}
+.at-secondary-skin > main .input {
+  background-color: #2b2d28;
+  color: #f3eee5;
+  border-color: rgba(239,232,218,.28);
+  font-family: 'Golos Text',sans-serif;
+  caret-color: var(--at-restyle-brass);
+}
+.at-secondary-skin > main .input:not(.is-ok):not(.is-err):not(.input-error):not(.input-success):focus {
+  border-color: var(--at-restyle-brass);
+  box-shadow: 0 0 0 3px rgba(197,170,132,.12);
+}
+.at-secondary-skin > main .input.is-ok,
+.at-secondary-skin > main .input.input-success {
+  background-color: #2b2d28 !important;
+  border-color: rgba(197,170,132,.54) !important;
+}
+.at-secondary-skin > main .input.is-err,
+.at-secondary-skin > main .input.input-error {
+  background-color: #362925 !important;
+  border-color: #d89b8d !important;
+}
+.at-secondary-skin > main .label { color: #ddd6c9; }
+.at-secondary-skin > main .hint { color: var(--at-restyle-muted); }
+.at-secondary-skin > main .error,
+.at-secondary-skin > main .hint.error {
+  color: #edb2a4;
+  border-color: rgba(216,155,141,.39);
+  background-color: rgba(110,60,54,.16);
+  box-shadow: none;
+}
+.at-secondary-skin > main input:-webkit-autofill {
+  -webkit-text-fill-color: #f2efe9;
+  -webkit-box-shadow: 0 0 0 100px #2b2d28 inset;
+  caret-color: var(--at-restyle-brass);
+}
+
+/* Exact utility tokens: do NOT recolour hover:* or focus:* before interaction. */
+.at-secondary-skin > main :is(
+  [class~="text-slate-50"],[class~="text-slate-100"]
+) { color: #f2efe9; }
+.at-secondary-skin > main :is(
+  [class~="text-slate-200"],[class~="text-slate-300"]
+) { color: var(--at-restyle-secondary); }
+.at-secondary-skin > main [class~="text-slate-400"] { color: var(--at-restyle-muted); }
+.at-secondary-skin > main [class~="text-slate-500"] { color: #938e83; }
+.at-secondary-skin > main :is(
+  [class~="text-sky-100"], [class~="text-sky-200"],
+  [class~="text-sky-300"], [class~="text-sky-400"],
+  [class~="text-indigo-200"],[class~="text-indigo-300"],
+  [class~="text-violet-200"],[class~="text-violet-300"],
+  [class~="text-purple-300"],[class~="text-cyan-300"],
+  [class~="text-teal-300"]
+) { color: #d8bc91; }
+.at-secondary-skin > main :is(
+  [class~="text-amber-100"],[class~="text-amber-200"],
+  [class~="text-amber-200/85"],[class~="text-amber-300"],
+  [class~="text-orange-200"]
+) { color: #ead3ad; }
+
+.at-secondary-skin > main :is(
+  [class~="bg-slate-900"],[class~="bg-slate-900/40"],
+  [class~="bg-slate-900/50"],[class~="bg-slate-900/60"],
+  [class~="bg-slate-900/65"],[class~="bg-slate-900/70"],
+  [class~="bg-slate-900/75"],[class~="bg-slate-900/80"],
+  [class~="bg-slate-900/90"]
+) { background-color: var(--at-restyle-surface); }
+.at-secondary-skin > main :is(
+  [class~="bg-slate-950"],[class~="bg-slate-950/40"],
+  [class~="bg-slate-950/55"],[class~="bg-slate-950/60"],
+  [class~="bg-slate-950/65"],[class~="bg-slate-950/70"],
+  [class~="bg-slate-950/80"],[class~="bg-slate-950/85"],
+  [class~="bg-slate-950/90"]
+) { background-color: var(--at-restyle-surface-muted); }
+.at-secondary-skin > main [class~="bg-slate-800"] { background-color: #34362f; }
+.at-secondary-skin > main [class~="bg-slate-700"] { background-color: #404037; }
+.at-secondary-skin > main :is(
+  [class~="border-slate-500"],[class~="border-slate-600"],
+  [class~="border-slate-700"],[class~="border-slate-700/70"],
+  [class~="border-slate-700/80"],[class~="border-slate-800"],
+  [class~="border-slate-800/80"],[class~="border-slate-800/90"]
+) { border-color: var(--at-restyle-line); }
+.at-secondary-skin > main :is(
+  [class~="border-sky-300"],[class~="border-sky-300/60"],
+  [class~="border-sky-400/80"],[class~="border-sky-500"],
+  [class~="border-sky-500/35"],[class~="border-sky-500/60"],
+  [class~="border-sky-700"],[class~="border-sky-700/50"]
+) { border-color: rgba(197,170,132,.58); }
+.at-secondary-skin > main :is(
+  [class~="bg-sky-600"],[class~="bg-sky-600/90"],
+  [class~="bg-sky-500"],[class~="bg-sky-400"],
+  [class~="bg-indigo-600"]
+) { background-color: #c8ae88; color: #211f1b; }
+.at-secondary-skin > main :is(
+  [class~="bg-sky-500/10"],[class~="bg-sky-500/12"],
+  [class~="bg-sky-500/20"],[class~="bg-indigo-500/12"],
+  [class~="bg-amber-500/10"]
+) { background-color: rgba(197,170,132,.11); }
+.at-secondary-skin > main [class*="hover:text-sky"]:hover,
+.at-secondary-skin > main [class*="hover:text-indigo"]:hover { color: #f0dcc0; }
+.at-secondary-skin > main [class*="hover:bg-sky"]:hover,
+.at-secondary-skin > main [class*="hover:bg-indigo"]:hover { background-color: #e6d6bd; }
+.at-secondary-skin > main [class*="hover:border-sky"]:hover { border-color: #cfb28c; }
+.at-secondary-skin > main :is(a,button,input,select,textarea):focus-visible {
+  outline: 2px solid #e1c79e;
+  outline-offset: 2px;
+}
+.at-secondary-skin > main input[type="checkbox"],
+.at-secondary-skin > main input[type="radio"] { accent-color: #c5aa84; }
+
+/* Document pages: reuse the same reading hierarchy as Rules and Wiki.
+   All sticky bars, numbered pills, padding, widths and motion remain intact. */
+.at-secondary-doc > main aside nav,
+.at-secondary-doc > main section > div > div.mb-8,
+.at-secondary-doc > main main > div.mb-6 {
+  border-color: var(--at-restyle-line);
+  background-color: rgba(32,34,30,.93);
+  box-shadow: none;
+}
+.at-secondary-doc > main aside nav h2 { color: #d3b58b; }
+.at-secondary-doc > main main section > div > h2 { color: #f0eae1; }
+.at-secondary-doc > main main section > div > h2 > span {
+  background-color: #c5aa84;
+  color: #28241f;
+}
+.at-secondary-doc > main kbd {
+  color: #eadcc6;
+  background-color: #282923;
+  border-color: var(--at-restyle-line);
+}
+
+/* Contacts — remove only the old blue/purple glow, not the cards themselves. */
+.at-secondary-contacts > main [class*="from-indigo-500/10"] {
+  background-image: linear-gradient(135deg,rgba(197,170,132,.10),transparent 72%);
+}
+.at-secondary-contacts > main [class~="text-indigo-200"],
+.at-secondary-contacts > main [class~="text-violet-200"],
+.at-secondary-contacts > main [class~="text-emerald-200"],
+.at-secondary-contacts > main [class~="text-sky-200"] { color: #d6b98e; }
+
+/* Profiles: keep user-selected inline themes/banners and progress ring geometry.
+   Only neutral surfaces, common fonts and default accents get recoloured. */
+.at-secondary-profile > main [class*="bg-[radial-gradient"] {
+  background-image: radial-gradient(circle at 50% -20%,rgba(197,170,132,.12),rgba(23,24,22,.13) 55%);
+}
+.at-secondary-profile > main :is(
+  [class~="bg-sky-900/30"],[class~="bg-sky-900/40"]
+) { background-color: rgba(197,170,132,.14); }
+.at-secondary-profile > main [class~="text-techno-glow"] { text-shadow: none; }
+.at-secondary-profile > main :is(
+  [class~="from-amber-900/25"],[class~="from-slate-950"]
+) { --tw-gradient-from: rgba(43,42,35,.75); }
+.at-secondary-profile > main :is(
+  [class~="ring-sky-300"],[class~="ring-emerald-300/90"]
+) { --tw-ring-color: #c5aa84; }
+
+/* Settings retain the original security, success and destructive-state colours. */
+.at-secondary-settings > main [class~="text-sky-300"],
+.at-secondary-settings > main [class~="text-sky-400"] { color: #d3b58b; }
+.at-secondary-settings > main [class~="bg-sky-500/20"] { background-color: rgba(197,170,132,.12); }
+.at-secondary-flow > main .card { background-color: rgba(32,34,30,.93); }
+
+@media (prefers-reduced-motion: reduce) {
+  .at-secondary-skin > main *, .at-secondary-skin > main *::before,
+  .at-secondary-skin > main *::after { scroll-behavior: auto; }
+}
