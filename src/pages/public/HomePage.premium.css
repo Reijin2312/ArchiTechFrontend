@@ -811,6 +811,14 @@
   border-top: 2px solid #c3a47a;
   border-radius: 5px;
   background: radial-gradient(ellipse at 50% 0%,rgba(196,165,118,.10),transparent 68%),#22241f;
+  transition: border-color .28s ease, box-shadow .32s ease, background-color .28s ease;
+}
+@media (hover: hover) and (pointer: fine) {
+  .architech-home .at-staff-feature:hover {
+    border-color: rgba(213,184,141,.34);
+    border-top-color: #d6b58a;
+    box-shadow: 0 16px 40px rgba(0,0,0,.17), 0 0 0 1px rgba(201,170,127,.10), 0 0 30px rgba(201,170,127,.075);
+  }
 }
 .architech-home .at-staff-feature::after {
   content: '';
@@ -950,12 +958,14 @@
   border-radius: 5px;
   text-decoration: none;
   color: #f0ece5;
-  transition: background-color .26s ease,border-color .26s ease,transform .32s cubic-bezier(.22,1,.36,1);
+  transition: background-color .26s ease,border-color .26s ease,box-shadow .28s ease;
 }
-.architech-home .at-staff-person:hover {
-  background: #262821;
-  border-color: rgba(236,228,213,.32);
-  transform: translateY(-2px);
+@media (hover: hover) and (pointer: fine) {
+  .architech-home .at-staff-person:hover {
+    background: #262821;
+    border-color: rgba(236,228,213,.32);
+    box-shadow: 0 12px 28px rgba(0,0,0,.12);
+  }
 }
 .architech-home .at-staff-person-main {
   display: flex;
@@ -1083,7 +1093,22 @@
   outline: 2px solid var(--at-brass);
   outline-offset: -2px;
 }
-.architech-home .at-faq-question { display: inline-flex; align-items: center; gap: 12px; min-width: 0; }
+.architech-home .at-faq-question {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  transition: transform .27s cubic-bezier(.22,1,.36,1);
+}
+/* Only the collapsed question slides. The open answer and chevron stay put. */
+@media (hover: hover) and (pointer: fine) {
+  .architech-home .at-faq-trigger[aria-expanded="false"]:hover .at-faq-question {
+    transform: translateX(4px);
+  }
+}
+.architech-home .at-faq-trigger:focus-visible .at-faq-question {
+  transform: translateX(4px);
+}
 .architech-home .at-faq-question-icon {
   display: inline-flex;
   align-items: center;
@@ -1237,6 +1262,11 @@
 
 /* This design never depends on motion for information or access. */
 @media (prefers-reduced-motion: reduce) {
+  .architech-home .at-faq-trigger .at-faq-question,
+  .architech-home .at-faq-trigger:hover .at-faq-question,
+  .architech-home .at-faq-trigger:focus-visible .at-faq-question {
+    transform: none !important;
+  }
   .architech-home .at-testimonial-type-caret { animation: none !important; opacity: 1; }
   .architech-home *,
   .architech-home *::before,

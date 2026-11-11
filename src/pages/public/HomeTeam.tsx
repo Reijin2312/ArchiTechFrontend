@@ -84,7 +84,14 @@ export function HomeTeam({ team, avatars, disableMotion = false }: TeamProps) {
       whileInView={disableMotion ? undefined : 'show'}
       viewport={{ once: true, amount: .12 }}
     >
-      <motion.article className="at-staff-feature" variants={disableMotion ? undefined : appear}>
+      <motion.article
+        className="at-staff-feature"
+        variants={disableMotion ? undefined : appear}
+        whileHover={disableMotion ? undefined : {
+          y: -4,
+          transition: { duration: .28, ease: [.22, 1, .36, 1] },
+        }}
+      >
         <a className="at-staff-feature-photo" href={founderPath} aria-label={founder.name}>
           <MinecraftPortrait name={founder.name} src={avatars[founder.name]} prominent />
         </a>
@@ -126,6 +133,10 @@ export function HomeTeam({ team, avatars, disableMotion = false }: TeamProps) {
             <motion.a
               key={member.name}
               variants={disableMotion ? undefined : appear}
+              whileHover={disableMotion ? undefined : {
+                y: -3,
+                transition: { duration: .28, ease: [.22, 1, .36, 1] },
+              }}
               className={retired ? 'at-staff-person at-staff-person--former' : 'at-staff-person'}
               href={'/u/' + encodeURIComponent(member.name)}
               aria-label={member.name + ' — ' + roleFor(member, copy)}

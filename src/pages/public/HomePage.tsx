@@ -949,11 +949,11 @@ function TopPlayersSection({
               key={player.username}
               to={'/u/' + encodeURIComponent(player.username)}
               aria-label={isRu ? 'Открыть профиль ' + player.username : 'Open profile ' + player.username}
-              className="group block border-b border-[var(--at-line)] bg-transparent outline-none transition-colors duration-200 hover:bg-[rgba(244,239,230,.035)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#bfa57d]"
+              className="group relative block border-b border-[var(--at-line)] bg-transparent outline-none transition-colors duration-200 before:pointer-events-none before:absolute before:left-0 before:top-1/2 before:h-8 before:w-px before:-translate-y-1/2 before:bg-[#bca176] before:opacity-0 before:transition-opacity before:duration-300 hover:bg-[rgba(244,239,230,.035)] hover:before:opacity-70 focus-visible:bg-[rgba(244,239,230,.035)] focus-visible:before:opacity-70 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#bfa57d]"
             >
               <motion.div
-                whileHover={disableMotion ? undefined : { x: 3 }}
-                transition={{ duration: .22, ease: 'easeOut' }}
+                whileHover={disableMotion ? undefined : { x: 6 }}
+                transition={{ duration: .26, ease: [.22, 1, .36, 1] }}
                 className="flex items-center gap-4 px-1 py-5"
               >
                 <LeaderboardPortrait name={player.username} src={avatars[player.username]} />
