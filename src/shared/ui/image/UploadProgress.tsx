@@ -68,7 +68,7 @@ export function UploadProgress({
             </svg>
           </button>
         ) : (
-          <span className={`font-semibold text-slate-200 ${text}`}>
+          <span className={`font-semibold text-slate-200 [.at-secondary-skin_&]:text-[#c9c3b8] ${text}`}>
             {Math.round(progress)}%
           </span>
         )}

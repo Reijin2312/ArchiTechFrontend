@@ -69,7 +69,7 @@ export function ThemeSelector({ value = 'default', customColor1, customColor2, o
 
   return (
     <div className={className}>
-      <div className="mb-3 text-sm font-semibold text-slate-300">{language === 'ru' ? 'Тема профиля' : 'Profile theme'}</div>
+      <div className="mb-3 text-sm font-semibold text-slate-300 [.at-secondary-skin_&]:text-[#c9c3b8]">{language === 'ru' ? 'Тема профиля' : 'Profile theme'}</div>
       <div className="grid grid-cols-3 gap-3">
         {THEMES.map((theme) => {
           const isSelected = value === theme.id
@@ -82,8 +82,8 @@ export function ThemeSelector({ value = 'default', customColor1, customColor2, o
               whileTap={{ scale: 0.98 }}
               className={`group relative overflow-hidden rounded-xl border transition-all ${
                 isSelected
-                  ? 'border-sky-500 ring-2 ring-sky-500/40'
-                  : 'border-slate-700 hover:border-slate-500'
+                  ? 'border-sky-500 [.at-secondary-skin_&]:border-[rgba(197,170,132,0.58)] ring-2 ring-sky-500/40'
+                  : 'border-slate-700 [.at-secondary-skin_&]:border-[rgba(239,232,218,0.22)] hover:border-slate-500'
               }`}
             >
               <div className={`h-20 w-full ${theme.preview}`} />
@@ -93,7 +93,7 @@ export function ThemeSelector({ value = 'default', customColor1, customColor2, o
               {isSelected && (
                 <motion.div
                   layoutId="selected-theme"
-                  className="absolute inset-0 border-2 border-sky-500 rounded-xl"
+                  className="absolute inset-0 border-2 border-sky-500 [.at-secondary-skin_&]:border-[rgba(197,170,132,0.58)] rounded-xl"
                   transition={{ type: 'spring', stiffness: 300, damping: 30 }}
                 />
               )}
@@ -108,8 +108,8 @@ export function ThemeSelector({ value = 'default', customColor1, customColor2, o
           whileTap={{ scale: 0.98 }}
           className={`group relative overflow-hidden rounded-xl border transition-all ${
             isCustom
-              ? 'border-sky-500 ring-2 ring-sky-500/40'
-              : 'border-slate-700 hover:border-slate-500'
+              ? 'border-sky-500 [.at-secondary-skin_&]:border-[rgba(197,170,132,0.58)] ring-2 ring-sky-500/40'
+              : 'border-slate-700 [.at-secondary-skin_&]:border-[rgba(239,232,218,0.22)] hover:border-slate-500'
           }`}
         >
           <div 
@@ -124,7 +124,7 @@ export function ThemeSelector({ value = 'default', customColor1, customColor2, o
           {isCustom && (
             <motion.div
               layoutId="selected-theme"
-              className="absolute inset-0 border-2 border-sky-500 rounded-xl"
+              className="absolute inset-0 border-2 border-sky-500 [.at-secondary-skin_&]:border-[rgba(197,170,132,0.58)] rounded-xl"
               transition={{ type: 'spring', stiffness: 300, damping: 30 }}
             />
           )}
@@ -136,10 +136,10 @@ export function ThemeSelector({ value = 'default', customColor1, customColor2, o
           initial={{ opacity: 0, height: 0 }}
           animate={{ opacity: 1, height: 'auto' }}
           exit={{ opacity: 0, height: 0 }}
-          className="mt-4 space-y-3 rounded-xl border border-slate-800 bg-slate-900/50 p-4"
+          className="mt-4 space-y-3 rounded-xl border border-slate-800 [.at-secondary-skin_&]:border-[rgba(239,232,218,0.22)] bg-slate-900/50 [.at-secondary-skin_&]:bg-[rgba(33,35,31,0.91)] p-4"
         >
           <div>
-            <label className="mb-2 block text-xs text-slate-400">{language === 'ru' ? 'Первый цвет' : 'First color'}</label>
+            <label className="mb-2 block text-xs text-slate-400 [.at-secondary-skin_&]:text-[#aaa497]">{language === 'ru' ? 'Первый цвет' : 'First color'}</label>
             <ColorPicker
               value={localColor1}
               onChange={(color) => {
@@ -149,7 +149,7 @@ export function ThemeSelector({ value = 'default', customColor1, customColor2, o
             />
           </div>
           <div>
-            <label className="mb-2 block text-xs text-slate-400">{language === 'ru' ? 'Второй цвет' : 'Second color'}</label>
+            <label className="mb-2 block text-xs text-slate-400 [.at-secondary-skin_&]:text-[#aaa497]">{language === 'ru' ? 'Второй цвет' : 'Second color'}</label>
             <ColorPicker
               value={localColor2}
               onChange={(color) => {
@@ -158,8 +158,8 @@ export function ThemeSelector({ value = 'default', customColor1, customColor2, o
               }}
             />
           </div>
-          <div className="rounded-lg border border-slate-700 p-3">
-            <div className="mb-1 text-xs text-slate-400">{language === 'ru' ? 'Предпросмотр:' : 'Preview:'}</div>
+          <div className="rounded-lg border border-slate-700 [.at-secondary-skin_&]:border-[rgba(239,232,218,0.22)] p-3">
+            <div className="mb-1 text-xs text-slate-400 [.at-secondary-skin_&]:text-[#aaa497]">{language === 'ru' ? 'Предпросмотр:' : 'Preview:'}</div>
             <div 
               className="h-16 rounded-lg"
               style={{

@@ -82,10 +82,10 @@ export function DragDropZone({ onFile, accept, maxSize = 2 * 1024 * 1024, childr
       className={`relative transition-all ${className}`}
     >
       {isDragging && (
-        <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-xl border-2 border-dashed border-sky-500 bg-sky-500/10 backdrop-blur-sm">
+        <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-xl border-2 border-dashed border-sky-500 [.at-secondary-skin_&]:border-[rgba(197,170,132,0.58)] bg-sky-500/10 [.at-secondary-skin_&]:bg-[rgba(197,170,132,0.11)] backdrop-blur-sm">
           <div className="text-center">
             <div className="text-2xl mb-2">📁</div>
-            <div className="text-sm font-medium text-sky-300">{language === 'ru' ? 'Отпустите файл' : 'Drop the file'}</div>
+            <div className="text-sm font-medium text-sky-300 [.at-secondary-skin_&]:text-[#d8bc91]">{language === 'ru' ? 'Отпустите файл' : 'Drop the file'}</div>
           </div>
         </div>
       )}

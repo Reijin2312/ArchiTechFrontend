@@ -20,7 +20,7 @@ export function ProgressBar({
   const percentage = Math.min(100, Math.max(0, (value / max) * 100))
 
   const colorClasses = {
-    sky: 'bg-sky-500',
+    sky: 'bg-sky-500 [.at-secondary-skin_&]:bg-[#c8ae88] [.at-secondary-skin_&]:text-[#211f1b]',
     emerald: 'bg-emerald-500',
     amber: 'bg-amber-500',
     indigo: 'bg-indigo-500'
@@ -30,11 +30,11 @@ export function ProgressBar({
     <div className={className}>
       {(label || showPercentage) && (
         <div className="mb-1.5 flex items-center justify-between text-xs">
-          {label && <span className="text-slate-300">{label}</span>}
-          {showPercentage && <span className="text-slate-400">{percentage.toFixed(0)}%</span>}
+          {label && <span className="text-slate-300 [.at-secondary-skin_&]:text-[#c9c3b8]">{label}</span>}
+          {showPercentage && <span className="text-slate-400 [.at-secondary-skin_&]:text-[#aaa497]">{percentage.toFixed(0)}%</span>}
         </div>
       )}
-      <div className="h-2 w-full overflow-hidden rounded-full bg-slate-800">
+      <div className="h-2 w-full overflow-hidden rounded-full bg-slate-800 [.at-secondary-skin_&]:bg-[#34362f]">
         <motion.div
           className={`h-full rounded-full ${colorClasses[color]}`}
           initial={{ width: 0 }}

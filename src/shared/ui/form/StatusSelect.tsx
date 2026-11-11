@@ -11,9 +11,9 @@ type StatusOption = {
 
 const DEFAULT_STATUSES: StatusOption[] = [
   { id: 'online', emoji: '🟢', label: 'В сети', color: 'text-emerald-400' },
-  { id: 'playing', emoji: '🎮', label: 'Играю', color: 'text-sky-400' },
+  { id: 'playing', emoji: '🎮', label: 'Играю', color: 'text-sky-400 [.at-secondary-skin_&]:text-[#d8bc91]' },
   { id: 'building', emoji: '🏗️', label: 'Строю', color: 'text-amber-400' },
-  { id: 'afk', emoji: '💤', label: 'AFK', color: 'text-slate-400' },
+  { id: 'afk', emoji: '💤', label: 'AFK', color: 'text-slate-400 [.at-secondary-skin_&]:text-[#aaa497]' },
   { id: 'dnd', emoji: '⛔', label: 'Не беспокоить', color: 'text-red-400' },
 ]
 
@@ -40,13 +40,13 @@ export function StatusSelect({ value, customStatus, onChange, className = '' }: 
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className="flex w-full items-center gap-2 rounded-xl border border-slate-800 bg-slate-900 px-3 py-2 text-sm hover:border-slate-600 transition-colors"
+        className="flex w-full items-center gap-2 rounded-xl border border-slate-800 [.at-secondary-skin_&]:border-[rgba(239,232,218,0.22)] bg-slate-900 [.at-secondary-skin_&]:bg-[rgba(33,35,31,0.91)] px-3 py-2 text-sm hover:border-slate-600 transition-colors"
       >
         <span className="text-lg">{selected.emoji}</span>
-        <span className={selected.color || 'text-slate-300'}>
+        <span className={selected.color || 'text-slate-300 [.at-secondary-skin_&]:text-[#c9c3b8]'}>
           {customStatus || labels[selected.id]}
         </span>
-        <span className="ml-auto text-slate-500">▼</span>
+        <span className="ml-auto text-slate-500 [.at-secondary-skin_&]:text-[#938e83]">▼</span>
       </button>
 
       <AnimatePresence>
@@ -57,7 +57,7 @@ export function StatusSelect({ value, customStatus, onChange, className = '' }: 
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="absolute left-0 right-0 top-full z-30 mt-2 overflow-hidden rounded-xl border border-slate-800 bg-slate-950 shadow-xl"
+              className="absolute left-0 right-0 top-full z-30 mt-2 overflow-hidden rounded-xl border border-slate-800 [.at-secondary-skin_&]:border-[rgba(239,232,218,0.22)] bg-slate-950 [.at-secondary-skin_&]:bg-[rgba(25,27,24,0.85)] shadow-xl"
             >
               <div className="max-h-64 overflow-y-auto">
                 {DEFAULT_STATUSES.map((status) => (
@@ -71,15 +71,15 @@ export function StatusSelect({ value, customStatus, onChange, className = '' }: 
                     }}
                     className={`flex w-full items-center gap-3 px-3 py-2 text-left text-sm transition-colors ${
                       status.id === value
-                        ? 'bg-slate-800'
+                        ? 'bg-slate-800 [.at-secondary-skin_&]:bg-[#34362f]'
                         : 'hover:bg-slate-900'
                     }`}
                   >
                     <span className="text-lg">{status.emoji}</span>
-                    <span className={status.color || 'text-slate-300'}>{labels[status.id]}</span>
+                    <span className={status.color || 'text-slate-300 [.at-secondary-skin_&]:text-[#c9c3b8]'}>{labels[status.id]}</span>
                   </button>
                 ))}
-                <div className="border-t border-slate-800 p-2">
+                <div className="border-t border-slate-800 [.at-secondary-skin_&]:border-[rgba(239,232,218,0.22)] p-2">
                   {editingCustom ? (
                     <div className="flex gap-2">
                       <input
@@ -88,7 +88,7 @@ export function StatusSelect({ value, customStatus, onChange, className = '' }: 
                         onChange={(e) => setCustomText(e.target.value)}
                         placeholder={language === 'ru' ? 'Свой статус...' : 'Custom status...'}
                         maxLength={50}
-                        className="flex-1 rounded-lg border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm outline-none focus:border-slate-500"
+                        className="flex-1 rounded-lg border border-slate-700 [.at-secondary-skin_&]:border-[rgba(239,232,218,0.22)] bg-slate-900 [.at-secondary-skin_&]:bg-[rgba(33,35,31,0.91)] px-2 py-1.5 text-sm outline-none focus:border-slate-500"
                         autoFocus
                       />
                       <button
@@ -98,7 +98,7 @@ export function StatusSelect({ value, customStatus, onChange, className = '' }: 
                           setEditingCustom(false)
                           setOpen(false)
                         }}
-                        className="rounded-lg bg-sky-600 px-3 py-1.5 text-sm hover:bg-sky-500"
+                        className="rounded-lg bg-sky-600 [.at-secondary-skin_&]:bg-[#c8ae88] [.at-secondary-skin_&]:text-[#211f1b] px-3 py-1.5 text-sm hover:bg-sky-500 [.at-secondary-skin_&]:hover:bg-[#e6d6bd]"
                       >
                         ✓
                       </button>
@@ -107,7 +107,7 @@ export function StatusSelect({ value, customStatus, onChange, className = '' }: 
                     <button
                       type="button"
                       onClick={() => setEditingCustom(true)}
-                      className="w-full rounded-lg px-2 py-1.5 text-left text-sm text-slate-400 hover:bg-slate-900 hover:text-slate-300"
+                      className="w-full rounded-lg px-2 py-1.5 text-left text-sm text-slate-400 [.at-secondary-skin_&]:text-[#aaa497] hover:bg-slate-900 hover:text-slate-300"
                     >
                       ✏️ {language === 'ru' ? 'Свой статус' : 'Custom status'}
                     </button>

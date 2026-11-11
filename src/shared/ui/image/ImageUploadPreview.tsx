@@ -32,7 +32,7 @@ export function ImageUploadPreview({
   });
 
   return (
-    <div className={`relative rounded-2xl overflow-hidden border-2 border-slate-700 ${className}`}>
+    <div className={`relative rounded-2xl overflow-hidden border-2 border-slate-700 [.at-secondary-skin_&]:border-[rgba(239,232,218,0.22)] ${className}`}>
       {preview && (
         <img
           src={preview}
@@ -41,7 +41,7 @@ export function ImageUploadPreview({
         />
       )}
       
-      <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center">
+      <div className="absolute inset-0 bg-slate-900/80 [.at-secondary-skin_&]:bg-[rgba(33,35,31,0.91)] backdrop-blur-sm flex items-center justify-center">
         <AnimatePresence mode="wait">
           {error ? (
             <motion.div
@@ -60,7 +60,7 @@ export function ImageUploadPreview({
               {onCancel && (
                 <button
                   onClick={onCancel}
-                  className="mt-2 px-4 py-2 text-sm bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors"
+                  className="mt-2 px-4 py-2 text-sm bg-slate-800 [.at-secondary-skin_&]:bg-[#34362f] hover:bg-slate-700 rounded-lg transition-colors"
                 >
                   Закрыть
                 </button>
@@ -79,8 +79,8 @@ export function ImageUploadPreview({
                 onCancel={onCancel}
                 size="lg"
               />
-              <span className="text-sm text-slate-300">Загрузка изображения...</span>
-              <span className="text-xs text-slate-500">{file.name}</span>
+              <span className="text-sm text-slate-300 [.at-secondary-skin_&]:text-[#c9c3b8]">Загрузка изображения...</span>
+              <span className="text-xs text-slate-500 [.at-secondary-skin_&]:text-[#938e83]">{file.name}</span>
             </motion.div>
           ) : (
             <motion.div
