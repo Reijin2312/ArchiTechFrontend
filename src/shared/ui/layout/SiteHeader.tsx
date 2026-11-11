@@ -89,8 +89,8 @@ export default function SiteHeader() {
     }, [items]);
 
     return (
-      <div className="mt-6 rounded-xl border border-slate-800 bg-slate-900/70 px-3 py-3">
-        <div className="mb-2 text-xs font-semibold text-slate-300">{t('header.onThisPage')}</div>
+      <div className="mt-6 rounded-xl border border-slate-800 [.at-site-drawer_&]:border-[rgba(240,233,220,0.2)] bg-slate-900/70 [.at-site-drawer_&]:bg-[#292a24] px-3 py-3">
+        <div className="mb-2 text-xs font-semibold text-slate-300 [.at-site-drawer_&]:text-[#c9c2b7]">{t('header.onThisPage')}</div>
         <ol className="space-y-1 text-xs">
           {items.map((it, i) => {
             const on = active === it.id;
@@ -98,7 +98,7 @@ export default function SiteHeader() {
             <li key={it.id} className="flex items-start gap-2">
                 <span
                 className={`inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[10px] leading-none ${
-                    on ? 'border-[#baa07b] text-[#d5b993]' : 'border-slate-700 text-slate-400'
+                    on ? 'border-[#baa07b] text-[#d5b993] [.at-site-drawer_&]:text-[#dec59f]' : 'border-slate-700 [.at-site-drawer_&]:border-[rgba(240,233,220,0.2)] text-slate-400 [.at-site-drawer_&]:text-[#c9c2b7]'
                   }`}
                 >
                   {i + 1}
@@ -106,7 +106,7 @@ export default function SiteHeader() {
                 <a
                   href={`#${it.id}`}
                   onClick={onItemClick}
-                  className={on ? 'text-[#d5b993]' : 'text-slate-200 hover:text-[#d5b993]'}
+                  className={on ? 'text-[#d5b993] [.at-site-drawer_&]:text-[#dec59f]' : 'text-slate-200 [.at-site-drawer_&]:text-[#c9c2b7] hover:text-[#d5b993]'}
                   aria-current={on ? 'true' : undefined}
                 >
                   {it.title}
@@ -228,7 +228,7 @@ export default function SiteHeader() {
                       className="h-full w-full object-cover"
                     />
                   ) : (
-                    <span className="w-full text-center text-xs leading-8 text-slate-300">
+                    <span className="w-full text-center text-xs leading-8 text-slate-300 [.at-site-drawer_&]:text-[#c9c2b7]">
                       {(user.username?.[0] || '?').toUpperCase()}
                     </span>
                   )}
@@ -263,7 +263,7 @@ export default function SiteHeader() {
                     className="h-full w-full object-cover"
                   />
                 ) : (
-                  <span className="w-full text-center text-xs leading-8 text-slate-300">
+                  <span className="w-full text-center text-xs leading-8 text-slate-300 [.at-site-drawer_&]:text-[#c9c2b7]">
                     {(user.username?.[0] || '?').toUpperCase()}
                   </span>
                 )}
@@ -313,13 +313,13 @@ export default function SiteHeader() {
           }`}
         >
           <div className="mb-4 flex items-center justify-between">
-            <span className="text-xs font-semibold tracking-[0.18em] uppercase text-slate-300">
+            <span className="text-xs font-semibold tracking-[0.18em] uppercase text-slate-300 [.at-site-drawer_&]:text-[#c9c2b7]">
               {t('header.navigation')}
             </span>
             <button
               type="button"
               onClick={() => setMobileOpen(false)}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-lg hover:bg-slate-900"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-lg hover:bg-slate-900 [.at-site-drawer_&]:bg-[#292a24]"
               aria-label={t('header.closeMenu')}
             >
               <SvgX className="h-5 w-5" />
@@ -392,9 +392,9 @@ export default function SiteHeader() {
               <Link
                 to={`/u/${user.username}`}
                 onClick={() => setMobileOpen(false)}
-                className="inline-flex items-center gap-2 rounded-lg border border-slate-700 px-3 py-1.5 text-sm hover:border-slate-500"
+                className="inline-flex items-center gap-2 rounded-lg border border-slate-700 [.at-site-drawer_&]:border-[rgba(240,233,220,0.2)] px-3 py-1.5 text-sm hover:border-slate-500 [.at-site-drawer_&]:border-[rgba(240,233,220,0.2)]"
               >
-                <span className="inline-flex h-7 w-7 overflow-hidden rounded-full border border-slate-700">
+                <span className="inline-flex h-7 w-7 overflow-hidden rounded-full border border-slate-700 [.at-site-drawer_&]:border-[rgba(240,233,220,0.2)]">
                   {(user as any)?.avatarUrl ? (
                     <img
                       src={(user as any).avatarUrl as string}
@@ -406,7 +406,7 @@ export default function SiteHeader() {
                       className="h-full w-full object-cover"
                     />
                   ) : (
-                    <span className="w-full text-center text-xs leading-7 text-slate-300">
+                    <span className="w-full text-center text-xs leading-7 text-slate-300 [.at-site-drawer_&]:text-[#c9c2b7]">
                       {(user.username?.[0] || '?').toUpperCase()}
                     </span>
                   )}
@@ -417,7 +417,7 @@ export default function SiteHeader() {
               <Link
                 to={`/auth/login?next=${next}`}
                 onClick={() => setMobileOpen(false)}
-                className="rounded-lg border border-slate-700 px-3 py-1.5 text-sm hover:border-slate-500"
+                className="rounded-lg border border-slate-700 [.at-site-drawer_&]:border-[rgba(240,233,220,0.2)] px-3 py-1.5 text-sm hover:border-slate-500 [.at-site-drawer_&]:border-[rgba(240,233,220,0.2)]"
               >
                 {t('header.login')}
               </Link>
@@ -429,7 +429,7 @@ export default function SiteHeader() {
           )}
 
           {/* Нижняя «футерная» полоска */}
-          <div className="mt-auto pt-4 border-t border-slate-800 flex items-center justify-between gap-3">
+          <div className="mt-auto pt-4 border-t border-slate-800 [.at-site-drawer_&]:border-[rgba(240,233,220,0.2)] flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <img
                 src="/images/favicon-192.png"
@@ -438,9 +438,9 @@ export default function SiteHeader() {
                 height={24}
                 decoding="async"
               />
-              <span className="text-xs font-medium text-slate-100">{SERVER_NAME}</span>
+              <span className="text-xs font-medium text-slate-100 [.at-site-drawer_&]:text-[#c9c2b7]">{SERVER_NAME}</span>
             </div>
-            <div className="flex items-center gap-4 text-slate-300">
+            <div className="flex items-center gap-4 text-slate-300 [.at-site-drawer_&]:text-[#c9c2b7]">
               <a
                 href={TELEGRAM_URL}
                 rel="noopener noreferrer"
