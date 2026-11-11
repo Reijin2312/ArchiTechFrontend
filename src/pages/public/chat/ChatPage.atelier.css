@@ -1,0 +1,68 @@
+@import url('https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=Onest:wght@400;500;600;700&display=swap');
+
+/* Existing independent messenger: colour/typography only, no layout or behaviour edits. */
+.at-chat-theme {
+  background-color: #171816;
+  color: #f2efe9;
+}
+.at-chat-theme .tg-app {
+  font-family: 'Golos Text',sans-serif;
+  color: #e8e3db;
+}
+.at-chat-theme :is(h1,h2,h3) { font-family: 'Onest',sans-serif; }
+.at-chat-theme :is(button,input,textarea,a):focus-visible {
+  outline: 2px solid #dec399;
+  outline-offset: 2px;
+}
+.at-chat-theme :is(input,textarea) { caret-color: #c5aa84; }
+.at-chat-theme ::selection { background: #c5aa84; color: #171816; }
+.at-chat-theme .tg-sidebar { box-shadow: inset -1px 0 0 rgba(225,215,195,.12); }
+.at-chat-theme .tg-scroll::-webkit-scrollbar-thumb { background: rgba(225,215,195,.20); }
+.at-chat-theme .tg-right::after { background: #c5aa84; }
+.at-chat-theme .tg-left::after { background: #292b27; }
+/* Preserve all bubble radius/tails, the draggable sidebar and media previews. */
+.at-chat-theme [class~="bg-[#0a0910]"],
+.at-chat-theme [class~="bg-[#0f1115]"],
+.at-chat-theme [class~="bg-[#111216]"],
+.at-chat-theme [class~="bg-[#14151a]"],
+.at-chat-theme [class~="bg-[#16171d]"] { background-color: #171816; }
+.at-chat-theme [class~="bg-[#1a1b20]"],
+.at-chat-theme [class~="bg-[#1a1b22]"],
+.at-chat-theme [class~="bg-[#1b1c22]"],
+.at-chat-theme [class~="bg-[#1c1d23]"],
+.at-chat-theme [class~="bg-[#1e1f26]"],
+.at-chat-theme [class~="bg-[#1f2026]"],
+.at-chat-theme [class~="bg-[#222327]"],
+.at-chat-theme [class~="bg-[#23212a]"] { background-color: #242620; }
+.at-chat-theme [class~="bg-[#2a2b31]"],
+.at-chat-theme [class~="bg-[#2a2b34]"],
+.at-chat-theme [class~="bg-[#353142]"],
+.at-chat-theme [class~="bg-[#272832]"] { background-color: #33352e; }
+/* Primary interactive accents, selections and outgoing bubble. */
+.at-chat-theme [class~="bg-[#8e77ef]"],
+.at-chat-theme [class~="bg-[#8f79ee]"],
+.at-chat-theme [class~="bg-[#9d83ff]"],
+.at-chat-theme [class~="bg-[#8e75f8]"],
+.at-chat-theme [class~="bg-[#967ef0]"],
+.at-chat-theme [class~="bg-[#8f73ff]"],
+.at-chat-theme [class~="bg-[#7e65e8]"] {
+  background-color: #c5aa84;
+  color: #25231f;
+}
+.at-chat-theme [class~="bg-[#4c285c]"],
+.at-chat-theme [class~="bg-[#6557b7]"],
+.at-chat-theme [class~="bg-[#4f438f]"] { background-color: #58503f; }
+.at-chat-theme [class~="text-[#9d83ff]"],
+.at-chat-theme [class~="text-[#b79cff]"],
+.at-chat-theme [class~="text-[#bca8ff]"],
+.at-chat-theme [class~="text-[#b39cff]"],
+.at-chat-theme [class~="text-[#9f88ff]"],
+.at-chat-theme [class~="text-[#a790ff]"],
+.at-chat-theme [class~="text-[#d2c2ff]"],
+.at-chat-theme [class~="text-[#8e75f8]"] { color: #dec49d; }
+.at-chat-theme [class~="border-[#8e77ef]"],
+.at-chat-theme [class~="border-[#8e75f8]"],
+.at-chat-theme [class~="border-[#af93ff]"],
+.at-chat-theme [class~="border-[#8f73ff]"],
+.at-chat-theme [class~="border-[#7e65e8]"] { border-color: #c5aa84; }
+/* Wallpaper and message content remain operational even when inline styles apply. */
