@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import './BotLogin.atelier.css';
 
 type TelegramWebApp = {
   ready?: () => void;
@@ -79,7 +80,7 @@ export default function TgBotLoginWebApp() {
 
   if (!loading && !tg) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white px-4">
+      <div className="at-bot-login min-h-screen flex items-center justify-center bg-slate-900 text-white px-4">
         <div className="max-w-md w-full space-y-4 text-center">
           <h1 className="text-2xl font-semibold">Откройте из Telegram</h1>
           <p>Эта форма работает только внутри Telegram-бота как WebApp. Откройте кнопку снова из бота.</p>
@@ -89,7 +90,7 @@ export default function TgBotLoginWebApp() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-900 text-white px-4">
+    <div className="at-bot-login min-h-screen flex items-center justify-center bg-slate-900 text-white px-4">
       <div className="w-full max-w-md bg-slate-800/70 border border-slate-700 rounded-2xl p-6 shadow-2xl space-y-4">
         <div className="space-y-1">
           <h1 className="text-2xl font-semibold">Вход для бота</h1>
