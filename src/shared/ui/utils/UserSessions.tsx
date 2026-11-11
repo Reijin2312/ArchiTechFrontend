@@ -86,10 +86,10 @@ export function UserSessions({ username }: { username: string }) {
 
   if (loading) {
     return (
-      <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-6">
+      <div className="rounded-xl border border-slate-800 [.at-secondary-skin_&]:border-[rgba(239,232,218,0.22)] bg-slate-900/40 [.at-secondary-skin_&]:bg-[rgba(33,35,31,0.91)] p-6">
         <div className="animate-pulse space-y-3">
-          <div className="h-4 bg-slate-700 rounded w-1/3"></div>
-          <div className="h-8 bg-slate-700 rounded"></div>
+          <div className="h-4 bg-slate-700 [.at-secondary-skin_&]:bg-[#404037] rounded w-1/3"></div>
+          <div className="h-8 bg-slate-700 [.at-secondary-skin_&]:bg-[#404037] rounded"></div>
         </div>
       </div>
     );
@@ -97,8 +97,8 @@ export function UserSessions({ username }: { username: string }) {
 
   if (error || !data) {
     return (
-      <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-6">
-        <p className="text-slate-400 text-sm">{text.error}</p>
+      <div className="rounded-xl border border-slate-800 [.at-secondary-skin_&]:border-[rgba(239,232,218,0.22)] bg-slate-900/40 [.at-secondary-skin_&]:bg-[rgba(33,35,31,0.91)] p-6">
+        <p className="text-slate-400 [.at-secondary-skin_&]:text-[#aaa497] text-sm">{text.error}</p>
       </div>
     );
   }
@@ -144,10 +144,10 @@ export function UserSessions({ username }: { username: string }) {
   };
 
   return (
-    <div className="rounded-xl border border-slate-800 bg-slate-900/40 overflow-hidden">
-      <div className="px-6 py-4 border-b border-slate-800">
+    <div className="rounded-xl border border-slate-800 [.at-secondary-skin_&]:border-[rgba(239,232,218,0.22)] bg-slate-900/40 [.at-secondary-skin_&]:bg-[rgba(33,35,31,0.91)] overflow-hidden">
+      <div className="px-6 py-4 border-b border-slate-800 [.at-secondary-skin_&]:border-[rgba(239,232,218,0.22)]">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-slate-100">{text.title}</h3>
+          <h3 className="text-lg font-semibold text-slate-100 [.at-secondary-skin_&]:text-[#f2efe9]">{text.title}</h3>
           {data.isOnline && (
             <span className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs border border-emerald-700/50 bg-emerald-500/10 text-emerald-300">
               <motion.span
@@ -169,26 +169,26 @@ export function UserSessions({ username }: { username: string }) {
       </div>
 
       {data.stats && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 px-6 py-4 bg-slate-950/40">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 px-6 py-4 bg-slate-950/40 [.at-secondary-skin_&]:bg-[rgba(25,27,24,0.85)]">
           <div>
-            <div className="text-xs text-slate-400 mb-1">{text.total}</div>
-            <div className="text-xl font-semibold text-slate-100">{data.stats.totalSessions}</div>
+            <div className="text-xs text-slate-400 [.at-secondary-skin_&]:text-[#aaa497] mb-1">{text.total}</div>
+            <div className="text-xl font-semibold text-slate-100 [.at-secondary-skin_&]:text-[#f2efe9]">{data.stats.totalSessions}</div>
           </div>
           <div>
-            <div className="text-xs text-slate-400 mb-1">{text.played}</div>
-            <div className="text-xl font-semibold text-slate-100">
+            <div className="text-xs text-slate-400 [.at-secondary-skin_&]:text-[#aaa497] mb-1">{text.played}</div>
+            <div className="text-xl font-semibold text-slate-100 [.at-secondary-skin_&]:text-[#f2efe9]">
               {data.stats.totalHours.toFixed(1)}{language === 'ru' ? 'ч' : 'h'}
             </div>
           </div>
           <div>
-            <div className="text-xs text-slate-400 mb-1">{text.average}</div>
-            <div className="text-xl font-semibold text-slate-100">
+            <div className="text-xs text-slate-400 [.at-secondary-skin_&]:text-[#aaa497] mb-1">{text.average}</div>
+            <div className="text-xl font-semibold text-slate-100 [.at-secondary-skin_&]:text-[#f2efe9]">
               {formatDuration(data.stats.averageMinutes)}
             </div>
           </div>
           <div>
-            <div className="text-xs text-slate-400 mb-1">{text.last}</div>
-            <div className="text-xl font-semibold text-slate-100">
+            <div className="text-xs text-slate-400 [.at-secondary-skin_&]:text-[#aaa497] mb-1">{text.last}</div>
+            <div className="text-xl font-semibold text-slate-100 [.at-secondary-skin_&]:text-[#f2efe9]">
               {data.isOnline || hasActiveSession
                 ? text.now
                 : data.stats.lastPlayed
@@ -201,12 +201,12 @@ export function UserSessions({ username }: { username: string }) {
 
       <div className="px-6 py-4">
         {data.sessions.length === 0 ? (
-          <p className="text-slate-400 text-sm text-center py-8">
+          <p className="text-slate-400 [.at-secondary-skin_&]:text-[#aaa497] text-sm text-center py-8">
             {text.empty}
           </p>
         ) : (
           <div className="space-y-2">
-            <div className="text-xs text-slate-400 mb-3">{text.recent}</div>
+            <div className="text-xs text-slate-400 [.at-secondary-skin_&]:text-[#aaa497] mb-3">{text.recent}</div>
             {data.sessions.map((session) => {
               const activeMinutes = session.isActive ? getActiveMinutes(session.startedAt) : null;
               const durationMinutes = session.durationMinutes ?? activeMinutes;
@@ -216,11 +216,11 @@ export function UserSessions({ username }: { username: string }) {
                   key={session.sessionId}
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="flex items-center justify-between py-3 px-4 rounded-lg border border-slate-800 bg-slate-950/40 hover:bg-slate-900/60 transition-colors"
+                  className="flex items-center justify-between py-3 px-4 rounded-lg border border-slate-800 [.at-secondary-skin_&]:border-[rgba(239,232,218,0.22)] bg-slate-950/40 [.at-secondary-skin_&]:bg-[rgba(25,27,24,0.85)] hover:bg-slate-900/60 transition-colors"
                 >
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm text-slate-200 font-medium">
+                      <span className="text-sm text-slate-200 [.at-secondary-skin_&]:text-[#c9c3b8] font-medium">
                         {formatDate(session.startedAt)}
                       </span>
                       {session.isActive && (
@@ -229,14 +229,14 @@ export function UserSessions({ username }: { username: string }) {
                         </span>
                       )}
                     </div>
-                    <div className="text-xs text-slate-400 mt-0.5">
+                    <div className="text-xs text-slate-400 [.at-secondary-skin_&]:text-[#aaa497] mt-0.5">
                       {session.endedAt
                         ? `${text.until} ${formatDate(session.endedAt)}`
                         : text.still}
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-sm font-medium text-slate-100">
+                    <div className="text-sm font-medium text-slate-100 [.at-secondary-skin_&]:text-[#f2efe9]">
                       {durationMinutes != null
                         ? formatDuration(durationMinutes)
                         : '-'}

@@ -28,7 +28,7 @@ export function FriendsList({ friends, onRemove, onOpenChat }: FriendsListProps)
 
   if (friends.length === 0) {
     return (
-      <div className="text-center py-8 text-slate-400 text-sm">
+      <div className="text-center py-8 text-slate-400 [.at-secondary-skin_&]:text-[#aaa497] text-sm">
         <p>У вас пока нет друзей</p>
         <p className="text-xs mt-1">Используйте поиск</p>
       </div>
@@ -61,27 +61,27 @@ export function FriendsList({ friends, onRemove, onOpenChat }: FriendsListProps)
           key={friend.userId}
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex items-center gap-2 p-2 rounded-lg border border-slate-800 bg-slate-900/40 hover:bg-slate-900/60 transition-colors"
+          className="flex items-center gap-2 p-2 rounded-lg border border-slate-800 [.at-secondary-skin_&]:border-[rgba(239,232,218,0.22)] bg-slate-900/40 [.at-secondary-skin_&]:bg-[rgba(33,35,31,0.91)] hover:bg-slate-900/60 transition-colors"
         >
           <Link to={`/u/${friend.username}`} className="flex items-center gap-2 flex-1 min-w-0">
             {friend.avatarUrl ? (
               <img
                 src={friend.avatarUrl}
                 alt={friend.username}
-                className="w-10 h-10 rounded-lg object-cover border border-slate-700"
+                className="w-10 h-10 rounded-lg object-cover border border-slate-700 [.at-secondary-skin_&]:border-[rgba(239,232,218,0.22)]"
               />
             ) : (
-              <div className="w-10 h-10 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-400 text-sm">
+              <div className="w-10 h-10 rounded-lg bg-slate-800 [.at-secondary-skin_&]:bg-[#34362f] border border-slate-700 [.at-secondary-skin_&]:border-[rgba(239,232,218,0.22)] flex items-center justify-center text-slate-400 [.at-secondary-skin_&]:text-[#aaa497] text-sm">
                 {friend.username[0]?.toUpperCase()}
               </div>
             )}
             <div className="flex-1 min-w-0">
               <div className="text-sm font-medium truncate">{friend.username}</div>
               {friend.displayName && (
-                <div className="text-xs text-slate-400 truncate">{friend.displayName}</div>
+                <div className="text-xs text-slate-400 [.at-secondary-skin_&]:text-[#aaa497] truncate">{friend.displayName}</div>
               )}
               {friend.acceptedAt && (
-                <div className="text-xs text-slate-500 truncate" title={`Друг с ${new Date(friend.acceptedAt).toLocaleString('ru')}`}>
+                <div className="text-xs text-slate-500 [.at-secondary-skin_&]:text-[#938e83] truncate" title={`Друг с ${new Date(friend.acceptedAt).toLocaleString('ru')}`}>
                   {formatDate(friend.acceptedAt)}
                 </div>
               )}
@@ -89,7 +89,7 @@ export function FriendsList({ friends, onRemove, onOpenChat }: FriendsListProps)
           </Link>
           <button
             onClick={() => onOpenChat(friend.userId)}
-            className="p-1.5 text-xs rounded bg-indigo-600/20 hover:bg-indigo-600/40 hover:text-indigo-300 transition-all border border-indigo-600/30"
+            className="p-1.5 text-xs rounded bg-indigo-600/20 hover:bg-indigo-600/40 [.at-secondary-skin_&]:hover:bg-[#e6d6bd] hover:text-indigo-300 [.at-secondary-skin_&]:hover:text-[#f0dcc0] transition-all border border-indigo-600/30"
             title="Написать"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -102,7 +102,7 @@ export function FriendsList({ friends, onRemove, onOpenChat }: FriendsListProps)
                 e.stopPropagation();
                 setOpenMenuUserId((prev) => (prev === friend.userId ? null : friend.userId));
               }}
-              className="p-1.5 rounded border border-slate-700/70 bg-slate-900/70 text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
+              className="p-1.5 rounded border border-slate-700/70 [.at-secondary-skin_&]:border-[rgba(239,232,218,0.22)] bg-slate-900/70 [.at-secondary-skin_&]:bg-[rgba(33,35,31,0.91)] text-slate-300 [.at-secondary-skin_&]:text-[#c9c3b8] hover:bg-slate-800 hover:text-white transition-colors"
               title="Меню действий"
               aria-haspopup="menu"
               aria-expanded={openMenuUserId === friend.userId}
@@ -116,7 +116,7 @@ export function FriendsList({ friends, onRemove, onOpenChat }: FriendsListProps)
             </button>
 
             {openMenuUserId === friend.userId && (
-              <div className="absolute right-0 top-full mt-1 z-20 min-w-[180px] rounded-lg border border-slate-700 bg-slate-900 shadow-xl overflow-hidden">
+              <div className="absolute right-0 top-full mt-1 z-20 min-w-[180px] rounded-lg border border-slate-700 [.at-secondary-skin_&]:border-[rgba(239,232,218,0.22)] bg-slate-900 [.at-secondary-skin_&]:bg-[rgba(33,35,31,0.91)] shadow-xl overflow-hidden">
                 <button
                   onClick={() => {
                     setOpenMenuUserId(null);
