@@ -9,6 +9,7 @@ type SearchUsersProps = {
   loading: boolean;
   onSendRequest: (id: string) => void;
   onCancelRequest: (id: string) => void;
+  onOpenChat?: (id: string) => void;
   hideInput?: boolean;
 };
 
@@ -19,6 +20,7 @@ export function SearchUsers({
   loading,
   onSendRequest,
   onCancelRequest,
+  onOpenChat,
   hideInput = false,
 }: SearchUsersProps) {
   return (
@@ -77,6 +79,12 @@ export function SearchUsers({
                 </div>
               </Link>
 
+              {onOpenChat && user.friendStatus !== 'BLOCKED' ? (
+                <button type="button" onClick={() => onOpenChat(user.userId)}
+                  className="rounded-md border border-[#705f45] bg-[#3a3327] px-2.5 py-1.5 text-xs font-medium text-[#ebd4b1] hover:bg-[#49402e]">
+                  Написать
+                </button>
+              ) : null}
               {user.friendStatus === 'ACCEPTED' ? (
                 <span className="rounded border border-emerald-700/50 bg-emerald-500/10 px-2 py-1 text-xs text-emerald-300">
                   Added

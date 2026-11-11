@@ -1,5 +1,6 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import HomePage from '@/pages/public/HomePage';
+import ChatPage from '@/pages/public/ChatPage';
 import LoginPage from '@/features/auth/pages/LoginPage';
 import RegisterPage from '@/features/auth/pages/RegisterPage';
 import CodeVerifyPage from '@/features/auth/pages/CodeVerifyPage';
@@ -28,7 +29,6 @@ import DeviceLoginDonePage from '@/features/auth/pages/DeviceLoginDonePage';
 import LoginTwoFactorPage from '@/features/auth/pages/LoginTwoFactorPage';
 import UserAchievementsPage from '@/pages/public/UserAchievementsPage';
 import UserSkinsPage from '@/pages/public/UserSkinsPage';
-import ChatPage from '@/pages/public/ChatPage';
 
 export const router = createBrowserRouter([
   { path: '/tg-login', element: <TgBotLoginWebApp /> },
