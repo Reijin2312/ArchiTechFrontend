@@ -624,7 +624,7 @@ function GroupServiceMessageBubble({
 
   return (
     <div className="my-[7px] flex flex-col items-center gap-[8px]">
-      <div className="max-w-[90%] rounded-[14px] bg-[#4c285c]/86 px-[10px] py-[5px] text-center text-[15px] font-[600] leading-[1.15] text-white shadow-[0_6px_18px_rgba(0,0,0,0.28)] backdrop-blur-sm">
+      <div className="max-w-[90%] rounded-[14px] bg-[#594d3c]/86 px-[10px] py-[5px] text-center text-[15px] font-[600] leading-[1.15] text-white shadow-[0_6px_18px_rgba(0,0,0,0.28)] backdrop-blur-sm">
         {text}
       </div>
       {avatarUrl ? (
@@ -639,7 +639,7 @@ function GroupServiceMessageBubble({
 function DateDivider({ label }: { label: string }) {
   return (
     <div className="my-[7px] flex justify-center">
-      <div className="rounded-[14px] bg-[#4c285c]/86 px-[10px] py-[5px] text-[15px] font-[600] leading-none text-white shadow-[0_6px_18px_rgba(0,0,0,0.28)] backdrop-blur-sm">
+      <div className="rounded-[14px] bg-[#594d3c]/86 px-[10px] py-[5px] text-[15px] font-[600] leading-none text-white shadow-[0_6px_18px_rgba(0,0,0,0.28)] backdrop-blur-sm">
         {label}
       </div>
     </div>
@@ -1362,8 +1362,8 @@ function VideoLinkPreviewCard({
       }`}
       style={{ width: '100%', maxWidth: maxWidthPx }}
     >
-      <div className={`border-l-[4px] px-3 py-2.5 ${isOwn ? 'border-white/70 bg-white/8' : 'border-[#af93ff] bg-white/[0.03]'}`}>
-        <div className={`text-[13px] font-[700] ${isOwn ? 'text-white/88' : 'text-[#d2c2ff]'}`}>
+      <div className={`border-l-[4px] px-3 py-2.5 ${isOwn ? 'border-white/70 bg-white/8' : 'border-[#dbc29e] bg-white/[0.03]'}`}>
+        <div className={`text-[13px] font-[700] ${isOwn ? 'text-white/88' : 'text-[#e9d7bd]'}`}>
           {resolvedSource}
         </div>
         <div className="mt-[2px] line-clamp-1 text-[17px] font-[700] leading-tight text-white">
@@ -1380,7 +1380,7 @@ function VideoLinkPreviewCard({
       </div>
 
       <div
-        className="relative w-full overflow-hidden bg-[#6557b7]/66 transition-[padding] duration-150 ease-out"
+        className="relative w-full overflow-hidden bg-[#867052]/66 transition-[padding] duration-150 ease-out"
         style={{ paddingTop: mediaPaddingTop }}
       >
         {isPlayingInline && preview.directVideoUrl ? (
@@ -1410,7 +1410,7 @@ function VideoLinkPreviewCard({
               <img src={resolvedPosterUrl} alt={resolvedTitle} className="h-full w-full object-cover" />
             ) : null}
             <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(38,28,84,0.36)_0%,rgba(38,28,84,0.58)_100%)]" />
-            <span className="absolute left-1/2 top-1/2 grid h-[46px] w-[46px] -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-[#4f438f]/88 text-white shadow-[0_14px_28px_rgba(0,0,0,0.38)] transition-transform duration-200 group-hover:scale-105">
+            <span className="absolute left-1/2 top-1/2 grid h-[46px] w-[46px] -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-[#716249]/88 text-white shadow-[0_14px_28px_rgba(0,0,0,0.38)] transition-transform duration-200 group-hover:scale-105">
               <PlayIcon size={21} />
             </span>
           </button>
@@ -1470,7 +1470,7 @@ function MessageTextBubble({
 
   return (
     <div
-      className={`tg-bubble relative ${isOwn ? 'tg-right bg-[#967ef0] text-white' : 'tg-left bg-[#222327] text-white/95'} ${hideTail ? 'tg-tail-none' : ''}`}
+      className={`tg-bubble relative ${isOwn ? 'tg-right bg-[#c5aa84] text-white' : 'tg-left bg-[#222327] text-white/95'} ${hideTail ? 'tg-tail-none' : ''}`}
       style={bubbleWidthStyle}
     >
       {replyPreview ? <ReplyPreviewBlock replyPreview={replyPreview} isOwn={isOwn} /> : null}
@@ -1718,7 +1718,7 @@ function PollMessageBubble({
     <div
       className={`relative overflow-hidden px-[14px] pb-[22px] pt-[12px] text-white shadow-[0_10px_28px_rgba(0,0,0,0.32)] ${bubbleClass} ${
         isOwn
-          ? 'bg-gradient-to-br from-[#8875f6] via-[#7b66ef] to-[#6d56e1]'
+          ? 'bg-gradient-to-br from-[#ad906a] via-[#ad906a] to-[#99805e]'
           : 'bg-gradient-to-br from-[#2a2832] via-[#26242d] to-[#23212a]'
       }`}
       style={{ minWidth: 260, maxWidth: 420 }}
@@ -1748,7 +1748,7 @@ function PollMessageBubble({
                     : isWrongSelected
                       ? 'border-[#f78c9a] bg-[#f78c9a1a]'
                       : isSelected
-                    ? 'border-[#b8a9ff] bg-[#ffffff14]'
+                    ? 'border-[#e0c59e] bg-[#ffffff14]'
                     : 'border-white/14 bg-black/10 hover:bg-white/10'
                 } ${
                   closed || loading || voting || !onVote ? 'cursor-default' : 'cursor-pointer'
@@ -1761,7 +1761,7 @@ function PollMessageBubble({
                       : isWrongSelected
                         ? 'bg-[#ff9aaa29]'
                         : isSelected
-                          ? 'bg-[#c1b4ff33]'
+                          ? 'bg-[#d1b38b33]'
                           : 'bg-[#ffffff12]'
                   }`}
                   style={{ width: `${percent}%` }}
@@ -1916,7 +1916,7 @@ function MessageReactionsBar({
           disabled={!canToggle || toggleLoading}
           className={`inline-flex items-center gap-1 rounded-full border px-2 py-[3px] text-[12px] transition-colors ${
             reaction.reactedByMe
-              ? 'border-[#8f79ff] bg-[#6d56d933] text-white'
+              ? 'border-[#c5aa84] bg-[#b89e7133] text-white'
               : 'border-white/15 bg-white/8 text-white/86 hover:bg-white/14'
           } ${!canToggle || toggleLoading ? 'cursor-default' : ''}`}
         >
@@ -3511,7 +3511,7 @@ export function ChatMessageList({
                       }
                       className={`rounded-[8px] border px-2.5 py-1 text-[12px] ${
                         activePollVoterOption?.optionIndex === item.optionIndex
-                          ? 'border-[#8d76ff]/70 bg-[#8d76ff33] text-white'
+                          ? 'border-[#c5aa84]/70 bg-[#c5aa8433] text-white'
                           : 'border-white/14 text-white/78 hover:bg-white/10'
                       }`}
                     >
