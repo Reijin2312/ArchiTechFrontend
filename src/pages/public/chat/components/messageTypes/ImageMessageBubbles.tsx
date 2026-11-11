@@ -886,9 +886,9 @@ export function ReplyPreviewBlock({
       }`}
     >
       <div className="flex">
-        <span className={`w-[4px] ${isOwn ? 'bg-white/85' : 'bg-[#b599ff]'}`} />
+        <span className={`w-[4px] ${isOwn ? 'bg-white/85' : 'bg-[#e0c59e]'}`} />
         <div className="min-w-0 px-[10px] py-[7px]">
-          <div className={`truncate text-[15px] font-[700] leading-none ${isOwn ? 'text-white' : 'text-[#c0a7ff]'}`}>
+          <div className={`truncate text-[15px] font-[700] leading-none ${isOwn ? 'text-white' : 'text-[#e0c59e]'}`}>
             {replyPreview.author}
           </div>
           <div className={`mt-[4px] line-clamp-1 text-[15px] leading-none ${isOwn ? 'text-white/78' : 'text-white/66'}`}>
@@ -1072,7 +1072,7 @@ export function SingleImageBubble({
         </div>
         <div
           className={`relative px-3 pb-2 pt-2 ${
-            isOwn ? 'bg-[#967ef0] text-white' : 'bg-[#222327] text-white/95'
+            isOwn ? 'bg-[#c5aa84] text-white' : 'bg-[#222327] text-white/95'
           }`}
         >
           {replyPreview ? <ReplyPreviewBlock replyPreview={replyPreview} isOwn={isOwn} /> : null}
@@ -1103,7 +1103,7 @@ export function SingleImageBubble({
   return (
     <div
       className={`tg-bubble relative inline-block overflow-hidden p-0 ${
-        isOwn ? 'tg-right bg-[#967ef0] text-white' : 'tg-left bg-[#222327] text-white/95'
+        isOwn ? 'tg-right bg-[#c5aa84] text-white' : 'tg-left bg-[#222327] text-white/95'
       } ${hideTail ? 'tg-tail-none' : ''}`}
       style={rootContainerStyle}
     >
@@ -1240,7 +1240,7 @@ export function MultiImageBubble({
         />
         <div
           className={`relative px-3 pb-2 pt-2 ${
-            isOwn ? 'bg-[#967ef0] text-white' : 'bg-[#222327] text-white/95'
+            isOwn ? 'bg-[#c5aa84] text-white' : 'bg-[#222327] text-white/95'
           }`}
         >
           {replyPreview ? <ReplyPreviewBlock replyPreview={replyPreview} isOwn={isOwn} /> : null}
@@ -1271,7 +1271,7 @@ export function MultiImageBubble({
   return (
     <div
       className={`tg-bubble relative inline-block overflow-hidden p-0 ${
-        isOwn ? 'tg-right bg-[#967ef0] text-white' : 'tg-left bg-[#222327] text-white/95'
+        isOwn ? 'tg-right bg-[#c5aa84] text-white' : 'tg-left bg-[#222327] text-white/95'
       } ${hideTail ? 'tg-tail-none' : ''}`}
       style={{ maxWidth: bubbleMaxWidthPx }}
     >
