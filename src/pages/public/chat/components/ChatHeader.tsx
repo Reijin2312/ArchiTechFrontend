@@ -142,7 +142,7 @@ export function ChatHeader({
                 </span>
                 <span
                   className={`shrink-0 text-white/60 transition-transform duration-200 group-hover:text-white/90 ${
-                    isGroupInfoOpen ? 'rotate-180 text-[#bca8ff]' : ''
+                    isGroupInfoOpen ? 'rotate-180 text-[#e0c59e]' : ''
                   }`}
                 >
                   <DownIcon size={18} />
