@@ -1,0 +1,25 @@
+@import url('https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=Onest:wght@400;500;600;700&display=swap');
+
+/* Telegram WebApp: only visual colours/fonts, existing form and messaging logic intact. */
+.at-bot-login { background-color: #171816; color: #f2efe9; font-family: 'Golos Text',sans-serif; }
+.at-bot-login h1 { font-family: 'Onest',sans-serif; color: #f2efe9; letter-spacing: -.03em; }
+.at-bot-login > div[class*="bg-slate-800"] {
+  background-color: #242620;
+  border-color: rgba(239,232,218,.24);
+  box-shadow: 0 14px 37px rgba(0,0,0,.2);
+}
+.at-bot-login .text-slate-300, .at-bot-login .text-slate-200 { color: #c9c3b8; }
+.at-bot-login input {
+  background-color: #2d302a;
+  color: #f2efe9;
+  border-color: rgba(239,232,218,.24);
+  caret-color: #c5aa84;
+}
+.at-bot-login input:focus { border-color: #c5aa84; outline-color: #c5aa84; }
+.at-bot-login button[type="submit"] {
+  color: #25231f;
+  background-color: #e6d9c5;
+  font-family: 'Onest',sans-serif;
+}
+.at-bot-login button[type="submit"]:hover { background-color: #f3e9da; }
+.at-bot-login :is(button,input):focus-visible { outline: 2px solid #dfc29c; outline-offset: 2px; }
