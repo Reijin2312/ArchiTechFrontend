@@ -39,6 +39,7 @@ import {
 } from './chat/components/GroupAddMembersPanel';
 import { ChatSidebar, type ChatSidebarContact } from './chat/components/ChatSidebar';
 import { chatPageStyles, chatWallpaperSvg } from './chat/styles';
+import './chat/ChatPage.atelier.css';
 import type { SidebarChat } from './chat/types';
 import {
   formatChatTime,
@@ -2002,7 +2003,7 @@ export default function ChatPage() {
   return (
     <>
       <Seo {...(routesMeta['/chat'] ?? {})} />
-      <div className="h-dvh min-h-dvh w-full overflow-hidden bg-[#0f1115] text-white antialiased">
+      <div className="at-chat-theme h-dvh min-h-dvh w-full overflow-hidden bg-[#0f1115] text-white antialiased">
         <style>{chatPageStyles}</style>
 
         <div
