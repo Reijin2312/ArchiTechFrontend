@@ -292,7 +292,7 @@ export default function HomePage() {
 
       try {
         const response = await fetch(
-          `/api/v1/sessions/leaderboard?range=${encodeURIComponent(leaderboardRange)}&limit=5`,
+          `/api/v1/sessions/leaderboard?range=${encodeURIComponent(leaderboardRange)}&limit=7`,
           { cache: 'no-store' },
         )
         if (!response.ok) throw new Error('leaderboard failed')
@@ -895,8 +895,8 @@ function TopPlayersSection({
     : range === '7d'
       ? (isRu ? 'За 7 дней' : 'Last 7 days')
       : (isRu ? 'За 30 дней' : 'Last 30 days')
-  // Keep five places without inventing additional players or statistics.
-  const displayedPlayers = Array.from({ length: 5 }, (_, index) => players[index] ?? null)
+  // Keep seven places without inventing additional players or statistics.
+  const displayedPlayers = Array.from({ length: 7 }, (_, index) => players[index] ?? null)
 
   return (
     <div className="border-0 bg-transparent p-0 shadow-none" aria-busy={loading}>
