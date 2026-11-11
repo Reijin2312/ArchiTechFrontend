@@ -20,7 +20,8 @@ export function SocialFloatingButton() {
   const outgoingCount = model.outgoingRequests.length;
   const unreadChatCount = model.chats.filter(chat => {
     const message = chat.lastMessage;
-    return message && message.senderId !== model.userId && message.isRead === false;
+    return message && message.senderId !== model.userId && message.isRead === false
+      && !(model.isOpen && model.selectedChat === chat.chatId);
   }).length;
   const notificationsCount = incomingCount + unreadChatCount;
   const hasNotifications = notificationsCount > 0;

@@ -967,6 +967,14 @@ export function useSocialFloatingEffects(ctx: SocialFloatingEffectsContext) {
 
       showDesktopNotification(normalizedMessage, currentUser.id);
       setMessageStore((prev) => upsertMessageInStore(prev, normalizedMessage, currentUser.id));
+      const alreadyKnown = chatsRef.current.some(chat => chat.chatId === normalizedMessage.chatId);
+      setChats((previous) => previous.map(chat =>
+        chat.chatId === normalizedMessage.chatId
+          ? { ...chat, lastMessage: normalizedMessage }
+          : chat
+      ));
+      // New private chats opened from Minecraft must appear even when the widget is closed.
+      if (!alreadyKnown) void loadChats();
     });
 
     return () => {
@@ -978,6 +986,7 @@ export function useSocialFloatingEffects(ctx: SocialFloatingEffectsContext) {
 
   useEffect(() => {
     if (!user) return;
+    void loadChats();
     loadIncomingRequests();
     loadOutgoingRequests();
     logger.chat('Р РЋР вЂљР РЋРЎСџР Р†Р вЂљРЎС™Р В РІР‚В°', 'Loading initial friend requests for badge counts');
