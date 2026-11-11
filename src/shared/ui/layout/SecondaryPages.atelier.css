@@ -14,6 +14,20 @@
   --at-restyle-line: rgba(239,232,218,.22);
   --at-restyle-surface: rgba(33,35,31,.91);
   --at-restyle-surface-muted: rgba(25,27,24,.85);
+  --ui-primary: var(--at-restyle-ink);
+  --ui-secondary: var(--at-restyle-secondary);
+  --ui-muted: var(--at-restyle-muted);
+  --ui-accent: #d8bc91;
+  --ui-deep: var(--at-restyle-surface-muted);
+  --ui-surface: var(--at-restyle-surface);
+  --ui-line: var(--at-restyle-line);
+  --ui-nav-active-bg: transparent;
+  --ui-nav-active-text: #d8bc91;
+  --ui-nav-inactive-bg: transparent;
+  --ui-nav-inactive-border: var(--at-restyle-line);
+  --ui-nav-hover: #f0dcc0;
+  --ui-accent-fill: #c8ae88;
+  --ui-accent-fill-ink: #211f1b;
 }
 .at-secondary-skin > main {
   color: var(--at-restyle-ink);

@@ -25,6 +25,20 @@ body.has-wallpaper:has(.architech-document)::before {
   --doc-brass: #c5aa84;
   --doc-line: rgba(238, 232, 220, .19);
   --doc-line-strong: rgba(238, 232, 220, .33);
+  --ui-primary: #f2efe9;
+  --ui-secondary: #c9c4b9;
+  --ui-muted: #aaa598;
+  --ui-accent: #c5aa84;
+  --ui-deep: #171816;
+  --ui-surface: #252620;
+  --ui-line: var(--doc-line);
+  --ui-nav-active-bg: #c5aa84;
+  --ui-nav-active-text: #1c1c19;
+  --ui-nav-inactive-bg: #262721;
+  --ui-nav-inactive-border: var(--doc-line-strong);
+  --ui-nav-hover: #f2efe9;
+  --ui-accent-fill: #a88c66;
+  --ui-accent-fill-ink: #25231f;
   color: var(--doc-ink);
   font-family: 'Golos Text', sans-serif;
   font-synthesis: none;
@@ -57,27 +71,12 @@ body.has-wallpaper:has(.architech-document)::before {
 .architech-document aside nav > div > div {
   color: var(--doc-secondary);
 }
-.architech-document aside nav a {
-  color: var(--doc-secondary);
-  text-decoration: none;
-}
+.architech-document aside nav a { text-decoration: none; }
 .architech-document aside nav a:hover,
 .architech-document aside nav a:focus-visible {
   color: var(--doc-ink);
 }
-.architech-document aside nav ol li > span {
-  border-color: var(--doc-line-strong);
-  color: var(--doc-muted);
-  background: #262721;
-}
-.architech-document aside nav ol li > span[class~="border-sky-500"] {
-  color: #1c1c19;
-  background: var(--doc-brass);
-  border-color: var(--doc-brass);
-}
-.architech-document aside nav ol a[class~="text-sky-300"] {
-  color: var(--doc-brass);
-}
+/* Numbered navigation states are defined directly by PageSidebar Tailwind classes. */
 
 /* Editorial section headings and reading surfaces; no geometry changes. */
 .architech-document main section > div > h2 {
