@@ -870,7 +870,7 @@ function TopPlayersSection({
   const displayedPlayers = Array.from({ length: 5 }, (_, index) => players[index] ?? null)
 
   return (
-    <div className="rounded-2xl border border-slate-800 bg-linear-to-b from-slate-900/70 to-slate-900/20 p-5 backdrop-blur-md backdrop-saturate-150" aria-busy={loading}>
+    <div className="border-0 bg-transparent p-0 shadow-none" aria-busy={loading}>
       <div className="mb-4 flex items-center justify-between gap-2">
         <div className="text-sm text-slate-300 font-arcane uppercase">{leadersPrefix} {rangeLabel}</div>
         {/* Range switch is temporarily disabled.
@@ -909,7 +909,7 @@ function TopPlayersSection({
             return (
               <div
                 key={`vacant-${index + 1}`}
-                className="relative overflow-hidden rounded-xl border border-slate-800 bg-slate-950/60 px-3 py-2.5"
+                className="relative overflow-hidden rounded-none border-0 border-b border-[var(--at-line)] bg-transparent px-[5px] py-[23px] shadow-none transition-[background-color] duration-[270ms] hover:bg-[rgba(244,239,230,0.035)]"
                 aria-label={language === 'ru' ? `Место ${index + 1}: нет данных` : `Rank ${index + 1}: no data`}
               >
                 <div className="relative z-10 flex items-center gap-3">
@@ -938,98 +938,27 @@ function TopPlayersSection({
             const isKing = index === 0
             const isSilver = index === 1
             const isBronze = index === 2
-            const isTopThree = index < 3
             const avatar = avatars[player.username]
             const hours = player.totalHours >= 10 ? Math.round(player.totalHours).toString() : player.totalHours.toFixed(1)
-            const cardTone = isKing
-              ? 'border-amber-300/70 bg-linear-to-r from-amber-500/20 via-slate-900/84 to-slate-900/92 shadow-[0_0_22px_rgba(251,191,36,0.5)]'
-              : isSilver
-                ? 'border-slate-200/65 bg-linear-to-r from-slate-200/14 via-slate-900/88 to-slate-900/92 shadow-[0_0_20px_rgba(226,232,240,0.38)]'
-                : isBronze
-                  ? 'border-orange-300/65 bg-linear-to-r from-orange-500/16 via-slate-900/88 to-slate-900/92 shadow-[0_0_20px_rgba(251,146,60,0.35)]'
-                  : 'border-slate-800 bg-slate-950/60'
-            const rankTextTone = isKing
-              ? 'text-amber-200'
-              : isSilver
-                ? 'text-slate-200'
-                : isBronze
-                  ? 'text-orange-200'
-                  : 'text-slate-400'
-            const nameTone = isKing
-              ? 'text-amber-100'
-              : isSilver
-                ? 'text-slate-100'
-                : isBronze
-                  ? 'text-orange-100'
-                  : 'text-slate-100'
-            const hoursTone = isKing
-              ? 'text-amber-200'
-              : isSilver
-                ? 'text-slate-200'
-                : isBronze
-                  ? 'text-orange-300'
-                  : 'text-sky-300'
-            const avatarTone = isKing
-              ? 'border-amber-300/70 ring-2 ring-amber-300/40'
-              : isSilver
-                ? 'border-slate-300/65 ring-2 ring-slate-300/30'
-                : isBronze
-                  ? 'border-orange-300/70 ring-2 ring-orange-300/30'
-                  : 'border-slate-700'
-            const glowShadowMin = isKing
-              ? '0 0 0 1px rgba(251,191,36,0.54), 0 0 20px rgba(251,191,36,0.42), inset 0 0 11px rgba(251,191,36,0.18)'
-              : isSilver
-                ? '0 0 0 1px rgba(226,232,240,0.45), 0 0 18px rgba(226,232,240,0.32), inset 0 0 9px rgba(226,232,240,0.16)'
-                : '0 0 0 1px rgba(251,146,60,0.44), 0 0 18px rgba(251,146,60,0.3), inset 0 0 9px rgba(251,146,60,0.15)'
-            const glowShadowMax = isKing
-              ? '0 0 0 1px rgba(251,191,36,0.76), 0 0 30px rgba(251,191,36,0.68), inset 0 0 16px rgba(251,191,36,0.26)'
-              : isSilver
-                ? '0 0 0 1px rgba(226,232,240,0.68), 0 0 26px rgba(226,232,240,0.5), inset 0 0 14px rgba(226,232,240,0.24)'
-                : '0 0 0 1px rgba(251,146,60,0.68), 0 0 26px rgba(251,146,60,0.48), inset 0 0 14px rgba(251,146,60,0.22)'
-            const glowOrbTone = isKing ? 'bg-amber-200/42' : isSilver ? 'bg-slate-100/38' : 'bg-orange-200/40'
+            const rankTextTone = (isKing || isBronze) ? 'text-[#d8bf99]' : isSilver ? 'text-slate-200' : 'text-slate-400'
+            const nameTone = (isKing || isBronze) ? 'text-[#d8bf99]' : 'text-slate-100'
+            const hoursTone = isSilver ? 'text-slate-200' : 'text-[#d8bf99]'
 
             return (
               <Link
                 key={player.username}
                 to={`/u/${encodeURIComponent(player.username)}`}
                 aria-label={language === 'ru' ? `Открыть профиль ${player.username}` : `Open ${player.username}'s profile`}
-                className="block rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+                className="block rounded-none border-0 border-b border-[var(--at-line)] bg-transparent shadow-none outline-none"
               >
                 <motion.div
                   whileHover={disableMotion ? undefined : { y: -2, scale: 1.005 }}
-                  className={[
-                    'relative overflow-hidden rounded-xl border px-3 py-2.5 transition-colors hover:border-sky-400/60',
-                    cardTone,
-                  ].join(' ')}
+                  className="relative overflow-hidden rounded-none border-0 border-b border-[var(--at-line)] bg-transparent px-[5px] py-[23px] shadow-none transition-[background-color] duration-[270ms] hover:bg-[rgba(244,239,230,0.035)]"
                 >
-                {isTopThree && !disableMotion && (
-                  <>
-                    <motion.div
-                      className="pointer-events-none absolute inset-0 rounded-xl mix-blend-screen"
-                      animate={{
-                        boxShadow: [glowShadowMin, glowShadowMax, glowShadowMin],
-                        opacity: [0.48, 0.86, 0.48],
-                      }}
-                      transition={{ duration: 2.8 + index * 0.35, repeat: Infinity, ease: 'easeInOut' }}
-                    />
-                    <motion.div
-                      className={`pointer-events-none absolute -top-10 left-0 h-28 w-28 rounded-full blur-3xl mix-blend-screen ${glowOrbTone}`}
-                      animate={{
-                        x: ['-30%', '320%', '0%'],
-                        y: [0, 8, 0],
-                        opacity: [0.28, 0.72, 0.28],
-                      }}
-                      transition={{ duration: 4.1 + index * 0.45, repeat: Infinity, ease: 'easeInOut' }}
-                    />
-                  </>
-                )}
 
                 <div className="relative z-10 flex items-center gap-3">
                   <div
-                    className={[
-                      'relative size-11 shrink-0 overflow-hidden rounded-xl border bg-slate-900',
-                      avatarTone,
-                    ].join(' ')}
+                    className="relative size-11 shrink-0 overflow-hidden rounded-[8px] border border-[rgba(241,235,222,0.3)] bg-transparent shadow-none"
                   >
                     {avatar ? (
                       <img

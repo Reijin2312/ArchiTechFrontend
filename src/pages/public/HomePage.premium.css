@@ -1048,33 +1048,7 @@
   margin: 0;
   padding: 0;
 }
-.architech-home .at-rank-editorial > div {
-  padding: 0 !important;
-  border: 0 !important;
-  border-radius: 0 !important;
-  background: transparent !important;
-  box-shadow: none !important;
-  backdrop-filter: none !important;
-}
-.architech-home .at-rank-editorial [class*="rounded-xl"] {
-  background: transparent !important;
-  border: 0 !important;
-  border-bottom: 1px solid var(--at-line) !important;
-  border-radius: 0 !important;
-  box-shadow: none !important;
-}
-.architech-home .at-rank-editorial [class*="rounded-xl"].relative.overflow-hidden {
-  padding: 23px 5px !important;
-  transition: background-color .27s ease;
-}
-.architech-home .at-rank-editorial [class*="rounded-xl"].relative.overflow-hidden:hover { background: rgba(244,239,230,.035) !important; }
-.architech-home .at-rank-editorial .pointer-events-none.absolute,
-.architech-home .at-rank-editorial .mix-blend-screen { display: none !important; }
-.architech-home .at-rank-editorial [class*="text-amber"],
-.architech-home .at-rank-editorial [class*="text-sky"],
-.architech-home .at-rank-editorial [class*="text-orange"] { color: #d8bf99 !important; }
-.architech-home .at-rank-editorial .relative.size-11 { border: 1px solid rgba(241,235,222,.3) !important; border-radius: 8px !important; }
-.architech-home .at-rank-editorial .animate-pulse { animation: none !important; }
+/* Leaderboard presentation is owned by TopPlayersSection Tailwind classes. */
 
 /* FAQ: original two-column editorial layout, plain long-form answers. */
 .architech-home .at-faq {
