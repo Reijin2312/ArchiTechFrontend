@@ -119,7 +119,7 @@ function ContactActionButton({ action }: { action: ContactAction }) {
   const className =
     action.variant === 'secondary'
       ? 'inline-flex items-center gap-1 rounded-xl border border-[rgba(239,232,218,0.22)] px-4 py-2 text-sm text-[#c9c3b8] transition hover:border-slate-500 hover:text-white'
-      : 'inline-flex items-center gap-1 rounded-xl bg-[#c8ae88] text-[#211f1b] px-4 py-2 text-sm font-medium text-white shadow shadow-sky-900/50 transition hover:bg-[#e6d6bd]';
+      : 'inline-flex items-center gap-1 rounded-xl bg-[#c8ae88] px-4 py-2 text-sm font-medium text-[#211f1b] shadow shadow-sky-900/50 transition hover:bg-[#e6d6bd]';
 
   const rel = action.external ? 'noreferrer noopener' : undefined;
   const target = action.external ? '_blank' : undefined;

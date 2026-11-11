@@ -80,7 +80,6 @@ body.has-wallpaper:has(.architech-document)::before {
 
 /* Editorial section headings and reading surfaces; no geometry changes. */
 .architech-document main section > div > h2 {
-  background: transparent;
   border-radius: 8px;
   color: #eeeae2;
 }
