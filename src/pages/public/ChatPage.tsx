@@ -2003,7 +2003,7 @@ export default function ChatPage() {
   return (
     <>
       <Seo {...(routesMeta['/chat'] ?? {})} />
-      <div className="at-chat-theme h-dvh min-h-dvh w-full overflow-hidden bg-[#0f1115] text-white antialiased">
+      <div className="at-chat-theme h-dvh min-h-dvh w-full overflow-hidden bg-[#171816] text-white antialiased">
         <style>{chatPageStyles}</style>
 
         <div
@@ -2057,13 +2057,13 @@ export default function ChatPage() {
             >
               <span
                 className={`absolute left-1/2 top-0 h-full w-[2px] -translate-x-1/2 rounded-full transition-colors ${
-                  isSidebarResizing ? 'bg-[#9d83ff]/90' : 'bg-transparent group-hover:bg-white/20'
+                  isSidebarResizing ? 'bg-[#c5aa84]/90' : 'bg-transparent group-hover:bg-white/20'
                 }`}
               />
             </button>
           </div>
 
-          <main className="relative flex min-w-0 flex-1 flex-col bg-[#0a0910]">
+          <main className="relative flex min-w-0 flex-1 flex-col bg-[#171816]">
             <div className="relative z-[28] transition-transform duration-300">
               <ChatHeader
                 selectedChat={selectedChat}
@@ -2099,7 +2099,7 @@ export default function ChatPage() {
               />
 
               {isMessageSearchOpen ? (
-                <div className="relative z-[27] overflow-hidden border-b border-black/35 bg-[#1a1b20]">
+                <div className="relative z-[27] overflow-hidden border-b border-black/35 bg-[#22241f]">
                   {!messageSearchQuery.trim() ? (
                     <div className="px-6 py-4 text-center text-[15px] text-white/55">
                       Type text to search messages in this chat.
@@ -2173,7 +2173,7 @@ export default function ChatPage() {
                   className="tg-scroll relative h-full overflow-y-auto"
                   data-chat-scroll-container="true"
                   style={{
-                    backgroundColor: '#07070d',
+                    backgroundColor: '#171816',
                     backgroundImage: `url("data:image/svg+xml,${chatWallpaperSvg}")`,
                     backgroundSize: '256px 256px',
                   }}
@@ -2256,7 +2256,7 @@ export default function ChatPage() {
                     <button
                       type="button"
                       onClick={handleJumpToBottom}
-                      className="pointer-events-auto inline-flex items-center gap-2 rounded-full bg-[#7f67e8] px-4 py-2 text-[13px] font-[700] text-white shadow-[0_12px_26px_rgba(41,24,92,0.45)] transition-colors hover:bg-[#8f78ef]"
+                      className="pointer-events-auto inline-flex items-center gap-2 rounded-full bg-[#aa8f69] px-4 py-2 text-[13px] font-[700] text-white shadow-[0_12px_26px_rgba(41,24,92,0.45)] transition-colors hover:bg-[#c5aa84]"
                     >
                       <span aria-hidden="true">↓</span>
                       <span>
