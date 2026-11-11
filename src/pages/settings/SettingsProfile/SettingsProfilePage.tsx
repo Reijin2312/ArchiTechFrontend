@@ -346,10 +346,10 @@ export default function SettingsProfilePage() {
               <Card>
                 <div className="flex items-center justify-between mb-3">
                   <div>
-                    <h2 className="text-sm font-semibold text-sky-300">{copy.settings.completion}</h2>
-                    <p className="text-xs text-slate-500">{copy.settings.completionHint}</p>
+                    <h2 className="text-sm font-semibold text-[#d3b58b]">{copy.settings.completion}</h2>
+                    <p className="text-xs text-[#938e83]">{copy.settings.completionHint}</p>
                   </div>
-                  <div className="text-2xl font-bold text-sky-400">{profileCompletion}%</div>
+                  <div className="text-2xl font-bold text-[#d3b58b]">{profileCompletion}%</div>
                 </div>
                 <ProgressBar value={profileCompletion} max={100} showPercentage={false} color="sky" />
               </Card>
@@ -358,7 +358,7 @@ export default function SettingsProfilePage() {
             {/* Левый столбец */}
             <section className="col-span-12 md:col-span-4">
               <Card>
-                <h2 className="mb-3 text-sm font-semibold text-sky-300">{copy.avatar}</h2>
+                <h2 className="mb-3 text-sm font-semibold text-[#d3b58b]">{copy.avatar}</h2>
                 <AvatarPicker
                   value={profile?.avatarUrl || ''}
                   busy={busy === 'avatar-file'}
@@ -384,11 +384,11 @@ export default function SettingsProfilePage() {
               />
 
               <Card className="mt-6">
-                <h2 className="mb-3 text-sm font-semibold text-sky-300">{copy.settings.export}</h2>
+                <h2 className="mb-3 text-sm font-semibold text-[#d3b58b]">{copy.settings.export}</h2>
                 <button
                   disabled={busy === 'export'}
                   onClick={exportAccount}
-                  className="rounded-xl border border-slate-700 px-3 py-1.5 text-sm hover:border-slate-500 disabled:opacity-50"
+                  className="rounded-xl border border-[rgba(239,232,218,0.22)] px-3 py-1.5 text-sm hover:border-slate-500 disabled:opacity-50"
                 >
                   {copy.settings.downloadJson}
                 </button>
@@ -428,7 +428,7 @@ export default function SettingsProfilePage() {
               />
 
               <Card className="mt-6 relative z-40">
-                <h2 className="mb-4 text-sm font-semibold text-sky-300">{copy.settings.status}</h2>
+                <h2 className="mb-4 text-sm font-semibold text-[#d3b58b]">{copy.settings.status}</h2>
                 <StatusSelect
                   value={userStatus}
                   customStatus={customStatus}
@@ -440,7 +440,7 @@ export default function SettingsProfilePage() {
               </Card>
 
               <Card className="mt-6">
-                <h2 className="mb-4 text-sm font-semibold text-sky-300">{copy.settings.socials}</h2>
+                <h2 className="mb-4 text-sm font-semibold text-[#d3b58b]">{copy.settings.socials}</h2>
                 <SocialLinks links={socialLinks as never} onChange={(links) => setSocialLinks(links as never)} editable />
               </Card>
 
@@ -458,8 +458,8 @@ export default function SettingsProfilePage() {
               </Card>
 
               <Card className="mt-6">
-                <h2 className="mb-4 text-sm font-semibold text-sky-300">{copy.settings.wallpaper}</h2>
-                <p className="mb-3 text-xs text-slate-400">
+                <h2 className="mb-4 text-sm font-semibold text-[#d3b58b]">{copy.settings.wallpaper}</h2>
+                <p className="mb-3 text-xs text-[#aaa497]">
                   {copy.settings.wallpaperHint}
                 </p>
                 <WallpaperPicker
@@ -488,8 +488,8 @@ export default function SettingsProfilePage() {
               </Card>
 
               <Card className="mt-6">
-                <h2 className="mb-4 text-sm font-semibold text-sky-300">{copy.settings.banner}</h2>
-                <p className="mb-3 text-xs text-slate-400">{copy.settings.bannerHint}</p>
+                <h2 className="mb-4 text-sm font-semibold text-[#d3b58b]">{copy.settings.banner}</h2>
+                <p className="mb-3 text-xs text-[#aaa497]">{copy.settings.bannerHint}</p>
                 <BannerPicker
                   value={bannerUrl}
                   busy={busy === 'banner'}
@@ -517,7 +517,7 @@ export default function SettingsProfilePage() {
 
               <DangerZoneSection onLogout={logout} />
 
-              {since && <div className="mt-3 text-center text-xs text-slate-500">{fill(copy.settings.withUsSince, { date: since })}</div>}
+              {since && <div className="mt-3 text-center text-xs text-[#938e83]">{fill(copy.settings.withUsSince, { date: since })}</div>}
             </section>
 
             {avatarCropOpen && avatarCropSrc && (

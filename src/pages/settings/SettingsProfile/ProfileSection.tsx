@@ -42,7 +42,7 @@ export function ProfileSection({
     : `${value} ${value % 10 === 1 && value % 100 !== 11 ? 'год' : value % 10 >= 2 && value % 10 <= 4 && (value % 100 < 10 || value % 100 >= 20) ? 'года' : 'лет'}`;
   return (
     <Card>
-      <h2 className="mb-4 text-sm font-semibold text-sky-300">{copy.profile}</h2>
+      <h2 className="mb-4 text-sm font-semibold text-[#d3b58b]">{copy.profile}</h2>
 
       <InputRow label={copy.displayName}>
         <input value={displayName} onChange={(e) => setDisplayName(e.target.value)} className={inp()} />
@@ -70,7 +70,7 @@ export function ProfileSection({
           min="1900-01-01"
           max={new Date().toISOString().slice(0, 10)}
         />
-        <div className="mt-2 flex flex-col gap-1 text-xs text-slate-400">
+        <div className="mt-2 flex flex-col gap-1 text-xs text-[#aaa497]">
           {birthDate &&
             (() => {
               try {
@@ -116,7 +116,7 @@ export function ProfileSection({
         <button
           disabled={busy === 'profile'}
           onClick={onSave}
-          className="rounded-xl bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-500 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-sky-600/20 transition-all"
+          className="rounded-xl bg-[#c8ae88] text-[#211f1b] px-4 py-2 text-sm font-medium text-white hover:bg-[#e6d6bd] disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-sky-600/20 transition-all"
         >
           💾 {copy.saveProfile}
         </button>
