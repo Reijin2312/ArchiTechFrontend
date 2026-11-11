@@ -221,7 +221,7 @@ export function EmojiHoverPanel({
 
   return (
     <div
-      className="absolute bottom-[calc(100%+12px)] left-0 z-[95] w-[min(92vw,660px)] overflow-hidden rounded-[20px] bg-[#162437]/98 shadow-[0_26px_64px_rgba(0,0,0,.58)] ring-1 ring-[#8e77ef]/22"
+      className="absolute bottom-[calc(100%+12px)] left-0 z-[95] w-[min(92vw,660px)] overflow-hidden rounded-[20px] bg-[#162437]/98 shadow-[0_26px_64px_rgba(0,0,0,.58)] ring-1 ring-[#c5aa84]/22"
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >
@@ -292,7 +292,7 @@ export function EmojiHoverPanel({
               }}
               className={`grid h-10 w-10 shrink-0 place-items-center rounded-full text-[24px] transition-colors ${
                 category.id === activeCategory
-                  ? 'bg-[#8e77ef]/25 ring-1 ring-[#8e77ef]/45'
+                  ? 'bg-[#c5aa84]/25 ring-1 ring-[#c5aa84]/45'
                   : 'hover:bg-white/10'
               }`}
               title={category.label}
