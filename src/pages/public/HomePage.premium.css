@@ -1058,7 +1058,19 @@
   margin: 0;
   padding: 0;
 }
-/* Leaderboard presentation is owned by TopPlayersSection Tailwind classes. */
+/* The leaderboard behaves like a row sliding out of a paper archive.
+   Use native hover/focus rather than a disabled Framer Motion handler. */
+.architech-home .at-rank-leaf {
+  transition: transform .26s cubic-bezier(.22,1,.36,1);
+}
+@media (hover: hover) and (pointer: fine) {
+  .architech-home .at-ranking a:hover .at-rank-leaf {
+    transform: translateX(6px);
+  }
+}
+.architech-home .at-ranking a:focus-visible .at-rank-leaf {
+  transform: translateX(6px);
+}
 
 /* FAQ: original two-column editorial layout, plain long-form answers. */
 .architech-home .at-faq {
@@ -1100,9 +1112,10 @@
   min-width: 0;
   transition: transform .27s cubic-bezier(.22,1,.36,1);
 }
-/* Only the collapsed question slides. The open answer and chevron stay put. */
+/* Keep the question offset under the pointer when the accordion changes state.
+   Only its label moves; the expanded answer and chevron remain stationary. */
 @media (hover: hover) and (pointer: fine) {
-  .architech-home .at-faq-trigger[aria-expanded="false"]:hover .at-faq-question {
+  .architech-home .at-faq-trigger:hover .at-faq-question {
     transform: translateX(4px);
   }
 }
@@ -1262,6 +1275,10 @@
 
 /* This design never depends on motion for information or access. */
 @media (prefers-reduced-motion: reduce) {
+  .architech-home .at-ranking a:hover .at-rank-leaf,
+  .architech-home .at-ranking a:focus-visible .at-rank-leaf {
+    transform: none !important;
+  }
   .architech-home .at-faq-trigger .at-faq-question,
   .architech-home .at-faq-trigger:hover .at-faq-question,
   .architech-home .at-faq-trigger:focus-visible .at-faq-question {

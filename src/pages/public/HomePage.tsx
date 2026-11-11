@@ -603,7 +603,7 @@ export default function HomePage() {
           <div className="at-section-heading"><div><span className="at-kicker">ARCHITECH / COMMUNITY</span><h2>{copy.leaderboard}</h2></div></div>
           <div className="at-rank-editorial">
             <TopPlayersSection players={leaderboardPlayers} avatars={leaderboardAvatars}
-              loading={leaderboardLoading} range={leaderboardRange} disableMotion />
+              loading={leaderboardLoading} range={leaderboardRange} />
           </div>
         </div>
       </section>
@@ -880,13 +880,11 @@ function TopPlayersSection({
   avatars,
   loading,
   range,
-  disableMotion,
 }: {
   players: LeaderboardPlayer[]
   avatars: Record<string, string>
   loading: boolean
   range: LeaderboardRange
-  disableMotion?: boolean
 }) {
   const { language } = useI18n()
   const isRu = language === 'ru'
@@ -951,11 +949,7 @@ function TopPlayersSection({
               aria-label={isRu ? 'Открыть профиль ' + player.username : 'Open profile ' + player.username}
               className="group relative block border-b border-[var(--at-line)] bg-transparent outline-none transition-colors duration-200 before:pointer-events-none before:absolute before:left-0 before:top-1/2 before:h-8 before:w-px before:-translate-y-1/2 before:bg-[#bca176] before:opacity-0 before:transition-opacity before:duration-300 hover:bg-[rgba(244,239,230,.035)] hover:before:opacity-70 focus-visible:bg-[rgba(244,239,230,.035)] focus-visible:before:opacity-70 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#bfa57d]"
             >
-              <motion.div
-                whileHover={disableMotion ? undefined : { x: 6 }}
-                transition={{ duration: .26, ease: [.22, 1, .36, 1] }}
-                className="flex items-center gap-4 px-1 py-5"
-              >
+              <div className="at-rank-leaf flex items-center gap-4 px-1 py-5">
                 <LeaderboardPortrait name={player.username} src={avatars[player.username]} />
                 <div className="min-w-0 flex-1">
                   <div className="flex min-w-0 items-baseline gap-3">
@@ -980,7 +974,7 @@ function TopPlayersSection({
                     {isRu ? 'наиграно' : 'played'}
                   </div>
                 </div>
-              </motion.div>
+              </div>
             </Link>
           )
         })}
