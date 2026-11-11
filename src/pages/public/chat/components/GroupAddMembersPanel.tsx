@@ -52,7 +52,7 @@ function Checkbox({ checked }: { checked: boolean }) {
     <span
       className={`inline-flex h-[30px] w-[30px] items-center justify-center rounded-[9px] border transition-colors ${
         checked
-          ? 'border-[#8e77ef] bg-[#8e77ef] text-white'
+          ? 'border-[#c5aa84] bg-[#c5aa84] text-white'
           : 'border-white/35 bg-transparent text-transparent'
       }`}
     >
@@ -129,7 +129,7 @@ export function GroupAddMembersPanel({
                   <div className="truncate text-[17px] font-[500] leading-tight text-white/95">
                     {candidate.name}
                   </div>
-                  <div className={`mt-[1px] truncate text-[14px] ${candidate.isOnline ? 'text-[#9f88ff]' : 'text-white/52'}`}>
+                  <div className={`mt-[1px] truncate text-[14px] ${candidate.isOnline ? 'text-[#e0c59e]' : 'text-white/52'}`}>
                     {candidate.statusText || 'offline'}
                   </div>
                 </div>
@@ -147,7 +147,7 @@ export function GroupAddMembersPanel({
             type="button"
             onClick={onSubmit}
             disabled={isSubmitting}
-            className="absolute bottom-[22px] right-[16px] grid h-[68px] w-[68px] place-items-center rounded-full bg-[#8e77ef] text-white shadow-[0_14px_30px_rgba(142,119,239,.45)] transition-transform hover:scale-[1.03] disabled:cursor-not-allowed disabled:opacity-80"
+            className="absolute bottom-[22px] right-[16px] grid h-[68px] w-[68px] place-items-center rounded-full bg-[#c5aa84] text-white shadow-[0_14px_30px_rgba(142,119,239,.45)] transition-transform hover:scale-[1.03] disabled:cursor-not-allowed disabled:opacity-80"
             aria-label="Add selected members"
           >
             {isSubmitting ? (
