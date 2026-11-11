@@ -825,7 +825,7 @@ function TelegramSwitch({
       disabled={disabled}
       className={`relative inline-flex h-[20px] w-[40px] items-center rounded-full border transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
         checked
-          ? 'border-[#8e75f8] bg-[#8e75f8]'
+          ? 'border-[#c5aa84] bg-[#c5aa84]'
           : dangerWhenOff
             ? 'border-[#ff5b67] bg-[#ff5b67]'
             : 'border-white/18 bg-white/14'
@@ -853,7 +853,7 @@ function TelegramCheckbox({
       type="button"
       onClick={onToggle}
       className={`grid h-[20px] w-[20px] place-items-center rounded-[6px] border transition-colors ${
-        checked ? 'border-[#8e75f8] bg-[#8e75f8]' : 'border-white/18 bg-transparent'
+        checked ? 'border-[#c5aa84] bg-[#c5aa84]' : 'border-white/18 bg-transparent'
       }`}
       aria-pressed={checked}
     >
@@ -931,7 +931,7 @@ function GroupInfoLinkRow({ item }: { item: GroupInfoLinkItem }) {
           <div className="shrink-0 text-[13px] text-white/48">{item.dateLabel}</div>
         </div>
         <div className="mt-1 truncate text-[14px] text-white/62">{resolvedPreview}</div>
-        <div className="mt-[6px] truncate text-[14px] text-[#9f88ff] underline underline-offset-2">
+        <div className="mt-[6px] truncate text-[14px] text-[#e0c59e] underline underline-offset-2">
           {item.displayUrl}
         </div>
       </div>
@@ -2216,7 +2216,7 @@ export function GroupInfoPanel({
                 value={editTitle}
                 onChange={(event) => setEditTitle(event.target.value)}
                 maxLength={255}
-                className="h-10 w-full rounded-[10px] border border-white/12 bg-[#20222d] px-3 text-[14px] text-white/95 outline-none transition-colors focus:border-[#8f73ff]"
+                className="h-10 w-full rounded-[10px] border border-white/12 bg-[#20222d] px-3 text-[14px] text-white/95 outline-none transition-colors focus:border-[#c5aa84]"
               />
             </label>
             <label className="block">
@@ -2224,7 +2224,7 @@ export function GroupInfoPanel({
               <input
                 value={editAvatarPath}
                 onChange={(event) => setEditAvatarPath(event.target.value)}
-                className="h-10 w-full rounded-[10px] border border-white/12 bg-[#20222d] px-3 text-[14px] text-white/95 outline-none transition-colors focus:border-[#8f73ff]"
+                className="h-10 w-full rounded-[10px] border border-white/12 bg-[#20222d] px-3 text-[14px] text-white/95 outline-none transition-colors focus:border-[#c5aa84]"
               />
             </label>
             <div className="flex items-center justify-end gap-2">
@@ -2241,7 +2241,7 @@ export function GroupInfoPanel({
                   void submitGroupEdit();
                 }}
                 disabled={isSavingGroup}
-                className="rounded-[10px] bg-[#7d65e8] px-3 py-1.5 text-[13px] font-[600] text-white transition-colors hover:bg-[#8f78ef] disabled:cursor-not-allowed disabled:opacity-70"
+                className="rounded-[10px] bg-[#ad906a] px-3 py-1.5 text-[13px] font-[600] text-white transition-colors hover:bg-[#c5aa84] disabled:cursor-not-allowed disabled:opacity-70"
               >
                 {isSavingGroup ? 'Saving...' : 'Save'}
               </button>
@@ -2266,7 +2266,7 @@ export function GroupInfoPanel({
               onClick={() => onNotificationsEnabledChange(!notificationsEnabled)}
               className={`relative inline-flex h-8 w-[58px] items-center rounded-full border transition-colors ${
                 notificationsEnabled
-                  ? 'border-[#7e65e8] bg-[#7e65e8]'
+                  ? 'border-[#ad906a] bg-[#ad906a]'
                   : 'border-white/18 bg-white/12'
               }`}
               aria-label="Toggle group notifications"
@@ -2290,12 +2290,12 @@ export function GroupInfoPanel({
                   type="button"
                   onClick={() => onTabChange(tab.id)}
                   className={`relative flex-1 px-2 pb-3 pt-2.5 text-center text-[15px] font-[600] transition-colors ${
-                    isActive ? 'text-[#a790ff]' : 'text-white/56 hover:text-white/84'
+                    isActive ? 'text-[#e0c59e]' : 'text-white/56 hover:text-white/84'
                   }`}
                 >
                   {tab.label}
                   {isActive ? (
-                    <span className="absolute bottom-0 left-1/2 h-[3px] w-[78%] -translate-x-1/2 rounded-full bg-[#8f73ff]" />
+                    <span className="absolute bottom-0 left-1/2 h-[3px] w-[78%] -translate-x-1/2 rounded-full bg-[#c5aa84]" />
                   ) : null}
                 </button>
               );
@@ -2353,7 +2353,7 @@ export function GroupInfoPanel({
                             </div>
                             <div
                               className={`mt-[1px] truncate text-[14px] ${
-                                member.isOnline ? 'text-[#9f88ff]' : 'text-white/52'
+                                member.isOnline ? 'text-[#e0c59e]' : 'text-white/52'
                               }`}
                             >
                               {member.statusText}
@@ -2514,7 +2514,7 @@ export function GroupInfoPanel({
                       void saveSettings();
                     }}
                     disabled={isSavingSettings || !onUpdateGroupSettings}
-                    className="mt-3 rounded-[8px] bg-[#7d65e8] px-3 py-1.5 text-[12px] font-[700] text-white disabled:cursor-not-allowed disabled:opacity-60"
+                    className="mt-3 rounded-[8px] bg-[#ad906a] px-3 py-1.5 text-[12px] font-[700] text-white disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {isSavingSettings ? 'Saving...' : 'Save settings'}
                   </button>
@@ -2554,7 +2554,7 @@ export function GroupInfoPanel({
                       void savePermissions();
                     }}
                     disabled={isSavingPermissions || !onUpdateGroupPermissions}
-                    className="mt-3 rounded-[8px] bg-[#7d65e8] px-3 py-1.5 text-[12px] font-[700] text-white disabled:cursor-not-allowed disabled:opacity-60"
+                    className="mt-3 rounded-[8px] bg-[#ad906a] px-3 py-1.5 text-[12px] font-[700] text-white disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {isSavingPermissions ? 'Saving...' : 'Save permissions'}
                   </button>
@@ -2612,7 +2612,7 @@ export function GroupInfoPanel({
                         void createInvite();
                       }}
                       disabled={isInvitePending || !onCreateInviteLink}
-                      className="rounded-[8px] bg-[#7d65e8] px-2.5 py-1.5 text-[12px] font-[700] text-white disabled:opacity-60"
+                      className="rounded-[8px] bg-[#ad906a] px-2.5 py-1.5 text-[12px] font-[700] text-white disabled:opacity-60"
                     >
                       Create
                     </button>
@@ -2741,7 +2741,7 @@ export function GroupInfoPanel({
                         void createTopic();
                       }}
                       disabled={!onCreateTopic}
-                      className="rounded-[8px] bg-[#7d65e8] px-2.5 py-1.5 text-[12px] font-[700] text-white disabled:opacity-60"
+                      className="rounded-[8px] bg-[#ad906a] px-2.5 py-1.5 text-[12px] font-[700] text-white disabled:opacity-60"
                     >
                       Create
                     </button>
@@ -2755,7 +2755,7 @@ export function GroupInfoPanel({
                         }}
                         className={`rounded-[8px] border px-2.5 py-1 text-[11px] font-[600] transition-colors ${
                           !activeTopicId
-                            ? 'border-[#7d65e8]/70 bg-[#7d65e8]/24 text-white'
+                            ? 'border-[#ad906a]/70 bg-[#ad906a]/24 text-white'
                             : 'border-white/14 text-white/78 hover:bg-white/10'
                         }`}
                       >
@@ -2787,7 +2787,7 @@ export function GroupInfoPanel({
                                 }}
                                 className={`rounded-[8px] border px-2 py-1 text-[11px] ${
                                   activeTopicId === topic.id
-                                    ? 'border-[#7d65e8]/70 bg-[#7d65e8]/24 text-white'
+                                    ? 'border-[#ad906a]/70 bg-[#ad906a]/24 text-white'
                                     : 'border-white/14 text-white/80'
                                 }`}
                               >
@@ -2900,7 +2900,7 @@ export function GroupInfoPanel({
                       void createPoll();
                     }}
                     disabled={!onCreatePoll}
-                    className="rounded-[8px] bg-[#7d65e8] px-3 py-1.5 text-[12px] font-[700] text-white disabled:opacity-60"
+                    className="rounded-[8px] bg-[#ad906a] px-3 py-1.5 text-[12px] font-[700] text-white disabled:opacity-60"
                   >
                     Create poll
                   </button>
@@ -3081,7 +3081,7 @@ export function GroupInfoPanel({
                   void saveGroupEditPanel();
                 }}
                 disabled={isGroupEditorSaving || (!onUpdateGroup && !onUpdateGroupSettings)}
-                className="rounded-full p-1 text-[#8e75f8] transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded-full p-1 text-[#c5aa84] transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
                 aria-label="Save"
               >
                 <CheckIcon />
@@ -3305,7 +3305,7 @@ export function GroupInfoPanel({
                   void saveCurrentMemberEditor(true);
                 }}
                 disabled={isSavingMemberEditor || isLoadingMemberEditor || !canSaveMemberEditor}
-                className="rounded-full p-1 text-[#8e75f8] transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded-full p-1 text-[#c5aa84] transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
                 aria-label="Save"
               >
                 <CheckIcon />
@@ -3330,7 +3330,7 @@ export function GroupInfoPanel({
                 <div className="px-2 py-10 text-[15px] text-white/52">Loading…</div>
               ) : isAdminRightsEditorMode && adminRightsDraft ? (
                 <>
-                  <div className="mt-7 text-[14px] font-[600] text-[#8f74f8]">What can this admin do?</div>
+                  <div className="mt-7 text-[14px] font-[600] text-[#c5aa84]">What can this admin do?</div>
                   <div className="mt-5 space-y-5">
                     {(
                       [
@@ -3364,7 +3364,7 @@ export function GroupInfoPanel({
                   ) : null}
 
                   <div className="mt-7">
-                    <div className="mb-3 text-[14px] font-[600] text-[#8f74f8]">Member tag</div>
+                    <div className="mb-3 text-[14px] font-[600] text-[#c5aa84]">Member tag</div>
                     <label className="block rounded-[16px] border border-white/10 bg-[#1a1c23] p-3">
                       <div className="mb-1 text-[14px] text-white/45">Title</div>
                       <input
@@ -3400,7 +3400,7 @@ export function GroupInfoPanel({
                 </>
               ) : isRestrictionEditorMode && restrictionDraft ? (
                 <>
-                  <div className="mt-7 text-[14px] font-[600] text-[#8f74f8]">What can this user do?</div>
+                  <div className="mt-7 text-[14px] font-[600] text-[#c5aa84]">What can this user do?</div>
 
                   <div className="mt-5 space-y-5">
                     <div className="flex items-center justify-between gap-4">
@@ -3613,7 +3613,7 @@ export function GroupInfoPanel({
                   setShowUnsavedGroupEditDialog(false);
                   setIsGroupEditOpen(false);
                 }}
-                className="text-[17px] font-[600] text-[#8f74f8] transition-opacity hover:opacity-85"
+                className="text-[17px] font-[600] text-[#c5aa84] transition-opacity hover:opacity-85"
               >
                 DISCARD
               </button>
@@ -3623,7 +3623,7 @@ export function GroupInfoPanel({
                   void saveGroupEditPanel();
                 }}
                 disabled={isGroupEditorSaving}
-                className="text-[17px] font-[600] text-[#8f74f8] transition-opacity hover:opacity-85 disabled:opacity-60"
+                className="text-[17px] font-[600] text-[#c5aa84] transition-opacity hover:opacity-85 disabled:opacity-60"
               >
                 SAVE
               </button>
@@ -3647,7 +3647,7 @@ export function GroupInfoPanel({
                   setMemberEditor(null);
                   setIsDurationMenuOpen(false);
                 }}
-                className="text-[17px] font-[600] text-[#8f74f8] transition-opacity hover:opacity-85"
+                className="text-[17px] font-[600] text-[#c5aa84] transition-opacity hover:opacity-85"
               >
                 DISCARD
               </button>
@@ -3657,7 +3657,7 @@ export function GroupInfoPanel({
                   void saveCurrentMemberEditor(true);
                 }}
                 disabled={isSavingMemberEditor}
-                className="text-[17px] font-[600] text-[#8f74f8] transition-opacity hover:opacity-85 disabled:opacity-60"
+                className="text-[17px] font-[600] text-[#c5aa84] transition-opacity hover:opacity-85 disabled:opacity-60"
               >
                 SAVE
               </button>
@@ -3710,7 +3710,7 @@ export function GroupInfoPanel({
         <button
           type="button"
           onClick={onAddMembersClick}
-          className="absolute bottom-6 right-5 grid h-[66px] w-[66px] place-items-center rounded-full bg-[#7d65e8] text-white shadow-[0_14px_26px_rgba(126,102,235,0.45)] transition-colors hover:bg-[#927cff]"
+          className="absolute bottom-6 right-5 grid h-[66px] w-[66px] place-items-center rounded-full bg-[#ad906a] text-white shadow-[0_14px_26px_rgba(126,102,235,0.45)] transition-colors hover:bg-[#c5aa84]"
           aria-label="Add member"
         >
           <UserPlusIcon size={31} />
