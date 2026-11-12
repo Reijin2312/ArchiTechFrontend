@@ -2,7 +2,6 @@ import React from 'react'
 import { motion, useReducedMotion, type Variants } from 'framer-motion';
 import { Seo } from '@/shared/seo/seo';
 import { routesMeta } from '@/shared/seo/routesMeta';
-import { useWallpaper } from '@/shared/ui/wallpaper/useWallpaper';
 import { useIsMobile } from '@/shared/ui/utils/useIsMobile';
 import { TEAM_MEMBERS } from '@/shared/data/team';
 import { useTeamAvatars } from '@/shared/hooks/useTeamAvatars';
@@ -118,8 +117,8 @@ const ICONS: Record<ContactCardConfig['icon'], React.ReactNode> = {
 function ContactActionButton({ action }: { action: ContactAction }) {
   const className =
     action.variant === 'secondary'
-      ? 'inline-flex items-center gap-1 rounded-xl border border-[rgba(239,232,218,0.22)] px-4 py-2 text-sm text-[#c9c3b8] transition hover:border-slate-500 hover:text-white'
-      : 'inline-flex items-center gap-1 rounded-xl bg-[#c8ae88] px-4 py-2 text-sm font-medium text-[#211f1b] shadow shadow-sky-900/50 transition hover:bg-[#e6d6bd]';
+      ? 'inline-flex items-center gap-1 rounded-[8px] border border-[rgba(239,232,218,0.27)] px-4 py-2.5 text-sm text-[#c9c3b8] transition hover:border-[#c5aa84] hover:text-white'
+      : 'inline-flex items-center gap-1 rounded-[8px] bg-[#c8ae88] px-4 py-2.5 text-sm font-medium text-[#211f1b] transition hover:bg-[#e6d6bd]';
 
   const rel = action.external ? 'noreferrer noopener' : undefined;
   const target = action.external ? '_blank' : undefined;
@@ -133,7 +132,6 @@ function ContactActionButton({ action }: { action: ContactAction }) {
 }
 
 export default function ContactsPage() {
-  useWallpaper();
   const { language } = useI18n();
   const cards = language === 'en' ? CONTACT_CARDS_EN : CONTACT_CARDS;
   const isMobile = useIsMobile();
@@ -144,24 +142,24 @@ export default function ContactsPage() {
   return (
     <>
       <Seo {...routesMeta['/contacts']} />
-      <div className="relative mx-auto max-w-7xl px-4 py-10 text-[#f2efe9]">
+      <div className="at-contact-page relative mx-auto w-full max-w-[1380px] px-5 pb-28 pt-14 text-[#f2efe9] sm:px-8 lg:pt-20">
         <motion.section
-          className="mx-auto max-w-4xl text-center mb-10"
+          className="mb-10 max-w-[900px] border-b border-[rgba(238,231,218,.22)] pb-10 text-left sm:mb-14 sm:pb-12"
           initial={disableMotion ? undefined : { opacity: 0, y: 20, filter: 'blur(8px)' }}
           animate={disableMotion ? undefined : { opacity: 1, y: 0, filter: 'blur(0px)' }}
           transition={{ duration: 0.5, ease: 'easeOut' }}
         >
-          <p className="text-sm uppercase tracking-[0.35em] text-[#aaa497]">{language === 'ru' ? 'Связь' : 'Get in touch'}</p>
-          <h1 className="mt-3 text-3xl font-semibold leading-tight">
+          <p className="font-[Onest] text-[11px] font-semibold uppercase tracking-[.2em] text-[#c5aa84]">{language === 'ru' ? 'Связь' : 'Get in touch'}</p>
+          <h1 className="mt-3 font-[Onest] text-[clamp(40px,5.4vw,72px)] font-semibold leading-[1.05] tracking-[-.055em] text-[#f2efe9]">
             {language === 'ru' ? 'Контакты ArchiTech MC' : 'ArchiTech MC contacts'}
           </h1>
-          <p className="mt-4 text-base text-[#c9c3b8]">
+          <p className="mt-5 max-w-[740px] text-[16px] leading-[1.8] text-[#c9c3b8]">
             {language === 'ru' ? 'Здесь всё, что нужно для связи: техподдержка, модерация, Discord и Telegram. Без лишнего — просто выбирайте нужный канал.' : 'Everything you need to reach us: technical support, moderation, Discord, and Telegram. Pick the channel that fits your question.'}
           </p>
         </motion.section>
 
         <motion.section
-          className="grid gap-4 md:grid-cols-2"
+          className="grid gap-3 md:grid-cols-2"
           variants={disableMotion ? undefined : gridVariants}
           initial={disableMotion ? undefined : 'hidden'}
           animate={disableMotion ? undefined : 'show'}
@@ -170,43 +168,40 @@ export default function ContactsPage() {
             <motion.article
               key={card.id}
               variants={disableMotion ? undefined : cardVariants}
-              className="relative overflow-hidden rounded-2xl border border-[rgba(239,232,218,0.22)] bg-[rgba(25,27,24,0.85)] p-5 backdrop-blur-md"
+              className="relative overflow-hidden rounded-[9px] border border-[rgba(239,232,218,.22)] bg-[rgba(29,31,27,.95)] p-6 backdrop-blur-[8px] transition-[border-color,background-color] duration-300 hover:border-[rgba(239,232,218,.41)] hover:bg-[rgba(36,38,33,.97)] sm:p-7"
             >
-              <div className="pointer-events-none absolute inset-0 opacity-50 blur-3xl">
-                <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(197,170,132,0.10),transparent_72%)]" />
-              </div>
-              <div className="relative flex flex-col gap-4">
+              <div className="relative flex h-full flex-col gap-5">
                 <div className="flex items-center gap-3">
-                  <div className="grid h-12 w-12 place-items-center rounded-2xl border border-[rgba(239,232,218,0.22)] bg-[rgba(33,35,31,0.91)]">
+                  <div className="grid size-11 shrink-0 place-items-center rounded-[8px] border border-[rgba(239,232,218,.23)] bg-[#2c2e28]">
                     {ICONS[card.icon]}
                   </div>
                   <div>
-                    <div className="text-sm uppercase tracking-[0.18em] text-[#aaa497]">{card.badge}</div>
-                    <h2 className="text-xl font-semibold text-[#f2efe9]">{card.title}</h2>
+                    <div className="font-[Onest] text-[11px] font-medium uppercase tracking-[.12em] text-[#c6ad8a]">{card.badge}</div>
+                    <h2 className="mt-0.5 font-[Onest] text-[22px] font-semibold tracking-[-.035em] text-[#f2efe9]">{card.title}</h2>
                   </div>
                 </div>
-                <p className="text-sm text-[#c9c3b8]">{card.description}</p>
-                <div className="flex flex-wrap gap-2">
+                <p className="text-[15px] leading-7 text-[#ccc6ba]">{card.description}</p>
+                <div className="mt-auto flex flex-wrap gap-2">
                   {card.actions.map((action) => (
                     <ContactActionButton key={action.label} action={action} />
                   ))}
                 </div>
-                {card.meta && <p className="text-xs text-[#aaa497]">{card.meta}</p>}
+                {card.meta && <p className="text-[12px] leading-5 text-[#aaa497]">{card.meta}</p>}
               </div>
             </motion.article>
           ))}
         </motion.section>
 
         <motion.section
-          className="mt-14"
+          className="mt-24 sm:mt-28"
           initial={disableMotion ? undefined : { opacity: 0, y: 20 }}
           whileInView={disableMotion ? undefined : { opacity: 1, y: 0 }}
           viewport={disableMotion ? undefined : { once: true, margin: '-10% 0px' }}
           transition={{ duration: 0.5, ease: 'easeOut' }}
         >
-          <div className="flex flex-col gap-3 mb-6 text-center">
-            <p className="text-sm uppercase tracking-[0.35em] text-[#aaa497]">{language === 'ru' ? 'Команда' : 'Team'}</p>
-            <h2 className="text-2xl font-semibold">{language === 'ru' ? 'Администрация и команда' : 'Staff and project team'}</h2>
+          <div className="mb-10 border-b border-[rgba(238,231,218,.22)] pb-8 sm:mb-12">
+            <p className="font-[Onest] text-[11px] font-semibold uppercase tracking-[.2em] text-[#c5aa84]">{language === 'ru' ? 'Команда' : 'Team'}</p>
+            <h2 className="mt-3 font-[Onest] text-[clamp(34px,4.5vw,58px)] font-semibold leading-[1.09] tracking-[-.05em] text-[#f2efe9]">{language === 'ru' ? 'Администрация и команда' : 'Staff and project team'}</h2>
           </div>
           <TeamGrid team={TEAM_MEMBERS} avatars={avatars} disableMotion={disableMotion} />
         </motion.section>
