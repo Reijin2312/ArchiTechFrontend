@@ -8,6 +8,32 @@
     <link rel="icon" type="image/png" href="/images/favicon-192.png" sizes="192x192" />
     <link rel="apple-touch-icon" href="/images/apple-touch-icon.png" />
     <link rel="manifest" href="/manifest.webmanifest" />
+    <!-- The SPA renders the first visible photo with React, so Chrome cannot discover
+         its URL from the initial HTML. Route-aware preload eliminates that delay.
+         Only ONE LCP candidate is requested, never a whole gallery. -->
+    <script>
+      (() => {
+        const path = location.pathname.replace(/\/+$/, '') || '/';
+        const season = /^\/about\/seasons\/([1-4])$/.exec(path);
+        const name = path === '/' ? 'screen10'
+          : path === '/about' ? 'screen2'
+          : season ? ({ '1':'screen6', '2':'screen3', '3':'screen5', '4':'screen10' })[season[1]]
+          : null;
+        if (!name) return;
+        const widths = name === 'screen3' || name === 'screen6'
+          ? [320, 640, 960, 1280]
+          : name === 'screen5' ? [320, 640, 960, 1280, 1600]
+          : [320, 640, 960, 1280, 1600, 1920];
+        const link = document.createElement('link');
+        link.rel = 'preload';
+        link.as = 'image';
+        link.type = 'image/avif';
+        link.setAttribute('imagesrcset', widths.map(w => '/images/' + name + '-' + w + '.avif ' + w + 'w').join(', '));
+        link.setAttribute('imagesizes', path === '/' ? '100vw' : '(max-width: 1380px) 100vw, 1380px');
+        link.setAttribute('fetchpriority', 'high');
+        document.head.appendChild(link);
+      })();
+    </script>
     <!-- ssr-head --> <!-- зарезервировано: сюда вставится мета при пререндере -->
 </head>
 <body class="bg-slate-950 text-slate-100">

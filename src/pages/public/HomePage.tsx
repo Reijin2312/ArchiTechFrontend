@@ -373,17 +373,25 @@ export default function HomePage() {
     return () => window.clearInterval(id)
   }, [shot, sliderPaused, disableInteractiveMotion])
 
-  // Warm the next full-resolution screenshot so the crossfade is not waiting on a cold image.
-  // The responsive AVIF variant matches the browser viewport rather than forcing an original PNG.
-  useEffect(() => {
+  // Prefetch only after the visible slide finishes loading; never compete with LCP.
+  // Offscreen photos remain lazy and this one low-priority image prepares the next crossfade.
+  function warmNextGalleryShot() {
     const next = shots[(shots.indexOf(shot) + 1) % shots.length]
     const entry = IMAGES[toName(next)]
     if (!entry) return
-    const targetWidth = Math.min(1920, Math.max(640, window.innerWidth * (window.devicePixelRatio || 1)))
-    const variant = entry.avif.find(item => item.w >= targetWidth)
-    const image = new Image()
-    image.src = variant?.path ?? entry.avif[entry.avif.length - 1]?.path ?? entry.original.avif
-  }, [shot, shots])
+    const preload = () => {
+      const targetWidth = Math.min(1920, Math.max(640, window.innerWidth * (window.devicePixelRatio || 1)))
+      const variant = entry.avif.find(item => item.w >= targetWidth)
+      const image = new Image()
+      image.fetchPriority = 'low'
+      image.src = variant?.path ?? entry.avif[entry.avif.length - 1]?.path ?? entry.original.avif
+    }
+    if ('requestIdleCallback' in window) {
+      window.requestIdleCallback(preload, { timeout: 2000 })
+    } else {
+      window.setTimeout(preload, 300)
+    }
+  }
 
   const onlineText = useMemo(() => {
     if (!status) return "-"
@@ -459,7 +467,6 @@ export default function HomePage() {
     <Seo {...routesMeta['/']} />
 
     <div className="architech-home">
-      <WorldAtmosphere reduced={disableInteractiveMotion || isMobile} />
       <section className="at-hero" aria-label={copy.gallery}
         onPointerMove={handleHeroPointerMove} onPointerLeave={resetGalleryParallax} onPointerCancel={resetGalleryParallax}>
         <div className="at-hero-grid">
@@ -538,7 +545,7 @@ export default function HomePage() {
                   transition={{duration:disableInteractiveMotion ? .16 : 1.28,ease:[.22,1,.36,1]}}>
                   <motion.div className="at-gallery-pan" style={disableInteractiveMotion || isMobile ? undefined : { x: galleryPanX, y: galleryPanY }}>
                     <ResponsiveImage name={toName(shot) as keyof typeof IMAGES} alt={copy.galleryAlt} eager
-                      width={1920} height={1080} sizes="100vw" className="h-full w-full object-cover"/>
+                      onLoad={warmNextGalleryShot} width={1920} height={1080} sizes="100vw" className="h-full w-full object-cover"/>
                   </motion.div>
                 </motion.div>
               </AnimatePresence>
@@ -572,7 +579,7 @@ export default function HomePage() {
                   aria-label={`${copy.showScreenshot}: ${shotMeta[src]?.title ?? ''}`}
                   className={src===shot?'ring-2 ring-stone-200':'opacity-75'}>
                   <ResponsiveImage name={toName(src) as keyof typeof IMAGES} alt=""
-                    width={160} height={160} sizes="64px" className="h-full w-full object-cover" />
+                    width={160} height={160} sizes="64px" priority="low" className="h-full w-full object-cover" />
                 </motion.button>
               ))}
             </div>
@@ -729,23 +736,6 @@ export default function HomePage() {
           );
         }
 
-
-function WorldAtmosphere({ reduced }: { reduced: boolean }) {
-  const { scrollY } = useScroll()
-  const rearY = useTransform(scrollY, [0, 3800], [0, -230])
-  const frontY = useTransform(scrollY, [0, 3800], [0, 310])
-  const rearSmooth = useSpring(rearY, { stiffness: 55, damping: 32 })
-  const frontSmooth = useSpring(frontY, { stiffness: 55, damping: 32 })
-  return (
-    <div className="at-world" aria-hidden="true">
-      <div className="at-world-stage">
-        <motion.div className="at-world-rear" style={reduced ? undefined : {y:rearSmooth}}/>
-        <motion.div className="at-world-front" style={reduced ? undefined : {y:frontSmooth}}/>
-        <div className="at-world-wash"/>
-      </div>
-    </div>
-  )
-}
 
 const chapterEntrance: Variants = {
   hidden: { opacity: 0, y: 17 },

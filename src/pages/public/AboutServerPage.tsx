@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, useParams } from 'react-router-dom'
 import { motion, useReducedMotion, type Variants } from 'framer-motion'
-import { useWallpaper } from '@/shared/ui/wallpaper/useWallpaper'
 import { Seo } from '@/shared/seo/seo'
 import { routesMeta, ORIGIN } from '@/shared/seo/routesMeta'
 import { ResponsiveImage } from '@/shared/ui/image/ResponsiveImage'
@@ -188,7 +187,6 @@ function LegacyJoin({ copy }: { copy: typeof aboutTranslations.ru | typeof about
 }
 
 export default function AboutServerPage({ seasonNumberOverride }: { seasonNumberOverride?: number } = {}) {
-  useWallpaper()
   const { seasonNumber } = useParams<{ seasonNumber?: string }>()
   const { language } = useI18n()
   const copy = aboutTranslations[language]

@@ -6,11 +6,13 @@ type Props = {
   className?: string;
   sizes?: string;
   eager?: boolean;
+  priority?: 'high' | 'low' | 'auto';
+  onLoad?: React.ReactEventHandler<HTMLImageElement>;
   width?: number;
   height?: number;
 };
 
-export function ResponsiveImage({ name, alt, className, sizes, eager, width, height }: Props) {
+export function ResponsiveImage({ name, alt, className, sizes, eager, priority, onLoad, width, height }: Props) {
   const entry = IMAGES[name as string];
   if (!entry) return null;
 
@@ -30,7 +32,8 @@ export function ResponsiveImage({ name, alt, className, sizes, eager, width, hei
         height={height ?? entry.original.h}
         loading={eager ? 'eager' : 'lazy'}
         decoding="async"
-        fetchPriority={eager ? 'high' as const : 'auto' as const}
+        fetchPriority={priority ?? (eager ? 'high' : 'auto')}
+        onLoad={onLoad}
         className={className}
       />
     </picture>

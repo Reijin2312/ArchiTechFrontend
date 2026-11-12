@@ -66,45 +66,8 @@
 }
 .architech-home .at-rule { height: 1px; background: var(--at-line); }
 
-/* Deep atmosphere, made only from existing in-game photographs.
-   Two layers float behind the whole page; no wallpaper changes on slide switch. */
-.architech-home .at-world {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  overflow: clip;
-}
-.architech-home .at-world-stage {
-  position: sticky;
-  top: 0;
-  height: 100svh;
-  overflow: hidden;
-  background: var(--at-bg);
-}
-.architech-home .at-world-rear,
-.architech-home .at-world-front {
-  position: absolute;
-  inset: -16% -8%;
-  will-change: transform;
-}
-.architech-home .at-world-rear {
-  background: url('/images/screen2.webp') 50% 47% / cover no-repeat;
-  opacity: .18;
-  filter: saturate(.72) contrast(1.02);
-}
-.architech-home .at-world-front {
-  background: url('/images/screen3.webp') 78% 42% / cover no-repeat;
-  opacity: .08;
-  filter: saturate(.6);
-  -webkit-mask-image: linear-gradient(90deg,transparent 24%,#000 100%);
-  mask-image: linear-gradient(90deg,transparent 24%,#000 100%);
-}
-.architech-home .at-world-wash {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(to bottom,rgba(23,24,22,.22),rgba(23,24,22,.67) 48%,#171816 100%);
-}
+/* The full-bleed hero and photographic chapters provide all visual atmosphere;
+   redundant screen2/screen3 parallax layers have been removed. */
 
 /* Full-bleed hero — illustration and type are one composed scene. */
 .architech-home .at-hero {
@@ -1049,11 +1012,6 @@
     will-change: auto !important;
   }
   .architech-home .at-chapter .at-chapter-image,
-  .architech-home .at-gallery-pan,
-  .architech-home .at-world-rear,
-  .architech-home .at-world-front { transform: none !important; }
+  .architech-home .at-gallery-pan { transform: none !important; }
 }
-@media (prefers-reduced-data: reduce) {
-  .architech-home .at-world-front { display: none; }
-  .architech-home .at-world-rear { opacity: .055; }
-}
+
