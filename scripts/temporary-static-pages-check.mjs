@@ -19,10 +19,12 @@ for(const width of [1440,390]){
     await page.screenshot({path:'/tmp/static-page-screenshots/'+path+'-'+width+'.png',fullPage:false});
     if(!exists||!source?.includes('screen10-')||blank)failed=true;
     if(path==='contacts'){
-      const admin=await page.locator('text=Администрация и команда').count();
+      const team=await page.locator('.at-contact-team .at-staff').count();
+      const founder=await page.locator('.at-contact-team .at-staff-feature').count();
+      const members=await page.locator('.at-contact-team .at-staff-person').count();
       const blue=await page.locator('.border-sky-500').count();
-      console.log('CONTACTS team=',admin,'legacy sky=',blue);
-      if(!admin||blue)failed=true;
+      console.log('CONTACTS shared team=',team,'founder=',founder,'members=',members,'legacy sky=',blue);
+      if(team!==1||founder!==1||members!==4||blue!==0)failed=true;
     }
   }
   await page.close();

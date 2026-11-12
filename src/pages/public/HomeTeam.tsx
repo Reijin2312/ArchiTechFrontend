@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import './HomeTeam.css'
 import { motion, type Variants } from 'framer-motion'
 import type { TeamMember } from '@/shared/data/team'
 import { SvgArrowUpRight, SvgCurseForge, SvgGitHub, SvgModrinth } from '@/shared/ui/image/Icons'

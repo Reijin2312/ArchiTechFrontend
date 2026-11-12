@@ -5,7 +5,7 @@ import { routesMeta } from '@/shared/seo/routesMeta';
 import { useIsMobile } from '@/shared/ui/utils/useIsMobile';
 import { TEAM_MEMBERS } from '@/shared/data/team';
 import { useTeamAvatars } from '@/shared/hooks/useTeamAvatars';
-import { TeamGrid } from '@/shared/ui/card/TeamGrid';
+import { HomeTeam } from './HomeTeam';
 import {
   SvgTelegram,
   SvgDiscord,
@@ -203,7 +203,9 @@ export default function ContactsPage() {
             <p className="font-[Onest] text-[11px] font-semibold uppercase tracking-[.2em] text-[#c5aa84]">{language === 'ru' ? 'Команда' : 'Team'}</p>
             <h2 className="mt-3 font-[Onest] text-[clamp(34px,4.5vw,58px)] font-semibold leading-[1.09] tracking-[-.05em] text-[#f2efe9]">{language === 'ru' ? 'Администрация и команда' : 'Staff and project team'}</h2>
           </div>
-          <TeamGrid team={TEAM_MEMBERS} avatars={avatars} disableMotion={disableMotion} />
+          <div className="at-contact-team">
+            <HomeTeam team={TEAM_MEMBERS} avatars={avatars} disableMotion={disableMotion} />
+          </div>
         </motion.section>
       </div>
     </>
