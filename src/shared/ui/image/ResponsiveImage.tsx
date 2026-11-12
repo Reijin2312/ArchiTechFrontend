@@ -1,3 +1,4 @@
+import type { ReactEventHandler } from 'react';
 import { IMAGES } from '@/shared/images.manifest';
 
 type Props = {
@@ -7,7 +8,7 @@ type Props = {
   sizes?: string;
   eager?: boolean;
   priority?: 'high' | 'low' | 'auto';
-  onLoad?: React.ReactEventHandler<HTMLImageElement>;
+  onLoad?: ReactEventHandler<HTMLImageElement>;
   width?: number;
   height?: number;
 };
