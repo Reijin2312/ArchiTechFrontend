@@ -391,7 +391,7 @@ export default function HomePage() {
     if ('requestIdleCallback' in window) {
       window.requestIdleCallback(preload, { timeout: 2000 })
     } else {
-      window.setTimeout(preload, 300)
+      globalThis.setTimeout(preload, 300)
     }
   }
 
