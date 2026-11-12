@@ -1,0 +1,26 @@
+name: Temporary initial-paint theme regression
+on:
+  push:
+    branches: [design/premium-steampunk-home]
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npm install --no-save playwright@1.58.2
+      - run: npx playwright install chromium
+      - name: Check first paint before JS and CSS on desktop and mobile
+        run: |
+          npm run preview -- --host 127.0.0.1 --port 4173 > /tmp/theme-preview.log 2>&1 &
+          for i in $(seq 1 30); do
+            if curl --silent --fail http://127.0.0.1:4173/ > /dev/null; then break; fi
+            sleep 1
+          done
+          node scripts/temporary-theme-first-paint.mjs
