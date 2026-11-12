@@ -278,10 +278,10 @@ export default function AboutServerPage({ seasonNumberOverride }: { seasonNumber
               <div className="at-legacy-detail-rule" />
             </header>
 
-            <motion.figure className="at-legacy-shell at-legacy-detail-cover" {...fadeProps}>
+            <figure className="at-legacy-shell at-legacy-detail-cover">
               <SeasonPicture src={season.screenshots[0]} alt={`${season.name} — ${copy.screenshot} 1`} eager sizes="(max-width: 1380px) 100vw, 1380px" />
               <figcaption>{String(season.number).padStart(2, '0')} / ARCHITECH</figcaption>
-            </motion.figure>
+            </figure>
 
             <section className="at-legacy-shell at-legacy-detail-story" aria-labelledby="at-legacy-story-title">
               <div className="at-legacy-detail-side">
@@ -374,10 +374,10 @@ export default function AboutServerPage({ seasonNumberOverride }: { seasonNumber
               </motion.div>
             </header>
 
-            <motion.figure className="at-legacy-shell at-legacy-world" {...fadeProps}>
+            <figure className="at-legacy-shell at-legacy-world">
               <SeasonPicture src="/images/screen2.png" alt={copy.worldAlt} eager sizes="(max-width: 1380px) 100vw, 1380px" />
               <figcaption>ARCHITECH / MINECRAFT</figcaption>
-            </motion.figure>
+            </figure>
 
             <section className="at-legacy-shell at-legacy-values" aria-label={language === 'ru' ? 'Особенности сервера' : 'Server features'}>
               {copy.cards.map(([title, description], index) => (

@@ -141,6 +141,7 @@ export default function HomePage() {
     ({ title: copy.fallbackShot, subtitle: copy.fallbackShotSubtitle } as ShotMeta)
   const [activeIndex, setActiveIndex] = useState(0)
   const [sliderPaused, setSliderPaused] = useState(false)
+  const [galleryHasAdvanced, setGalleryHasAdvanced] = useState(false)
 
   const thumbSpring: Transition = {
     type: 'spring',
@@ -227,6 +228,7 @@ export default function HomePage() {
 
     const nextIdx = shots.indexOf(newSrc)
     if (nextIdx !== -1) setActiveIndex(nextIdx)
+    setGalleryHasAdvanced(true)
     setShot(newSrc)
   }
 
@@ -539,7 +541,7 @@ export default function HomePage() {
             <div className="at-gallery-frame">
               <AnimatePresence initial={false}>
                 <motion.div key={shot} className="at-gallery-slide absolute inset-0"
-                  initial={disableInteractiveMotion ? {opacity:0} : {opacity:0,scale:1.018}}
+                  initial={!galleryHasAdvanced ? false : disableInteractiveMotion ? {opacity:0} : {opacity:0,scale:1.018}}
                   animate={{opacity:1,scale:1}}
                   exit={{opacity:0,scale:1}}
                   transition={{duration:disableInteractiveMotion ? .16 : 1.28,ease:[.22,1,.36,1]}}>
