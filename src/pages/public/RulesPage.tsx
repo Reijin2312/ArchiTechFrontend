@@ -1,5 +1,4 @@
 import type { ComponentProps } from 'react';
-import { useWallpaper } from '@/shared/ui/wallpaper/useWallpaper';
 import { Seo } from '@/shared/seo/seo';
 import { routesMeta } from '@/shared/seo/routesMeta';
 import { motion } from 'framer-motion';
@@ -27,7 +26,6 @@ export const SECTIONS: TocItem[] = [
 
 
 export default function RulesPage() {
-  useWallpaper();
   const isMobile = useIsMobile();
   const { language } = useI18n();
 

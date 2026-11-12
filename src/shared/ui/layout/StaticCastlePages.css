@@ -1,0 +1,138 @@
+@import url('https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=Onest:wght@400;500;600;700&display=swap');
+
+/* A single coherent Walking Castle backdrop across the five static pages,
+   using the first photograph already featured in the homepage gallery. */
+.at-static-castle {
+  position: relative;
+  isolation: isolate;
+  background: #171816;
+}
+.at-static-castle::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    linear-gradient(95deg,rgba(17,18,15,.89),rgba(17,18,15,.75) 45%,rgba(17,18,15,.84)),
+    linear-gradient(180deg,rgba(17,18,15,.20),#171816),
+    url('/images/screen10-1920.avif') 58% center / cover no-repeat;
+  background-size: cover;
+}
+.at-static-castle > main { position: relative; z-index: 1; min-width: 0; }
+.at-static-castle .at-site-footer { position: relative; z-index: 1; }
+.at-static-castle .at-site-header { position: relative; z-index: 20; }
+
+/* Rules and wiki keep their navigation and contents, not the old flat backdrop. */
+.at-static-castle .architech-document main > h1 {
+  font-family: 'Onest',sans-serif;
+  font-size: clamp(30px,3.7vw,47px);
+  font-weight: 600;
+  line-height: 1.13;
+  letter-spacing: -.045em;
+  margin-bottom: 26px;
+}
+.at-static-castle .architech-document aside > nav,
+.at-static-castle .architech-document main section > div > div.mb-8,
+.at-static-castle .architech-document main > div.mb-6 {
+  background: rgba(27,29,25,.94);
+  border-color: rgba(239,232,218,.22);
+  box-shadow: none;
+  backdrop-filter: blur(9px);
+}
+.at-static-castle .architech-document main section > div > h2 {
+  background: rgba(27,29,25,.94);
+}
+
+/* Legal documents: editorial typography, quiet surfaces and legible reading width. */
+.at-legal-shell {
+  --ui-primary: #f2efe9;
+  --ui-secondary: #c9c4b9;
+  --ui-muted: #aaa497;
+  --ui-accent: #d7ba91;
+  --ui-deep: rgba(25,27,24,.94);
+  --ui-surface: rgba(31,33,28,.94);
+  --ui-line: rgba(239,232,218,.20);
+  --ui-nav-active-bg: rgba(197,170,132,.15);
+  --ui-nav-active-text: #e7ceaa;
+  --ui-nav-inactive-bg: #2b2d27;
+  --ui-nav-inactive-border: rgba(239,232,218,.22);
+  --ui-nav-hover: #f2e2ca;
+  --ui-accent-fill: #c5aa84;
+  --ui-accent-fill-ink: #24221e;
+  font-family: 'Golos Text',sans-serif;
+}
+.at-legal-shell :is(h1,h2,h3) { font-family: 'Onest',sans-serif; }
+.at-legal-shell aside nav {
+  border-radius: 9px;
+  border: 1px solid rgba(239,232,218,.23);
+  background: rgba(27,29,25,.94);
+  box-shadow: none;
+  backdrop-filter: blur(8px);
+}
+.at-legal-shell aside nav a {
+  display: inline-block;
+  padding-block: 2px;
+  line-height: 1.5;
+  text-decoration: none;
+  transition: color .2s ease,transform .25s ease;
+}
+.at-legal-shell aside nav a:hover { transform: translateX(3px); }
+.at-legal-shell > div > main > div.mb-6 {
+  border-radius: 9px;
+  border-color: rgba(197,170,132,.32);
+  background: rgba(30,32,28,.94);
+  box-shadow: none;
+}
+.at-legal-shell main section > div > h2 {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  max-width: 100%;
+  gap: 10px;
+  margin-bottom: 15px;
+  padding: 0;
+  background: none;
+  border-radius: 0;
+  color: #f0eae1;
+  font: 600 clamp(18px,1.8vw,23px)/1.4 'Onest',sans-serif;
+  letter-spacing: -.025em;
+}
+.at-legal-shell main section > div > h2 > span {
+  flex: none;
+  width: 29px;
+  height: 29px;
+  background: #c5aa84;
+  border-radius: 7px;
+  color: #24211d;
+  font: 700 13px 'Onest',sans-serif;
+}
+.at-legal-shell main section > div > div.mb-8 {
+  margin-bottom: 36px;
+  border-radius: 9px;
+  border: 1px solid rgba(239,232,218,.20);
+  padding: clamp(19px,2.4vw,29px);
+  background: rgba(29,31,27,.94);
+  box-shadow: none;
+  backdrop-filter: blur(8px);
+}
+.at-legal-shell main section :is(ol,ul,p,li) {
+  color: #cfc9bf;
+  font-size: 15px;
+  line-height: 1.84;
+}
+.at-legal-shell main section :is(strong,b) { color: #f1e7d6; font-weight: 600; }
+.at-legal-shell .at-legal-hero p { line-height: 1.7; }
+.at-legal-shell a:focus-visible { outline: 2px solid #dabb8c; outline-offset: 4px; }
+@media(max-width:767px) {
+  .at-static-castle::before {
+    background:
+      linear-gradient(180deg,rgba(17,18,15,.87),rgba(17,18,15,.94)),
+      url('/images/screen10-960.avif') 57% top / cover no-repeat;
+  }
+}
+@media(prefers-reduced-data:reduce) {
+  .at-static-castle::before { background-image: none; }
+}
+@media(prefers-reduced-motion:reduce) {
+  .at-legal-shell aside nav a { transition: none; transform: none !important; }
+}

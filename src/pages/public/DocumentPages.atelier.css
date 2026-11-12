@@ -10,10 +10,6 @@ body:has(.architech-document) {
   background-color: #171816;
   color: #f2efe9;
 }
-body.has-wallpaper:has(.architech-document)::before {
-  background-image: none;
-  background-color: #171816;
-}
 
 .architech-document {
   --doc-bg: #171816;

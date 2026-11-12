@@ -1,4 +1,3 @@
-import { useWallpaper } from '@/shared/ui/wallpaper/useWallpaper';
 import { Seo } from '@/shared/seo/seo';
 import { routesMeta } from '@/shared/seo/routesMeta';
 import { motion, type Variants } from 'framer-motion';
@@ -21,18 +20,22 @@ export const TERMS_SECTIONS: TermsTocItem[] = [
 
 
 export default function UserAgreementPage() {
-  useWallpaper();
 
   return (
     <>
     <Seo {...routesMeta['/terms']} />
-    <div className="mx-auto w-full max-w-7xl grid grid-cols-12 gap-6 px-4 py-6 text-[#f2efe9]">
-      <aside className="hidden md:block md:col-span-3">
+    <div className="at-legal-shell relative mx-auto w-full max-w-[1460px] px-5 pb-28 pt-12 text-[#f2efe9] sm:px-8 sm:pt-16 lg:pt-20">
+      <header className="at-legal-hero mb-11 border-b border-[rgba(238,231,218,.22)] pb-10 sm:mb-14 sm:pb-12">
+        <p className="mb-4 font-[Onest] text-[11px] font-semibold uppercase tracking-[.22em] text-[#c5aa84]">ARCHITECH / УСЛОВИЯ</p>
+        <h1 className="max-w-[1050px] font-[Onest] text-[clamp(34px,5vw,64px)] font-semibold leading-[1.06] tracking-[-.05em] text-[#f2efe9]">Пользовательское соглашение</h1>
+        <p className="mt-5 max-w-[660px] text-[15px] leading-7 text-[#c9c4b9]">Условия использования сайта, аккаунта и игрового сервера ArchiTech.</p>
+      </header>
+      <div className="grid grid-cols-1 items-start gap-7 lg:grid-cols-[220px_minmax(0,1fr)] xl:grid-cols-[225px_minmax(0,1fr)_210px] xl:gap-9">
+      <aside className="hidden lg:block">
         <LeftNav items={TERMS_SECTIONS} />
       </aside>
 
-      <main className="col-span-12 md:col-span-6">
-        <h1 className="mb-4 text-3xl font-bold text-[22px] md:text-[24px] text-center">Пользовательское соглашение</h1>
+      <main className="min-w-0">
         <Callout title="Подсказка по навигации">
           <ul className="text-sm text-[#c9c3b8] space-y-1">
             <li>Переходите по разделам слева или используйте быстрый поиск по странице: <Kbd>Ctrl</Kbd> + <Kbd>F</Kbd> (Windows / Linux), <Kbd>Cmd</Kbd> + <Kbd>F</Kbd> (macOS).</li>
@@ -125,9 +128,10 @@ export default function UserAgreementPage() {
         </Section>
       </main>
 
-      <aside className="hidden md:block md:col-span-3">
+      <aside className="hidden xl:block">
         <RightToc items={TERMS_SECTIONS} />
       </aside>
+      </div>
     </div>
     </>
   );

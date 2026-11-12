@@ -1,5 +1,4 @@
 import type { ComponentProps } from 'react';
-import { useWallpaper } from '@/shared/ui/wallpaper/useWallpaper';
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Seo } from '@/shared/seo/seo';
@@ -124,7 +123,6 @@ const CMDS: Cmd[] = [
 ];
 
 export default function WikiPage() {
-  useWallpaper();
   const isMobile = useIsMobile();
   const { t } = useI18n();
   const sections = useMemo(() => WIKI_SECTIONS.map((item) => ({ ...item, title: wikiSectionTitle(item.id, t) })), [t]);
