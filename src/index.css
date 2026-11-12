@@ -33,12 +33,9 @@
 
 @layer base {
   body {
-    @apply bg-slate-950 text-slate-100;
+    @apply text-slate-100;
     font-family: var(--font-body);
-  }
-  
-  body {
-    background-color: #020617; 
+    background-color: #171816;
   }
 
   body.has-wallpaper {
@@ -53,7 +50,7 @@
     z-index: -1;
 
     background-image:
-      linear-gradient(rgb(2 6 23 / var(--overlay-alpha)), rgb(2 6 23 / var(--overlay-alpha))),
+      linear-gradient(rgb(23 24 22 / var(--overlay-alpha)), rgb(23 24 22 / var(--overlay-alpha))),
       var(--bg-url, url('/images/wallpaper.avif'));
     background-position: center center;
     background-size: cover;

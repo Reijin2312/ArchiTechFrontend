@@ -3,7 +3,9 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#0e141c" />
+    <meta name="theme-color" content="#171816" />
+    <!-- Match the finished site graphite background before CSS/React arrive. -->
+    <style>html, body { background-color: #171816; }</style>
     <link rel="icon" type="image/png" href="/images/favicon-32.png" sizes="32x32" />
     <link rel="icon" type="image/png" href="/images/favicon-192.png" sizes="192x192" />
     <link rel="apple-touch-icon" href="/images/apple-touch-icon.png" />
@@ -36,7 +38,7 @@
     </script>
     <!-- ssr-head --> <!-- зарезервировано: сюда вставится мета при пререндере -->
 </head>
-<body class="bg-slate-950 text-slate-100">
+<body class="text-slate-100">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
 </body>

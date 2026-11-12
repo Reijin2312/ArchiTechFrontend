@@ -3,8 +3,8 @@
 "short_name": "ArchiTech",
 "start_url": "/",
 "display": "standalone",
-"background_color": "#0e141c",
-"theme_color": "#0e141c",
+"background_color": "#171816",
+"theme_color": "#171816",
 "icons": [
   { "src": "/images/favicon-32.png", "sizes": "32x32", "type": "image/png" },
   { "src": "/images/favicon-192.png", "sizes": "192x192", "type": "image/png" }
