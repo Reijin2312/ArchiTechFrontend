@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import '@/shared/ui/layout/SecondaryPages.atelier.css';
 import '@/shared/ui/layout/StaticCastlePages.css';
@@ -6,6 +7,11 @@ import SiteFooter from '@/shared/ui/layout/SiteFooter';
 
 export default function Layout() {
   const { pathname } = useLocation();
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  }, [pathname]);
+
   const castlePage = ['/rules', '/wiki', '/contacts', '/terms', '/privacy'].includes(pathname);
   // Opt-in only. Already rebranded home, wiki, rules, legacy and main auth pages are untouched.
   const visualScope = pathname === '/start' || pathname === '/contacts' ||

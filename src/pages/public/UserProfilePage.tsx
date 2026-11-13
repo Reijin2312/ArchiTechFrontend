@@ -169,7 +169,7 @@ export default function UserProfilePage() {
                 <div className="flex items-center gap-2">
                   <Link
                     to={skinsHref}
-                    className="group inline-flex h-8 w-8 items-center justify-center rounded-full border border-[rgba(197,170,132,0.58)] bg-[radial-gradient(circle_at_50%_-20%,rgba(197,170,132,.12),rgba(23,24,22,.13)_55%)] text-[#d8bc91] shadow-[0_0_0_1px_rgba(56,189,248,.12)_inset,0_10px_22px_-14px_rgba(0,0,0,.9)] transition hover:scale-105 hover:border-[#cfb28c] hover:text-[#f0dcc0]"
+                    className="group inline-flex h-8 w-8 items-center justify-center rounded-full border border-[rgba(197,170,132,0.58)] bg-[radial-gradient(circle_at_50%_-20%,rgba(197,170,132,.12),rgba(23,24,22,.13)_55%)] text-[#d8bc91] shadow-[0_0_0_1px_rgba(197,170,132,.16)_inset,0_10px_22px_-14px_rgba(0,0,0,.9)] transition hover:scale-105 hover:border-[#cfb28c] hover:text-[#f0dcc0]"
                     aria-label={copy.public.openSkins}
                     title={copy.public.skinGallery}
                   >
@@ -183,8 +183,9 @@ export default function UserProfilePage() {
               </div>
               <div className="h-[400px] md:flex-1 md:h-auto">
                 <Skin3DViewer
-                  className="h-full w-full overflow-hidden rounded-xl border border-[rgba(239,232,218,0.22)] bg-[rgba(33,35,31,0.91)]"
+                  className="h-full w-full overflow-hidden"
                   skinUrl={(user as any)?.skinUrl || ''}
+                  background={null}
                 />
               </div>
             </Card>
@@ -201,7 +202,7 @@ export default function UserProfilePage() {
                   className="h-full w-full object-cover"
                   style={{ imageRendering: 'pixelated' }}
                 />
-                <div className="absolute inset-0 bg-linear-to-b from-transparent via-transparent to-slate-900" />
+                <div className="absolute inset-0 bg-linear-to-b from-transparent via-transparent to-[#21231f]" />
               </div>
             )}
             
@@ -210,7 +211,7 @@ export default function UserProfilePage() {
               <button
                 type="button"
                 onClick={handleShareProfile}
-                className="absolute right-14 top-4 z-10 inline-flex h-9 w-9 items-center justify-center rounded-xl border border-[rgba(239,232,218,0.22)] bg-[rgba(33,35,31,0.91)] text-[#c9c3b8] hover:border-slate-500 hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-300 backdrop-blur-sm"
+                className="absolute right-14 top-4 z-10 inline-flex h-9 w-9 items-center justify-center rounded-xl border border-[rgba(239,232,218,0.22)] bg-[rgba(33,35,31,0.91)] text-[#c9c3b8] hover:border-[#cfb28c] hover:bg-[#34362f] focus:outline-none focus:ring-2 focus:ring-[#c5aa84] backdrop-blur-sm"
                 aria-label={copy.public.share}
                 title={copy.public.share}
               >
@@ -222,7 +223,7 @@ export default function UserProfilePage() {
               </button>
               <a
                 href="/settings/profile"
-                className="absolute right-4 top-4 z-10 inline-flex h-9 w-9 items-center justify-center rounded-xl border border-[rgba(239,232,218,0.22)] bg-[rgba(33,35,31,0.91)] text-[#c9c3b8] hover:border-slate-500 hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-300 backdrop-blur-sm"
+                className="absolute right-4 top-4 z-10 inline-flex h-9 w-9 items-center justify-center rounded-xl border border-[rgba(239,232,218,0.22)] bg-[rgba(33,35,31,0.91)] text-[#c9c3b8] hover:border-[#cfb28c] hover:bg-[#34362f] focus:outline-none focus:ring-2 focus:ring-[#c5aa84] backdrop-blur-sm"
                 aria-label={copy.public.edit}
               >
                 <svg
@@ -306,7 +307,7 @@ export default function UserProfilePage() {
               <h3 className="text-sm font-semibold text-[#d8bc91] font-techno">{copy.public.achievements}</h3>
               <Link
                 to={achievementsHref}
-                className="group inline-flex h-8 w-8 items-center justify-center rounded-full border border-[rgba(197,170,132,0.58)] bg-[radial-gradient(circle_at_50%_-20%,rgba(197,170,132,.12),rgba(23,24,22,.13)_55%)] text-[#d8bc91] shadow-[0_0_0_1px_rgba(56,189,248,.12)_inset,0_10px_22px_-14px_rgba(0,0,0,.9)] transition hover:scale-105 hover:border-[#cfb28c] hover:text-[#f0dcc0]"
+                className="group inline-flex h-8 w-8 items-center justify-center rounded-full border border-[rgba(197,170,132,0.58)] bg-[radial-gradient(circle_at_50%_-20%,rgba(197,170,132,.12),rgba(23,24,22,.13)_55%)] text-[#d8bc91] shadow-[0_0_0_1px_rgba(197,170,132,.16)_inset,0_10px_22px_-14px_rgba(0,0,0,.9)] transition hover:scale-105 hover:border-[#cfb28c] hover:text-[#f0dcc0]"
                 aria-label={copy.public.openAchievements}
                 title={copy.public.allAchievements}
               >
@@ -337,13 +338,11 @@ export default function UserProfilePage() {
             )}
           </Card>
 
-          <Card>
-            {profileUsername ? (
-              <UserSessions username={profileUsername} />
-            ) : (
-              <Empty loading={loading} text={copy.public.sessionsError} />
-            )}
-          </Card>
+          {profileUsername ? (
+            <UserSessions username={profileUsername} />
+          ) : (
+            <Empty loading={loading} text={copy.public.sessionsError} />
+          )}
         </div>
 
         {err && (
@@ -364,7 +363,7 @@ function Card(props: { children: React.ReactNode; className?: string; style?: Re
   const customStyle = getThemeStyle();
   
   const finalStyle = {
-    backgroundColor: 'rgba(15, 23, 42, 0.6)',
+    backgroundColor: 'rgba(33, 35, 31, 0.91)',
     ...customStyle,
     ...props.style
   };
@@ -381,7 +380,7 @@ function Card(props: { children: React.ReactNode; className?: string; style?: Re
 
 function Avatar({ url, loading, online, copy }: { url?: string; loading: boolean; online?: boolean; copy: typeof profileTranslations.ru }) {
   return (
-    <div className="relative h-32 w-32 rounded-3xl border-2 border-[rgba(197,170,132,0.58)] bg-[rgba(33,35,31,0.91)] shadow-[0_8px_24px_rgba(2,132,199,0.25)]">
+    <div className="relative h-32 w-32 rounded-3xl border-2 border-[rgba(197,170,132,0.58)] bg-[rgba(33,35,31,0.91)] shadow-[0_8px_24px_rgba(197,170,132,0.22)]">
       {loading ? (
         <div className="h-full w-full animate-pulse rounded-3xl bg-[#34362f]" />
       ) : url ? (
@@ -397,7 +396,7 @@ function Avatar({ url, loading, online, copy }: { url?: string; loading: boolean
       )}
       {typeof online === 'boolean' && !loading && (
         <span
-          className={`absolute -bottom-1 -right-1 h-5 w-5 rounded-full border-2 border-slate-900 ${
+          className={`absolute -bottom-1 -right-1 h-5 w-5 rounded-full border-2 border-[#21231f] ${
             online
               ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,.75)]'
               : 'bg-slate-500 shadow-[0_0_6px_rgba(100,116,139,.55)]'

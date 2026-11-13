@@ -9,7 +9,7 @@ type Skin3DViewerProps = {
   skinUrl: string
   autoRotate?: boolean
   animated?: boolean
-  background?: string
+  background?: string | null
   interactive?: boolean
   onReady?: () => void
   onError?: () => void
