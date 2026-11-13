@@ -4,6 +4,7 @@ import '@/shared/ui/layout/SecondaryPages.atelier.css';
 import '@/shared/ui/layout/StaticCastlePages.css';
 import SiteHeader from '@/shared/ui/layout/SiteHeader';
 import SiteFooter from '@/shared/ui/layout/SiteFooter';
+import { SocialFloatingButton } from '@/shared/ui/button/SocialFloatingButton';
 
 export default function Layout() {
   const { pathname } = useLocation();
@@ -28,6 +29,7 @@ export default function Layout() {
       <SiteHeader />
       <main className="min-h-[70vh]"><Outlet /></main>
       <SiteFooter />
+      <SocialFloatingButton />
     </div>
   );
 }
