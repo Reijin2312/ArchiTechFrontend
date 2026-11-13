@@ -17,12 +17,13 @@ export const WIKI_SECTIONS: WikiTocItem[] = [
   { id: 'intro', title: 'О сервере и тематика', n: 1 },
   { id: 'start', title: 'Как начать играть', n: 2 },
   { id: 'mods', title: 'Список модов', n: 3 },
-  { id: 'progress', title: 'Прогрессия техномагии', n: 4 },
-  { id: 'commands', title: 'Команды сервера и бота', n: 5 },
+  { id: 'progress', title: 'Рекомендуемый маршрут', n: 4 },
+  { id: 'commands', title: 'Команды сервера', n: 5 },
   { id: 'economy', title: 'Экономика', n: 6 },
   { id: 'perf', title: 'Производительность', n: 7 },
-  { id: 'faq', title: 'FAQ', n: 8 },
-  { id: 'links', title: 'Ссылки', n: 9 },
+  { id: 'help', title: 'Если что-то не работает', n: 8 },
+  { id: 'faq', title: 'FAQ', n: 9 },
+  { id: 'links', title: 'Ссылки', n: 10 },
 ];
 
 type Cmd = { cmd: string; descKey: TranslationKey };
@@ -74,6 +75,12 @@ export default function WikiPage() {
           <p className="text-[#c9c4b9]">
             {t('wiki.introSpawn')}
           </p>
+          <ul className="mt-3 list-disc space-y-1 pl-5 text-[#c9c4b9]">
+            <li>{t('wiki.packTechnology')}</li>
+            <li>{t('wiki.packMagic')}</li>
+            <li>{t('wiki.packWorld')}</li>
+            <li>{t('wiki.packBuilding')}</li>
+          </ul>
         </Section>
 
         <Section id="start" title={t('wiki.sectionStart')} n={2}>
@@ -98,6 +105,7 @@ export default function WikiPage() {
         <ModCatalogSection disableMotion={isMobile} />
 
         <Section id="progress" title={t('wiki.sectionProgress')} n={4}>
+          <p className="mb-3 text-[#c9c4b9]">{t('wiki.progressIntro')}</p>
           <ul className="space-y-3 text-[#c9c4b9]">
             <li>
               <b>{t('wiki.progress1Title')}</b> {t('wiki.progress1')}
@@ -134,9 +142,18 @@ export default function WikiPage() {
           </ul>
         </Section>
 
+        <Section id="help" title={t('wiki.sectionHelp')} n={8}>
+          <ol className="list-decimal space-y-2 pl-6 text-[#c9c4b9]">
+            <li>{t('wiki.helpUpdate')}</li>
+            <li>{t('wiki.helpCleanPack')}</li>
+            <li>{t('wiki.helpRestart')}</li>
+            <li>{t('wiki.helpLogs')}</li>
+          </ol>
+        </Section>
+
         <FaqSection disableMotion={isMobile} />
 
-        <Section id="links" title={t('wiki.sectionLinks')} n={9}>
+        <Section id="links" title={t('wiki.sectionLinks')} n={10}>
           <ul className="list-disc pl-5 text-[#c9c4b9]">
             <li><Link to="/rules" className="text-[#c5aa84] hover:text-[#f1dbc0]">{t('wiki.rulesLink')}</Link></li>
             <li><Link to="/start" className="text-[#c5aa84] hover:text-[#f1dbc0]">{t('wiki.startLink')}</Link></li>
@@ -177,7 +194,7 @@ function FaqSection({ disableMotion }: { disableMotion: SectionComponentProps['d
     { q: t('wiki.faqMoveQ'), a: t('wiki.faqMoveA') },
   ];
   return (
-    <BaseSection id="faq" title={t('wiki.faqTitle')} n={8} disableMotion={disableMotion}>
+    <BaseSection id="faq" title={t('wiki.faqTitle')} n={9} disableMotion={disableMotion}>
       <div className="space-y-3">
         {qa.map((x) => (
           <div key={x.q} className="rounded-xl border border-[rgba(238,232,220,0.19)] bg-[#252620] p-3 backdrop-blur-md backdrop-saturate-150">
@@ -226,6 +243,7 @@ function wikiSectionTitle(id: string, t: (key: TranslationKey) => string) {
     commands: 'wiki.sectionCommands',
     economy: 'wiki.sectionEconomy',
     perf: 'wiki.sectionPerformance',
+    help: 'wiki.sectionHelp',
     faq: 'wiki.faqTitle',
     links: 'wiki.sectionLinks',
   };

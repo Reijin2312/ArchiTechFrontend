@@ -96,9 +96,10 @@ export default function RulesPage() {
 
         <Section id="chat" title="Общение" n={3}>
           <ul className="list-disc pl-5 space-y-1 text-[#c9c4b9]">
-            <li>Соблюдайте законы юрисдикции хостинга и платформы.</li>
+            <li>Правила общения действуют в текстовом и голосовом чате, а также на связанных площадках проекта.</li>
             <li>Не публикуйте личные данные третьих лиц.</li>
             <li>Предложения с конструктивной критикой направляйте в соответствующие каналы. Избегайте оффтопа.</li>
+            <li>Не мешайте другим игрокам громкими, повторяющимися звуками и не принуждайте их переходить в голосовой чат.</li>
           </ul>
         </Section>
 
@@ -130,15 +131,15 @@ export default function RulesPage() {
 
         <Section id="pvp" title="PVP / PVE" n={7}>
           <ul className="list-disc pl-5 space-y-1 text-[#c9c4b9]">
-            <li>PVE не запрещено.</li>
-            <li>PVP разрешено только по взаимному согласию его участников или в отмеченных зонах/событиях.</li>
-            <li>Запрещено байтить на PVP через провокации или обман.</li>
+            <li>PvE разрешено.</li>
+            <li>PvP разрешено только по взаимному согласию участников или в отмеченных зонах и событиях.</li>
+            <li>Запрещено втягивать игроков в PvP провокацией или обманом.</li>
           </ul>
         </Section>
 
         <Section id="trade" title="Экономика и торговля" n={8}>
           <ul className="list-disc pl-5 space-y-1 text-[#c9c4b9]">
-            <li>Сделки рекомендуется проводить через специальные торговые станции. Фиксируйте условия, например, в книгах. </li>
+            <li>Договаривайтесь об условиях сделки заранее; крупные обмены рекомендуется фиксировать, например, в подписанной книге.</li>
             <li>Реклама собственных магазинов разрешена в специально отведённых местах.</li>
           </ul>
         </Section>
@@ -147,7 +148,7 @@ export default function RulesPage() {
           <ul className="list-disc pl-5 space-y-1 text-[#c9c4b9]">
             <li>Безопасность аккаунта - ответственность его владельца.</li>
             <li>Не делитесь с посторонними данными для входа и не сообщайте коды доступа ни при каких обстоятельствах.</li>
-            <li>Администрация не имеет доступа к вашим данным. Они хранятся в зашифрованном виде.</li>
+            <li>Администрация никогда не просит пароль или код доступа. Вводите их только на официальном сайте и в лаунчере ArchiTech.</li>
             <li>Запрещён обход банов через твинки и VPN.</li>
             <li>При любой подозрительной активности немедленно сообщайте администрации.</li>
           </ul>
@@ -181,13 +182,13 @@ const EN_SECTIONS: TocItem[] = [
 const EN_RULES: Array<{ id: string; items: React.ReactNode[] }> = [
   { id: 'intro', items: [<>The server uses <b>one persistent world</b> focused on tech magic and building. Our goal is a stable, welcoming place for collaboration. Staff may decide cases not explicitly covered by these rules.</>, <>Respect other players, help newcomers, play fairly, and report violations to staff.</>] },
   { id: 'forbidden', items: [<><b>Griefing:</b> damaging another player’s build without permission.</>, <><b>Abusive behaviour:</b> targeted insults or harassment; friendly mutual banter is the only exception.</>, <><b>Toxicity:</b> disrupting conversation, shouting, repeated loud sounds, or abusing voice chat.</>, <><b>Flood and spam:</b> meaningless or repetitive messages.</>, <>Off-topic posts in topic-specific channels.</>, <>Malware, phishing, shock content, or suspicious links.</>, <>Pornographic or erotic content.</>, <>Sharing another person’s private data without consent.</>, <>Misinformation intended to harm the project or its reputation.</>, <>Begging players or staff for privileges.</>, <>Manipulating wording or searching for loopholes to excuse a violation.</>, <>Alternate accounts used to evade punishment or gain an advantage.</>, <>Cheats, software, mods, or resource packs that provide an unfair advantage, including their promotion.</>, <>Commercial advertising without staff approval.</>] },
-  { id: 'chat', items: [<>Follow the laws applicable to the hosting location and platform.</>, <>Do not publish another person’s private data.</>, <>Send constructive feedback to the appropriate channels and avoid off-topic discussion.</>] },
+  { id: 'chat', items: [<>The communication rules apply to text chat, proximity voice chat, and the project’s related platforms.</>, <>Do not publish another person’s private data.</>, <>Send constructive feedback to the appropriate channels and avoid off-topic discussion.</>, <>Do not disrupt others with loud or repetitive sounds, and do not pressure players to join voice chat.</>] },
   { id: 'techmagic', items: [<>The server modpack is allowed. Extra client-side mods are allowed unless they provide an unfair advantage.</>, <>Visual and quality-of-life mods are allowed when they do not change gameplay fairness.</>, <>Exploits and duplication glitches are forbidden, except TNT, dragon egg, and carpet duplication. Report newly discovered bugs to staff.</>] },
   { id: 'build', items: [<>Do not overlap another player’s building area without agreement.</>, <>Mark occupied territory so its owner can be identified.</>, <>Never remove another player’s markers or seize their territory. An unused claim on the spawn island may be released after one month with no construction.</>, <>Keep public paths, highways, railways, portals, junctions, and train routes clear.</>, <>Clean up the terrain after dismantling builds or terraforming.</>] },
   { id: 'farms', items: [<>Coordinate very large or heavy farms and machinery with staff. They must not reduce server TPS or cause lag.</>, <>Automated farms must have rate limits and an off switch.</>, <>Entity limits apply. Staff may remove or disable a source of server lag.</>] },
   { id: 'pvp', items: [<>PVE is allowed.</>, <>PVP is allowed only with mutual consent or inside designated zones and events.</>, <>Do not trick or provoke players into unwanted PVP.</>] },
-  { id: 'trade', items: [<>Use dedicated trading stations when possible and record the terms of major deals, for example in a signed book.</>, <>Advertise your own shops only in designated places.</>] },
-  { id: 'security', items: [<>You are responsible for the security of your account.</>, <>Never share sign-in details or access codes.</>, <>Staff cannot read your password; credentials are stored securely.</>, <>Do not evade bans using alternate accounts or VPN services.</>, <>Report suspicious account activity to staff immediately.</>] },
+  { id: 'trade', items: [<>Agree on the terms before trading; record major exchanges, for example in a signed book.</>, <>Advertise your own shops only in designated places.</>] },
+  { id: 'security', items: [<>You are responsible for the security of your account.</>, <>Never share sign-in details or access codes.</>, <>Staff will never ask for your password or access code. Enter them only on the official ArchiTech website and launcher.</>, <>Do not evade bans using alternate accounts or VPN services.</>, <>Report suspicious account activity to staff immediately.</>] },
   { id: 'penalties', items: [<>Typical escalation is <b>warning → mute → temporary ban → permanent ban</b>.</>, <>The penalty depends on severity, repetition, and consequences.</>, <>Staff may increase a penalty when aggravating circumstances apply.</>] },
 ];
 
