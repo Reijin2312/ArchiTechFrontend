@@ -6,6 +6,7 @@
   position: relative;
   isolation: isolate;
   background: #171816;
+  --at-static-castle-image: url('/images/screen10-1920.avif');
 }
 .at-static-castle::before {
   content: "";
@@ -16,7 +17,7 @@
   background:
     linear-gradient(95deg,rgba(17,18,15,.89),rgba(17,18,15,.75) 45%,rgba(17,18,15,.84)),
     linear-gradient(180deg,rgba(17,18,15,.20),#171816),
-    url('/images/screen10-1920.avif') 58% center / cover no-repeat;
+    var(--at-static-castle-image) 58% center / cover no-repeat;
   background-size: cover;
 }
 .at-static-castle > main { position: relative; z-index: 1; min-width: 0; }
@@ -31,6 +32,9 @@
   line-height: 1.13;
   letter-spacing: -.045em;
   margin-bottom: 26px;
+}
+.at-static-castle :is(.architech-rules,.architech-wiki) {
+  background: transparent;
 }
 .at-static-castle .architech-document aside > nav,
 .at-static-castle .architech-document main section > div > div.mb-8,
@@ -63,21 +67,7 @@
   font-family: 'Golos Text',sans-serif;
 }
 .at-legal-shell :is(h1,h2,h3) { font-family: 'Onest',sans-serif; }
-.at-legal-shell aside nav {
-  border-radius: 9px;
-  border: 1px solid rgba(239,232,218,.23);
-  background: rgba(27,29,25,.94);
-  box-shadow: none;
-  backdrop-filter: blur(8px);
-}
-.at-legal-shell aside nav a {
-  display: inline-block;
-  padding-block: 2px;
-  line-height: 1.5;
-  text-decoration: none;
-  transition: color .2s ease,transform .25s ease;
-}
-.at-legal-shell aside nav a:hover { transform: translateX(3px); }
+.at-legal-shell aside nav a { text-decoration: none; }
 .at-legal-shell > div > main > div.mb-6 {
   border-radius: 9px;
   border-color: rgba(197,170,132,.32);
@@ -134,5 +124,5 @@
   .at-static-castle::before { background-image: none; }
 }
 @media(prefers-reduced-motion:reduce) {
-  .at-legal-shell aside nav a { transition: none; transform: none !important; }
+  .at-legal-shell aside nav a { transition: none; }
 }

@@ -2,6 +2,7 @@ import { Seo } from '@/shared/seo/seo';
 import { routesMeta } from '@/shared/seo/routesMeta';
 import { motion, type Variants } from 'framer-motion';
 import { LeftNav, RightToc, Section, Kbd, Callout } from '@/shared/ui/layout/PageSidebar';
+import '@/pages/public/DocumentPages.atelier.css';
 
 export type TermsTocItem = { id: string; title: string; n: number };
 export const TERMS_SECTIONS: TermsTocItem[] = [
@@ -24,18 +25,18 @@ export default function UserAgreementPage() {
   return (
     <>
     <Seo {...routesMeta['/terms']} />
-    <div className="at-legal-shell relative mx-auto w-full max-w-[1460px] px-5 pb-28 pt-12 text-[#f2efe9] sm:px-8 sm:pt-16 lg:pt-20">
+    <div className="architech-document architech-legal-document at-legal-shell relative mx-auto w-full max-w-7xl px-4 pb-28 pt-12 text-[#f2efe9] sm:pt-16 lg:pt-20">
       <header className="at-legal-hero mb-11 border-b border-[rgba(238,231,218,.22)] pb-10 sm:mb-14 sm:pb-12">
         <p className="mb-4 font-[Onest] text-[11px] font-semibold uppercase tracking-[.22em] text-[#c5aa84]">ARCHITECH / УСЛОВИЯ</p>
         <h1 className="max-w-[1050px] font-[Onest] text-[clamp(34px,5vw,64px)] font-semibold leading-[1.06] tracking-[-.05em] text-[#f2efe9]">Пользовательское соглашение</h1>
         <p className="mt-5 max-w-[660px] text-[15px] leading-7 text-[#c9c4b9]">Условия использования сайта, аккаунта и игрового сервера ArchiTech.</p>
       </header>
-      <div className="grid grid-cols-1 items-start gap-7 lg:grid-cols-[220px_minmax(0,1fr)] xl:grid-cols-[225px_minmax(0,1fr)_210px] xl:gap-9">
-      <aside className="hidden lg:block">
-        <LeftNav items={TERMS_SECTIONS} />
+      <div className="grid grid-cols-12 items-start gap-6">
+      <aside className="hidden md:col-span-3 md:block">
+        <LeftNav items={TERMS_SECTIONS} blurIntensity="xl" bgOpacity="60" />
       </aside>
 
-      <main className="min-w-0">
+      <main className="col-span-12 min-w-0 md:col-span-6">
         <Callout title="Подсказка по навигации">
           <ul className="text-sm text-[#c9c3b8] space-y-1">
             <li>Переходите по разделам слева или используйте быстрый поиск по странице: <Kbd>Ctrl</Kbd> + <Kbd>F</Kbd> (Windows / Linux), <Kbd>Cmd</Kbd> + <Kbd>F</Kbd> (macOS).</li>
@@ -128,8 +129,8 @@ export default function UserAgreementPage() {
         </Section>
       </main>
 
-      <aside className="hidden xl:block">
-        <RightToc items={TERMS_SECTIONS} />
+      <aside className="hidden md:col-span-3 md:block">
+        <RightToc items={TERMS_SECTIONS} blurIntensity="xl" bgOpacity="60" linkTransition />
       </aside>
       </div>
     </div>
