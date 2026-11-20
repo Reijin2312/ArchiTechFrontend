@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { http } from '@/shared/api/http';
 import { endpoints } from '@/shared/api/endpoints';
 import type { TwoFactorStatusRes } from '@/shared/api/types';
@@ -32,12 +32,10 @@ export function AccountSection({
   currentUsername,
   busy,
   onUsernameChange,
-  onError,
 }: AccountSectionProps) {
   const { language } = useI18n();
   const copy = profileTranslations[language].settings;
   const navigate = useNavigate();
-  const location = useLocation();
 
   const [twoFaStatus, setTwoFaStatus] = useState<TwoFactorStatusRes | null>(null);
   const [twoFaLoading, setTwoFaLoading] = useState(true);
@@ -46,28 +44,6 @@ export function AccountSection({
   useEffect(() => {
     void loadTwoFaStatus();
   }, []);
-
-  const handlePasswordReset = async () => {
-    onError('');
-    const emailVal = email.trim();
-    if (!emailVal) {
-      onError(copy.emailRequired);
-      return;
-    }
-
-    try {
-      const next = location.pathname + (location.search || '') || '/profile';
-      const { data } = await http.post(
-        endpoints.resetBegin,
-        { email: emailVal },
-        { withCredentials: true, headers: { 'Content-Type': 'application/json' } },
-      );
-      const qs = new URLSearchParams({ ticket: data.ticket, email: emailVal, next }).toString();
-      navigate('/auth/reset/code?' + qs, { replace: true });
-    } catch (e: unknown) {
-      onError(normalizeAccountError(e, copy.resetError));
-    }
-  };
 
   async function loadTwoFaStatus() {
     setTwoFaLoading(true);
@@ -139,7 +115,7 @@ export function AccountSection({
           <button
             type="button"
             disabled={busy === 'pwd'}
-            onClick={handlePasswordReset}
+            onClick={() => navigate('/settings/password')}
             className="flex items-center justify-center rounded-xl border border-slate-700 px-3 py-2 text-sm hover:border-slate-500 hover:bg-slate-800 disabled:opacity-50"
             title={copy.changePassword}
           >
