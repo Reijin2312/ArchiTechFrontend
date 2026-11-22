@@ -160,7 +160,6 @@ export function HomeQuote({ reduced, typewriterReduced = reduced }: { reduced: b
           viewport={{ once: true, amount: .22 }}
           transition={{ duration: .8, delay: reduced ? 0 : .09, ease: [.22, 1, .36, 1] }}>
           <div className="at-testimonial-meta">
-            <span className="at-kicker">ARCHITECH / MINECRAFT</span>
             <div className="at-testimonial-author">
               <a href={'/u/' + encodeURIComponent(OWNER)} className="at-testimonial-name">{OWNER}</a>
               <span className="at-testimonial-role">{role}</span>
