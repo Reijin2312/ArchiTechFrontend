@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { CheckCheckIcon, CloseIcon, MenuIcon, PenSquareIcon, SearchIcon } from '../icons';
+import { CheckCheckIcon, CloseIcon, PenSquareIcon, SearchIcon } from '../icons';
 import type { SidebarChat } from '../types';
 import { Avatar } from './Avatar';
+import { useI18n } from '@/shared/i18n/I18nProvider';
 
 export type ChatSidebarContact = {
   userId: string;
@@ -45,17 +46,6 @@ function ArrowRightIcon({ size = 28 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       <path d="m9 5 7 7-7 7" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function ChannelIcon({ size = 24 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <path d="M14 8.5 19.5 6v12L14 15.5v-7Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M14 8.5H8.5A2.5 2.5 0 0 0 6 11v2a2.5 2.5 0 0 0 2.5 2.5H14V8.5Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="m10 15.5 1.2 3.1a1.8 1.8 0 0 1-1.67 2.44H8.7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M20.5 10.25a2.5 2.5 0 0 1 0 3.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
     </svg>
   );
 }
@@ -134,27 +124,6 @@ function ComposeMenuItem({
       <span className="text-white/88">{icon}</span>
       <span>{label}</span>
     </button>
-  );
-}
-
-function TopMiniAvatars() {
-  return (
-    <div className="flex items-center gap-[10px]">
-      <div className="relative flex items-center -space-x-[8px]">
-        <div
-          className="grid h-[42px] w-[42px] place-items-center rounded-full text-[20px] ring-2 ring-[#1a1b20]"
-          style={{ background: 'linear-gradient(135deg, #14d4b4 0%, #41d2f3 100%)' }}
-        >
-          A
-        </div>
-        <div
-          className="grid h-[42px] w-[42px] place-items-center rounded-full text-[20px] ring-2 ring-[#1a1b20]"
-          style={{ background: 'linear-gradient(135deg, #ad906a 0%, #ff9d3f 100%)' }}
-        >
-          T
-        </div>
-      </div>
-    </div>
   );
 }
 
@@ -372,9 +341,26 @@ export function ChatSidebar({
   onOpenPrivateChat,
   onSearchPrivateUsers,
 }: ChatSidebarProps) {
+  const { language } = useI18n();
+  const copy = language === 'ru'
+    ? {
+        search: 'Поиск', searchChats: 'Искать чаты', empty: 'Чатов пока нет', newGroup: 'Новая группа',
+        newPrivate: 'Новый личный чат', closeCompose: 'Закрыть меню создания', openCompose: 'Создать чат',
+        back: 'Назад', addMembers: 'Добавить участников', addPeople: 'Поиск людей…', noContacts: 'Подходящих контактов нет',
+        continueGroup: 'Перейти к настройке группы', groupName: 'Название группы', pickAvatar: 'Выбрать аватар группы',
+        createGroup: 'Создать группу', searchPeople: 'Поиск людей…', searching: 'Ищем пользователей…', noUsers: 'Пользователи не найдены',
+        createFailed: 'Не удалось создать группу', openFailed: 'Не удалось открыть личный чат', avatarFailed: 'Не удалось подготовить аватар группы', searchFailed: 'Не удалось найти пользователей',
+      }
+    : {
+        search: 'Search', searchChats: 'Search chats', empty: 'No chats yet', newGroup: 'New Group',
+        newPrivate: 'New Private Chat', closeCompose: 'Close compose menu', openCompose: 'Open compose menu',
+        back: 'Back', addMembers: 'Add Members', addPeople: 'Add people…', noContacts: 'No contacts from existing private chats',
+        continueGroup: 'Continue to group details', groupName: 'Group Name', pickAvatar: 'Pick group avatar',
+        createGroup: 'Create group', searchPeople: 'Search people…', searching: 'Searching users…', noUsers: 'No users found',
+        createFailed: 'Failed to create group', openFailed: 'Failed to open private chat', avatarFailed: 'Failed to prepare group avatar', searchFailed: 'Failed to search users',
+      };
   const isCompact = width <= 122;
   const isSearchHidden = width <= 270;
-  const isTabsHidden = width <= 320;
   const [isCompactSearchOpen, setIsCompactSearchOpen] = useState(false);
   const compactSearchInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -508,7 +494,7 @@ export function ChatSidebar({
           if (privateSearchRequestSeqRef.current !== requestSeq) return;
           setPrivateSearchResults([]);
           setPrivateSearchError(
-            error instanceof Error ? error.message : 'Failed to search users'
+            error instanceof Error ? error.message : copy.searchFailed
           );
         } finally {
           if (privateSearchRequestSeqRef.current === requestSeq) {
@@ -541,7 +527,7 @@ export function ChatSidebar({
       });
       closeCreationFlow();
     } catch (error) {
-      alert(error instanceof Error ? error.message : 'Failed to create group');
+      alert(error instanceof Error ? error.message : copy.createFailed);
       setIsCreatingGroup(false);
     }
   };
@@ -553,7 +539,7 @@ export function ChatSidebar({
       await onOpenPrivateChat(userId);
       closeCreationFlow();
     } catch (error) {
-      alert(error instanceof Error ? error.message : 'Failed to open private chat');
+      alert(error instanceof Error ? error.message : copy.openFailed);
       setOpeningPrivateChatId(null);
     }
   };
@@ -565,7 +551,7 @@ export function ChatSidebar({
       const dataUrl = await fileToAvatarDataUrl(file);
       setGroupAvatarDataUrl(dataUrl);
     } catch (error) {
-      alert(error instanceof Error ? error.message : 'Failed to prepare group avatar');
+      alert(error instanceof Error ? error.message : copy.avatarFailed);
     } finally {
       if (groupAvatarInputRef.current) {
         groupAvatarInputRef.current.value = '';
@@ -586,7 +572,7 @@ export function ChatSidebar({
           type="button"
           onClick={onBack}
           className="grid h-10 w-10 place-items-center rounded-full text-white/80 transition-colors hover:bg-white/10"
-          aria-label="Back"
+          aria-label={copy.back}
         >
           <BackIcon />
         </button>
@@ -611,11 +597,11 @@ export function ChatSidebar({
 
   const renderGroupMembersScreen = () => (
     <div className="flex h-full flex-col bg-[#242620]">
-      {renderCreationHeader('Add Members', closeCreationFlow, memberQuery, setMemberQuery, 'Add people...')}
+      {renderCreationHeader(copy.addMembers, closeCreationFlow, memberQuery, setMemberQuery, copy.addPeople)}
 
       <div className="tg-scroll flex-1 overflow-y-auto pb-[86px] pt-1">
         {filteredGroupContacts.length === 0 ? (
-          <div className="px-5 py-8 text-sm text-white/55">No contacts from existing private chats</div>
+          <div className="px-5 py-8 text-sm text-white/55">{copy.noContacts}</div>
         ) : (
           filteredGroupContacts.map((contact) => (
             <ContactRow
@@ -633,8 +619,8 @@ export function ChatSidebar({
       <button
         type="button"
         onClick={() => setCreationMode('groupDetails')}
-        className="absolute bottom-[22px] right-[16px] grid h-[68px] w-[68px] place-items-center rounded-full bg-[#c5aa84] text-white shadow-[0_14px_30px_rgba(142,119,239,.45)] transition-transform hover:scale-[1.03]"
-        aria-label="Continue to group details"
+        className="absolute bottom-[22px] right-[16px] grid h-[68px] w-[68px] place-items-center rounded-full bg-[#c5aa84] text-[#211f1b] shadow-[0_14px_30px_rgba(0,0,0,.38)] transition-transform hover:scale-[1.03]"
+        aria-label={copy.continueGroup}
       >
         <ArrowRightIcon size={28} />
       </button>
@@ -648,12 +634,12 @@ export function ChatSidebar({
           type="button"
           onClick={() => setCreationMode('groupMembers')}
           className="grid h-10 w-10 place-items-center rounded-full text-white/80 transition-colors hover:bg-white/10"
-          aria-label="Back"
+          aria-label={copy.back}
           disabled={isCreatingGroup}
         >
           <BackIcon />
         </button>
-        <div className="text-[17px] font-[700] text-white/96">New Group</div>
+        <div className="text-[17px] font-[700] text-white/96">{copy.newGroup}</div>
       </div>
 
       <div className="px-4 pt-2">
@@ -671,11 +657,11 @@ export function ChatSidebar({
           type="button"
           onClick={() => groupAvatarInputRef.current?.click()}
           disabled={isCreatingGroup}
-          className="mx-auto grid h-[190px] w-[190px] place-items-center overflow-hidden rounded-full bg-linear-to-br from-[#a795ea] to-[#ae936e] text-white shadow-[0_18px_36px_rgba(142,119,239,0.45)] transition-transform hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-80"
-          aria-label="Pick group avatar"
+          className="mx-auto grid h-[190px] w-[190px] place-items-center overflow-hidden rounded-full bg-linear-to-br from-[#d1b68d] to-[#765d3f] text-white shadow-[0_18px_36px_rgba(0,0,0,0.42)] transition-transform hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-80"
+          aria-label={copy.pickAvatar}
         >
           {groupAvatarDataUrl ? (
-            <img src={groupAvatarDataUrl} alt="Group avatar" className="h-full w-full object-cover" />
+            <img src={groupAvatarDataUrl} alt="" className="h-full w-full object-cover" />
           ) : (
             <CameraPlusIcon />
           )}
@@ -685,7 +671,7 @@ export function ChatSidebar({
           <input
             value={groupTitle}
             onChange={(event) => setGroupTitle(event.target.value)}
-            placeholder="Group Name"
+            placeholder={copy.groupName}
             maxLength={255}
             disabled={isCreatingGroup}
             className="h-10 w-full bg-transparent text-[18px] text-white/95 placeholder:text-white/45 focus:outline-none disabled:cursor-not-allowed"
@@ -699,8 +685,8 @@ export function ChatSidebar({
           onClick={() => {
             void handleSubmitGroup();
           }}
-          className="absolute bottom-[22px] right-[16px] grid h-[68px] w-[68px] place-items-center rounded-full bg-[#c5aa84] text-white shadow-[0_14px_30px_rgba(142,119,239,.45)] transition-transform hover:scale-[1.03]"
-          aria-label="Create group"
+          className="absolute bottom-[22px] right-[16px] grid h-[68px] w-[68px] place-items-center rounded-full bg-[#c5aa84] text-[#211f1b] shadow-[0_14px_30px_rgba(0,0,0,.38)] transition-transform hover:scale-[1.03]"
+          aria-label={copy.createGroup}
         >
           {isCreatingGroup ? (
             <span className="h-6 w-6 animate-spin rounded-full border-[3px] border-white border-r-transparent" />
@@ -714,18 +700,18 @@ export function ChatSidebar({
 
   const renderPrivateChatScreen = () => (
     <div className="flex h-full flex-col bg-[#242620]">
-      {renderCreationHeader('New Private Chat', closeCreationFlow, privateQuery, setPrivateQuery, 'Search people...')}
+      {renderCreationHeader(copy.newPrivate, closeCreationFlow, privateQuery, setPrivateQuery, copy.searchPeople)}
 
       <div className="tg-scroll flex-1 overflow-y-auto pb-[30px] pt-1">
         {privateQuery.trim().length >= 2 && isPrivateSearching ? (
-          <div className="px-5 py-8 text-sm text-white/55">Searching users...</div>
+          <div className="px-5 py-8 text-sm text-white/55">{copy.searching}</div>
         ) : privateSearchError ? (
           <div className="px-5 py-8 text-sm text-[#ffb4b4]">{privateSearchError}</div>
         ) : (privateQuery.trim().length >= 2 ? privateSearchResults : filteredPrivateContacts).length === 0 ? (
           <div className="px-5 py-8 text-sm text-white/55">
             {privateQuery.trim().length >= 2
-              ? 'No users found'
-              : 'No contacts from existing private chats'}
+              ? copy.noUsers
+              : copy.noContacts}
           </div>
         ) : (
           (privateQuery.trim().length >= 2 ? privateSearchResults : filteredPrivateContacts).map((contact) => (
@@ -773,10 +759,6 @@ export function ChatSidebar({
       style={{ width }}
     >
       <div className="flex h-[66px] items-center gap-[14px] px-[16px] pt-[4px]">
-        <button className="grid h-[38px] w-[38px] place-items-center rounded-full text-white/82">
-          <MenuIcon size={28} strokeWidth={2.2} />
-        </button>
-
         {!isSearchHidden ? (
           <div className="flex h-[42px] flex-1 items-center gap-[10px] rounded-full bg-[#171816] px-[18px] text-white/45 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)]">
             <SearchIcon size={20} strokeWidth={2.4} />
@@ -785,7 +767,7 @@ export function ChatSidebar({
                 type="text"
                 value={query}
                 onChange={(event) => onQueryChange(event.target.value)}
-                placeholder={searchPlaceholder}
+                placeholder={searchPlaceholder === 'Search' ? copy.search : searchPlaceholder}
                 className="w-full bg-transparent text-[17px] font-[450] text-white/90 placeholder:text-white/45 focus:outline-none"
               />
               {displayedSearchStatus ? (
@@ -806,7 +788,7 @@ export function ChatSidebar({
             className={`grid h-[38px] w-[38px] place-items-center rounded-full transition-colors ${
               isCompactSearchOpen ? 'bg-white/12 text-[#e0c59e]' : 'text-white/78 hover:bg-white/10'
             }`}
-            aria-label="Search chats"
+            aria-label={copy.searchChats}
           >
             {isCompactSearchOpen ? (
               <CloseIcon size={21} strokeWidth={2.3} />
@@ -816,7 +798,6 @@ export function ChatSidebar({
           </button>
         )}
 
-        {!isCompact && !isSearchHidden ? <TopMiniAvatars /> : null}
       </div>
 
       {isSearchHidden && isCompactSearchOpen ? (
@@ -829,7 +810,7 @@ export function ChatSidebar({
                 type="text"
                 value={query}
                 onChange={(event) => onQueryChange(event.target.value)}
-                placeholder={searchPlaceholder}
+              placeholder={searchPlaceholder === 'Search' ? copy.search : searchPlaceholder}
                 className="w-full bg-transparent text-[14px] text-white/90 placeholder:text-white/42 focus:outline-none"
               />
               {displayedSearchStatus ? (
@@ -846,27 +827,9 @@ export function ChatSidebar({
         </div>
       ) : null}
 
-      {!isTabsHidden ? (
-        <div className="overflow-hidden px-[28px] pt-[4px]">
-          <div className="flex items-end gap-[32px] whitespace-nowrap text-[17px] font-[600] text-white/78">
-            <div className="relative pb-[13px] text-[#c5aa84]">
-              Chats
-              <span className="absolute bottom-0 left-0 h-[2.5px] w-full rounded-full bg-[#c5aa84]" />
-            </div>
-            <div className="pb-[13px]">ArchiTech</div>
-            <div className="flex items-center gap-[8px] pb-[13px]">
-              <span>News</span>
-              <span className="grid h-[22px] min-w-[22px] place-items-center rounded-full bg-white/16 px-[6px] text-[13px] text-white">
-                2
-              </span>
-            </div>
-          </div>
-        </div>
-      ) : null}
-
       <div className={`tg-scroll flex-1 overflow-y-auto pb-[94px] ${isCompact ? 'pt-[10px]' : 'pt-[6px]'}`}>
         {chats.length === 0 ? (
-          <div className="px-5 py-8 text-sm text-white/55">No chats yet</div>
+          <div className="px-5 py-8 text-sm text-white/55">{copy.empty}</div>
         ) : (
           chats.map((chat) => (
             <ChatRow
@@ -884,15 +847,7 @@ export function ChatSidebar({
           {composeMenuOpen ? (
             <div className="mb-2.5 min-w-[184px] overflow-hidden rounded-[12px] border border-white/10 bg-[#1b1c22]/98 shadow-[0_14px_28px_rgba(0,0,0,0.45)]">
               <ComposeMenuItem
-                label="New Channel"
-                icon={<ChannelIcon size={16} />}
-                onClick={() => {
-                  setComposeMenuOpen(false);
-                  alert('Channels are not implemented yet');
-                }}
-              />
-              <ComposeMenuItem
-                label="New Group"
+                label={copy.newGroup}
                 icon={<GroupIcon size={16} />}
                 onClick={() => {
                   setComposeMenuOpen(false);
@@ -900,7 +855,7 @@ export function ChatSidebar({
                 }}
               />
               <ComposeMenuItem
-                label="New Private Chat"
+                label={copy.newPrivate}
                 icon={<PrivateChatIcon size={16} />}
                 onClick={() => {
                   setComposeMenuOpen(false);
@@ -913,8 +868,8 @@ export function ChatSidebar({
           <button
             type="button"
             onClick={() => setComposeMenuOpen((prev) => !prev)}
-            className="grid h-[68px] w-[68px] place-items-center rounded-full bg-[#c5aa84] text-white shadow-[0_14px_30px_rgba(142,119,239,.45)]"
-            aria-label={composeMenuOpen ? 'Close compose menu' : 'Open compose menu'}
+            className="grid h-[68px] w-[68px] place-items-center rounded-full bg-[#c5aa84] text-[#211f1b] shadow-[0_14px_30px_rgba(0,0,0,.38)]"
+            aria-label={composeMenuOpen ? copy.closeCompose : copy.openCompose}
           >
             {composeMenuOpen ? (
               <CloseIcon size={30} strokeWidth={2.1} />

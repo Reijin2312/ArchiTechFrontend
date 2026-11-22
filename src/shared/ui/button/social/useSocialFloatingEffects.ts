@@ -1032,7 +1032,10 @@ export function useSocialFloatingEffects(ctx: SocialFloatingEffectsContext) {
             return { targetUserId, data };
           } catch (err) {
             logger.warn('Failed to load chat presence', { targetUserId, err });
-            return null;
+            return {
+              targetUserId,
+              data: { userId: targetUserId, online: false, lastSeenAt: null } satisfies ChatPresenceResponse,
+            };
           }
         })
       );
@@ -1098,6 +1101,16 @@ export function useSocialFloatingEffects(ctx: SocialFloatingEffectsContext) {
         });
       } catch (err) {
         logger.warn('Failed to refresh private chat presence', { participantId, err });
+        if (!cancelled) {
+          setPresenceByUser((prev) => ({
+            ...prev,
+            [participantId]: {
+              online: false,
+              lastSeenAt: prev[participantId]?.lastSeenAt ?? null,
+              resolved: true,
+            },
+          }));
+        }
       }
     };
 

@@ -603,13 +603,13 @@ export default function HomePage() {
       </section>
       <section className="at-community">
         <div className="at-container">
-          <div className="at-section-heading"><div><span className="at-kicker">ARCHITECH / COMMUNITY</span><h2>{copy.team}</h2></div></div>
+          <div className="at-section-heading"><div><h2>{copy.team}</h2></div></div>
           <div className="at-team-editorial"><HomeTeam team={TEAM_MEMBERS} avatars={avatars} disableMotion={disableEntranceMotion}/></div>
         </div>
       </section>
       <section className="at-ranking">
         <div className="at-container at-ranking-layout">
-          <div className="at-section-heading"><div><span className="at-kicker">ARCHITECH / COMMUNITY</span><h2>{copy.leaderboard}</h2></div></div>
+          <div className="at-section-heading"><div><h2>{copy.leaderboard}</h2></div></div>
           <div className="at-rank-editorial">
             <TopPlayersSection players={leaderboardPlayers} avatars={leaderboardAvatars}
               loading={leaderboardLoading} range={leaderboardRange} />
@@ -619,7 +619,7 @@ export default function HomePage() {
       <section className="at-faq">
         <div className="at-container at-faq-layout">
           <div className="at-section-heading">
-            <div><span className="at-kicker">ARCHITECH / FAQ</span><h2>{copy.faq}</h2></div>
+            <div><h2>{copy.faq}</h2></div>
           </div>
           <div className="at-faq-editorial">
             <motion.section
@@ -776,9 +776,6 @@ function ParallaxChapter({image,number,reduced,title,text,href,action,scene}: {
         initial={reduced ? false : 'hidden'}
         whileInView={reduced ? undefined : 'visible'}
         viewport={{ once: true, amount: .3 }}>
-        <motion.span className="at-kicker at-chapter-kicker" variants={reduced ? undefined : chapterEntrance}>
-          {number} / ARCHITECH
-        </motion.span>
         <motion.h2 className="at-chapter-title" variants={reduced ? undefined : chapterEntrance}>{title}</motion.h2>
         <motion.p className="at-chapter-description" variants={reduced ? undefined : chapterEntrance}>{text}</motion.p>
         <motion.a className="at-chapter-link" href={href} variants={reduced ? undefined : chapterEntrance}>

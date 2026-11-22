@@ -4,14 +4,6 @@ type IconProps = {
   className?: string;
 };
 
-export function MenuIcon({ size = 24, strokeWidth = 2, className }: IconProps) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
-      <path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" />
-    </svg>
-  );
-}
-
 export function SearchIcon({ size = 24, strokeWidth = 2, className }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
@@ -21,18 +13,6 @@ export function SearchIcon({ size = 24, strokeWidth = 2, className }: IconProps)
         strokeWidth={strokeWidth}
         strokeLinecap="round"
         strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-export function PhoneIcon({ size = 24, strokeWidth = 2, className }: IconProps) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
-      <path
-        d="M3 5.75A2.75 2.75 0 0 1 5.75 3h1.1a2 2 0 0 1 1.95 1.56l.58 2.62a2 2 0 0 1-.58 1.84l-1.07 1.07a15.05 15.05 0 0 0 6.2 6.2l1.06-1.07a2 2 0 0 1 1.84-.58l2.63.58a2 2 0 0 1 1.55 1.95v1.1A2.75 2.75 0 0 1 18.25 21h-.5C9.6 21 3 14.4 3 6.25v-.5Z"
-        stroke="currentColor"
-        strokeWidth={strokeWidth}
       />
     </svg>
   );

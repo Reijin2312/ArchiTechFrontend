@@ -89,7 +89,7 @@ export function FriendsList({ friends, onRemove, onOpenChat }: FriendsListProps)
           </Link>
           <button
             onClick={() => onOpenChat(friend.userId)}
-            className="p-1.5 text-xs rounded bg-indigo-600/20 hover:bg-indigo-600/40 [.at-secondary-skin_&]:hover:bg-[#e6d6bd] hover:text-indigo-300 [.at-secondary-skin_&]:hover:text-[#f0dcc0] transition-all border border-indigo-600/30"
+            className="rounded border border-[#c5aa84]/30 bg-[#c5aa84]/10 p-1.5 text-xs text-[#d8bc91] transition-all hover:bg-[#c5aa84]/20 hover:text-[#f0dcc0]"
             title="Написать"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

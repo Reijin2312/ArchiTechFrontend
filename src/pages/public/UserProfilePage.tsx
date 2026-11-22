@@ -181,7 +181,7 @@ export default function UserProfilePage() {
                   </Link>
                 </div>
               </div>
-              <div className="h-[400px] md:flex-1 md:h-auto">
+              <div className="h-[400px] border-b-2 border-[#c5aa84]/70 pb-3 md:flex-1 md:h-auto">
                 <Skin3DViewer
                   className="h-full w-full overflow-hidden"
                   skinUrl={(user as any)?.skinUrl || ''}

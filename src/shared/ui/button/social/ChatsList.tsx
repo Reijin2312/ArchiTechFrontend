@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import type { Friend, FriendRequest, PrivateChat, UserSearchResult } from '@/shared/api/types';
 import { getMessageMediaAttachments } from './chat/mediaAttachments';
+import { useI18n } from '@/shared/i18n/I18nProvider';
 
 type ChatsListProps = {
   chats: PrivateChat[];
@@ -23,6 +24,10 @@ export function ChatsList({
   onSelectChat,
   selectedChatId = null,
 }: ChatsListProps) {
+  const { language } = useI18n();
+  const copy = language === 'ru'
+    ? { empty: 'Чатов пока нет', emptyHint: 'Откройте чат с другом, чтобы начать', now: 'сейчас', yesterday: 'вчера', photo: 'Фото', video: 'Видео', message: 'Сообщение', group: 'Группа', privateChat: 'Личный чат', you: 'Вы', noMessages: 'Сообщений пока нет', sent: 'Отправлено', read: 'Прочитано' }
+    : { empty: 'No chats yet', emptyHint: 'Open a chat with a friend to start', now: 'now', yesterday: 'yesterday', photo: 'Photo', video: 'Video', message: 'Message', group: 'Group', privateChat: 'Private chat', you: 'You', noMessages: 'No messages yet', sent: 'Sent', read: 'Read' };
   const resolveAvatarUrl = (avatarPath?: string): string | undefined => {
     if (!avatarPath) return undefined;
     const normalized = avatarPath.trim();
@@ -42,8 +47,8 @@ export function ChatsList({
   if (chats.length === 0) {
     return (
       <div className="py-8 text-center">
-        <p className="text-sm text-slate-400 [.at-secondary-skin_&]:text-[#aaa497]">No chats yet</p>
-        <p className="mt-1 text-xs text-slate-500 [.at-secondary-skin_&]:text-[#938e83]">Open a chat with a friend to start</p>
+        <p className="text-sm text-[#aaa497]">{copy.empty}</p>
+        <p className="mt-1 text-xs text-[#938e83]">{copy.emptyHint}</p>
       </div>
     );
   }
@@ -55,14 +60,14 @@ export function ChatsList({
       const diffMs = now.getTime() - date.getTime();
       const diffMins = Math.floor(diffMs / (1000 * 60));
 
-      if (diffMins < 1) return 'now';
+      if (diffMins < 1) return copy.now;
       if (diffMins < 60) return `${diffMins}m`;
 
       const diffHours = Math.floor(diffMins / 60);
       if (diffHours < 24) return `${diffHours}h`;
 
       const diffDays = Math.floor(diffHours / 24);
-      if (diffDays === 1) return 'yesterday';
+      if (diffDays === 1) return copy.yesterday;
       if (diffDays < 7) return `${diffDays}d`;
 
       return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
@@ -96,11 +101,11 @@ export function ChatsList({
       return isImage || contentType.startsWith('image/') || /\.(png|jpe?g|gif|webp|avif|bmp|svg)(?:$|[?#])/.test(url);
     });
 
-    if (hasVideoAttachment) return 'Video message';
-    if (hasImageAttachment) return 'Photo';
+    if (hasVideoAttachment) return copy.video;
+    if (hasImageAttachment) return copy.photo;
 
-    if (lastMsg.messageType === 'image' || lastMsg.messageType === 'images') return 'Photo';
-    return 'Message';
+    if (lastMsg.messageType === 'image' || lastMsg.messageType === 'images') return copy.photo;
+    return copy.message;
   };
 
   return (
@@ -122,7 +127,7 @@ export function ChatsList({
             ? searchResults.find((item) => item.userId === privateParticipantId)
             : undefined;
         const displayName = isGroupChat
-          ? chat.title?.trim() || `Group #${chat.chatId}`
+          ? chat.title?.trim() || `${copy.group} #${chat.chatId}`
           : friend?.displayName ||
             friend?.username ||
             fallbackReq?.displayName ||
@@ -130,7 +135,7 @@ export function ChatsList({
             searchHit?.displayName ||
             searchHit?.username ||
             privateParticipantId?.slice(0, 8) ||
-            'Private chat';
+            copy.privateChat;
         const avatarUrl = isGroupChat
           ? resolveAvatarUrl(chat.avatarPath)
           : friend?.avatarUrl || fallbackReq?.avatarUrl || searchHit?.avatarUrl;
@@ -149,7 +154,7 @@ export function ChatsList({
           !lastMsg
             ? null
             : lastMsg.senderId === currentUserId
-              ? 'Вы'
+              ? copy.you
               : lastMsg.senderDisplayName?.trim() ||
                 lastMsg.senderUsername?.trim() ||
                 senderFriend?.displayName ||
@@ -169,18 +174,18 @@ export function ChatsList({
             className={[
               'group flex w-full items-center gap-3 rounded-xl border px-3 py-2 text-left transition-all',
               isSelected
-                ? 'border-sky-500/50 bg-sky-500/20 [.at-secondary-skin_&]:bg-[rgba(197,170,132,0.11)]'
-                : 'border-slate-800 [.at-secondary-skin_&]:border-[rgba(239,232,218,0.22)] bg-slate-900/40 [.at-secondary-skin_&]:bg-[rgba(33,35,31,0.91)] hover:border-slate-700 hover:bg-slate-900/70',
+                ? 'border-[#c5aa84]/55 bg-[#c5aa84]/12'
+                : 'border-[rgba(239,232,218,0.18)] bg-[rgba(33,35,31,0.91)] hover:border-[#c5aa84]/40 hover:bg-[#292b26]',
             ].join(' ')}
           >
             {avatarUrl ? (
               <img
                 src={avatarUrl}
                 alt={displayName}
-                className="h-12 w-12 rounded-full border border-slate-700/70 [.at-secondary-skin_&]:border-[rgba(239,232,218,0.22)] object-cover"
+                className="h-12 w-12 rounded-full border border-[rgba(239,232,218,0.22)] object-cover"
               />
             ) : (
-              <div className="flex h-12 w-12 items-center justify-center rounded-full border border-slate-700/70 [.at-secondary-skin_&]:border-[rgba(239,232,218,0.22)] bg-slate-800 [.at-secondary-skin_&]:bg-[#34362f] text-lg font-semibold text-slate-300 [.at-secondary-skin_&]:text-[#c9c3b8]">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full border border-[rgba(239,232,218,0.22)] bg-[#34362f] text-lg font-semibold text-[#c9c3b8]">
                 {displayName[0]?.toUpperCase()}
               </div>
             )}
@@ -188,16 +193,19 @@ export function ChatsList({
             <div className="min-w-0 flex-1">
               <div className="mb-0.5 flex items-start justify-between gap-2">
                 <div
-                  className={`truncate text-sm font-semibold ${hasUnread || isSelected ? 'text-white' : 'text-slate-200 [.at-secondary-skin_&]:text-[#c9c3b8]'}`}
+                  className={`truncate text-sm font-semibold ${hasUnread || isSelected ? 'text-white' : 'text-[#c9c3b8]'}`}
                 >
                   {displayName}
                 </div>
                 {lastMsg ? (
                   <div className="shrink-0 text-right">
-                    <div className="text-[11px] text-slate-500 [.at-secondary-skin_&]:text-[#938e83]">{formatDate(lastMsg.createdAt)}</div>
+                    <div className="text-[11px] text-[#938e83]">{formatDate(lastMsg.createdAt)}</div>
                     {isOutgoing ? (
-                      <div className={`text-[10px] ${lastMsg.isRead ? 'text-sky-300 [.at-secondary-skin_&]:text-[#d8bc91]' : 'text-slate-500 [.at-secondary-skin_&]:text-[#938e83]'}`}>
-                        {lastMsg.isRead ? 'read' : 'sent'}
+                      <div className={`flex justify-end ${lastMsg.isRead ? 'text-[#d8bc91]' : 'text-[#938e83]'}`} title={lastMsg.isRead ? copy.read : copy.sent} aria-label={lastMsg.isRead ? copy.read : copy.sent}>
+                        <svg viewBox="0 0 22 14" className="h-3.5 w-[22px]" fill="none" aria-hidden="true">
+                          <path d="m1.5 7.5 3.1 3.1L11 3.8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                          {lastMsg.isRead ? <path d="m8 8.2 2.4 2.4 6.4-6.8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /> : null}
+                        </svg>
                       </div>
                     ) : null}
                   </div>
@@ -207,16 +215,16 @@ export function ChatsList({
               {lastMsg ? (
                 <div className="flex items-center gap-2">
                   <div
-                    className={`flex-1 truncate text-xs ${hasUnread ? 'font-medium text-slate-200 [.at-secondary-skin_&]:text-[#c9c3b8]' : 'text-slate-400 [.at-secondary-skin_&]:text-[#aaa497]'}`}
+                    className={`flex-1 truncate text-xs ${hasUnread ? 'font-medium text-[#c9c3b8]' : 'text-[#aaa497]'}`}
                   >
                     {preview}
                   </div>
                   {hasUnread ? (
-                    <span className="h-2 w-2 shrink-0 rounded-full bg-sky-400 [.at-secondary-skin_&]:bg-[#c8ae88] [.at-secondary-skin_&]:text-[#211f1b]" />
+                    <span className="h-2 w-2 shrink-0 rounded-full bg-[#c8ae88]" />
                   ) : null}
                 </div>
               ) : (
-                <div className="text-xs text-slate-500 [.at-secondary-skin_&]:text-[#938e83]">No messages yet</div>
+                <div className="text-xs text-[#938e83]">{copy.noMessages}</div>
               )}
             </div>
           </motion.button>

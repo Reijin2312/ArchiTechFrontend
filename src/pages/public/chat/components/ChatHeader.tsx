@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, type RefObject } from 'react';
-import { CloseIcon, MoreVerticalIcon, PhoneIcon, SearchIcon } from '../icons';
+import { CloseIcon, MoreVerticalIcon, SearchIcon } from '../icons';
 import type { SidebarChat } from '../types';
 import { Avatar } from './Avatar';
+import { useI18n } from '@/shared/i18n/I18nProvider';
 
 type ChatHeaderProps = {
   selectedChat?: SidebarChat;
@@ -58,6 +59,10 @@ export function ChatHeader({
   onToggleGroupInfo,
   onNavigateHome,
 }: ChatHeaderProps) {
+  const { language } = useI18n();
+  const copy = language === 'ru'
+    ? { select: 'Выберите чат', inactive: 'Чат не выбран', search: 'Поиск в чате', previous: 'Предыдущее совпадение', next: 'Следующее совпадение', closeSearch: 'Закрыть поиск', menu: 'Меню чата', home: 'На главную', hideInfo: 'Скрыть информацию о группе', showInfo: 'Показать информацию о группе' }
+    : { select: 'Select chat', inactive: 'No active chat', search: 'Search in chat', previous: 'Previous message match', next: 'Next message match', closeSearch: 'Close message search', menu: 'Chat menu', home: 'Home', hideInfo: 'Hide group info', showInfo: 'Show group info' };
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const [typingDots, setTypingDots] = useState(0);
   const isTypingStatus = /\btyping$/i.test(selectedStatus);
@@ -124,7 +129,7 @@ export function ChatHeader({
                   onCloseMessageSearch();
                 }
               }}
-              placeholder="Search in chat"
+              placeholder={copy.search}
               className="w-full bg-transparent text-[18px] font-[600] leading-none text-white placeholder:text-white/35 focus:outline-none"
             />
           </div>
@@ -134,11 +139,11 @@ export function ChatHeader({
               type="button"
               onClick={onToggleGroupInfo}
               className="group min-w-0 text-left outline-none focus:outline-none focus-visible:outline-none"
-              aria-label={isGroupInfoOpen ? 'Hide group info' : 'Show group info'}
+              aria-label={isGroupInfoOpen ? copy.hideInfo : copy.showInfo}
             >
               <div className="flex min-w-0 items-center gap-1.5">
                 <span className="truncate text-[17px] font-[700] leading-none tracking-[0.1px]">
-                  {selectedChat?.name || 'Select chat'}
+                  {selectedChat?.name || copy.select}
                 </span>
                 <span
                   className={`shrink-0 text-white/60 transition-transform duration-200 group-hover:text-white/90 ${
@@ -155,10 +160,10 @@ export function ChatHeader({
           ) : (
             <div>
               <div className="text-[17px] font-[700] leading-none tracking-[0.1px]">
-                {selectedChat?.name || 'Select chat'}
+                {selectedChat?.name || copy.select}
               </div>
               <div className="mt-[5px] text-[14px] leading-none text-white/58">
-                {selectedChat ? renderedStatus : 'No active chat'}
+                {selectedChat ? renderedStatus : copy.inactive}
               </div>
             </div>
           )
@@ -172,7 +177,7 @@ export function ChatHeader({
             type="button"
             onClick={onPrevMessageSearchResult}
             className="rounded-full p-1 transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:text-white/30"
-            aria-label="Previous message match"
+            aria-label={copy.previous}
             disabled={messageSearchMatchesCount === 0}
           >
             <UpIcon />
@@ -181,7 +186,7 @@ export function ChatHeader({
             type="button"
             onClick={onNextMessageSearchResult}
             className="rounded-full p-1 transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:text-white/30"
-            aria-label="Next message match"
+            aria-label={copy.next}
             disabled={messageSearchMatchesCount === 0}
           >
             <DownIcon />
@@ -190,19 +195,18 @@ export function ChatHeader({
             type="button"
             onClick={onCloseMessageSearch}
             className="rounded-full p-1 transition-colors hover:bg-white/10"
-            aria-label="Close message search"
+            aria-label={copy.closeSearch}
           >
             <CloseIcon size={22} strokeWidth={2.3} />
           </button>
         </div>
       ) : (
-        <div className="flex items-center gap-[24px] text-white/78">
-          <PhoneIcon size={24} strokeWidth={2.15} />
+        <div className="flex items-center gap-[18px] text-white/78">
           <button
             type="button"
             onClick={onToggleMessageSearch}
             className="rounded-full p-1 transition-colors hover:bg-white/10"
-            aria-label="Search in current chat"
+            aria-label={copy.search}
           >
             <SearchIcon size={23} strokeWidth={2.2} />
           </button>
@@ -211,7 +215,7 @@ export function ChatHeader({
               type="button"
               onClick={() => setMenuOpen((prev) => !prev)}
               className="rounded-full p-1 transition-colors hover:bg-white/10"
-              aria-label="Chat menu"
+              aria-label={copy.menu}
             >
               <MoreVerticalIcon size={24} />
             </button>
@@ -223,7 +227,7 @@ export function ChatHeader({
                   onClick={onNavigateHome}
                   className="w-full px-4 py-2.5 text-left text-sm text-white/90 transition-colors hover:bg-white/10"
                 >
-                  {'\u041d\u0430 \u0433\u043b\u0430\u0432\u043d\u0443\u044e'}
+                  {copy.home}
                 </button>
               </div>
             ) : null}

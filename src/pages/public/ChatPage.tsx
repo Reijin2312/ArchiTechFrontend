@@ -21,6 +21,7 @@ import type {
   UserSearchResponse,
 } from '@/shared/api/types';
 import { formatPresenceStatus } from '@/shared/utils/presenceStatus';
+import { useI18n } from '@/shared/i18n/I18nProvider';
 import { Seo } from '@/shared/seo/seo';
 import { routesMeta } from '@/shared/seo/routesMeta';
 import { useSocialFloatingModel } from '@/shared/ui/button/social/useSocialFloatingModel';
@@ -184,6 +185,7 @@ const toLinksPanelItem = (link: ChatLinkItem): GroupInfoLinkItem | null => {
 
 export default function ChatPage() {
   const navigate = useNavigate();
+  const { language } = useI18n();
   const model = useSocialFloatingModel({ mode: 'page' });
   const [menuOpen, setMenuOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -523,8 +525,8 @@ export default function ChatPage() {
     : model.isChatsRefreshing
       ? `обновление${animatedDots}`
       : null;
-  const searchPlaceholder = 'Search';
-  const loadingPresenceLabel = `обновление${animatedDots}`;
+  const searchPlaceholder = language === 'ru' ? 'Поиск' : 'Search';
+  const loadingPresenceLabel = language === 'ru' ? `обновление${animatedDots}` : `updating${animatedDots}`;
   const isPresenceGateOpen =
     model.isOpen &&
     model.activeTab === 'chat' &&
@@ -543,9 +545,9 @@ export default function ChatPage() {
       if (!presence?.resolved) {
         return loadingPresenceLabel;
       }
-      return formatPresenceStatus(presence, presenceNowMs);
+      return formatPresenceStatus(presence, presenceNowMs, language);
     },
-    [loadingPresenceLabel, presenceNowMs]
+    [language, loadingPresenceLabel, presenceNowMs]
   );
 
   const privateChatContacts = useMemo<ChatSidebarContact[]>(() => {
@@ -775,19 +777,19 @@ export default function ChatPage() {
 
     return onlineCount;
   }, [isPresenceGateOpen, model.presenceByUser, model.userId, selectedChat]);
-  const selectedMembersStatusLabel = `${selectedMemberCount} ${
-    selectedMemberCount === 1 ? 'member' : 'members'
-  }`;
+  const selectedMembersStatusLabel = language === 'ru'
+    ? `${selectedMemberCount} ${selectedMemberCount === 1 ? 'участник' : 'участников'}`
+    : `${selectedMemberCount} ${selectedMemberCount === 1 ? 'member' : 'members'}`;
   const selectedStatus = !selectedChat
-    ? 'No active chat'
+    ? (language === 'ru' ? 'Чат не выбран' : 'No active chat')
     : selectedChat.chatType === 'GROUP'
       ? selectedGroupTypingCount > 0
-        ? `${selectedGroupTypingCount} typing`
+        ? (language === 'ru' ? `${selectedGroupTypingCount} печатают` : `${selectedGroupTypingCount} typing`)
         : selectedGroupOnlineCount > 0
-          ? `${selectedMembersStatusLabel}, ${selectedGroupOnlineCount} online`
+          ? `${selectedMembersStatusLabel}, ${selectedGroupOnlineCount} ${language === 'ru' ? 'в сети' : 'online'}`
           : selectedMembersStatusLabel
       : selectedIsPrivateTyping
-        ? 'typing'
+        ? (language === 'ru' ? 'печатает' : 'typing')
         : formatPresenceLabel(selectedPresence);
   const selectedGroupChat = selectedChat?.chatType === 'GROUP' ? selectedChat : undefined;
   const visibleMessages = useMemo(() => {
@@ -2102,11 +2104,13 @@ export default function ChatPage() {
                 <div className="relative z-[27] overflow-hidden border-b border-black/35 bg-[#22241f]">
                   {!messageSearchQuery.trim() ? (
                     <div className="px-6 py-4 text-center text-[15px] text-white/55">
-                      Type text to search messages in this chat.
+                      {language === 'ru' ? 'Введите текст для поиска по сообщениям.' : 'Type text to search messages in this chat.'}
                     </div>
                   ) : messageSearchResultItems.length === 0 ? (
                     <div className="px-6 py-4 text-center text-[15px] text-white/55">
-                      {`There were no results for "${messageSearchQuery}". Try a new search.`}
+                      {language === 'ru'
+                        ? `По запросу «${messageSearchQuery}» ничего не найдено.`
+                        : `There were no results for "${messageSearchQuery}". Try a new search.`}
                     </div>
                   ) : (
                     <div className="tg-scroll max-h-[300px] overflow-y-auto py-1.5">

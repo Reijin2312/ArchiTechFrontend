@@ -168,7 +168,6 @@ function LegacyJoin({ copy }: { copy: typeof aboutTranslations.ru | typeof about
   return (
     <section className="at-legacy-join" id="join">
       <div className="at-legacy-shell at-legacy-join-inner">
-        <span className="at-legacy-kicker">ARCHITECH / COMMUNITY</span>
         <h2>{copy.join}</h2>
         <p>{copy.joinText}</p>
         <div className="at-legacy-actions">
@@ -368,7 +367,6 @@ export default function AboutServerPage({ seasonNumberOverride }: { seasonNumber
           <div>
             <header className="at-legacy-shell at-legacy-intro">
               <motion.div {...fadeProps}>
-                <span className="at-legacy-kicker">ARCHITECH / COMMUNITY</span>
                 <h1>{copy.title} <span>{SERVER_NAME}</span></h1>
                 <p className="at-legacy-lead">{copy.lead}</p>
               </motion.div>

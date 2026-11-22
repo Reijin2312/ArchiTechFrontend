@@ -7,6 +7,7 @@ import { CloseIcon, PaperclipIcon, SendIcon, SmilePlusIcon } from '../icons';
 import { formatFileSize } from '../utils';
 import { EmojiHoverPanel } from './EmojiHoverPanel';
 import { buildImageGridRows } from './messageTypes/imageGridPattern';
+import { useI18n } from '@/shared/i18n/I18nProvider';
 
 type ChatComposerProps = {
   model: SocialFloatingModel;
@@ -42,15 +43,32 @@ function EditIcon() {
   );
 }
 
-const resolveMessagePreview = (message: NonNullable<SocialFloatingModel['replyingTo']>) => {
+const resolveMessagePreview = (
+  message: NonNullable<SocialFloatingModel['replyingTo']>,
+  labels: { photo: string; poll: string; message: string }
+) => {
   const text = (message.content || '').trim();
   if (text) return text;
-  if (message.messageType === 'image' || message.messageType === 'images') return 'Photo';
-  if (message.messageType === 'poll') return 'Poll';
-  return 'Message';
+  if (message.messageType === 'image' || message.messageType === 'images') return labels.photo;
+  if (message.messageType === 'poll') return labels.poll;
+  return labels.message;
 };
 
 export function ChatComposer({ model }: ChatComposerProps) {
+  const { language } = useI18n();
+  const copy = language === 'ru'
+    ? {
+        photo: 'Фото', poll: 'Опрос', message: 'Сообщение', you: 'Вы', onlyMedia: 'Поддерживаются только фото и видео.',
+        closePreview: 'Закрыть предпросмотр', removeMedia: 'Убрать выбранный файл', caption: 'Подпись',
+        writeCaption: 'Добавьте подпись', removeAttachment: 'Убрать вложение', cancelEdit: 'Отменить редактирование',
+        cancelReply: 'Отменить ответ', openEmoji: 'Открыть эмодзи',
+      }
+    : {
+        photo: 'Photo', poll: 'Poll', message: 'Message', you: 'You', onlyMedia: 'Only photos and videos are supported.',
+        closePreview: 'Close media preview', removeMedia: 'Remove selected media', caption: 'Caption',
+        writeCaption: 'Write a caption', removeAttachment: 'Remove attachment', cancelEdit: 'Cancel editing',
+        cancelReply: 'Cancel reply', openEmoji: 'Open emoji panel',
+      };
   const composerRootRef = useRef<HTMLDivElement | null>(null);
   const messagesRef = useRef(model.messages);
   const pendingPreviewUrlsRef = useRef<string[]>([]);
@@ -80,15 +98,15 @@ export function ChatComposer({ model }: ChatComposerProps) {
     void model.sendChatMessage();
   };
 
-  const replyingPreview = model.replyingTo ? resolveMessagePreview(model.replyingTo) : '';
+  const replyingPreview = model.replyingTo ? resolveMessagePreview(model.replyingTo, copy) : '';
   const replyingName = model.replyingTo
     ? model.replyingTo.senderId === model.userId
-      ? 'You'
+      ? copy.you
       : model.friends.find((friend) => friend.userId === model.replyingTo!.senderId)?.displayName ||
         model.friends.find((friend) => friend.userId === model.replyingTo!.senderId)?.username ||
         model.replyingTo.senderId.slice(0, 8)
     : '';
-  const editingPreview = model.editingMessage ? resolveMessagePreview(model.editingMessage) : '';
+  const editingPreview = model.editingMessage ? resolveMessagePreview(model.editingMessage, copy) : '';
   const hasComposerState = !!model.editingMessage || !!model.replyingTo;
 
   const revokePreviewUrls = (previewUrls: string[]) => {
@@ -248,7 +266,7 @@ export function ChatComposer({ model }: ChatComposerProps) {
     });
 
     if (mediaFiles.length === 0) {
-      alert('Only photos and videos are supported.');
+      alert(copy.onlyMedia);
       return;
     }
 
@@ -434,7 +452,7 @@ export function ChatComposer({ model }: ChatComposerProps) {
             type="button"
             onClick={() => closePendingImageDraft()}
             className="grid h-8 w-8 place-items-center rounded-full text-[#e0c59e]/80 transition-colors hover:bg-[#c5aa84]/18 hover:text-white"
-            aria-label="Close media preview"
+            aria-label={copy.closePreview}
             disabled={isPendingImageApplying}
           >
             <CloseIcon size={18} strokeWidth={2.4} />
@@ -483,7 +501,7 @@ export function ChatComposer({ model }: ChatComposerProps) {
                           type="button"
                           onClick={() => removePendingDraftItem(item.id)}
                           className="absolute right-1.5 top-1.5 grid h-6 w-6 place-items-center rounded-full bg-black/58 text-white opacity-0 transition-opacity hover:bg-black/72 group-hover:opacity-100"
-                          aria-label="Remove selected media"
+                          aria-label={copy.removeMedia}
                           disabled={isPendingImageApplying}
                         >
                           <CloseIcon size={14} strokeWidth={2.4} />
@@ -498,7 +516,7 @@ export function ChatComposer({ model }: ChatComposerProps) {
         </div>
 
         <div className="px-4 pb-2">
-          <div className="text-[13px] font-[600] text-[#e0c59e]">Caption</div>
+          <div className="text-[13px] font-[600] text-[#e0c59e]">{copy.caption}</div>
           <div className="mt-1 flex items-center gap-2 border-b border-[#c5aa84]/50 pb-1.5">
             <input
               value={pendingImageDraft.caption}
@@ -506,7 +524,7 @@ export function ChatComposer({ model }: ChatComposerProps) {
                 const value = event.target.value;
                 setPendingImageDraft((prev) => (prev ? { ...prev, caption: value } : prev));
               }}
-              placeholder="Write a caption"
+              placeholder={copy.writeCaption}
               className="h-8 flex-1 bg-transparent text-[15px] text-white/92 placeholder:text-white/35 focus:outline-none"
               disabled={isPendingImageApplying}
             />
@@ -560,7 +578,7 @@ export function ChatComposer({ model }: ChatComposerProps) {
                   type="button"
                   onClick={() => model.removeAttachedImage(attachment.id)}
                   className="absolute right-1 top-1 z-10 grid h-5 w-5 place-items-center rounded-full bg-black/55 text-white opacity-0 transition-opacity group-hover:opacity-100"
-                  aria-label="Remove attachment"
+                  aria-label={copy.removeAttachment}
                 >
                   <CloseIcon size={12} strokeWidth={2.3} />
                 </button>
@@ -630,7 +648,7 @@ export function ChatComposer({ model }: ChatComposerProps) {
                         }
                       }}
                       className="absolute right-2 top-1.5 grid h-6 w-6 place-items-center rounded-full text-white/70 transition-colors hover:bg-white/10 hover:text-white"
-                      aria-label={model.editingMessage ? 'Cancel editing' : 'Cancel reply'}
+                      aria-label={model.editingMessage ? copy.cancelEdit : copy.cancelReply}
                     >
                       <CloseIcon size={15} strokeWidth={2.4} />
                     </button>
@@ -653,7 +671,7 @@ export function ChatComposer({ model }: ChatComposerProps) {
                     className={`transition-colors ${
                       isEmojiPanelOpen ? 'text-[#e0c59e]' : 'text-white/55 hover:text-white/78'
                     }`}
-                    aria-label="Open emoji panel"
+                    aria-label={copy.openEmoji}
                   >
                     <SmilePlusIcon size={24} strokeWidth={2.1} />
                   </button>
@@ -685,7 +703,7 @@ export function ChatComposer({ model }: ChatComposerProps) {
                     }
                   }}
                   rows={1}
-                  placeholder="Message"
+                  placeholder={copy.message}
                   className="max-h-[180px] flex-1 resize-none bg-transparent py-2 text-[16px] text-white/90 placeholder:text-white/40 focus:outline-none"
                 />
                 <label className="relative cursor-pointer text-white/62 hover:text-white">
@@ -713,7 +731,7 @@ export function ChatComposer({ model }: ChatComposerProps) {
           <button
             type="button"
             onClick={handleSend}
-            className="grid h-[58px] w-[58px] place-items-center rounded-full bg-[#c5aa84] text-white shadow-[0_14px_28px_rgba(142,119,239,.42)] transition-opacity disabled:cursor-not-allowed disabled:opacity-55"
+            className="grid h-[58px] w-[58px] place-items-center rounded-full bg-[#c5aa84] text-[#211f1b] shadow-[0_14px_28px_rgba(0,0,0,.38)] transition-opacity disabled:cursor-not-allowed disabled:opacity-55"
             disabled={model.selectedChat === null || !canSend}
           >
             <SendIcon size={24} strokeWidth={2.2} />

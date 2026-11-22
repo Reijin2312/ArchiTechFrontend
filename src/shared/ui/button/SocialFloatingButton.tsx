@@ -1,13 +1,16 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { authStore } from '@/shared/store/auth';
-import { SocialSidebarTabs } from './social/SocialSidebarTabs';
 import { SocialSidebarContent } from './social/SocialSidebarContent';
 import { useSocialFloatingModel } from './social/useSocialFloatingModel';
+import { useI18n } from '@/shared/i18n/I18nProvider';
 
 export function SocialFloatingButton() {
   const authenticated = authStore((state) => Boolean(state.user));
   const model = useSocialFloatingModel();
-  const incomingCount = model.incomingRequests.length;
+  const { language } = useI18n();
+  const copy = language === 'ru'
+    ? { title: 'Чат', full: 'Открыть полный чат', close: 'Закрыть чат', open: 'Открыть чат' }
+    : { title: 'Chat', full: 'Open full chat', close: 'Close chat', open: 'Open chat' };
 
   if (!authenticated) return null;
 
@@ -35,35 +38,26 @@ export function SocialFloatingButton() {
             aria-label="Social panel"
           >
             <header className="flex items-center justify-between border-b border-[#c5aa84]/20 bg-[#20211d] px-4 py-3">
-              <div>
-                <div className="text-base font-semibold tracking-wide text-[#f3ede4]">ArchiTech Chat</div>
-                <div className="text-[11px] text-[#9f998f]">Friends, requests and server conversations</div>
-              </div>
+              <div className="text-base font-semibold tracking-wide text-[#f3ede4]">{copy.title}</div>
               <div className="flex items-center gap-2">
                 <a
                   href="/chat"
-                  className="rounded-full border border-[#c5aa84]/25 px-3 py-1.5 text-xs text-[#c5aa84] hover:bg-[#c5aa84]/10"
+                  className="inline-flex min-h-9 items-center rounded-full border border-[#c5aa84]/45 bg-[#c5aa84]/10 px-4 py-1.5 text-xs font-semibold text-[#ead4b3] transition hover:border-[#d4b98f]/70 hover:bg-[#c5aa84]/20"
                 >
-                  Full chat
+                  {copy.full}
                 </a>
                 <button
                   type="button"
                   onClick={model.closeMessenger}
                   className="grid h-9 w-9 place-items-center rounded-full border border-[#c5aa84]/20 text-xl text-[#bbb3a7] hover:bg-[#c5aa84]/10 hover:text-white"
-                  aria-label="Close chat"
+                  aria-label={copy.close}
                 >
                   ×
                 </button>
               </div>
             </header>
-            <SocialSidebarTabs
-              model={model}
-              incomingCount={incomingCount}
-              outgoingCount={model.outgoingRequests.length}
-              hasNotifications={incomingCount > 0}
-            />
             <div className="min-h-0 flex-1 overflow-hidden">
-              <SocialSidebarContent model={model} />
+              <SocialSidebarContent model={model} forceChatOnly />
             </div>
           </motion.section>
         ) : null}
@@ -75,13 +69,8 @@ export function SocialFloatingButton() {
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         className="fixed bottom-5 right-4 z-[91] grid h-14 w-14 place-items-center rounded-full border border-[#d4b98f]/50 bg-[#22231f] text-[#ead4b3] shadow-[0_14px_38px_rgba(0,0,0,0.48)] hover:bg-[#2c2d27] sm:right-6"
-        aria-label={model.isOpen ? 'Close social panel' : 'Open social panel'}
+        aria-label={model.isOpen ? copy.close : copy.open}
       >
-        {incomingCount > 0 ? (
-          <span className="absolute -right-1 -top-1 grid min-h-5 min-w-5 place-items-center rounded-full bg-[#a4483d] px-1 text-[11px] font-bold text-white">
-            {incomingCount}
-          </span>
-        ) : null}
         <svg width="25" height="25" viewBox="0 0 24 24" fill="none" aria-hidden="true">
           <path d="M5 5.75h14v10.5H9.2L5 19.5V5.75Z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
           <path d="M8.3 9.4h7.4M8.3 12.6h5.1" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />

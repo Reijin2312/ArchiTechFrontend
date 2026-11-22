@@ -1409,7 +1409,7 @@ function VideoLinkPreviewCard({
             {resolvedPosterUrl ? (
               <img src={resolvedPosterUrl} alt={resolvedTitle} className="h-full w-full object-cover" />
             ) : null}
-            <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(38,28,84,0.36)_0%,rgba(38,28,84,0.58)_100%)]" />
+            <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(52,43,31,0.30)_0%,rgba(31,27,22,0.62)_100%)]" />
             <span className="absolute left-1/2 top-1/2 grid h-[46px] w-[46px] -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-[#716249]/88 text-white shadow-[0_14px_28px_rgba(0,0,0,0.38)] transition-transform duration-200 group-hover:scale-105">
               <PlayIcon size={21} />
             </span>

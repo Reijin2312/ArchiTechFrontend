@@ -2158,7 +2158,7 @@ export function GroupInfoPanel({
           {hasCover ? (
             <img src={chat.avatarUrl} alt={chat.name} className="h-full w-full object-cover" />
           ) : (
-            <div className="flex h-full w-full items-center justify-center bg-[radial-gradient(circle_at_top,#4a3b73_0%,#23242d_58%,#16171d_100%)]">
+            <div className="flex h-full w-full items-center justify-center bg-[radial-gradient(circle_at_top,#5c4b35_0%,#24251f_58%,#161713_100%)]">
               <span className="text-[120px] font-[800] leading-none text-white/92">{chat.avatarText}</span>
             </div>
           )}

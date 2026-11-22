@@ -30,7 +30,7 @@ export function SearchUsers({
             value={query}
             onChange={(event) => onQueryChange(event.target.value)}
             placeholder="Search by nickname..."
-            className="w-full rounded-lg border border-slate-800 [.at-secondary-skin_&]:border-[rgba(239,232,218,0.22)] bg-slate-900/60 [.at-secondary-skin_&]:bg-[rgba(33,35,31,0.91)] px-3 py-2 text-sm text-slate-100 [.at-secondary-skin_&]:text-[#f2efe9] placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full rounded-lg border border-[#c5aa84]/25 bg-[#21221e] px-3 py-2 text-sm text-[#f2efe9] placeholder:text-[#817c72] focus:outline-none focus:ring-2 focus:ring-[#c5aa84]/45"
             autoFocus
           />
         </div>
@@ -100,7 +100,7 @@ export function SearchUsers({
                 <button
                   type="button"
                   onClick={() => onSendRequest(user.userId)}
-                  className="rounded bg-indigo-600 [.at-secondary-skin_&]:bg-[#c8ae88] [.at-secondary-skin_&]:text-[#211f1b] px-2 py-1 text-xs hover:bg-indigo-500 [.at-secondary-skin_&]:hover:bg-[#e6d6bd]"
+                  className="rounded bg-[#c8ae88] px-2 py-1 text-xs text-[#211f1b] hover:bg-[#e6d6bd]"
                 >
                   Add
                 </button>

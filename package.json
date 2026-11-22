@@ -8,7 +8,7 @@
     "preview": "vite preview",
     "assets": "node scripts/raster-resize.mjs && node scripts/build-og.mjs",
     "build": "tsc -b && vite build",
-    "ssg:prep": "tsc -p tsconfig.ssg.json && tsc-alias -p tsconfig.ssg.json --resolve-full-paths",
+    "ssg:prep": "tsc -p tsconfig.ssg.json && tsc-alias -p tsconfig.ssg.json --resolve-full-paths && node scripts/strip-ssg-css-imports.mjs",
     "ssg": "node scripts/prerender.mjs",
     "build:prod": "npm run assets && npm run build && npm run ssg:prep && npm run ssg"
   },

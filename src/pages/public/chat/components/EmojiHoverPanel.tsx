@@ -221,7 +221,7 @@ export function EmojiHoverPanel({
 
   return (
     <div
-      className="absolute bottom-[calc(100%+12px)] left-0 z-[95] w-[min(92vw,660px)] overflow-hidden rounded-[20px] bg-[#162437]/98 shadow-[0_26px_64px_rgba(0,0,0,.58)] ring-1 ring-[#c5aa84]/22"
+      className="absolute bottom-[calc(100%+12px)] left-0 z-[95] w-[min(92vw,660px)] overflow-hidden rounded-[20px] bg-[#20211d]/98 shadow-[0_26px_64px_rgba(0,0,0,.58)] ring-1 ring-[#c5aa84]/22"
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >
@@ -229,9 +229,9 @@ export function EmojiHoverPanel({
         className="grid grid-cols-3 border-b border-black/30 px-4 pt-3 text-white/58"
         style={{ fontSize: '18px' }}
       >
-        <button type="button" className="relative pb-2 text-left text-[#6fb8ff]">
+        <button type="button" className="relative pb-2 text-left text-[#d8bc91]">
           Эмодзи
-          <span className="absolute bottom-0 left-0 h-[3px] w-[110px] rounded-full bg-[#6fb8ff]" />
+          <span className="absolute bottom-0 left-0 h-[3px] w-[110px] rounded-full bg-[#c5aa84]" />
         </button>
         <button type="button" className="pb-2 text-center text-white/55">
           Стикеры
@@ -242,7 +242,7 @@ export function EmojiHoverPanel({
       </div>
 
       <div className="px-2.5 pb-2 pt-2">
-        <div className="flex items-center gap-3 rounded-full bg-[#25364c]/92 px-3 py-2 text-white/45">
+        <div className="flex items-center gap-3 rounded-full bg-[#171816]/92 px-3 py-2 text-white/45">
           <SearchIcon size={22} strokeWidth={2.2} />
           <input
             value={searchQuery}
@@ -280,7 +280,7 @@ export function EmojiHoverPanel({
         )}
       </div>
 
-      <div className="border-t border-black/35 bg-[#152235] px-2 py-1.5">
+      <div className="border-t border-black/35 bg-[#1b1c19] px-2 py-1.5">
         <div className="tg-scroll flex items-center gap-1 overflow-x-auto">
           {categories.map((category) => (
             <button
