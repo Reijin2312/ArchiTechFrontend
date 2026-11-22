@@ -202,6 +202,7 @@ export type ChatGroupMemberRole = 'OWNER' | 'ADMIN' | 'MEMBER'
 
 export interface ChatGroupMember {
   userId: string
+  username?: string
   role: ChatGroupMemberRole
   joinedAt?: string | null
 }

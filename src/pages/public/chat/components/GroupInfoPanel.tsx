@@ -16,11 +16,13 @@ import type { SidebarChat } from '../types';
 import { CloseIcon, PenSquareIcon } from '../icons';
 import { Avatar } from './Avatar';
 import { MediaViewerModal, type MediaViewerItem } from './messageTypes/MediaViewerModal';
+import { useI18n } from '@/shared/i18n/I18nProvider';
 
 export type GroupInfoTab = 'members' | 'media' | 'links';
 
 export type GroupInfoMember = {
   userId: string;
+  username?: string;
   name: string;
   avatarUrl?: string;
   avatarBg: string;
@@ -138,6 +140,7 @@ type GroupInfoPanelProps = {
   onBanMember?: (userId: string) => Promise<void> | void;
   onUnbanMember?: (userId: string) => Promise<void> | void;
   onOpenPrivateChat?: (userId: string) => Promise<void> | void;
+  onOpenProfile?: (username: string) => void;
   onLoadMemberRestrictions?: (userId: string) => Promise<ChatMemberRestrictions> | ChatMemberRestrictions;
   onSaveMemberRestrictions?: (
     userId: string,
@@ -407,6 +410,7 @@ function UserPlusIcon({ size = 30 }: { size?: number }) {
 }
 
 type MemberContextMenuAction =
+  | 'open-profile'
   | 'send-message'
   | 'promote-admin'
   | 'edit-admin-rights'
@@ -1071,6 +1075,7 @@ export function GroupInfoPanel({
   onBanMember,
   onUnbanMember,
   onOpenPrivateChat,
+  onOpenProfile,
   onLoadMemberRestrictions,
   onSaveMemberRestrictions,
   onLoadMemberAdminRights,
@@ -1078,7 +1083,7 @@ export function GroupInfoPanel({
   onCreatePoll,
   onClose,
 }: GroupInfoPanelProps) {
-  const inviteLink = `t.me/+group${chat.chatId.toString(36)}`;
+  const { language } = useI18n();
   const hasCover = !!chat.avatarUrl;
   const panelRef = useRef<HTMLElement | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
@@ -1275,6 +1280,10 @@ export function GroupInfoPanel({
     (member: GroupInfoMember): MemberContextMenuAction[] => {
       const actions: MemberContextMenuAction[] = [];
 
+      if (member.username && onOpenProfile) {
+        actions.push('open-profile');
+      }
+
       if (!member.isCurrentUser && onOpenPrivateChat) {
         actions.push('send-message');
       }
@@ -1306,6 +1315,7 @@ export function GroupInfoPanel({
     },
     [
       onOpenPrivateChat,
+      onOpenProfile,
       onTransferOwnership,
       onPromoteMember,
       onRemoveMember,
@@ -1381,6 +1391,11 @@ export function GroupInfoPanel({
     async (action: MemberContextMenuAction, member: GroupInfoMember) => {
       setMemberContextMenu(null);
 
+      if (action === 'open-profile') {
+        if (member.username && onOpenProfile) onOpenProfile(member.username);
+        return;
+      }
+
       if (action === 'send-message') {
         if (!onOpenPrivateChat) return;
         try {
@@ -1418,6 +1433,7 @@ export function GroupInfoPanel({
     },
     [
       onOpenPrivateChat,
+      onOpenProfile,
       onTransferOwnership,
       onRemoveMember,
       openAdminRightsEditor,
@@ -2251,14 +2267,6 @@ export function GroupInfoPanel({
 
         <div className="bg-[#1c1d24]">
           <div className="flex items-center gap-3 px-5 py-4 text-white/78">
-            <LinkIcon />
-            <div className="min-w-0 flex-1">
-              <div className="truncate text-[15px] font-[500] text-white/96">{inviteLink}</div>
-              <div className="text-[14px] text-white/58">Link</div>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3 px-5 pb-5 pt-3 text-white/78">
             <BellIcon />
             <div className="min-w-0 flex-1 text-[15px] font-[500] text-white/96">Notifications</div>
             <button
@@ -3017,7 +3025,9 @@ export function GroupInfoPanel({
           <div className="w-full overflow-hidden rounded-[15px] border border-white/8 bg-[#1b1d24]/98 py-1 shadow-[0_16px_36px_rgba(0,0,0,0.56)] backdrop-blur-[8px]">
             {memberContextMenu.actions.map((action) => {
               const label =
-                action === 'send-message'
+                action === 'open-profile'
+                  ? language === 'ru' ? 'Открыть профиль' : 'Open profile'
+                  : action === 'send-message'
                   ? 'Send Message'
                   : action === 'promote-admin'
                     ? 'Promote to admin'
@@ -3039,7 +3049,9 @@ export function GroupInfoPanel({
                   className="flex w-full items-center gap-2.5 px-4 py-2 text-left text-[14px] font-[600] text-white/95 transition-colors hover:bg-white/[0.06]"
                 >
                   <div className="text-white/90">
-                    {action === 'send-message' ? (
+                    {action === 'open-profile' ? (
+                      <UserPlusIcon size={21} />
+                    ) : action === 'send-message' ? (
                       <ContextMessageIcon size={21} />
                     ) : action === 'promote-admin' ? (
                       <ContextPromoteIcon size={21} />

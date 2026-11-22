@@ -32,7 +32,6 @@ import ChatPage from '@/pages/public/ChatPage';
 
 export const router = createBrowserRouter([
   { path: '/tg-login', element: <TgBotLoginWebApp /> },
-  { path: '/chat', element: <ChatPage /> },
   {
     path: '/',
     element: <Layout />,
@@ -58,6 +57,7 @@ export const router = createBrowserRouter([
       { path: '/about/seasons/:seasonNumber', element: <AboutServerPage />},
       { path: '/contacts', element: <ContactsPage />},
       { path: '/map', element: <MapPage />},
+      { path: '/chat', element: <ChatPage /> },
       { path: '/terms', element: <UserAgreementPage/>},
       { path: '/privacy', element: <PrivacyPolicyPage/>},
       { path: '/settings/profile', element: <SettingsProfilePage/>},

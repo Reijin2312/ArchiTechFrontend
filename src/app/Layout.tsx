@@ -29,7 +29,7 @@ export default function Layout() {
       <SiteHeader />
       <main className="min-h-[70vh]"><Outlet /></main>
       <SiteFooter />
-      <SocialFloatingButton />
+      {pathname === '/chat' ? null : <SocialFloatingButton />}
     </div>
   );
 }

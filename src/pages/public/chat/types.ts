@@ -4,6 +4,7 @@ export type SidebarChat = {
   chatId: number;
   chatType: ChatType;
   participantId?: string;
+  profileUsername?: string;
   participantIds?: string[];
   ownerId?: string;
   memberCount?: number;

@@ -767,7 +767,11 @@ export function ChatSidebar({
                 type="text"
                 value={query}
                 onChange={(event) => onQueryChange(event.target.value)}
-                placeholder={searchPlaceholder === 'Search' ? copy.search : searchPlaceholder}
+                placeholder={
+                  isSearchStatusVisible
+                    ? ''
+                    : searchPlaceholder === 'Search' ? copy.search : searchPlaceholder
+                }
                 className="w-full bg-transparent text-[17px] font-[450] text-white/90 placeholder:text-white/45 focus:outline-none"
               />
               {displayedSearchStatus ? (
@@ -810,7 +814,11 @@ export function ChatSidebar({
                 type="text"
                 value={query}
                 onChange={(event) => onQueryChange(event.target.value)}
-              placeholder={searchPlaceholder === 'Search' ? copy.search : searchPlaceholder}
+                placeholder={
+                  isSearchStatusVisible
+                    ? ''
+                    : searchPlaceholder === 'Search' ? copy.search : searchPlaceholder
+                }
                 className="w-full bg-transparent text-[14px] text-white/90 placeholder:text-white/42 focus:outline-none"
               />
               {displayedSearchStatus ? (

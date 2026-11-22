@@ -21,6 +21,7 @@ type ChatHeaderProps = {
   onPrevMessageSearchResult: () => void;
   onNextMessageSearchResult: () => void;
   onToggleGroupInfo: () => void;
+  onOpenProfile: (username: string) => void;
   onNavigateHome: () => void;
 };
 
@@ -57,6 +58,7 @@ export function ChatHeader({
   onPrevMessageSearchResult,
   onNextMessageSearchResult,
   onToggleGroupInfo,
+  onOpenProfile,
   onNavigateHome,
 }: ChatHeaderProps) {
   const { language } = useI18n();
@@ -95,12 +97,28 @@ export function ChatHeader({
     <div className="relative flex h-[66px] items-center justify-between bg-[#242620] px-[18px] shadow-[inset_0_-1px_0_rgba(255,255,255,0.045)]">
       <div className="flex min-w-0 items-center gap-[12px]">
         {selectedChat ? (
-          <Avatar
-            size={44}
-            avatarBg={selectedChat.avatarBg}
-            avatarText={selectedChat.avatarText}
-            avatarUrl={selectedChat.avatarUrl}
-          />
+          selectedChat.chatType === 'PRIVATE' && selectedChat.profileUsername ? (
+            <button
+              type="button"
+              onClick={() => onOpenProfile(selectedChat.profileUsername!)}
+              className="shrink-0 rounded-full transition-opacity hover:opacity-80"
+              aria-label={language === 'ru' ? 'Открыть профиль' : 'Open profile'}
+            >
+              <Avatar
+                size={44}
+                avatarBg={selectedChat.avatarBg}
+                avatarText={selectedChat.avatarText}
+                avatarUrl={selectedChat.avatarUrl}
+              />
+            </button>
+          ) : (
+            <Avatar
+              size={44}
+              avatarBg={selectedChat.avatarBg}
+              avatarText={selectedChat.avatarText}
+              avatarUrl={selectedChat.avatarUrl}
+            />
+          )
         ) : (
           <div className="grid h-[44px] w-[44px] place-items-center rounded-full bg-[#33352e] text-xs text-white/50">
             ?
@@ -155,6 +173,19 @@ export function ChatHeader({
               </div>
               <div className="mt-[5px] text-[14px] leading-none text-white/58">
                 {renderedStatus}
+              </div>
+            </button>
+          ) : selectedChat?.chatType === 'PRIVATE' && selectedChat.profileUsername ? (
+            <button
+              type="button"
+              onClick={() => onOpenProfile(selectedChat.profileUsername!)}
+              className="min-w-0 text-left transition-opacity hover:opacity-80"
+            >
+              <div className="text-[17px] font-[700] leading-none tracking-[0.1px]">
+                {selectedChat?.name || copy.select}
+              </div>
+              <div className="mt-[5px] text-[14px] leading-none text-white/58">
+                {selectedChat ? renderedStatus : copy.inactive}
               </div>
             </button>
           ) : (

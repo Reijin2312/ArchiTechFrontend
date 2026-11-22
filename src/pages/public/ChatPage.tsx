@@ -78,6 +78,10 @@ type CurrentUserProfile = {
 };
 
 const PRESENCE_VISUAL_IDLE_TIMEOUT_MS = 60_000;
+const ARCHITECH_GLOBAL_CHAT_ICON = '/images/logo.png';
+
+const isArchiTechGlobalChat = (chat: { chatType?: string; title?: string }) =>
+  chat.chatType === 'GROUP' && /^(общий чат )?architech$/i.test(chat.title?.trim() || '');
 
 const resolveChatAvatarUrl = (avatarPath?: string) => {
   if (!avatarPath) return undefined;
@@ -218,7 +222,7 @@ export default function ChatPage() {
   const [selectedGroupAddMemberIds, setSelectedGroupAddMemberIds] = useState<string[]>([]);
   const [isAddingGroupMembers, setIsAddingGroupMembers] = useState(false);
   const [groupMembersByUserId, setGroupMembersByUserId] = useState<
-    Record<string, { role: ChatGroupMemberRole; joinedAt?: string | null }>
+    Record<string, { username?: string; role: ChatGroupMemberRole; joinedAt?: string | null }>
   >({});
   const [groupMemberTagsByUserId, setGroupMemberTagsByUserId] = useState<Record<string, string>>({});
   const [selectedGroupTopicId, setSelectedGroupTopicId] = useState<number | undefined>(undefined);
@@ -680,11 +684,16 @@ export default function ChatPage() {
         chatId: chat.chatId,
         chatType: chat.chatType,
         participantId,
+        profileUsername: !isGroup ? meta?.username : undefined,
         participantIds: chat.participantIds,
         ownerId: chat.ownerId,
         memberCount: chat.memberCount,
         name,
-        avatarUrl: isGroup ? resolveChatAvatarUrl(chat.avatarPath) : meta?.avatarUrl,
+        avatarUrl: isGroup
+          ? isArchiTechGlobalChat(chat)
+            ? ARCHITECH_GLOBAL_CHAT_ICON
+            : resolveChatAvatarUrl(chat.avatarPath)
+          : meta?.avatarUrl,
         avatarText: initialOf(name),
         avatarBg: hashColor(isGroup ? `group:${chat.chatId}` : participantId || `chat:${chat.chatId}`),
         isOnline: !isGroup ? !!privatePresence?.online : false,
@@ -827,7 +836,7 @@ export default function ChatPage() {
     setIsGroupMembersLoading(true);
     try {
       const { data } = await http.get<ChatGroupMembersResponse>(endpoints.chatMembers(chatId));
-      const next: Record<string, { role: ChatGroupMemberRole; joinedAt?: string | null }> = {};
+      const next: Record<string, { username?: string; role: ChatGroupMemberRole; joinedAt?: string | null }> = {};
       const adminOrOwnerIds: string[] = [];
       for (const member of data.members || []) {
         if (!member?.userId) continue;
@@ -835,6 +844,7 @@ export default function ChatPage() {
         const normalizedRole: ChatGroupMemberRole =
           role === 'OWNER' || role === 'ADMIN' || role === 'MEMBER' ? role : 'MEMBER';
         next[member.userId] = {
+          username: member.username,
           role: normalizedRole,
           joinedAt: member.joinedAt,
         };
@@ -1665,6 +1675,9 @@ export default function ChatPage() {
 
       return {
         userId: id,
+        username: isCurrentUser
+          ? currentUserProfile?.username || model.user?.username
+          : userMeta?.username || groupMembersByUserId[id]?.username,
         name: userName,
         avatarUrl: isCurrentUser ? currentUserAvatarUrl || userMeta?.avatarUrl : userMeta?.avatarUrl,
         avatarBg: hashColor(id),
@@ -2005,7 +2018,7 @@ export default function ChatPage() {
   return (
     <>
       <Seo {...(routesMeta['/chat'] ?? {})} />
-      <div className="at-chat-theme h-dvh min-h-dvh w-full overflow-hidden bg-[#171816] text-white antialiased">
+      <div className="at-chat-theme h-[calc(100dvh-70px)] min-h-[calc(100dvh-70px)] w-full overflow-hidden bg-[#171816] text-white antialiased max-md:h-[calc(100dvh-62px)] max-md:min-h-[calc(100dvh-62px)]">
         <style>{chatPageStyles}</style>
 
         <div
@@ -2097,6 +2110,7 @@ export default function ChatPage() {
                   if (selectedChat?.chatType !== 'GROUP') return;
                   setIsGroupInfoOpen((prev) => !prev);
                 }}
+                onOpenProfile={(username) => navigate(`/u/${encodeURIComponent(username)}`)}
                 onNavigateHome={() => navigate('/')}
               />
 
@@ -2361,6 +2375,7 @@ export default function ChatPage() {
                         onBanMember={canBanGroupMembers ? banGroupMember : undefined}
                         onUnbanMember={canBanGroupMembers ? unbanGroupMember : undefined}
                         onOpenPrivateChat={openMemberPrivateChat}
+                        onOpenProfile={(username) => navigate(`/u/${encodeURIComponent(username)}`)}
                         onLoadMemberRestrictions={canBanGroupMembers ? loadMemberRestrictions : undefined}
                         onSaveMemberRestrictions={canBanGroupMembers ? saveMemberRestrictions : undefined}
                         onLoadMemberAdminRights={canManageGroupMembers ? loadMemberAdminRights : undefined}
@@ -2474,6 +2489,7 @@ export default function ChatPage() {
                         onBanMember={canBanGroupMembers ? banGroupMember : undefined}
                         onUnbanMember={canBanGroupMembers ? unbanGroupMember : undefined}
                         onOpenPrivateChat={openMemberPrivateChat}
+                        onOpenProfile={(username) => navigate(`/u/${encodeURIComponent(username)}`)}
                         onLoadMemberRestrictions={canBanGroupMembers ? loadMemberRestrictions : undefined}
                         onSaveMemberRestrictions={canBanGroupMembers ? saveMemberRestrictions : undefined}
                         onLoadMemberAdminRights={canManageGroupMembers ? loadMemberAdminRights : undefined}

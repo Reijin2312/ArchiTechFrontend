@@ -14,7 +14,7 @@ import {
   SERVER_NAME,
   RULES_URL,
   WIKI_URL,
-  // CHAT_URL,
+  CHAT_URL,
   MAP_URL,
   DISCORD_URL,
   TELEGRAM_URL,
@@ -174,15 +174,15 @@ export default function SiteHeader() {
             >
               {t('header.wiki')}
             </a>
-            {/* Messenger is intentionally hidden; keep the link here for an easy rollback.
-            <a
-              href={CHAT_URL}
-              className={linkCls(isActive(CHAT_URL))}
-              aria-current={isActive(CHAT_URL) ? 'page' : undefined}
-            >
-              Chat
-            </a>
-            */}
+            {user ? (
+              <Link
+                to={CHAT_URL}
+                className={linkCls(isActive(CHAT_URL))}
+                aria-current={isActive(CHAT_URL) ? 'page' : undefined}
+              >
+                {t('header.chat')}
+              </Link>
+            ) : null}
             <a
               href={TELEGRAM_URL}
               rel="noopener noreferrer"
@@ -373,17 +373,17 @@ export default function SiteHeader() {
             >
               {t('header.wiki')}
             </a>
-            {/* Messenger is intentionally hidden; keep the mobile link here for an easy rollback.
-            <a
-              href={CHAT_URL}
-              onClick={() => setMobileOpen(false)}
-              className={`at-site-mobile-link rounded-lg px-3 py-3 ${
-                isActive(CHAT_URL) ? 'at-site-mobile-link--active' : ''
-              }`}
-            >
-              Chat
-            </a>
-            */}
+            {user ? (
+              <Link
+                to={CHAT_URL}
+                onClick={() => setMobileOpen(false)}
+                className={`at-site-mobile-link rounded-lg px-3 py-3 ${
+                  isActive(CHAT_URL) ? 'at-site-mobile-link--active' : ''
+                }`}
+              >
+                {t('header.chat')}
+              </Link>
+            ) : null}
           </nav>
 
           {/* Блок профиля / логина */}

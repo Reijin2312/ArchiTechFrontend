@@ -136,8 +136,10 @@ export function ChatsList({
             searchHit?.username ||
             privateParticipantId?.slice(0, 8) ||
             copy.privateChat;
+        const isArchiTechGlobalChat =
+          isGroupChat && /^(общий чат )?architech$/i.test(chat.title?.trim() || '');
         const avatarUrl = isGroupChat
-          ? resolveAvatarUrl(chat.avatarPath)
+          ? isArchiTechGlobalChat ? '/images/logo.png' : resolveAvatarUrl(chat.avatarPath)
           : friend?.avatarUrl || fallbackReq?.avatarUrl || searchHit?.avatarUrl;
         const lastMsg = chat.lastMessage;
         const hasUnread = lastMsg && lastMsg.senderId !== currentUserId && !lastMsg.isRead;
