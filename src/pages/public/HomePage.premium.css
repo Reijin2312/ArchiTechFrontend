@@ -421,16 +421,6 @@
   overflow: hidden;
   background: #1b1c19;
 }
-.architech-home .at-testimonial-stage::after {
-  position: absolute;
-  bottom: 0;
-  left: 12%;
-  right: 0;
-  height: 1px;
-  content: "";
-  background: linear-gradient(90deg, transparent, rgba(217,207,184,.15) 30%, rgba(217,207,184,.15));
-  pointer-events: none;
-}
 .architech-home .at-testimonial-skin {
   position: absolute;
   inset: 0;
