@@ -6,8 +6,6 @@ import { SERVER_NAME, SERVER_IP, RULES_URL, SHOP_URL, WIKI_URL, LAUNCHER_DOWNLOA
 import { AnimatePresence, motion, useMotionValue, useReducedMotion, useScroll, useSpring, useTransform, type Variants, type Transition } from 'framer-motion'
 import { Seo } from '@/shared/seo/seo';
 import { routesMeta } from '@/shared/seo/routesMeta';
-import { ResponsiveImage } from '@/shared/ui/image/ResponsiveImage'
-import { IMAGES } from '@/shared/images.manifest'
 import { SvgUserPlus, SvgSkin, SvgMcBlockGrass, SvgModpack, SvgRoute, SvgLauncher, SvgDownload, SvgShield, SvgGitHub, SvgCheck, SvgCopy, SvgChevronDown } from '@/shared/ui/image/Icons'
 import { useIsMobile } from '@/shared/ui/utils/useIsMobile';
 import { TEAM_MEMBERS } from '@/shared/data/team';
@@ -90,6 +88,18 @@ function GalleryImage({ src, alt, eager = false, sizes = '100vw', className = ''
   )
 }
 
+function ChapterImage({ name }: { name: string }) {
+  const base = `/images/chapters/${name}`
+  const srcSet = [640, 1280, 1920, 2560].map(width => `${base}-${width}.webp ${width}w`).join(', ')
+  return (
+    <picture>
+      <source type="image/webp" srcSet={srcSet} sizes="100vw" />
+      <img src={`${base}-1920.webp`} srcSet={srcSet} sizes="100vw" alt=""
+        width={2560} height={1440} loading="lazy" decoding="async" className="h-full w-full object-cover" />
+    </picture>
+  )
+}
+
 export default function HomePage() {
   const { language } = useI18n();
   const copy = homeTranslations[language];
@@ -165,6 +175,10 @@ export default function HomePage() {
       '/images/screen10.png': { title: copy.shots.screen10[0], subtitle: copy.shots.screen10[1] },
       '/images/screen11.png': { title: copy.shots.screen11[0], subtitle: copy.shots.screen11[1] },
       '/images/screen12.png': { title: copy.shots.screen12[0], subtitle: copy.shots.screen12[1] },
+      '/images/chapters/chapter1.webp': { title: copy.shots.chapter1[0], subtitle: copy.shots.chapter1[1] },
+      '/images/chapters/chapter2.webp': { title: copy.shots.chapter2[0], subtitle: copy.shots.chapter2[1] },
+      '/images/chapters/chapter3.webp': { title: copy.shots.chapter3[0], subtitle: copy.shots.chapter3[1] },
+      '/images/chapters/chapter4.webp': { title: copy.shots.chapter4[0], subtitle: copy.shots.chapter4[1] },
     }),
     [copy],
   )
@@ -621,13 +635,13 @@ export default function HomePage() {
       <HomeQuote reduced={disableEntranceMotion} typewriterReduced={reduceMotion} />
       <section className="at-stories">
         <div className="at-stories-inner">
-          <ParallaxChapter image="screen9.png" number="01" scene={shotMeta['/images/screen9.png']} reduced={disableInteractiveMotion || isMobile}
+          <ParallaxChapter image="chapter1" number="01" scene={shotMeta['/images/chapters/chapter1.webp']} reduced={disableInteractiveMotion || isMobile}
             title={copy.cards[0][0]} text={copy.cards[0][1]} href="/about" action={copy.cards[0][2]}/>
-          <ParallaxChapter image="screen3.png" number="02" scene={shotMeta['/images/screen3.png']} reduced={disableInteractiveMotion || isMobile}
+          <ParallaxChapter image="chapter2" number="02" scene={shotMeta['/images/chapters/chapter2.webp']} reduced={disableInteractiveMotion || isMobile}
             title={copy.cards[1][0]} text={copy.cards[1][1]} href={WIKI_URL+'#mods'} action={copy.cards[1][2]}/>
-          <ParallaxChapter image="screen12.png" number="03" scene={shotMeta['/images/screen12.png']} reduced={disableInteractiveMotion || isMobile}
+          <ParallaxChapter image="chapter3" number="03" scene={shotMeta['/images/chapters/chapter3.webp']} reduced={disableInteractiveMotion || isMobile}
             title={copy.cards[2][0]} text={copy.cards[2][1]} href={SHOP_URL} action={copy.cards[2][2]}/>
-          <ParallaxChapter image="screen11.png" number="04" scene={shotMeta['/images/screen11.png']} reduced={disableInteractiveMotion || isMobile}
+          <ParallaxChapter image="chapter4" number="04" scene={shotMeta['/images/chapters/chapter4.webp']} reduced={disableInteractiveMotion || isMobile}
             title={copy.cards[3][0]} text={copy.cards[3][1]} href={LAUNCHER_DOWNLOAD_URL} action={copy.cards[3][2]}/>
         </div>
       </section>
@@ -797,8 +811,7 @@ function ParallaxChapter({image,number,reduced,title,text,href,action,scene}: {
   return (
     <section ref={target} className={'at-chapter at-chapter--' + number}>
       <motion.div className="at-chapter-image" style={reduced ? undefined : { y }}>
-        <ResponsiveImage name={image as keyof typeof IMAGES} alt="" width={1920} height={1080}
-          sizes="100vw" className="h-full w-full object-cover" />
+        <ChapterImage name={image} />
       </motion.div>
       <div className="at-chapter-shade" aria-hidden="true" />
       <motion.div className="at-chapter-content"

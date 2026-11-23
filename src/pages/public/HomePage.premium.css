@@ -545,10 +545,10 @@
   object-fit: cover;
   filter: saturate(.93) contrast(1.03) brightness(1.04);
 }
-.architech-home .at-chapter--01 .at-chapter-image img { object-position: 46% 50%; }
-.architech-home .at-chapter--02 .at-chapter-image img { object-position: 57% 50%; }
-.architech-home .at-chapter--03 .at-chapter-image img { object-position: 49% 50%; }
-.architech-home .at-chapter--04 .at-chapter-image img { object-position: 43% 50%; }
+.architech-home .at-chapter--01 .at-chapter-image img { object-position: 72% 50%; }
+.architech-home .at-chapter--02 .at-chapter-image img { object-position: 27% 50%; }
+.architech-home .at-chapter--03 .at-chapter-image img { object-position: 68% 50%; }
+.architech-home .at-chapter--04 .at-chapter-image img { object-position: 36% 50%; }
 .architech-home .at-chapter-shade {
   position: absolute;
   inset: 0;

@@ -294,10 +294,10 @@ export const homeTranslations = {
     hero: 'Небольшой ламповый техномагический сервер c упором на строительство и творчество, где можно возвести завод, улететь на собственном дирижабле и случайно стать магом. В основе — Create, Create: Aeronautics и Ars Nouveau с аддонами. Без вайпов и с авторскими портами BetterEnd & BetterNether.',
     copied: 'Скопировано', error: 'Ошибка', copyIp: 'Копировать IP', online: 'Онлайн', offline: 'Офлайн', checking: 'Проверяем…', players: 'Игроки', onlinePlayers: 'Игроки онлайн', close: 'Закрыть', version: 'Версия', ping: 'Пинг', downloadLauncher: 'Скачать лаунчер', launcherSource: 'Исходный код лаунчера', launcherSourceAria: 'Исходный код лаунчера на GitHub', gallery: 'Галерея', galleryAlt: 'Скриншот мира ArchiTech MC', showScreenshot: 'Показать скриншот', fallbackShot: 'Скриншот ArchiTech', fallbackShotSubtitle: 'Момент из жизни сервера',
     cards: [
-      ['О сервере', 'Что такое этот ваш ArchiTech, про что он и с чем его едят', 'Узнать больше'],
-      ['Посмотреть сборку', 'Щепотка техники, щепотка магии, вуаля — это техномагия!', 'Открыть вики'],
-      ['Как начать играть', 'Пара шагов и правильный ник — добро пожаловать в Сити-17', 'Начать играть'],
-      ['Скачать лаунчер', 'Скачал и забыл про ручные обновления. Магия вне Хогвартса', 'Скачать'],
+      ['О сервере', 'Мир, где у каждой базы есть история, а у каждой истории — минимум один взрыв', 'Узнать больше'],
+      ['Посмотреть сборку', 'Магия, механизмы и дракон на крыше — техномагия без скучной инструкции', 'Открыть вики'],
+      ['Как начать играть', 'Аккаунт, лаунчер, кнопка «Играть» — фабрика железа уже прогревает вам спавн', 'Начать играть'],
+      ['Скачать лаунчер', 'Сам скачает сборку и обновит моды. Вам останется самая сложная часть — нажать «Играть»', 'Скачать'],
     ],
     team: 'Команда проекта', leaderboard: 'Легенды сервера', faq: 'Популярные вопросы',
     faqItems: {
@@ -314,16 +314,17 @@ export const homeTranslations = {
     shots: {
       gallery1: ['Морской исполин', '«Война... Война никогда не меняется». Линкор из «Ходячего замка»'], gallery2: ['Ходячий замок', 'Ипотеку оформили — фундамент забыли'], gallery3: ['Небесная пагода', 'До следующей станции — одна остановка и пропасть'], gallery4: ['Портал в отпуск', 'Шары уже улетели, портал всё ещё думает'], gallery5: ['Дворец над облаками', 'Туман включили, чтобы не было видно смету'], gallery6: ['Морская платформа', 'Нефти нет, зато механизмов на два сервера'], gallery7: ['Ветрогенераторы', 'Чайник теперь закипает с эпическим саундтреком'], gallery8: ['Небесный левиафан', 'Парковочное место ищет до сих пор'], gallery9: ['Радиотелескоп', 'Ловит всё, кроме стабильного Wi-Fi'],
       screen1: ['Ветрогенераторы', 'Построены Hoshimori Inc.'], screen13: ['Портальная лягушка', 'It is Wednesday, my dudes'], screen3: ['Дирижабль', 'Так и сгинул, упал в океан... Дирижабль Левиафан'], screen4: ['Как это тут оказалось?', 'Игрок KIDron позирует на ветрогенераторе'], screen9: ['Цитадель Альянса', 'По совместительству база игрока Andrej_Dinera'], screen10: ['Ходячий замок', 'Нестареющая классика'], screen11: ['Радиотелескоп', 'ОНИ следят за нами...'], screen12: ['Портал', 'Главный портал спавна в стиле древнего монолита'],
+      chapter1: ['Город над туманом', 'До центра пять минут, если не смотреть вниз'], chapter2: ['Красный дракон', 'Магия, техника и очень убедительная охрана крыши'], chapter3: ['Фабрика железа', 'Железо делают круглосуточно. Тишину — по возможности'], chapter4: ['Башня загрузки', 'Пока лаунчер обновлялся, успели достроить ещё пару этажей'],
     },
   },
   en: {
     hero: 'A cozy tech-and-magic server built around construction and creativity: build a factory, fly your own airship, and accidentally become a wizard. Powered by Create, Create: Aeronautics, Ars Nouveau and their addons, with no wipes and our own BetterEnd & BetterNether ports.',
     copied: 'Copied', error: 'Error', copyIp: 'Copy IP', online: 'Online', offline: 'Offline', checking: 'Checking…', players: 'Players', onlinePlayers: 'Players online', close: 'Close', version: 'Version', ping: 'Ping', downloadLauncher: 'Download launcher', launcherSource: 'Launcher source code', launcherSourceAria: 'Launcher source code on GitHub', gallery: 'Gallery', galleryAlt: 'ArchiTech MC world screenshot', showScreenshot: 'Show screenshot', fallbackShot: 'ArchiTech screenshot', fallbackShotSubtitle: 'A moment from server life',
     cards: [
-      ['About the server', 'What is this ArchiTech thing, and what do you eat it with?', 'Learn more'],
-      ['Explore the modpack', 'A pinch of tech, a pinch of magic — voilà, tech magic!', 'Open the wiki'],
-      ['How to start', 'A couple of steps and the right nickname — welcome to City 17', 'Start playing'],
-      ['Download launcher', 'Install it once and forget manual updates. Magic outside Hogwarts', 'Download'],
+      ['About the server', 'A world where every base has a story, and every story includes at least one explosion', 'Learn more'],
+      ['Explore the modpack', 'Magic, machinery, and a dragon on the roof — tech magic without the boring manual', 'Open the wiki'],
+      ['How to start', 'Account, launcher, Play — the iron factory is already warming up spawn for you', 'Start playing'],
+      ['Download launcher', 'It installs the pack and updates the mods. Your hardest task is pressing Play', 'Download'],
     ],
     team: 'Project team', leaderboard: 'Server legends', faq: 'Frequently asked questions',
     faqItems: {
@@ -340,6 +341,7 @@ export const homeTranslations = {
     shots: {
       gallery1: ['The sea giant', 'War... War never changes. The battleship from Howl\'s Moving Castle'], gallery2: ['Moving Castle', 'Mortgage approved; foundation forgotten'], gallery3: ['Sky Pagoda', 'Next stop: one station and a bottomless drop'], gallery4: ['Portal to vacation', 'The balloons left; the portal is still thinking'], gallery5: ['Palace above the clouds', 'Fog enabled so nobody can see the budget'], gallery6: ['Offshore platform', 'No oil, enough machinery for two servers'], gallery7: ['Wind turbines', 'The kettle now boils with an epic soundtrack'], gallery8: ['Sky Leviathan', 'Still looking for a parking space'], gallery9: ['Radio telescope', 'Receives everything except stable Wi-Fi'],
       screen1: ['Wind turbines', 'Built by Hoshimori Inc.'], screen13: ['Portal frog', 'It is Wednesday, my dudes'], screen3: ['Airship', 'It vanished into the ocean... the Leviathan'], screen4: ['How did this get here?', 'KIDron poses on a wind turbine'], screen9: ['Alliance Citadel', 'Also Andrej_Dinera’s base'], screen10: ['Moving Castle', 'A timeless classic'], screen11: ['Radio telescope', 'THEY are watching us...'], screen12: ['Portal', 'The main spawn portal, styled after an ancient monolith'],
+      chapter1: ['City above the fog', 'Five minutes downtown, if you never look down'], chapter2: ['The red dragon', 'Magic, machinery, and very convincing rooftop security'], chapter3: ['Iron factory', 'Iron around the clock. Silence whenever possible'], chapter4: ['Loading tower', 'The launcher updated; they added two more floors meanwhile'],
     },
   },
 } as const;
