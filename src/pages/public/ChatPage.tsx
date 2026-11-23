@@ -2206,10 +2206,10 @@ export default function ChatPage() {
 
             <div className="relative z-0 flex min-h-0 flex-1 overflow-hidden">
               <div
-                className={`relative min-w-0 flex-1 transform-gpu transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
-                  isGroupInfoVisible ? 'lg:-translate-x-[180px]' : 'lg:translate-x-0'
+                className={`relative min-w-0 flex-1 transition-[margin] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+                  isGroupInfoVisible ? 'lg:mr-[360px]' : 'lg:mr-0'
                 }`}
-                style={{ willChange: isGroupInfoVisible ? 'transform' : undefined }}
+                style={{ willChange: isGroupInfoVisible ? 'margin-right' : undefined }}
               >
                 <div
                   className="tg-scroll relative h-full overflow-y-auto"
@@ -2539,10 +2539,10 @@ export default function ChatPage() {
 
             {model.selectedChat !== null ? (
               <div
-                className={`absolute bottom-0 left-0 right-0 transform-gpu transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
-                  isGroupInfoVisible ? 'lg:-translate-x-[180px]' : 'lg:translate-x-0'
+                className={`absolute bottom-0 left-0 transition-[right] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+                  isGroupInfoVisible ? 'right-0 lg:right-[360px]' : 'right-0'
                 }`}
-                style={{ willChange: isGroupInfoVisible ? 'transform' : undefined }}
+                style={{ willChange: isGroupInfoVisible ? 'right' : undefined }}
                 data-chat-composer-container="true"
               >
                 <ChatComposer model={model} />
