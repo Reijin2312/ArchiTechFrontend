@@ -78,7 +78,7 @@ type CurrentUserProfile = {
 };
 
 const PRESENCE_VISUAL_IDLE_TIMEOUT_MS = 60_000;
-const ARCHITECH_GLOBAL_CHAT_ICON = '/images/logo.png';
+const ARCHITECH_GLOBAL_CHAT_ICON = '/images/favicon-192.png';
 
 const isArchiTechGlobalChat = (chat: { chatType?: string; title?: string }) =>
   chat.chatType === 'GROUP' && /^(общий чат )?architech$/i.test(chat.title?.trim() || '');
@@ -222,7 +222,14 @@ export default function ChatPage() {
   const [selectedGroupAddMemberIds, setSelectedGroupAddMemberIds] = useState<string[]>([]);
   const [isAddingGroupMembers, setIsAddingGroupMembers] = useState(false);
   const [groupMembersByUserId, setGroupMembersByUserId] = useState<
-    Record<string, { username?: string; role: ChatGroupMemberRole; joinedAt?: string | null }>
+    Record<string, {
+      username?: string;
+      displayName?: string;
+      avatarUrl?: string;
+      lastSeenAt?: string | null;
+      role: ChatGroupMemberRole;
+      joinedAt?: string | null;
+    }>
   >({});
   const [groupMemberTagsByUserId, setGroupMemberTagsByUserId] = useState<Record<string, string>>({});
   const [selectedGroupTopicId, setSelectedGroupTopicId] = useState<number | undefined>(undefined);
@@ -836,7 +843,14 @@ export default function ChatPage() {
     setIsGroupMembersLoading(true);
     try {
       const { data } = await http.get<ChatGroupMembersResponse>(endpoints.chatMembers(chatId));
-      const next: Record<string, { username?: string; role: ChatGroupMemberRole; joinedAt?: string | null }> = {};
+      const next: Record<string, {
+        username?: string;
+        displayName?: string;
+        avatarUrl?: string;
+        lastSeenAt?: string | null;
+        role: ChatGroupMemberRole;
+        joinedAt?: string | null;
+      }> = {};
       const adminOrOwnerIds: string[] = [];
       for (const member of data.members || []) {
         if (!member?.userId) continue;
@@ -845,6 +859,9 @@ export default function ChatPage() {
           role === 'OWNER' || role === 'ADMIN' || role === 'MEMBER' ? role : 'MEMBER';
         next[member.userId] = {
           username: member.username,
+          displayName: member.displayName,
+          avatarUrl: resolveChatAvatarUrl(member.avatarUrl),
+          lastSeenAt: member.lastSeenAt,
           role: normalizedRole,
           joinedAt: member.joinedAt,
         };
@@ -1000,8 +1017,7 @@ export default function ChatPage() {
     }
     const ownerFallbackId =
       Object.entries(groupMembersByUserId).find(([, value]) => value.role === 'OWNER')?.[0] ||
-      selectedGroupChat.ownerId ||
-      selectedGroupChat.participantIds?.[0];
+      selectedGroupChat.ownerId;
     if (ownerFallbackId && ownerFallbackId === model.userId) {
       return 'OWNER';
     }
@@ -1598,9 +1614,10 @@ export default function ChatPage() {
         return selectedChat.name;
       }
 
-      return meta?.displayName || meta?.username || id.slice(0, 8);
+      const groupMember = groupMembersByUserId[id];
+      return groupMember?.displayName || meta?.displayName || groupMember?.username || meta?.username || id.slice(0, 8);
     },
-    [model.userId, resolveUserMeta, selectedChat]
+    [groupMembersByUserId, model.userId, resolveUserMeta, selectedChat]
   );
 
   const resolveMessageUserAvatar = useCallback(
@@ -1615,9 +1632,9 @@ export default function ChatPage() {
         return selectedChat.avatarUrl || meta?.avatarUrl;
       }
 
-      return meta?.avatarUrl;
+      return groupMembersByUserId[id]?.avatarUrl || meta?.avatarUrl;
     },
-    [currentUserProfile?.avatarUrl, model.user, model.userId, resolveUserMeta, selectedChat]
+    [currentUserProfile?.avatarUrl, groupMembersByUserId, model.user, model.userId, resolveUserMeta, selectedChat]
   );
 
   const groupInfoMembers = useMemo<GroupInfoMember[]>(() => {
@@ -1636,9 +1653,7 @@ export default function ChatPage() {
     const uniqueParticipantIds = Array.from(new Set(participantIds.filter(Boolean)));
     const ownerId =
       Object.entries(groupMembersByUserId).find(([, value]) => value.role === 'OWNER')?.[0] ||
-      selectedChat.ownerId ||
-      selectedChat.participantIds?.[0] ||
-      undefined;
+      selectedChat.ownerId || undefined;
     const currentUserName =
       currentUserProfile?.displayName?.trim() ||
       currentUserProfile?.username?.trim() ||
@@ -1652,11 +1667,17 @@ export default function ChatPage() {
     return uniqueParticipantIds.map((id) => {
       const isCurrentUser = id === model.userId;
       const userMeta = resolveUserMeta(id);
-      const presence = isCurrentUser ? currentUserVisualPresence : model.presenceByUser[id];
+      const groupMember = groupMembersByUserId[id];
+      const livePresence = model.presenceByUser[id];
+      const presence: ChatPresenceState = isCurrentUser
+        ? { online: true, lastSeenAt: new Date(presenceNowMs).toISOString(), resolved: true }
+        : livePresence?.resolved
+          ? livePresence
+          : { online: false, lastSeenAt: groupMember?.lastSeenAt ?? null, resolved: true };
       const userName =
         isCurrentUser
           ? currentUserName
-          : userMeta?.displayName || userMeta?.username || id.slice(0, 8);
+          : groupMember?.displayName || userMeta?.displayName || groupMember?.username || userMeta?.username || id.slice(0, 8);
       const isOnline = !!presence?.online;
       const role =
         groupMembersByUserId[id]?.role ||
@@ -1677,9 +1698,11 @@ export default function ChatPage() {
         userId: id,
         username: isCurrentUser
           ? currentUserProfile?.username || model.user?.username
-          : userMeta?.username || groupMembersByUserId[id]?.username,
+          : groupMember?.username || userMeta?.username,
         name: userName,
-        avatarUrl: isCurrentUser ? currentUserAvatarUrl || userMeta?.avatarUrl : userMeta?.avatarUrl,
+        avatarUrl: isCurrentUser
+          ? currentUserAvatarUrl || groupMember?.avatarUrl || userMeta?.avatarUrl
+          : groupMember?.avatarUrl || userMeta?.avatarUrl,
         avatarBg: hashColor(id),
         avatarText: initialOf(userName),
         statusText: formatPresenceLabel(presence),
@@ -1700,6 +1723,7 @@ export default function ChatPage() {
     groupMemberTagsByUserId,
     groupMembersByUserId,
     model.presenceByUser,
+    presenceNowMs,
     model.user,
     model.userId,
     resolveUserMeta,

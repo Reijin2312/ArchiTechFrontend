@@ -2265,7 +2265,7 @@ export function GroupInfoPanel({
           </div>
         ) : null}
 
-        <div className="bg-[#1c1d24]">
+        <div className="border-y border-white/6 bg-[#242620]">
           <div className="flex items-center gap-3 px-5 py-4 text-white/78">
             <BellIcon />
             <div className="min-w-0 flex-1 text-[15px] font-[500] text-white/96">Notifications</div>
@@ -2280,7 +2280,7 @@ export function GroupInfoPanel({
               aria-label="Toggle group notifications"
             >
               <span
-                className={`inline-block h-[26px] w-[26px] rounded-full bg-[#111217] transition-transform ${
+                className={`inline-block h-[26px] w-[26px] rounded-full bg-[#171816] transition-transform ${
                   notificationsEnabled ? 'translate-x-[30px]' : 'translate-x-[2px]'
                 }`}
               />

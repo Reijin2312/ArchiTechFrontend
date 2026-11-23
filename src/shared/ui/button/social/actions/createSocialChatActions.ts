@@ -921,11 +921,9 @@ export function createSocialChatActions(ctx: SocialFloatingActionsContext): Soci
               const messageRect = firstUnreadElement.getBoundingClientRect();
               const containerRect = scrollContainer.getBoundingClientRect();
               scrollContainer.scrollTop += messageRect.top - containerRect.top;
-            } else {
-              firstUnreadElement.scrollIntoView({ behavior: 'auto', block: 'start' });
             }
-          } else if (messagesEndRef.current) {
-            messagesEndRef.current.scrollIntoView({ behavior: 'auto' });
+          } else if (scrollContainer) {
+            scrollContainer.scrollTop = scrollContainer.scrollHeight;
           }
 
           const tryMarkReadOnOpen = () => {

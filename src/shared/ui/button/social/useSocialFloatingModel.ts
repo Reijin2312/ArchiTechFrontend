@@ -142,7 +142,13 @@ export function useSocialFloatingModel(options: SocialFloatingModelOptions = {})
     if (autoScrollLockedRef.current) {
       return;
     }
-    messagesEndRef.current?.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto' });
+    const container = messagesEndRef.current?.closest('.tg-scroll');
+    if (container instanceof HTMLElement) {
+      container.scrollTo({
+        top: container.scrollHeight,
+        behavior: smooth ? 'smooth' : 'auto',
+      });
+    }
   };
 
   const closeMessenger = () => {
