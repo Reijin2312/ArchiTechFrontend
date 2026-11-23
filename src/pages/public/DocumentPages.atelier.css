@@ -144,3 +144,148 @@ body:has(.architech-document) {
   background: #171816;
   border-color: var(--doc-line-strong);
 }
+
+/* Shared rules/wiki catalog. The content cards retain their existing components. */
+.at-doc-layout {
+  align-items: start;
+}
+.at-doc-layout__left,
+.at-doc-layout__right {
+  position: sticky;
+  top: 82px;
+  align-self: start;
+}
+.architech-document .at-doc-nav {
+  display: flex;
+  max-height: calc(100dvh - 104px);
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--doc-line);
+  border-radius: 18px;
+  background: #20211e;
+}
+.architech-document .at-doc-search {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  margin: 14px;
+  padding: 10px 12px;
+  border: 1px solid var(--doc-line);
+  border-radius: 12px;
+  background: #171816;
+}
+.architech-document .at-doc-search:focus-within {
+  border-color: var(--doc-brass);
+  box-shadow: 0 0 0 3px rgba(197,170,132,.1);
+}
+.architech-document .at-doc-search > svg {
+  width: 23px;
+  height: 23px;
+  fill: none;
+  stroke: var(--doc-ink);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+.architech-document .at-doc-search input {
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font: inherit;
+  color: var(--doc-ink);
+}
+.architech-document .at-doc-search > span {
+  display: flex;
+  gap: 4px;
+}
+.architech-document .at-doc-search kbd {
+  display: inline-flex;
+  min-width: 25px;
+  height: 25px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  font-size: 11px;
+}
+.architech-document .at-doc-nav__scroll {
+  min-height: 0;
+  overflow: auto;
+  padding: 2px 14px 18px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(197,170,132,.45) transparent;
+}
+.architech-document .at-doc-nav__group + .at-doc-nav__group {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid var(--doc-line);
+}
+.architech-document .at-doc-nav__group h2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 6px 10px;
+  font-size: 18px;
+  color: var(--doc-ink);
+}
+.architech-document .at-doc-nav__group h2 svg {
+  width: 23px;
+  height: 23px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.architech-document .at-doc-nav__group ul {
+  display: grid;
+  gap: 3px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.architech-document .at-doc-nav__group a {
+  display: block;
+  padding: 8px 10px 8px 42px;
+  border-radius: 10px;
+  color: var(--doc-secondary);
+  line-height: 1.35;
+  text-decoration: none;
+  transition: color .18s ease, background-color .18s ease;
+}
+.architech-document .at-doc-nav__group a:hover,
+.architech-document .at-doc-nav__group a:focus-visible {
+  background: rgba(197,170,132,.08);
+  color: var(--doc-ink);
+}
+.architech-document .at-doc-nav__group a.is-active {
+  background: rgba(197,170,132,.18);
+  color: #f1ddbd;
+}
+.architech-document .at-doc-nav__empty {
+  margin: 8px;
+  color: var(--doc-muted);
+  font-size: 14px;
+}
+.architech-document .at-doc-mobile-nav {
+  margin-bottom: 18px;
+  border: 1px solid var(--doc-line);
+  border-radius: 14px;
+  background: #20211e;
+}
+.architech-document .at-doc-mobile-nav > summary {
+  padding: 14px 16px;
+  cursor: pointer;
+  color: var(--doc-ink);
+  font-weight: 600;
+}
+.architech-document .at-doc-nav--compact {
+  max-height: min(65dvh, 620px);
+  border: 0;
+  border-top: 1px solid var(--doc-line);
+  border-radius: 0 0 14px 14px;
+}
+
+@media (max-width: 1023px) {
+  .at-doc-layout { max-width: 820px; }
+}

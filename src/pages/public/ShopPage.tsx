@@ -63,7 +63,7 @@ export default function ShopPage() {
             <p className="text-[#c9c3b8] text-sm">
               {t('start.modpackText')}
             </p>
-            <a href={`${WIKI_URL}#mods`} className="mt-3 inline-flex text-sm text-[#d8bc91] underline underline-offset-2 hover:text-[#f0dcc0]">
+            <a href={`${WIKI_URL}/mods`} className="mt-3 inline-flex text-sm text-[#d8bc91] underline underline-offset-2 hover:text-[#f0dcc0]">
               {t('start.modpackLink')}
             </a>
           </BaseSection>

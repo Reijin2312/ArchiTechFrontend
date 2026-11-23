@@ -10,6 +10,7 @@ import PrivacyPolicyPage from '../pages/legal/PrivacyPolicyPage'
 import SiteHeader from '../shared/ui/layout/SiteHeader'
 import SiteFooter from '../shared/ui/layout/SiteFooter'
 import { I18nProvider } from '../shared/i18n/I18nProvider'
+import { RULES_DOCUMENT_SECTIONS, WIKI_DOCUMENT_SECTIONS, documentPath } from '../pages/public/docs/documentationNavigation'
 
 const shell = (page: React.ReactNode) => <I18nProvider><SiteHeader/><main>{page}</main><SiteFooter/></I18nProvider>
 
@@ -27,4 +28,6 @@ export const pages = {
   '/map': () => shell(<MapPage/>),
   '/terms': () => shell(<UserAgreementPage/>),
   '/privacy': () => shell(<PrivacyPolicyPage/>),
+  ...Object.fromEntries(RULES_DOCUMENT_SECTIONS.filter(section => section.id !== 'intro').map(section => [documentPath(section), () => shell(<RulesPage sectionIdOverride={section.id}/>)])),
+  ...Object.fromEntries(WIKI_DOCUMENT_SECTIONS.filter(section => section.id !== 'intro').map(section => [documentPath(section), () => shell(<WikiPage sectionIdOverride={section.id}/>)])),
 };

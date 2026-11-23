@@ -13,7 +13,7 @@ export default function Layout() {
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
   }, [pathname]);
 
-  const castlePage = ['/rules', '/wiki', '/contacts', '/terms', '/privacy'].includes(pathname);
+  const castlePage = pathname.startsWith('/rules') || pathname.startsWith('/wiki') || ['/contacts', '/terms', '/privacy'].includes(pathname);
   // Opt-in only. Already rebranded home, wiki, rules, legacy and main auth pages are untouched.
   const visualScope = pathname === '/start' || pathname === '/contacts' ||
     pathname === '/terms' || pathname === '/privacy' ||

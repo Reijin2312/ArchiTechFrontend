@@ -638,7 +638,7 @@ export default function HomePage() {
           <ParallaxChapter image="chapter1" number="01" scene={shotMeta['/images/chapters/chapter1.webp']} reduced={disableInteractiveMotion || isMobile}
             title={copy.cards[0][0]} text={copy.cards[0][1]} href="/about" action={copy.cards[0][2]}/>
           <ParallaxChapter image="chapter2" number="02" scene={shotMeta['/images/chapters/chapter2.webp']} reduced={disableInteractiveMotion || isMobile}
-            title={copy.cards[1][0]} text={copy.cards[1][1]} href={WIKI_URL+'#mods'} action={copy.cards[1][2]}/>
+            title={copy.cards[1][0]} text={copy.cards[1][1]} href={`${WIKI_URL}/mods`} action={copy.cards[1][2]}/>
           <ParallaxChapter image="chapter3" number="03" scene={shotMeta['/images/chapters/chapter3.webp']} reduced={disableInteractiveMotion || isMobile}
             title={copy.cards[2][0]} text={copy.cards[2][1]} href={SHOP_URL} action={copy.cards[2][2]}/>
           <ParallaxChapter image="chapter4" number="04" scene={shotMeta['/images/chapters/chapter4.webp']} reduced={disableInteractiveMotion || isMobile}
@@ -725,7 +725,7 @@ export default function HomePage() {
                     a={
                       <p>
                         {copy.faqItems.modsAnswer}{' '}
-                        <a href={`${WIKI_URL}#mods`}>{copy.faqItems.modsLink}</a>
+                        <a href={`${WIKI_URL}/mods`}>{copy.faqItems.modsLink}</a>
                       </p>
                     }
                   />

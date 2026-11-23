@@ -1,69 +1,47 @@
-import type { ComponentProps } from 'react';
 import { Seo } from '@/shared/seo/seo';
 import { routesMeta } from '@/shared/seo/routesMeta';
-import { motion } from 'framer-motion';
-import { LeftNav as BaseLeftNav, RightToc as BaseRightToc, Section as BaseSection, Kbd, Callout, pageVariants } from '@/shared/ui/layout/PageSidebar';
+import { Navigate, useParams } from 'react-router-dom';
+import { Section as BaseSection, Kbd, Callout } from '@/shared/ui/layout/PageSidebar';
 import { useIsMobile } from '@/shared/ui/utils/useIsMobile';
 import { useI18n } from '@/shared/i18n/I18nProvider';
+import { DocumentationShell } from '@/pages/public/docs/DocumentationShell';
+import { RULES_DOCUMENT_SECTIONS, documentItem, documentPath } from '@/pages/public/docs/documentationNavigation';
 import './DocumentPages.atelier.css';
 
 export type TocItem = { id: string; title: string };
 
-export const SECTIONS: TocItem[] = [
-  { id: 'intro', title: 'Введение' },
-  { id: 'forbidden', title: 'Запрещено' },
-  { id: 'chat', title: 'Общение' },
-  { id: 'techmagic', title: 'Модификации и ресурс-паки' },
-  { id: 'build', title: 'Строительство' },
-  { id: 'farms', title: 'Фермы и механизмы' },
-  { id: 'pvp', title: 'PVP / PVE' },
-  { id: 'trade', title: 'Экономика и торговля' },
-  { id: 'security', title: 'Безопасность и аккаунты' },
-  { id: 'penalties', title: 'Наказания' },
-];
+export const SECTIONS: TocItem[] = RULES_DOCUMENT_SECTIONS.map(({ id, ru: title }) => ({ id, title }));
 
 
 
 
-export default function RulesPage() {
+export default function RulesPage({ sectionIdOverride }: { sectionIdOverride?: string } = {}) {
   const isMobile = useIsMobile();
   const { language } = useI18n();
+  const { sectionId } = useParams();
+  const current = documentItem('rules', sectionIdOverride ?? sectionId);
 
-  const Section = (props: ComponentProps<typeof BaseSection>) => (
-    <BaseSection {...props} disableMotion={isMobile} />
-  );
-  const LeftNav = (props: ComponentProps<typeof BaseLeftNav>) => (
-    <BaseLeftNav {...props} disableMotion={isMobile} />
-  );
-  const RightToc = (props: ComponentProps<typeof BaseRightToc>) => (
-    <BaseRightToc {...props} disableMotion={isMobile} />
-  );
+  if (!current) return <Navigate to="/rules" replace />;
 
-  if (language === 'en') return <EnglishRules isMobile={isMobile} />;
+  if (language === 'en') return <EnglishRules isMobile={isMobile} sectionId={current.id} />;
+
+  const Section = (props: React.ComponentProps<typeof BaseSection>) => <BaseSection {...props} disableMotion={isMobile} />;
+  const show = (id: string) => current.id === id;
+  const toc = [{ id: current.id, title: current.ru }];
 
   return (
     <>
-    <Seo {...routesMeta['/rules']} />
-    <motion.div
-      className="architech-document architech-rules mx-auto w-full max-w-7xl grid grid-cols-12 gap-6 px-4 py-6 text-[#f2efe9]"
-      variants={isMobile ? undefined : pageVariants}
-      initial={isMobile ? false : 'hidden'}
-      animate={isMobile ? false : 'show'}
-    >
-      <aside className="hidden md:block md:col-span-3">
-        <LeftNav items={SECTIONS} blurIntensity="xl" bgOpacity="60" />
-      </aside>
-      
-      <main className="col-span-12 md:col-span-6">
+    <Seo {...routesMeta[documentPath(current)]} />
+    <DocumentationShell area="rules" toc={toc}>
         <h1 className="mb-4 text-3xl font-bold text-center text-[22px] md:text-[24px]">Правила сервера</h1>
-        <Callout title="Рекомендация">
+        {show('intro') && <Callout title="Рекомендация">
           <ul className="text-sm text-[#c9c4b9] space-y-1">
-            <li>Быстрый поиск по странице: <Kbd>Ctrl</Kbd> + <Kbd>F</Kbd> (Windows / Linux), <Kbd>Cmd</Kbd> + <Kbd>F</Kbd> (macOS).</li>
+            <li>Для перехода между разделами используйте общий каталог правил и вики. Поиск открывается сочетанием <Kbd>Ctrl</Kbd> + <Kbd>K</Kbd>.</li>
             <li>По оставшимся вопросам вы можете обратиться к администрации.</li>
           </ul>
-        </Callout>
+        </Callout>}
 
-        <Section id="intro" title="Введение" n={1}>
+        {show('intro') && <Section id="intro" title="Введение" n={1}>
           <p className="text-[#c9c4b9]">
             Сервер состоит из <span className="text-[#c5aa84]">одного мира</span>. Тематикой является <span className="text-[#c5aa84]">техномагия с особым упором на строительство</span>. 
             Наша цель — создать комфортное и стабильное место для общения и взаимодействия.
@@ -73,9 +51,9 @@ export default function RulesPage() {
             <li>Уважайте других игроков, помогайте новичкам, играйте честно.</li>
             <li>О любых нарушениях незамедлительно сообщайте модераторам.</li>
           </ul>
-        </Section>
+        </Section>}
 
-        <Section id="forbidden" title="Запрещено" n={2}>
+        {show('forbidden') && <Section id="forbidden" title="Запрещено" n={2}>
           <ol className="list-decimal pl-6 space-y-3">
             <li><b>Гриферство.</b> Частичное или полное разрушение чужих построек без разрешения владельца.</li>
             <li><b>Оскорбительное поведение.</b> Мат, уничижительные выражения в адрес других игроков/администрации, за исключением случаев, когда это является своеобразным взаимным юмором. </li>
@@ -92,26 +70,26 @@ export default function RulesPage() {
             <li><b>Читы/ПО, моды и ресурс-паки, дающие преимущество</b>, их реклама или пропаганда.</li>
             <li><b>Коммерческая реклама</b> без согласования с администрацией.</li>
           </ol>
-        </Section>
+        </Section>}
 
-        <Section id="chat" title="Общение" n={3}>
+        {show('chat') && <Section id="chat" title="Общение" n={3}>
           <ul className="list-disc pl-5 space-y-1 text-[#c9c4b9]">
             <li>Правила общения действуют в текстовом и голосовом чате, а также на связанных площадках проекта.</li>
             <li>Не публикуйте личные данные третьих лиц.</li>
             <li>Предложения с конструктивной критикой направляйте в соответствующие каналы. Избегайте оффтопа.</li>
             <li>Не мешайте другим игрокам громкими, повторяющимися звуками и не принуждайте их переходить в голосовой чат.</li>
           </ul>
-        </Section>
+        </Section>}
 
-        <Section id="techmagic" title="Модификации и ресурс-паки" n={4}>
+        {show('techmagic') && <Section id="techmagic" title="Модификации и ресурс-паки" n={4}>
           <ul className="list-disc pl-5 space-y-1 text-[#c9c4b9]">
             <li>Разрешены моды, входящие в сборку сервера. Сторонние клиентские моды допустимы, за исключением дающих преимущество чит-модов. </li>
             <li>Визуальные и QoL-моды допустимы, если не дают геймплейного преимущества.</li>
             <li>Эксплойты и дюпы любых механик запрещены, за исключением дюпа динамита, яиц дракона и ковров. О найденных багах сообщайте модераторам.</li>
           </ul>
-        </Section>
+        </Section>}
 
-        <Section id="build" title="Строительство" n={5}>
+        {show('build') && <Section id="build" title="Строительство" n={5}>
           <ul className="list-disc pl-5 space-y-1 text-[#c9c4b9]">
             <li>Не допускайте пересечения вашей зоны постройки с чужими территориями без согласования.</li>
             <li>Ставьте таблички и иные метки, по которым можно определить принадлежность занятой территории вам.</li>
@@ -119,32 +97,32 @@ export default function RulesPage() {
             <li>Сохраняйте проходы, магистрали, жд-пути и иные общие дороги. Не блокируйте порталы и перекрёстки, не создавайте препятствий движению поездов.</li>
             <li>После демонтажа построек или терраформирования приводите местность в порядок.</li>
           </ul>
-        </Section>
+        </Section>}
 
-        <Section id="farms" title="Фермы и механизмы" n={6}>
+        {show('farms') && <Section id="farms" title="Фермы и механизмы" n={6}>
           <ul className="list-disc pl-5 space-y-1 text-[#c9c4b9]">
             <li>Тяжёлые и большие механизмы / фермы согласовывайте с модерацией. Создаваемая нагрузка не должна сажать TPS сервера и приводить к лагам.</li>
             <li>Авто-фермы допустимы при наличии ограничителей скорости и выключателей.</li>
             <li>Лимит мобов действует. Администрация имеет право уничтожить источник лагов.</li>
           </ul>
-        </Section>
+        </Section>}
 
-        <Section id="pvp" title="PVP / PVE" n={7}>
+        {show('pvp') && <Section id="pvp" title="PVP / PVE" n={7}>
           <ul className="list-disc pl-5 space-y-1 text-[#c9c4b9]">
             <li>PvE разрешено.</li>
             <li>PvP разрешено только по взаимному согласию участников или в отмеченных зонах и событиях.</li>
             <li>Запрещено втягивать игроков в PvP провокацией или обманом.</li>
           </ul>
-        </Section>
+        </Section>}
 
-        <Section id="trade" title="Экономика и торговля" n={8}>
+        {show('trade') && <Section id="trade" title="Экономика и торговля" n={8}>
           <ul className="list-disc pl-5 space-y-1 text-[#c9c4b9]">
             <li>Договаривайтесь об условиях сделки заранее; крупные обмены рекомендуется фиксировать, например, в подписанной книге.</li>
             <li>Реклама собственных магазинов разрешена в специально отведённых местах.</li>
           </ul>
-        </Section>
+        </Section>}
 
-        <Section id="security" title="Безопасность и аккаунты" n={9}>
+        {show('security') && <Section id="security" title="Безопасность и аккаунты" n={9}>
           <ul className="list-disc pl-5 space-y-1 text-[#c9c4b9]">
             <li>Безопасность аккаунта - ответственность его владельца.</li>
             <li>Не делитесь с посторонними данными для входа и не сообщайте коды доступа ни при каких обстоятельствах.</li>
@@ -152,21 +130,16 @@ export default function RulesPage() {
             <li>Запрещён обход банов через твинки и VPN.</li>
             <li>При любой подозрительной активности немедленно сообщайте администрации.</li>
           </ul>
-        </Section>
+        </Section>}
 
-        <Section id="penalties" title="Наказания" n={10}>
+        {show('penalties') && <Section id="penalties" title="Наказания" n={10}>
           <ul className="list-disc pl-5 space-y-1 text-[#c9c4b9]">
             <li>Меры наказания применяются в соответствии со следующей шкалой: <b>предупреждение → мут → временный бан → перманентный бан.</b> </li>
             <li>Степень наказания зависит от тяжести, повторяемости нарушений и их последствий. </li>
             <li>Администрация вправе усилить наказание при наличии отягчающих обстоятельств.</li>
           </ul>
-        </Section>
-      </main>
-
-      <aside className="hidden md:block md:col-span-3">
-        <RightToc items={SECTIONS} blurIntensity="xl" bgOpacity="60" />
-      </aside>
-    </motion.div>
+        </Section>}
+    </DocumentationShell>
     </>
   );
 }
@@ -192,17 +165,16 @@ const EN_RULES: Array<{ id: string; items: React.ReactNode[] }> = [
   { id: 'penalties', items: [<>Typical escalation is <b>warning → mute → temporary ban → permanent ban</b>.</>, <>The penalty depends on severity, repetition, and consequences.</>, <>Staff may increase a penalty when aggravating circumstances apply.</>] },
 ];
 
-function EnglishRules({ isMobile }: { isMobile: boolean }) {
+function EnglishRules({ isMobile, sectionId }: { isMobile: boolean; sectionId: string }) {
+  const current = RULES_DOCUMENT_SECTIONS.find((item) => item.id === sectionId)!;
+  const sectionIndex = RULES_DOCUMENT_SECTIONS.findIndex((item) => item.id === sectionId);
+  const englishSection = EN_SECTIONS.find((item) => item.id === sectionId)!;
   return <>
-    <Seo {...routesMeta['/rules']} />
-    <motion.div className="architech-document architech-rules mx-auto grid w-full max-w-7xl grid grid-cols-12 gap-6 px-4 py-6 text-[#f2efe9]" variants={isMobile ? undefined : pageVariants} initial={isMobile ? false : 'hidden'} animate={isMobile ? false : 'show'}>
-      <aside className="hidden md:block md:col-span-3"><BaseLeftNav items={EN_SECTIONS} disableMotion={isMobile} blurIntensity="xl" bgOpacity="60" /></aside>
-      <main className="col-span-12 md:col-span-6">
+    <Seo {...routesMeta[documentPath(current)]} />
+    <DocumentationShell area="rules" toc={[{ id: current.id, title: current.en }]}>
         <h1 className="mb-4 text-center text-[22px] font-bold md:text-[24px]">Server rules</h1>
-        <Callout title="Tip"><ul className="space-y-1 text-sm text-[#c9c4b9]"><li>Search this page with <Kbd>Ctrl</Kbd> + <Kbd>F</Kbd> (Windows / Linux) or <Kbd>Cmd</Kbd> + <Kbd>F</Kbd> (macOS).</li><li>Ask the staff team if anything remains unclear.</li></ul></Callout>
-        {EN_SECTIONS.map((section, index) => <BaseSection key={section.id} id={section.id} title={section.title} n={index + 1} disableMotion={isMobile}><ul className="list-disc space-y-1 pl-5 text-[#c9c4b9]">{EN_RULES.find((entry) => entry.id === section.id)?.items.map((item, itemIndex) => <li key={itemIndex}>{item}</li>)}</ul></BaseSection>)}
-      </main>
-      <aside className="hidden md:block md:col-span-3"><BaseRightToc items={EN_SECTIONS} disableMotion={isMobile} blurIntensity="xl" bgOpacity="60" /></aside>
-    </motion.div>
+        {sectionId === 'intro' && <Callout title="Tip"><ul className="space-y-1 text-sm text-[#c9c4b9]"><li>Use the shared rules and wiki catalog. Focus search with <Kbd>Ctrl</Kbd> + <Kbd>K</Kbd>.</li><li>Ask the staff team if anything remains unclear.</li></ul></Callout>}
+        <BaseSection id={englishSection.id} title={englishSection.title} n={sectionIndex + 1} disableMotion={isMobile}><ul className="list-disc space-y-1 pl-5 text-[#c9c4b9]">{EN_RULES.find((entry) => entry.id === sectionId)?.items.map((item, itemIndex) => <li key={itemIndex}>{item}</li>)}</ul></BaseSection>
+    </DocumentationShell>
   </>;
 }

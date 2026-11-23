@@ -2,8 +2,6 @@ import { useState, useEffect, useRef } from 'react';
 import './SiteChrome.css';
 import { Link, useLocation } from 'react-router-dom';
 import { authStore } from '@/shared/store/auth';
-import { SECTIONS as RULES_SECTIONS } from '@/pages/public/RulesPage';
-import { WIKI_SECTIONS } from '@/pages/public/WikiPage';
 import { PRIVACY_SECTIONS } from '@/pages/legal/PrivacyPolicyPage';
 import { TERMS_SECTIONS } from '@/pages/legal/UserAgreementPage';
 import { SvgTelegram, SvgDiscord, SvgMenu, SvgX } from '@/shared/ui/image/Icons';
@@ -32,15 +30,9 @@ export default function SiteHeader() {
   const user = authStore((s) => s.user);
   const { pathname, search } = useLocation();
   const next = encodeURIComponent(pathname + search);
-  const isRulesPage = pathname === RULES_URL;
-  const isWikiPage = pathname === WIKI_URL;
   const isPrivacyPage = pathname === PRIVACY_URL;
   const isTermsPage = pathname === TERMS_URL;
-  const rawMobileTocItems: HeaderTocItem[] | undefined = isRulesPage
-    ? RULES_SECTIONS
-    : isWikiPage
-      ? WIKI_SECTIONS
-      : isPrivacyPage
+  const rawMobileTocItems: HeaderTocItem[] | undefined = isPrivacyPage
         ? PRIVACY_SECTIONS
         : isTermsPage
           ? TERMS_SECTIONS

@@ -1,12 +1,13 @@
 import type { ComponentProps } from 'react';
-import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useMemo } from 'react';
+import { Link, Navigate, useParams } from 'react-router-dom';
 import { Seo } from '@/shared/seo/seo';
 import { routesMeta } from '@/shared/seo/routesMeta';
-import { motion } from 'framer-motion';
-import { LeftNav as BaseLeftNav, RightToc as BaseRightToc, Section as BaseSection, Kbd, Callout, pageVariants } from '@/shared/ui/layout/PageSidebar';
+import { Section as BaseSection, Kbd, Callout } from '@/shared/ui/layout/PageSidebar';
 import { useIsMobile } from '@/shared/ui/utils/useIsMobile';
 import { ModCatalogSection } from '@/pages/public/wiki/ModCatalogSection';
+import { DocumentationShell } from '@/pages/public/docs/DocumentationShell';
+import { documentItem, documentPath } from '@/pages/public/docs/documentationNavigation';
 import { useI18n } from '@/shared/i18n/I18nProvider';
 import { LAUNCHER_DOWNLOAD_URL } from '@/shared/constants';
 import type { TranslationKey } from '@/shared/i18n/translations';
@@ -31,44 +32,31 @@ const CMDS: Cmd[] = [
   { cmd: '/msg <player> <message>', descKey: 'wiki.cmdMessage' },
 ];
 
-export default function WikiPage() {
+export default function WikiPage({ sectionIdOverride }: { sectionIdOverride?: string } = {}) {
   const isMobile = useIsMobile();
   const { t } = useI18n();
+  const { sectionId } = useParams();
   const sections = useMemo(() => WIKI_SECTIONS.map((item) => ({ ...item, title: wikiSectionTitle(item.id, t) })), [t]);
+  const current = documentItem('wiki', sectionIdOverride ?? sectionId);
 
-  const Section = (props: ComponentProps<typeof BaseSection>) => (
-    <BaseSection {...props} disableMotion={isMobile} />
-  );
-  const LeftNav = (props: ComponentProps<typeof BaseLeftNav>) => (
-    <BaseLeftNav {...props} disableMotion={isMobile} />
-  );
-  const RightToc = (props: ComponentProps<typeof BaseRightToc>) => (
-    <BaseRightToc {...props} disableMotion={isMobile} />
-  );
+  if (!current) return <Navigate to="/wiki" replace />;
+  const Section = (props: ComponentProps<typeof BaseSection>) => <BaseSection {...props} disableMotion={isMobile} />;
+  const show = (id: string) => current.id === id;
+  const currentSection = sections.find((item) => item.id === current.id)!;
 
   return (
     <>
-    <Seo {...routesMeta['/wiki']} />
-    <motion.div
-      className="architech-document architech-wiki mx-auto w-full max-w-7xl grid grid-cols-12 gap-6 px-4 py-6 text-[#f2efe9]"
-      variants={isMobile ? undefined : pageVariants}
-      initial={isMobile ? false : 'hidden'}
-      animate={isMobile ? false : 'show'}
-    >
-      <aside className="hidden md:block md:col-span-3">
-        <LeftNav items={sections} blurIntensity="xl" bgOpacity="60" />
-      </aside>
-
-      <main className="col-span-12 md:col-span-6">
+    <Seo {...routesMeta[documentPath(current)]} />
+    <DocumentationShell area="wiki" toc={[currentSection]}>
         <h1 className="mb-4 text-3xl font-bold text-[22px] md:text-[24px] text-center">{t('wiki.title')}</h1>
-        <Callout title={t('wiki.howToUse')}>
+        {show('intro') && <Callout title={t('wiki.howToUse')}>
           <ul className="text-sm text-[#c9c4b9] space-y-1">
-            <li>{t('wiki.howToUseNavigation')} <Kbd>Ctrl</Kbd> + <Kbd>F</Kbd> (Windows / Linux), <Kbd>Cmd</Kbd> + <Kbd>F</Kbd> (macOS).</li>
+            <li>{t('wiki.howToUseNavigation')} <Kbd>Ctrl</Kbd> + <Kbd>K</Kbd>.</li>
             <li>{t('wiki.howToUseMods')}</li>
           </ul>
-        </Callout>
+        </Callout>}
 
-        <Section id="intro" title={t('wiki.sectionIntro')} n={1}>
+        {show('intro') && <Section id="intro" title={t('wiki.sectionIntro')} n={1}>
           <p className="text-[#c9c4b9] ">
             {t('wiki.introFirstBefore')} <span className="text-[#c5aa84]">{t('wiki.introOneWorld')}</span>. {t('wiki.introThemeBefore')} <span className="text-[#c5aa84]">{t('wiki.introTheme')}</span>. {t('wiki.introGoal')}
           </p>
@@ -81,9 +69,9 @@ export default function WikiPage() {
             <li>{t('wiki.packWorld')}</li>
             <li>{t('wiki.packBuilding')}</li>
           </ul>
-        </Section>
+        </Section>}
 
-        <Section id="start" title={t('wiki.sectionStart')} n={2}>
+        {show('start') && <Section id="start" title={t('wiki.sectionStart')} n={2}>
           <p className="mb-3 text-[#c9c4b9]">{t('wiki.startIntro')}</p>
           <ol className="list-decimal pl-6 space-y-2 text-[#c9c4b9]">
             <li><Link to="/auth/register" className="text-[#c5aa84] hover:text-[#f1dbc0] hover:underline">{t('start.step1Link')}</Link>.</li>
@@ -100,11 +88,11 @@ export default function WikiPage() {
               <li>{t('wiki.firstMinutesGuides')}</li>
             </ul>
           </div>
-        </Section>
+        </Section>}
 
-        <ModCatalogSection disableMotion={isMobile} />
+        {show('mods') && <ModCatalogSection disableMotion={isMobile} />}
 
-        <Section id="progress" title={t('wiki.sectionProgress')} n={4}>
+        {show('progress') && <Section id="progress" title={t('wiki.sectionProgress')} n={4}>
           <p className="mb-3 text-[#c9c4b9]">{t('wiki.progressIntro')}</p>
           <ul className="space-y-3 text-[#c9c4b9]">
             <li>
@@ -123,50 +111,45 @@ export default function WikiPage() {
               <b>{t('wiki.progress5Title')}</b> {t('wiki.progress5')}
             </li>
           </ul>
-        </Section>
+        </Section>}
 
-        <CommandsSection disableMotion={isMobile} />
+        {show('commands') && <CommandsSection disableMotion={isMobile} />}
 
-        <Section id="economy" title={t('wiki.sectionEconomy')} n={6}>
+        {show('economy') && <Section id="economy" title={t('wiki.sectionEconomy')} n={6}>
           <ul className="list-disc pl-5 space-y-1 text-[#c9c4b9]">
             <li>{t('wiki.economy1')}</li>
             <li>{t('wiki.economy2')}</li>
           </ul>
-        </Section>
+        </Section>}
 
-        <Section id="perf" title={t('wiki.sectionPerformance')} n={7}>
+        {show('perf') && <Section id="perf" title={t('wiki.sectionPerformance')} n={7}>
           <ul className="list-disc pl-5 space-y-1 text-[#c9c4b9]">
             <li>{t('wiki.performance1')}</li>
             <li>{t('wiki.performance2')}</li>
             <li>{t('wiki.performance3')}</li>
           </ul>
-        </Section>
+        </Section>}
 
-        <Section id="help" title={t('wiki.sectionHelp')} n={8}>
+        {show('help') && <Section id="help" title={t('wiki.sectionHelp')} n={8}>
           <ol className="list-decimal space-y-2 pl-6 text-[#c9c4b9]">
             <li>{t('wiki.helpUpdate')}</li>
             <li>{t('wiki.helpCleanPack')}</li>
             <li>{t('wiki.helpRestart')}</li>
             <li>{t('wiki.helpLogs')}</li>
           </ol>
-        </Section>
+        </Section>}
 
-        <FaqSection disableMotion={isMobile} />
+        {show('faq') && <FaqSection disableMotion={isMobile} />}
 
-        <Section id="links" title={t('wiki.sectionLinks')} n={10}>
+        {show('links') && <Section id="links" title={t('wiki.sectionLinks')} n={10}>
           <ul className="list-disc pl-5 text-[#c9c4b9]">
             <li><Link to="/rules" className="text-[#c5aa84] hover:text-[#f1dbc0]">{t('wiki.rulesLink')}</Link></li>
             <li><Link to="/start" className="text-[#c5aa84] hover:text-[#f1dbc0]">{t('wiki.startLink')}</Link></li>
             <li><Link to="/privacy" className="text-[#c5aa84] hover:text-[#f1dbc0]">{t('footer.privacy')}</Link></li>
             <li><Link to="/terms" className="text-[#c5aa84] hover:text-[#f1dbc0]">{t('footer.terms')}</Link></li>
           </ul>
-        </Section>
-      </main>
-
-      <aside className="hidden md:block md:col-span-3">
-        <RightToc items={sections} blurIntensity="xl" bgOpacity="60" linkTransition />
-      </aside>
-    </motion.div>
+        </Section>}
+    </DocumentationShell>
     </>
   );
 }

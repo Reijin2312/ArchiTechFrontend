@@ -55,7 +55,7 @@ const CONTACT_CARDS: ContactCardConfig[] = [
     badge: 'Жалобы и апелляции',
     meta: 'По жалобам нужны доказательства: скриншоты, видео или логи.',
     actions: [
-      { label: 'Открыть гайд', href: '/rules#penalties', variant: 'primary' },
+      { label: 'Открыть гайд', href: '/rules/penalties', variant: 'primary' },
       { label: 'Написать модераторам', href: DISCORD_URL, external: true, variant: 'secondary' },
     ],
   },
@@ -84,7 +84,7 @@ const CONTACT_CARDS: ContactCardConfig[] = [
 
 const CONTACT_CARDS_EN: ContactCardConfig[] = [
   { id: 'support', title: 'Support', description: 'Launcher will not start, the server rejects your login, or something broke in-game? Contact us here.', icon: 'support', badge: 'Technical help', meta: 'Include a screenshot and tell us what you have already tried.', actions: [{ label: 'Open support', href: DISCORD_URL, external: true, variant: 'primary' }, { label: 'Send an email', href: `mailto:${SUPPORT_EMAIL}`, variant: 'secondary' }] },
-  { id: 'moderation', title: 'Moderation', description: 'Player reports, rule disputes, and appeals against penalties.', icon: 'moderation', badge: 'Reports and appeals', meta: 'Reports need evidence such as screenshots, video, or logs.', actions: [{ label: 'Read the guide', href: '/rules#penalties', variant: 'primary' }, { label: 'Contact moderators', href: DISCORD_URL, external: true, variant: 'secondary' }] },
+  { id: 'moderation', title: 'Moderation', description: 'Player reports, rule disputes, and appeals against penalties.', icon: 'moderation', badge: 'Reports and appeals', meta: 'Reports need evidence such as screenshots, video, or logs.', actions: [{ label: 'Read the guide', href: '/rules/penalties', variant: 'primary' }, { label: 'Contact moderators', href: DISCORD_URL, external: true, variant: 'secondary' }] },
   { id: 'telegram', title: 'Telegram channel', description: 'Project updates, maintenance notices, and short server news.', icon: 'telegram', badge: 'Server announcements', actions: [{ label: 'Open channel', href: TELEGRAM_URL, external: true, variant: 'primary' }] },
   { id: 'discord', title: 'Discord server', description: 'The main community hub for text channels, voice chat, help, and quick contact with the team.', icon: 'discord', badge: 'Voice and chat', meta: 'Discord is usually the fastest place to get in-game help.', actions: [{ label: 'Open Discord', href: DISCORD_URL, external: true, variant: 'primary' }] },
 ];

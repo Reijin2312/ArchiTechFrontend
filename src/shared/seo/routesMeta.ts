@@ -1,5 +1,7 @@
 ﻿import { DISCORD_URL, TELEGRAM_URL, SERVER_IP } from '@/shared/constants';
 
+import { RULES_DOCUMENT_SECTIONS, WIKI_DOCUMENT_SECTIONS, documentPath } from '@/pages/public/docs/documentationNavigation';
+
 export const ORIGIN = 'https://architech-mc.ru';
 
 const breadcrumb = (items: { name: string; url: string }[]) => ({
@@ -293,6 +295,23 @@ for (const item of legacySeasonMeta) {
         author: { '@type': 'Organization', name: 'ArchiTech MC' },
       },
     ],
+  };
+}
+
+for (const item of [...RULES_DOCUMENT_SECTIONS, ...WIKI_DOCUMENT_SECTIONS].filter((section) => section.id !== 'intro')) {
+  const path = documentPath(item);
+  const basePath = `/${item.area}` as '/rules' | '/wiki';
+  const areaTitle = item.area === 'rules' ? 'Правила' : 'Вики';
+  routesMeta[path] = {
+    ...routesMeta[basePath],
+    title: `${item.ru} — ${areaTitle} ArchiTech MC`,
+    canonical: `${ORIGIN}${path}`,
+    og: { ...routesMeta[basePath].og, url: `${ORIGIN}${path}` },
+    jsonLd: [breadcrumb([
+      { name: 'Главная', url: `${ORIGIN}/` },
+      { name: areaTitle, url: `${ORIGIN}${basePath}` },
+      { name: item.ru, url: `${ORIGIN}${path}` },
+    ])],
   };
 }
 
