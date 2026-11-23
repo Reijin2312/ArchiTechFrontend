@@ -17,7 +17,6 @@
   padding: 32px 30px 29px;
   text-align: center;
   border: 1px solid rgba(236,228,213,.20);
-  border-top: 2px solid #c3a47a;
   border-radius: 5px;
   background: radial-gradient(ellipse at 50% 0%,rgba(196,165,118,.10),transparent 68%),#22241f;
   transition: border-color .28s ease, box-shadow .32s ease, background-color .28s ease;
@@ -25,7 +24,6 @@
 @media (hover: hover) and (pointer: fine) {
   :is(.architech-home, .at-contact-team) .at-staff-feature:hover {
     border-color: rgba(213,184,141,.34);
-    border-top-color: #d6b58a;
     box-shadow: 0 16px 40px rgba(0,0,0,.17), 0 0 0 1px rgba(201,170,127,.10), 0 0 30px rgba(201,170,127,.075);
   }
 }

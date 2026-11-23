@@ -2193,7 +2193,7 @@ export function GroupInfoPanel({
 
             <div className="text-[18px] font-[700] text-white">Group Info</div>
 
-            <button
+            {canEditGroup ? <button
               type="button"
               onClick={() => {
                 if (!canEditGroup) return;
@@ -2203,12 +2203,11 @@ export function GroupInfoPanel({
                 setIsDurationMenuOpen(false);
                 setIsGroupEditOpen(true);
               }}
-              disabled={!canEditGroup}
               className="rounded-full p-1.5 text-white/92 transition-colors hover:bg-black/25"
               aria-label="Edit group"
             >
               <PenSquareIcon size={23} strokeWidth={2.2} />
-            </button>
+            </button> : <span className="h-9 w-9" aria-hidden="true" />}
           </div>
 
           <div className="absolute inset-x-0 bottom-0 px-4 pb-5">

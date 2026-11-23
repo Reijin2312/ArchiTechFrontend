@@ -17,8 +17,18 @@
       (() => {
         const path = location.pathname.replace(/\/+$/, '') || '/';
         const season = /^\/about\/seasons\/([1-4])$/.exec(path);
-        const name = path === '/' ? 'screen10'
-          : path === '/about' ? 'screen2'
+        if (path === '/') {
+          const link = document.createElement('link');
+          link.rel = 'preload';
+          link.as = 'image';
+          link.type = 'image/webp';
+          link.setAttribute('imagesrcset', [320, 640, 1280, 1920, 2560].map(w => '/images/gallery/gallery1-' + w + '.webp ' + w + 'w').join(', '));
+          link.setAttribute('imagesizes', '100vw');
+          link.setAttribute('fetchpriority', 'high');
+          document.head.appendChild(link);
+          return;
+        }
+        const name = path === '/about' ? 'screen2'
           : season ? ({ '1':'screen6', '2':'screen3', '3':'screen5', '4':'screen10' })[season[1]]
           : null;
         if (!name) return;
@@ -31,7 +41,7 @@
         link.as = 'image';
         link.type = 'image/avif';
         link.setAttribute('imagesrcset', widths.map(w => '/images/' + name + '-' + w + '.avif ' + w + 'w').join(', '));
-        link.setAttribute('imagesizes', path === '/' ? '100vw' : '(max-width: 1380px) 100vw, 1380px');
+        link.setAttribute('imagesizes', '(max-width: 1380px) 100vw, 1380px');
         link.setAttribute('fetchpriority', 'high');
         document.head.appendChild(link);
       })();

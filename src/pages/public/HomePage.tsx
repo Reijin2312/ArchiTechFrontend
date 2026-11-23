@@ -67,6 +67,26 @@ type ShotMeta = {
   subtitle: string
 }
 
+function GalleryImage({ src, alt, eager = false, sizes = '100vw', className = '', onLoad }: {
+  src: string
+  alt: string
+  eager?: boolean
+  sizes?: string
+  className?: string
+  onLoad?: () => void
+}) {
+  const base = src.replace(/\.webp$/i, '')
+  const srcSet = [320, 640, 1280, 1920, 2560].map(width => `${base}-${width}.webp ${width}w`).join(', ')
+  return (
+    <picture>
+      <source type="image/webp" srcSet={srcSet} sizes={sizes} />
+      <img src={`${base}-2560.webp`} srcSet={srcSet} sizes={sizes} alt={alt}
+        width={2560} height={1440} loading={eager ? 'eager' : 'lazy'}
+        fetchPriority={eager ? 'high' : 'low'} decoding="async" className={className} onLoad={onLoad} />
+    </picture>
+  )
+}
+
 export default function HomePage() {
   const { language } = useI18n();
   const copy = homeTranslations[language];
@@ -111,19 +131,29 @@ export default function HomePage() {
   }
   const shots = useMemo(
     () => [
-      '/images/screen10.png',
-      '/images/screen13.png',
-      '/images/screen9.png',
-      '/images/screen4.png',
-      '/images/screen11.png',
-      '/images/screen1.png',
-      '/images/screen3.png',
-      '/images/screen12.png',
+      '/images/gallery/gallery1.webp',
+      '/images/gallery/gallery2.webp',
+      '/images/gallery/gallery3.webp',
+      '/images/gallery/gallery4.webp',
+      '/images/gallery/gallery5.webp',
+      '/images/gallery/gallery6.webp',
+      '/images/gallery/gallery7.webp',
+      '/images/gallery/gallery8.webp',
+      '/images/gallery/gallery9.webp',
     ],
     [],
   )
   const shotMeta = useMemo<Record<string, ShotMeta>>(
     () => ({
+      '/images/gallery/gallery1.webp': { title: copy.shots.gallery1[0], subtitle: copy.shots.gallery1[1] },
+      '/images/gallery/gallery2.webp': { title: copy.shots.gallery2[0], subtitle: copy.shots.gallery2[1] },
+      '/images/gallery/gallery3.webp': { title: copy.shots.gallery3[0], subtitle: copy.shots.gallery3[1] },
+      '/images/gallery/gallery4.webp': { title: copy.shots.gallery4[0], subtitle: copy.shots.gallery4[1] },
+      '/images/gallery/gallery5.webp': { title: copy.shots.gallery5[0], subtitle: copy.shots.gallery5[1] },
+      '/images/gallery/gallery6.webp': { title: copy.shots.gallery6[0], subtitle: copy.shots.gallery6[1] },
+      '/images/gallery/gallery7.webp': { title: copy.shots.gallery7[0], subtitle: copy.shots.gallery7[1] },
+      '/images/gallery/gallery8.webp': { title: copy.shots.gallery8[0], subtitle: copy.shots.gallery8[1] },
+      '/images/gallery/gallery9.webp': { title: copy.shots.gallery9[0], subtitle: copy.shots.gallery9[1] },
       '/images/screen1.png': { title: copy.shots.screen1[0], subtitle: copy.shots.screen1[1] },
       '/images/screen13.png': { title: copy.shots.screen13[0], subtitle: copy.shots.screen13[1] },
       '/images/screen3.png': { title: copy.shots.screen3[0], subtitle: copy.shots.screen3[1] },
@@ -379,14 +409,12 @@ export default function HomePage() {
   // Offscreen photos remain lazy and this one low-priority image prepares the next crossfade.
   function warmNextGalleryShot() {
     const next = shots[(shots.indexOf(shot) + 1) % shots.length]
-    const entry = IMAGES[toName(next)]
-    if (!entry) return
     const preload = () => {
       const targetWidth = Math.min(1920, Math.max(640, window.innerWidth * (window.devicePixelRatio || 1)))
-      const variant = entry.avif.find(item => item.w >= targetWidth)
+      const variantWidth = [640, 1280, 1920, 2560].find(width => width >= targetWidth) ?? 2560
       const image = new Image()
       image.fetchPriority = 'low'
-      image.src = variant?.path ?? entry.avif[entry.avif.length - 1]?.path ?? entry.original.avif
+      image.src = next.replace(/\.webp$/i, `-${variantWidth}.webp`)
     }
     if ('requestIdleCallback' in window) {
       window.requestIdleCallback(preload, { timeout: 2000 })
@@ -546,8 +574,8 @@ export default function HomePage() {
                   exit={{opacity:0,scale:1}}
                   transition={{duration:disableInteractiveMotion ? .16 : 1.28,ease:[.22,1,.36,1]}}>
                   <motion.div className="at-gallery-pan" style={disableInteractiveMotion || isMobile ? undefined : { x: galleryPanX, y: galleryPanY }}>
-                    <ResponsiveImage name={toName(shot) as keyof typeof IMAGES} alt={copy.galleryAlt} eager
-                      onLoad={warmNextGalleryShot} width={1920} height={1080} sizes="100vw" className="h-full w-full object-cover"/>
+                    <GalleryImage src={shot} alt={copy.galleryAlt} eager onLoad={warmNextGalleryShot}
+                      className="h-full w-full object-cover" />
                   </motion.div>
                 </motion.div>
               </AnimatePresence>
@@ -580,8 +608,7 @@ export default function HomePage() {
                   transition={thumbSpring} aria-pressed={src===shot}
                   aria-label={`${copy.showScreenshot}: ${shotMeta[src]?.title ?? ''}`}
                   className={src===shot?'ring-2 ring-stone-200':'opacity-75'}>
-                  <ResponsiveImage name={toName(src) as keyof typeof IMAGES} alt=""
-                    width={160} height={160} sizes="64px" priority="low" className="h-full w-full object-cover" />
+                  <GalleryImage src={src} alt="" sizes="80px" className="h-full w-full object-cover" />
                 </motion.button>
               ))}
             </div>
@@ -612,7 +639,7 @@ export default function HomePage() {
           <div className="at-section-heading"><div><h2>{copy.leaderboard}</h2></div></div>
           <div className="at-rank-editorial">
             <TopPlayersSection players={leaderboardPlayers} avatars={leaderboardAvatars}
-              loading={leaderboardLoading} range={leaderboardRange} />
+              loading={leaderboardLoading} />
           </div>
         </div>
       </section>
@@ -868,20 +895,13 @@ function TopPlayersSection({
   players,
   avatars,
   loading,
-  range,
 }: {
   players: LeaderboardPlayer[]
   avatars: Record<string, string>
   loading: boolean
-  range: LeaderboardRange
 }) {
   const { language } = useI18n()
   const isRu = language === 'ru'
-  const rangeLabel = range === 'all'
-    ? (isRu ? 'За всё время' : 'All time')
-    : range === '7d'
-      ? (isRu ? 'За 7 дней' : 'Last 7 days')
-      : (isRu ? 'За 30 дней' : 'Last 30 days')
   // Keep seven places without inventing additional players or statistics.
   const displayedPlayers = Array.from({ length: 7 }, (_, index) => players[index] ?? null)
 
@@ -891,9 +911,6 @@ function TopPlayersSection({
         <h3 className="font-[Onest] text-[17px] font-medium leading-7 tracking-[-.018em] text-[#e9e4db]">
           {isRu ? 'Лидеры по игровому времени' : 'Playtime leaders'}
         </h3>
-        <span className="rounded-full border border-[rgba(197,170,132,.30)] px-3 py-1 font-[Onest] text-[12px] font-medium leading-5 text-[#d2ba98]">
-          {rangeLabel}
-        </span>
       </div>
       <div aria-live="polite">
         {displayedPlayers.map((player, index) => {

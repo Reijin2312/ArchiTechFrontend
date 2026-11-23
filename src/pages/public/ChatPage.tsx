@@ -247,6 +247,8 @@ export default function ChatPage() {
   const groupInfoLinksLoadingRef = useRef(false);
   const groupMediaLoadingRef = useRef(false);
   const groupAdminLogLoadingRef = useRef(false);
+  const groupMembersRequestIdRef = useRef(0);
+  const groupMembersChatIdRef = useRef<number | null>(null);
   const [isNearBottom, setIsNearBottom] = useState(true);
   const [pendingIncomingCount, setPendingIncomingCount] = useState(0);
   const lastSeenIncomingMessageIdRef = useRef(0);
@@ -808,6 +810,12 @@ export default function ChatPage() {
         ? (language === 'ru' ? 'печатает' : 'typing')
         : formatPresenceLabel(selectedPresence);
   const selectedGroupChat = selectedChat?.chatType === 'GROUP' ? selectedChat : undefined;
+  const selectedRawChat = useMemo(
+    () => model.chats.find((chat) => chat.chatId === selectedGroupChat?.chatId),
+    [model.chats, selectedGroupChat?.chatId]
+  );
+  const isSelectedArchiTechGlobalChat =
+    !!selectedRawChat && isArchiTechGlobalChat(selectedRawChat);
   const visibleMessages = useMemo(() => {
     if (!selectedChat) {
       return [];
@@ -840,6 +848,8 @@ export default function ChatPage() {
       return;
     }
 
+    const requestId = ++groupMembersRequestIdRef.current;
+    groupMembersChatIdRef.current = chatId;
     setIsGroupMembersLoading(true);
     try {
       const { data } = await http.get<ChatGroupMembersResponse>(endpoints.chatMembers(chatId));
@@ -886,16 +896,15 @@ export default function ChatPage() {
         }
       }
 
+      if (requestId !== groupMembersRequestIdRef.current || groupMembersChatIdRef.current !== chatId) return;
       setGroupMembersByUserId(next);
       setGroupMemberTagsByUserId(nextTags);
     } catch (error) {
       console.error('Failed to load group members:', error);
-      setGroupMembersByUserId({});
-      setGroupMemberTagsByUserId({});
     } finally {
-      setIsGroupMembersLoading(false);
+      if (requestId === groupMembersRequestIdRef.current) setIsGroupMembersLoading(false);
     }
-  }, [model]);
+  }, [model.getAdminRights]);
 
   const loadGroupMeta = useCallback(async (chatId: number) => {
     if (!Number.isFinite(chatId) || chatId <= 0) {
@@ -979,13 +988,15 @@ export default function ChatPage() {
 
   useEffect(() => {
     if (!selectedGroupChat) {
+      groupMembersChatIdRef.current = null;
+      groupMembersRequestIdRef.current += 1;
       setGroupMembersByUserId({});
       setGroupMemberTagsByUserId({});
       setIsGroupMembersLoading(false);
       return;
     }
     void loadGroupMembers(selectedGroupChat.chatId);
-  }, [loadGroupMembers, selectedGroupChat]);
+  }, [loadGroupMembers, selectedGroupChat?.chatId]);
 
   useEffect(() => {
     if (!selectedGroupChat || !isGroupInfoVisible) {
@@ -1029,7 +1040,8 @@ export default function ChatPage() {
   const canManageGroupMembers =
     isGroupOwner || (isGroupAdmin && !!selectedGroupAdminRights?.canManageMembers);
   const canEditGroupInfo =
-    isGroupOwner || (isGroupAdmin && !!selectedGroupAdminRights?.canManageGroup);
+    !isSelectedArchiTechGlobalChat &&
+    (isGroupOwner || (isGroupAdmin && !!selectedGroupAdminRights?.canManageGroup));
   const canManageInviteLinks =
     isGroupOwner || (isGroupAdmin && !!selectedGroupAdminRights?.canManageInviteLinks);
   const canManageJoinRequests = canManageInviteLinks || canManageGroupMembers;
@@ -2042,7 +2054,7 @@ export default function ChatPage() {
   return (
     <>
       <Seo {...(routesMeta['/chat'] ?? {})} />
-      <div className="at-chat-theme h-[calc(100dvh-70px)] min-h-[calc(100dvh-70px)] w-full overflow-hidden bg-[#171816] text-white antialiased max-md:h-[calc(100dvh-62px)] max-md:min-h-[calc(100dvh-62px)]">
+      <div className="at-chat-theme relative isolate z-0 h-[calc(100dvh-70px)] min-h-[calc(100dvh-70px)] w-full overflow-hidden bg-[#171816] text-white antialiased max-md:h-[calc(100dvh-62px)] max-md:min-h-[calc(100dvh-62px)]">
         <style>{chatPageStyles}</style>
 
         <div
@@ -2363,8 +2375,8 @@ export default function ChatPage() {
                         onPromoteMember={canManageGroupMembers ? promoteGroupMember : undefined}
                         onDemoteMember={canManageGroupMembers ? demoteGroupMember : undefined}
                         onRemoveMember={canManageGroupMembers ? removeGroupMember : undefined}
-                        onLeaveGroup={leaveSelectedGroup}
-                        onDeleteGroup={deleteSelectedGroup}
+                        onLeaveGroup={isSelectedArchiTechGlobalChat ? undefined : leaveSelectedGroup}
+                        onDeleteGroup={isSelectedArchiTechGlobalChat ? undefined : deleteSelectedGroup}
                         groupSettings={groupSettings}
                         groupPermissions={groupPermissions}
                         inviteLinks={groupInviteLinks}
@@ -2477,8 +2489,8 @@ export default function ChatPage() {
                         onPromoteMember={canManageGroupMembers ? promoteGroupMember : undefined}
                         onDemoteMember={canManageGroupMembers ? demoteGroupMember : undefined}
                         onRemoveMember={canManageGroupMembers ? removeGroupMember : undefined}
-                        onLeaveGroup={leaveSelectedGroup}
-                        onDeleteGroup={deleteSelectedGroup}
+                        onLeaveGroup={isSelectedArchiTechGlobalChat ? undefined : leaveSelectedGroup}
+                        onDeleteGroup={isSelectedArchiTechGlobalChat ? undefined : deleteSelectedGroup}
                         groupSettings={groupSettings}
                         groupPermissions={groupPermissions}
                         inviteLinks={groupInviteLinks}

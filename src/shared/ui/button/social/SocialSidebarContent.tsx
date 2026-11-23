@@ -21,7 +21,7 @@ function CompactChatView({ model }: { model: SocialFloatingModel }) {
   const isArchiTechGlobalChat =
     chat?.chatType === 'GROUP' && /^(общий чат )?architech$/i.test(chat.title?.trim() || '');
   const avatarUrl = chat?.chatType === 'GROUP'
-    ? isArchiTechGlobalChat ? '/images/logo.png' : chat.avatarPath
+    ? isArchiTechGlobalChat ? '/images/favicon-192.png' : chat.avatarPath
     : participant?.avatarUrl;
 
   useEffect(() => {

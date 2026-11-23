@@ -53,6 +53,15 @@ export function ChatsList({
     );
   }
 
+  const orderedChats = chats
+    .map((chat, index) => ({ chat, index }))
+    .sort((left, right) => {
+      const leftGlobal = left.chat.chatType === 'GROUP' && /^(общий чат )?architech$/i.test(left.chat.title?.trim() || '');
+      const rightGlobal = right.chat.chatType === 'GROUP' && /^(общий чат )?architech$/i.test(right.chat.title?.trim() || '');
+      return Number(rightGlobal) - Number(leftGlobal) || left.index - right.index;
+    })
+    .map(({ chat }) => chat);
+
   const formatDate = (dateStr: string) => {
     try {
       const date = new Date(dateStr);
@@ -110,7 +119,7 @@ export function ChatsList({
 
   return (
     <div className="space-y-1.5">
-      {chats.map((chat) => {
+      {orderedChats.map((chat) => {
         const isGroupChat = chat.chatType === 'GROUP';
         const privateParticipantId = chat.participantId;
         const friend =
@@ -139,7 +148,7 @@ export function ChatsList({
         const isArchiTechGlobalChat =
           isGroupChat && /^(общий чат )?architech$/i.test(chat.title?.trim() || '');
         const avatarUrl = isGroupChat
-          ? isArchiTechGlobalChat ? '/images/logo.png' : resolveAvatarUrl(chat.avatarPath)
+          ? isArchiTechGlobalChat ? '/images/favicon-192.png' : resolveAvatarUrl(chat.avatarPath)
           : friend?.avatarUrl || fallbackReq?.avatarUrl || searchHit?.avatarUrl;
         const lastMsg = chat.lastMessage;
         const hasUnread = lastMsg && lastMsg.senderId !== currentUserId && !lastMsg.isRead;

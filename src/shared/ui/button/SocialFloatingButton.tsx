@@ -34,7 +34,7 @@ export function SocialFloatingButton() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 18, scale: 0.98 }}
             transition={{ type: 'spring', damping: 28, stiffness: 330 }}
-            className="fixed bottom-24 right-4 z-[90] flex h-[min(660px,calc(100dvh-8rem))] w-[min(410px,calc(100vw-2rem))] flex-col overflow-hidden rounded-[24px] border border-[#c5aa84]/30 bg-[#171816]/[0.98] text-[#eee7dd] shadow-[0_28px_80px_rgba(0,0,0,0.58)] backdrop-blur-xl sm:right-6"
+            className="fixed bottom-24 right-2 z-[90] flex h-[min(660px,calc(100dvh-8rem))] w-[min(410px,calc(100vw-2rem))] flex-col overflow-hidden rounded-[24px] border border-[#c5aa84]/30 bg-[#171816]/[0.98] text-[#eee7dd] shadow-[0_28px_80px_rgba(0,0,0,0.58)] backdrop-blur-xl sm:right-2"
             aria-label="Social panel"
           >
             <header className="flex items-center justify-between border-b border-[#c5aa84]/20 bg-[#20211d] px-4 py-3">
@@ -42,9 +42,13 @@ export function SocialFloatingButton() {
               <div className="flex items-center gap-2">
                 <a
                   href="/chat"
-                  className="inline-flex min-h-9 items-center rounded-full border border-[#c5aa84]/45 bg-[#c5aa84]/10 px-4 py-1.5 text-xs font-semibold text-[#ead4b3] transition hover:border-[#d4b98f]/70 hover:bg-[#c5aa84]/20"
+                  className="grid h-9 w-9 place-items-center rounded-full border border-[#c5aa84]/45 bg-[#c5aa84]/10 text-[#ead4b3] transition hover:border-[#d4b98f]/70 hover:bg-[#c5aa84]/20"
+                  aria-label={copy.full}
+                  title={copy.full}
                 >
-                  {copy.full}
+                  <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="none" aria-hidden="true">
+                    <path d="M9 5H5v4M15 5h4v4M9 19H5v-4M15 19h4v-4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
                 </a>
                 <button
                   type="button"
@@ -68,7 +72,7 @@ export function SocialFloatingButton() {
         onClick={toggle}
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
-        className="fixed bottom-5 right-4 z-[91] grid h-14 w-14 place-items-center rounded-full border border-[#d4b98f]/50 bg-[#22231f] text-[#ead4b3] shadow-[0_14px_38px_rgba(0,0,0,0.48)] hover:bg-[#2c2d27] sm:right-6"
+        className="fixed bottom-5 right-2 z-[91] grid h-14 w-14 place-items-center rounded-full border border-[#d4b98f]/50 bg-[#22231f] text-[#ead4b3] shadow-[0_14px_38px_rgba(0,0,0,0.48)] hover:bg-[#2c2d27] sm:right-2"
         aria-label={model.isOpen ? copy.close : copy.open}
       >
         <svg width="25" height="25" viewBox="0 0 24 24" fill="none" aria-hidden="true">
