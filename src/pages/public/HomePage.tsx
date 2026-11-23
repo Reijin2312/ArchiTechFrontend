@@ -65,14 +65,16 @@ type LeaderboardResponse = {
 type ShotMeta = {
   title: string
   subtitle: string
+  objectPosition?: string
 }
 
-function GalleryImage({ src, alt, eager = false, sizes = '100vw', className = '', onLoad }: {
+function GalleryImage({ src, alt, eager = false, sizes = '100vw', className = '', objectPosition, onLoad }: {
   src: string
   alt: string
   eager?: boolean
   sizes?: string
   className?: string
+  objectPosition?: string
   onLoad?: () => void
 }) {
   const base = src.replace(/\.webp$/i, '')
@@ -82,7 +84,8 @@ function GalleryImage({ src, alt, eager = false, sizes = '100vw', className = ''
       <source type="image/webp" srcSet={srcSet} sizes={sizes} />
       <img src={`${base}-2560.webp`} srcSet={srcSet} sizes={sizes} alt={alt}
         width={2560} height={1440} loading={eager ? 'eager' : 'lazy'}
-        fetchPriority={eager ? 'high' : 'low'} decoding="async" className={className} onLoad={onLoad} />
+        fetchPriority={eager ? 'high' : 'low'} decoding="async" className={className}
+        style={objectPosition ? { objectPosition } : undefined} onLoad={onLoad} />
     </picture>
   )
 }
@@ -145,13 +148,13 @@ export default function HomePage() {
   )
   const shotMeta = useMemo<Record<string, ShotMeta>>(
     () => ({
-      '/images/gallery/gallery1.webp': { title: copy.shots.gallery1[0], subtitle: copy.shots.gallery1[1] },
+      '/images/gallery/gallery1.webp': { title: copy.shots.gallery1[0], subtitle: copy.shots.gallery1[1], objectPosition: 'left center' },
       '/images/gallery/gallery2.webp': { title: copy.shots.gallery2[0], subtitle: copy.shots.gallery2[1] },
-      '/images/gallery/gallery3.webp': { title: copy.shots.gallery3[0], subtitle: copy.shots.gallery3[1] },
-      '/images/gallery/gallery4.webp': { title: copy.shots.gallery4[0], subtitle: copy.shots.gallery4[1] },
-      '/images/gallery/gallery5.webp': { title: copy.shots.gallery5[0], subtitle: copy.shots.gallery5[1] },
+      '/images/gallery/gallery3.webp': { title: copy.shots.gallery3[0], subtitle: copy.shots.gallery3[1], objectPosition: '82% center' },
+      '/images/gallery/gallery4.webp': { title: copy.shots.gallery4[0], subtitle: copy.shots.gallery4[1], objectPosition: '82% center' },
+      '/images/gallery/gallery5.webp': { title: copy.shots.gallery5[0], subtitle: copy.shots.gallery5[1], objectPosition: '25% center' },
       '/images/gallery/gallery6.webp': { title: copy.shots.gallery6[0], subtitle: copy.shots.gallery6[1] },
-      '/images/gallery/gallery7.webp': { title: copy.shots.gallery7[0], subtitle: copy.shots.gallery7[1] },
+      '/images/gallery/gallery7.webp': { title: copy.shots.gallery7[0], subtitle: copy.shots.gallery7[1], objectPosition: 'left center' },
       '/images/gallery/gallery8.webp': { title: copy.shots.gallery8[0], subtitle: copy.shots.gallery8[1] },
       '/images/gallery/gallery9.webp': { title: copy.shots.gallery9[0], subtitle: copy.shots.gallery9[1] },
       '/images/screen1.png': { title: copy.shots.screen1[0], subtitle: copy.shots.screen1[1] },
@@ -508,15 +511,6 @@ export default function HomePage() {
               </picture>
             </div>
             <p className="at-hero-description">{copy.hero}</p>
-            <div className="at-hero-action-row flex flex-wrap items-center">
-              <a className="at-primary-action" href={LAUNCHER_DOWNLOAD_URL}>
-                <SvgDownload className="size-4" /> {copy.downloadLauncher}
-              </a>
-              <a className="at-source-action" href="https://github.com/Reijin2312/ArchiTech_Launcher"
-                target="_blank" rel="noreferrer noopener" aria-label={copy.launcherSourceAria} title={copy.launcherSource}>
-                <SvgGitHub className="size-5 shrink-0" aria-hidden="true" />
-              </a>
-            </div>
             <div className="at-ip-block">
               <div className="px-3 grid place-items-center border-r">IP</div>
               <div className="flex-1 grid place-items-center px-3 font-mono">{SERVER_IP}</div>
@@ -558,6 +552,15 @@ export default function HomePage() {
                 </div>
               )}
             </div>
+            <div className="at-hero-action-row flex flex-wrap items-center">
+              <a className="at-primary-action" href={LAUNCHER_DOWNLOAD_URL}>
+                <SvgDownload className="size-4" /> {copy.downloadLauncher}
+              </a>
+              <a className="at-source-action" href="https://github.com/Reijin2312/ArchiTech_Launcher"
+                target="_blank" rel="noreferrer noopener" aria-label={copy.launcherSourceAria} title={copy.launcherSource}>
+                <SvgGitHub className="size-5 shrink-0" aria-hidden="true" />
+              </a>
+            </div>
           </div>
           <div className="at-gallery"
             onMouseEnter={() => {setSliderPaused(true);setGalleryHover(true)}}
@@ -574,7 +577,7 @@ export default function HomePage() {
                   exit={{opacity:0,scale:1}}
                   transition={{duration:disableInteractiveMotion ? .16 : 1.28,ease:[.22,1,.36,1]}}>
                   <motion.div className="at-gallery-pan" style={disableInteractiveMotion || isMobile ? undefined : { x: galleryPanX, y: galleryPanY }}>
-                    <GalleryImage src={shot} alt={copy.galleryAlt} eager onLoad={warmNextGalleryShot}
+                    <GalleryImage src={shot} alt={copy.galleryAlt} eager objectPosition={activeShotMeta.objectPosition} onLoad={warmNextGalleryShot}
                       className="h-full w-full object-cover" />
                   </motion.div>
                 </motion.div>
