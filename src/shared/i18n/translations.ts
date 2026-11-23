@@ -294,10 +294,10 @@ export const homeTranslations = {
     hero: 'Небольшой ламповый техномагический сервер c упором на строительство и творчество, где можно возвести завод, улететь на собственном дирижабле и случайно стать магом. В основе — Create, Create: Aeronautics и Ars Nouveau с аддонами. Без вайпов и с авторскими портами BetterEnd & BetterNether.',
     copied: 'Скопировано', error: 'Ошибка', copyIp: 'Копировать IP', online: 'Онлайн', offline: 'Офлайн', checking: 'Проверяем…', players: 'Игроки', onlinePlayers: 'Игроки онлайн', close: 'Закрыть', version: 'Версия', ping: 'Пинг', downloadLauncher: 'Скачать лаунчер', launcherSource: 'Исходный код лаунчера', launcherSourceAria: 'Исходный код лаунчера на GitHub', gallery: 'Галерея', galleryAlt: 'Скриншот мира ArchiTech MC', showScreenshot: 'Показать скриншот', fallbackShot: 'Скриншот ArchiTech', fallbackShotSubtitle: 'Момент из жизни сервера',
     cards: [
-      ['О сервере', 'Мир, где у каждой базы есть история, а у каждой истории — минимум один взрыв', 'Узнать больше'],
-      ['Посмотреть сборку', 'Магия, механизмы и дракон на крыше — техномагия без скучной инструкции', 'Открыть вики'],
-      ['Как начать играть', 'Аккаунт, лаунчер, кнопка «Играть» — фабрика железа уже прогревает вам спавн', 'Начать играть'],
-      ['Скачать лаунчер', 'Сам скачает сборку и обновит моды. Вам останется самая сложная часть — нажать «Играть»', 'Скачать'],
+      ['О сервере', 'Что такое этот ваш ArchiTech, про что он и с чем его едят', 'Узнать больше'],
+      ['Посмотреть сборку', 'Щепотка техники, щепотка магии, вуаля — это техномагия!', 'Открыть вики'],
+      ['Как начать играть', 'Пара шагов и правильный ник — добро пожаловать в Сити-17', 'Начать играть'],
+      ['Скачать лаунчер', 'Скачал и забыл про ручные обновления. Магия вне Хогвартса', 'Скачать'],
     ],
     team: 'Команда проекта', leaderboard: 'Легенды сервера', faq: 'Популярные вопросы',
     faqItems: {
@@ -321,10 +321,10 @@ export const homeTranslations = {
     hero: 'A cozy tech-and-magic server built around construction and creativity: build a factory, fly your own airship, and accidentally become a wizard. Powered by Create, Create: Aeronautics, Ars Nouveau and their addons, with no wipes and our own BetterEnd & BetterNether ports.',
     copied: 'Copied', error: 'Error', copyIp: 'Copy IP', online: 'Online', offline: 'Offline', checking: 'Checking…', players: 'Players', onlinePlayers: 'Players online', close: 'Close', version: 'Version', ping: 'Ping', downloadLauncher: 'Download launcher', launcherSource: 'Launcher source code', launcherSourceAria: 'Launcher source code on GitHub', gallery: 'Gallery', galleryAlt: 'ArchiTech MC world screenshot', showScreenshot: 'Show screenshot', fallbackShot: 'ArchiTech screenshot', fallbackShotSubtitle: 'A moment from server life',
     cards: [
-      ['About the server', 'A world where every base has a story, and every story includes at least one explosion', 'Learn more'],
-      ['Explore the modpack', 'Magic, machinery, and a dragon on the roof — tech magic without the boring manual', 'Open the wiki'],
-      ['How to start', 'Account, launcher, Play — the iron factory is already warming up spawn for you', 'Start playing'],
-      ['Download launcher', 'It installs the pack and updates the mods. Your hardest task is pressing Play', 'Download'],
+      ['About the server', 'What is this ArchiTech thing, and what do you eat it with?', 'Learn more'],
+      ['Explore the modpack', 'A pinch of tech, a pinch of magic — voilà, tech magic!', 'Open the wiki'],
+      ['How to start', 'A couple of steps and the right nickname — welcome to City 17', 'Start playing'],
+      ['Download launcher', 'Install it once and forget manual updates. Magic outside Hogwarts', 'Download'],
     ],
     team: 'Project team', leaderboard: 'Server legends', faq: 'Frequently asked questions',
     faqItems: {
