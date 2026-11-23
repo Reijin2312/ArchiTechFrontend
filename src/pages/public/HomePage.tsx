@@ -148,13 +148,13 @@ export default function HomePage() {
   )
   const shotMeta = useMemo<Record<string, ShotMeta>>(
     () => ({
-      '/images/gallery/gallery1.webp': { title: copy.shots.gallery1[0], subtitle: copy.shots.gallery1[1], objectPosition: 'left center' },
+      '/images/gallery/gallery1.webp': { title: copy.shots.gallery1[0], subtitle: copy.shots.gallery1[1], objectPosition: '30% center' },
       '/images/gallery/gallery2.webp': { title: copy.shots.gallery2[0], subtitle: copy.shots.gallery2[1] },
       '/images/gallery/gallery3.webp': { title: copy.shots.gallery3[0], subtitle: copy.shots.gallery3[1], objectPosition: '82% center' },
-      '/images/gallery/gallery4.webp': { title: copy.shots.gallery4[0], subtitle: copy.shots.gallery4[1], objectPosition: '82% center' },
-      '/images/gallery/gallery5.webp': { title: copy.shots.gallery5[0], subtitle: copy.shots.gallery5[1], objectPosition: '25% center' },
+      '/images/gallery/gallery4.webp': { title: copy.shots.gallery4[0], subtitle: copy.shots.gallery4[1], objectPosition: '55% center' },
+      '/images/gallery/gallery5.webp': { title: copy.shots.gallery5[0], subtitle: copy.shots.gallery5[1], objectPosition: '45% center' },
       '/images/gallery/gallery6.webp': { title: copy.shots.gallery6[0], subtitle: copy.shots.gallery6[1] },
-      '/images/gallery/gallery7.webp': { title: copy.shots.gallery7[0], subtitle: copy.shots.gallery7[1], objectPosition: 'left center' },
+      '/images/gallery/gallery7.webp': { title: copy.shots.gallery7[0], subtitle: copy.shots.gallery7[1], objectPosition: '35% center' },
       '/images/gallery/gallery8.webp': { title: copy.shots.gallery8[0], subtitle: copy.shots.gallery8[1] },
       '/images/gallery/gallery9.webp': { title: copy.shots.gallery9[0], subtitle: copy.shots.gallery9[1] },
       '/images/screen1.png': { title: copy.shots.screen1[0], subtitle: copy.shots.screen1[1] },
