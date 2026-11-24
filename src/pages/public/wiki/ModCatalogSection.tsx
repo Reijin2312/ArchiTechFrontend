@@ -1,4 +1,4 @@
-import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
+import { useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { Section as BaseSection } from '@/shared/ui/layout/PageSidebar';
 import { useI18n } from '@/shared/i18n/I18nProvider';
 import type { TranslationKey } from '@/shared/i18n/translations';
@@ -29,18 +29,17 @@ type ModCatalog = {
   mods: ModCatalogItem[];
 };
 
-const PAGE_SIZE = 36;
+const PAGE_SIZE = 12;
 
 export function ModCatalogSection({ disableMotion }: { disableMotion?: boolean }) {
   const { language, t } = useI18n();
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(true);
   const [catalog, setCatalog] = useState<ModCatalog | null>(null);
   const [error, setError] = useState(false);
   const [query, setQuery] = useState('');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const deferredQuery = useDeferredValue(query.trim().toLocaleLowerCase('ru'));
-  const sentinelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!expanded) return;
@@ -71,19 +70,6 @@ export function ModCatalogSection({ disableMotion }: { disableMotion?: boolean }
   }, [catalog, deferredQuery, selectedTags]);
 
   useEffect(() => setVisibleCount(PAGE_SIZE), [deferredQuery, selectedTags]);
-
-  useEffect(() => {
-    const sentinel = sentinelRef.current;
-    if (!sentinel || visibleCount >= filtered.length) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) setVisibleCount((count) => Math.min(count + PAGE_SIZE, filtered.length));
-      },
-      { rootMargin: '500px 0px' },
-    );
-    observer.observe(sentinel);
-    return () => observer.disconnect();
-  }, [filtered.length, visibleCount]);
 
   const toggleTag = (tag: string) => {
     setSelectedTags((current) => current.includes(tag) ? current.filter((value) => value !== tag) : [...current, tag]);
@@ -159,7 +145,6 @@ export function ModCatalogSection({ disableMotion }: { disableMotion?: boolean }
               {t('mods.empty')}
             </div>
           )}
-          <div ref={sentinelRef} className="h-px" aria-hidden="true" />
           {visibleCount < filtered.length && (
             <button
               type="button"
